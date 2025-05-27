@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="assets/css/actionGrid.css">
     <link rel="stylesheet" href="assets/css/modeToggle.css">
     <link rel="stylesheet" href="assets/css/helpers.css">
+    <link rel="stylesheet" href="assets/css/hud.css">
 </head>
 <body>
     <div class="dashboard">
@@ -184,11 +185,26 @@
         
                         <div class="section" id="hud-upper-bottom">
                             <div class="sub-section">
-                            <div id="power-gems" class="tooltip-target coming-soon-hover">
+                            <!-- <div id="power-gems" class="tooltip-target coming-soon-hover">
                                 <button id="special" class="special-icon">💎</button>
                                 <button id="special2" class="special-icon">💎</button>
                                 <button id="special3" class="special-icon">💎</button>
-                            </div>
+                            </div> -->
+                                <div id="amountDisplay">0</div>
+                                <div class="button-row">
+                                    <div class="circle-button red" data-category="Growth">Growth</div>
+                                    <div class="circle-button blue" data-category="Wants">Wants</div>
+                                    <div class="circle-button green" data-category="Needs">Needs</div>
+                                </div>
+
+                                <!-- Confirmation Modal -->
+                                <div id="confirmationModal" class="hidden">
+                                <div class="modal-content">
+                                    <p>Confirm transaction for <span id="modalCategory"></span>: <span id="modalAmount"></span>?</p>
+                                    <button id="confirmYes">Yes</button>
+                                    <button id="confirmNo">No</button>
+                                </div>
+                                </div>
                             </div>
                             <div class="sub-section">
                             <div id="energy-summary" class="tooltip-target">
@@ -237,8 +253,6 @@
                 </div>
                 
              </div>
-
-
 
             <!-- Metrics Section -->
             <div class="panel metrics coming-soon-hover" id="metrics">

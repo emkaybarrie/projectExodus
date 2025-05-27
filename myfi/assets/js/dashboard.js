@@ -3,6 +3,7 @@ import { getDoc, doc, setDoc, updateDoc, deleteField } from "https://www.gstatic
 import { logoutUser } from './auth.js';
 import { categories, subCategories, incomeCategory, unallocatedRefName } from './config.js';
 import { gapiLoaded, gisLoaded, extractSheetId, validateSheet, fetchSheetData, openGooglePicker  } from "./api.js";
+import { saveManualTransactions, testManualTransaction } from "./transactions.js";
 import playerDataManager from "./playerDataManager.js";
 
 
@@ -277,13 +278,15 @@ export async function loadDashboard(playerData) {
                     renderHUD()
                    // }, 1000);
 
+                   testManualTransaction();
 
 
 
-playerDataManager.on('update', (player) => {
-  console.log('Player data updated:', player.hudData);
-  // Here you can call your HUD render/update logic to refresh UI
-});
+
+                  playerDataManager.on('update', (player) => {
+                    console.log('Player data updated:', player.hudData);
+                    // Here you can call your HUD render/update logic to refresh UI
+                  });
             
 
                     // renderMetrics 
