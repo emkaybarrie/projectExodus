@@ -66,6 +66,8 @@ async function testManualTransaction() {
   }
 }
 
+
+
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("income-btn").addEventListener("click", () => showOverlay('income'));
   document.getElementById("expenses-btn").addEventListener("click", () => showOverlay('expenses'));
@@ -93,12 +95,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("confirm-spending-btn").addEventListener("click", logSpending);
 
   document.addEventListener('click', function (e) {
-  if (e.target.classList.contains('remove-entry-btn')) {
-    const type = e.target.getAttribute('data-type');
-    const index = parseInt(e.target.getAttribute('data-index'), 10);
-    removeEntry(type, index);
-  }
-});
+    if (e.target.classList.contains('remove-entry-btn')) {
+      const type = e.target.getAttribute('data-type');
+      const index = parseInt(e.target.getAttribute('data-index'), 10);
+      removeEntry(type, index);
+    }
+  });
 });
 
 // Simple state
@@ -123,47 +125,37 @@ function saveIncome() {
 }
 
 // --- Expenses ---
-// function addEntry(type) {
-//   const name = prompt("Entry name?");
-//   const amount = parseFloat(prompt("Amount?"));
-//   const date = prompt("Date? (YYYY-MM-DD)");
-//   if (name && amount && date) {
-//     expenseEntries[type].push({ name, amount, date });
-//     renderExpenseList(type);
-//   }
-// }
-
 function addEntry(type) {
   const list = document.getElementById(`${type}-list`);
-  
   const div = document.createElement("div");
   div.classList.add("expense-entry");
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date();
+  const currentDay = today.getDate();
+
+  let dayOptions = "";
+  for (let i = 1; i <= 31; i++) {
+    dayOptions += `<option value="${i}" ${i === currentDay ? "selected" : ""}>${i}</option>`;
+  }
 
   div.innerHTML = `
     <input type="text" placeholder="Name" class="entry-name" />
     <input type="number" placeholder="Amount" class="entry-amount" min="0" />
-    <input type="date" class="entry-date" value="${today}" />
+    <select class="entry-day">${dayOptions}</select>
     <button class="remove-entry-btn" data-type="${type}" data-index="-1">X</button>
   `;
 
   list.appendChild(div);
-
-  // Optional: Reindex remove buttons
   updateExpenseIndices(type);
 }
 
-
-// function renderExpenseList(type) {
-//   const list = document.getElementById(`${type}-list`);
-//   list.innerHTML = '';
-//   expenseEntries[type].forEach((entry, index) => {
-//     const div = document.createElement("div");
-//     div.innerHTML = `${entry.name}: £${entry.amount} (${entry.date}) <button onclick="removeEntry('${type}', ${index})">X</button>`;
-//     list.appendChild(div);
-//   });
-// }
+function updateExpenseIndices(type) {
+  const entries = document.querySelectorAll(`#${type}-list .expense-entry`);
+  entries.forEach((entry, index) => {
+    const btn = entry.querySelector(".remove-entry-btn");
+    btn.setAttribute("data-index", index);
+  });
+}
 
 function renderExpenseList(type) {
   const list = document.getElementById(`${type}-list`);
@@ -174,14 +166,13 @@ function renderExpenseList(type) {
     div.classList.add("expense-entry");
 
     div.innerHTML = `
-      ${entry.name}: £${entry.amount} (${entry.date})
+      ${entry.name}: £${entry.amount} (Day ${entry.date})
       <button class="remove-entry-btn" data-type="${type}" data-index="${index}">X</button>
     `;
 
     list.appendChild(div);
   });
 }
-
 
 function removeEntry(type, index) {
   expenseEntries[type].splice(index, 1);
@@ -195,7 +186,6 @@ let spendingState = {
 };
 
 function selectOption(button, field) {
-  // Deselect all siblings
   const buttons = button.parentNode.querySelectorAll("button");
   buttons.forEach(btn => btn.classList.remove("selected"));
   button.classList.add("selected");
@@ -207,6 +197,7 @@ function logSpending() {
   console.log("Spending logged:", { ...spendingState, amount });
   closeOverlay("spending");
 }
+
 
 
 
