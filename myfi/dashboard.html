@@ -19,6 +19,7 @@
     <script type="module" src="assets/js/dashboard.js"></script>
 
 
+
     <!-- <link rel="stylesheet" href="assets/css/styles.css"> -->
     <link rel="stylesheet" href="assets/css/base.css">
     <link rel="stylesheet" href="assets/css/desktop.css">
@@ -185,26 +186,69 @@
         
                         <div class="section" id="hud-upper-bottom">
                             <div class="sub-section">
-                            <!-- <div id="power-gems" class="tooltip-target coming-soon-hover">
-                                <button id="special" class="special-icon">💎</button>
-                                <button id="special2" class="special-icon">💎</button>
-                                <button id="special3" class="special-icon">💎</button>
-                            </div> -->
-                                <div id="amountDisplay">0</div>
-                                <div class="button-row">
-                                    <div class="circle-button red" data-category="Growth">Growth</div>
-                                    <div class="circle-button blue" data-category="Wants">Wants</div>
-                                    <div class="circle-button green" data-category="Needs">Needs</div>
-                                </div>
+                                
+                                <div id="cashflow-buttons">
+                                    <button id="income-btn" class="button">Income</button>
+                                    <button id="expenses-btn" class="button">Expenses</button>
+                                    <button id="spending-btn" class="button">Spending</button>
+                                    </div>
 
-                                <!-- Confirmation Modal -->
-                                <div id="confirmationModal" class="hidden">
-                                <div class="modal-content">
-                                    <p>Confirm transaction for <span id="modalCategory"></span>: <span id="modalAmount"></span>?</p>
-                                    <button id="confirmYes">Yes</button>
-                                    <button id="confirmNo">No</button>
-                                </div>
-                                </div>
+                                    <!-- Overlays -->
+                                    <div class="overlay" id="income-overlay">
+                                    <div class="overlay-content">
+                                        <h3>Income</h3>
+                                        <input type="number" id="income-input" />
+                                        <div class="overlay-actions">
+                                        <button id="income-cancel-btn">Cancel</button>
+                                        <button id="income-confirm-btn">Confirm</button>    
+                                        </div>
+                                    </div>
+                                    </div>
+
+                                    <div class="overlay" id="expenses-overlay">
+                                    <div class="overlay-content">
+                                        <h3>Expenses</h3>
+                                        <div>
+                                        <strong>Mandatory</strong>
+                                        <div id="mandatory-list"></div>
+                                        <button id="add-mandatory-btn">Add</button>
+                                        </div>
+                                        <div>
+                                        <strong>Supplementary</strong>
+                                        <div id="supplementary-list"></div>
+                                        <button id="add-supplementary-btn">Add</button>
+                                        </div>
+                                        <div class="overlay-actions">
+                                        <button id="close-expenses-btn">Close</button>
+                                        </div>
+                                    </div>
+                                    </div>
+
+                                    <div class="overlay" id="spending-overlay">
+                                    <div class="overlay-content">
+                                        <h3>Log Spending</h3>
+                                        <div>
+                                        <label>Category:</label>
+                                        <button class="category-option">Wants</button>
+                                        <button class="category-option">Needs</button>
+                                        </div>
+                                        <div>
+                                        <label>Group:</label>
+                                        <button class="group-option">Socialising</button>
+                                        <button class="group-option">Travel</button>
+                                        </div>
+                                        <div>
+                                        <label>Amount:</label>
+                                        <input type="number" id="spend-amount" />
+                                        </div>
+                                        <div class="overlay-actions">
+                                        <button id="cancel-spending-btn">Cancel</button>
+                                        <button id="confirm-spending-btn">Confirm</button>
+                                        </div>
+                                    </div>
+                                    </div>
+
+
                             </div>
                             <div class="sub-section">
                             <div id="energy-summary" class="tooltip-target">

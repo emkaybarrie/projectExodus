@@ -42,3 +42,108 @@
 .modal-content p {
   margin-bottom: 10px;
 }
+
+
+/* Transactions */
+/* Transactions Overlay Styles */
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.overlay-content {
+  background: #ffffff;
+  color: #333333;
+  padding: 20px;
+  width: 90%;
+  max-width: 360px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  font-family: sans-serif;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+.overlay h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.2em;
+  color: #222;
+}
+
+/* Buttons */
+button {
+  padding: 8px 14px;
+  margin: 5px 5px 0 0;
+  border: none;
+  border-radius: 6px;
+  background-color: #f0f0f0;
+  color: #222;
+  cursor: pointer;
+  font-size: 1em;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background-color: #dcdcdc;
+}
+
+button.selected {
+  background-color: #007BFF;
+  color: #fff;
+}
+
+/* Form Inputs */
+input[type="number"],
+input[type="text"],
+input[type="date"] {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0 12px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.overlay-actions {
+  margin-top: 15px;
+  text-align: right;
+}
+
+/* Section headers */
+.overlay-content strong {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Lists */
+#mandatory-list,
+#supplementary-list {
+  margin-bottom: 10px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .overlay-content {
+    width: 95%;
+    padding: 15px;
+  }
+
+  button {
+    font-size: 0.95em;
+    padding: 8px 12px;
+  }
+}
+
+
+

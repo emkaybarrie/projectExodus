@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs, doc, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, auth } from "./auth.js"; // adjust path if needed
+import playerDataManager from "./playerDataManager.js";
 
 function generateTransactionId(date, category, amount) {
   const input = `${date}-${category}-${amount}`;
@@ -65,100 +66,100 @@ async function testManualTransaction() {
   }
 }
 
-let holdInterval;
-let currentAmount = 0;
-const incrementRate = 50; // ms between each increment
-const incrementValue = 1;
-let startY = 0;
-let swipeThreshold = -30;
-let currentCategory = '';
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("income-btn").addEventListener("click", () => showOverlay('income'));
+  document.getElementById("expenses-btn").addEventListener("click", () => showOverlay('expenses'));
+  document.getElementById("spending-btn").addEventListener("click", () => showOverlay('spending'));
 
-const amountDisplay = document.getElementById('amountDisplay');
-const buttons = document.querySelectorAll('.circle-button');
-const modal = document.getElementById('confirmationModal');
-const modalCategory = document.getElementById('modalCategory');
-const modalAmount = document.getElementById('modalAmount');
+  // Income overlay actions
+  document.getElementById("income-cancel-btn").addEventListener("click", () => closeOverlay("income"));
+  document.getElementById("income-confirm-btn").addEventListener("click", saveIncome);
 
-buttons.forEach(button => {
-  button.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    currentCategory = button.dataset.category;
-    startY = e.clientY || e.touches?.[0]?.clientY || 0;
-    currentAmount = 0;
-    amountDisplay.textContent = currentAmount;
+  // Expenses overlay actions
+  document.getElementById("add-mandatory-btn").addEventListener("click", () => addEntry("mandatory"));
+  document.getElementById("add-supplementary-btn").addEventListener("click", () => addEntry("supplementary"));
+  document.getElementById("close-expenses-btn").addEventListener("click", () => closeOverlay("expenses"));
 
-    holdInterval = setInterval(() => {
-      currentAmount += incrementValue;
-      amountDisplay.textContent = currentAmount;
-    }, incrementRate);
-
-    button.setPointerCapture(e.pointerId);
+  // Spending overlay actions
+  document.querySelectorAll(".category-option").forEach(btn => {
+    btn.addEventListener("click", () => selectOption(btn, "category"));
   });
 
-//   button.addEventListener('pointerup', e => {
-//     const endY = e.clientY || e.changedTouches?.[0]?.clientY || 0;
-//     const deltaY = endY - startY;
-//     clearInterval(holdInterval);
-
-//     if (deltaY < swipeThreshold) {
-//       showConfirmation();
-//     } else {
-//       resetAmount();
-//     }
-//   });
-
-  button.addEventListener('pointerup', e => {
-  const endY = e.clientY || e.changedTouches?.[0]?.clientY || 0;
-  const deltaY = endY - startY;
-  clearInterval(holdInterval);
-
-    if (isTouchDevice) {
-        if (deltaY < swipeThreshold) {
-        showConfirmation();
-        } else {
-        resetAmount();
-        }
-    } else {
-        // Desktop – auto-confirm on release
-        showConfirmation();
-    }
+  document.querySelectorAll(".group-option").forEach(btn => {
+    btn.addEventListener("click", () => selectOption(btn, "group"));
   });
 
-
-  button.addEventListener('pointercancel', () => {
-    clearInterval(holdInterval);
-    resetAmount();
-  });
+  document.getElementById("cancel-spending-btn").addEventListener("click", () => closeOverlay("spending"));
+  document.getElementById("confirm-spending-btn").addEventListener("click", logSpending);
 });
 
-function resetAmount() {
-  currentAmount = 0;
-  amountDisplay.textContent = 0;
+// Simple state
+const expenseEntries = {
+  mandatory: [],
+  supplementary: []
+};
+
+function showOverlay(id) {
+  document.getElementById(`${id}-overlay`).style.display = 'flex';
 }
 
-function showConfirmation() {
-  modalCategory.textContent = currentCategory;
-  modalAmount.textContent = currentAmount;
-  modal.classList.remove('hidden');
+function closeOverlay(id) {
+  document.getElementById(`${id}-overlay`).style.display = 'none';
 }
 
-document.getElementById('confirmYes').addEventListener('click', () => {
-  // 🔄 Placeholder: Save transaction
-  const transaction = {
-    category: currentCategory,
-    amount: currentAmount
-  };
-  console.log('Transaction Saved:', transaction);
+// --- Income ---
+function saveIncome() {
+  const amount = document.getElementById("income-input").value;
+  console.log("Income saved:", amount); // Replace with playerDataManager logic
+  closeOverlay("income");
+}
 
-  modal.classList.add('hidden');
-  resetAmount();
-});
+// --- Expenses ---
+function addEntry(type) {
+  const name = prompt("Entry name?");
+  const amount = parseFloat(prompt("Amount?"));
+  const date = prompt("Date? (YYYY-MM-DD)");
+  if (name && amount && date) {
+    expenseEntries[type].push({ name, amount, date });
+    renderExpenseList(type);
+  }
+}
 
-document.getElementById('confirmNo').addEventListener('click', () => {
-  modal.classList.add('hidden');
-  resetAmount();
-});
+function renderExpenseList(type) {
+  const list = document.getElementById(`${type}-list`);
+  list.innerHTML = '';
+  expenseEntries[type].forEach((entry, index) => {
+    const div = document.createElement("div");
+    div.innerHTML = `${entry.name}: £${entry.amount} (${entry.date}) <button onclick="removeEntry('${type}', ${index})">X</button>`;
+    list.appendChild(div);
+  });
+}
 
-const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+function removeEntry(type, index) {
+  expenseEntries[type].splice(index, 1);
+  renderExpenseList(type);
+}
+
+// --- Spending ---
+let spendingState = {
+  category: null,
+  group: null
+};
+
+function selectOption(button, field) {
+  // Deselect all siblings
+  const buttons = button.parentNode.querySelectorAll("button");
+  buttons.forEach(btn => btn.classList.remove("selected"));
+  button.classList.add("selected");
+  spendingState[field] = button.textContent;
+}
+
+function logSpending() {
+  const amount = document.getElementById("spend-amount").value;
+  console.log("Spending logged:", { ...spendingState, amount });
+  closeOverlay("spending");
+}
+
+
 
 export { saveManualTransactions, testManualTransaction };

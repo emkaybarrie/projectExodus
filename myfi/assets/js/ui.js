@@ -397,12 +397,6 @@ export async function renderHUD() {
                 //const currentDays = playerData?.hudData?.[keyStoredDays] ?? 0;
                 const currentDays = barData.storedDays ?? 0;
     
-                // Update storedDays +1 in persistent store
-                //playerDataManager.updateByKey(keyStoredDays, currentDays + 1);
-
-                // Reset available resource to 0 in persistent store
-                //playerDataManager.updateByKey(keyAvailable, 0);
-
                 // 2. Update the bar's internal resource state and displayed badge
                 barInstance.updateResource({ 
                     storedDays: currentDays + 1, 
@@ -473,131 +467,7 @@ export async function renderHUD() {
 
 /* ========== Animation Engine ========== */
 
-// export function startLiveHUDUpdate(discretionaryBreakdownData) {
-//     const growthRates = {};
-//     let isUserActive = true;
-//     let lastActivityTime = Date.now();
-//     let isRewinding = false;
 
-//     subCategories[categories.discretionary].forEach(subCat => {
-//         if (subCat.toLowerCase() !== 'unallocated') {
-//             const { available = 0, dailyCap = 1 } = discretionaryBreakdownData?.[subCat] || {};
-//             const ratePerSecond = dailyCap / 86400;
-
-//             growthRates[subCat] = {
-//                 availableAmount: available,
-//                 capAmount: dailyCap,
-//                 ratePerSecond,
-//                 savedAvailableAmount: available
-//             };
-
-//             growthRates["Power"] = {
-//                 availableAmount: 0,
-//                 capAmount: discretionaryBreakdownData.maxEmpower,
-//                 ratePerSecond : discretionaryBreakdownData.maxEmpower / 86400 ,
-//                 savedAvailableAmount: 0
-//             };
-
-            
-//         }
-//     });
-
-//     function updateBars() {
-//         const bars = document.querySelectorAll('.bar-fill');
-//         const labels = document.querySelectorAll('.bar-label');
-   
-//         subCategories[categories.discretionary].forEach((subCat, index) => {
-            
-//             if (subCat.toLowerCase() !== 'unallocated') {
-//                 const data = growthRates[subCat];
-//                 const bar = bars[index + 1];
-//                 const label = labels[index + 1];
-
-//                 const speedMultiplier = isUserActive ? 1 : 100;
-//                 data.availableAmount = Math.min(data.availableAmount + (data.ratePerSecond * speedMultiplier), data.capAmount);
-
-//                 if (bar) {
-//                     bar.style.width = `${(data.availableAmount / data.capAmount) * 100}%`;
-//                     bar.classList.toggle('fast-forward', !isUserActive);
-//                 }
-//                 if (label) {
-//                     label.innerText = `£${data.availableAmount.toFixed(2)} / £${data.capAmount.toFixed(2)}`;
-//                 }
-//             }
-//         });
-
-
-//     }
-
-//     function startRewind() {
-//         if (isRewinding) return;
-//         isRewinding = true;
-//         const rewindStart = Date.now();
-//         const rewindFrom = {};
-
-//         subCategories[categories.discretionary].forEach(subCat => {
-//             if (subCat.toLowerCase() !== 'unallocated') {
-//                 rewindFrom[subCat] = growthRates[subCat].availableAmount;
-//             }
-//         });
-
-//         function animateRewind() {
-//             const elapsed = Date.now() - rewindStart;
-//             const progress = Math.min(elapsed / 100, 1);
-
-//             subCategories[categories.discretionary].forEach(subCat => {
-//                 if (subCat.toLowerCase() !== 'unallocated') {
-//                     const start = rewindFrom[subCat];
-//                     const end = growthRates[subCat].savedAvailableAmount;
-//                     growthRates[subCat].availableAmount = start - (start - end) * progress;
-//                 }
-//             });
-
-//             updateBars();
-
-//             if (progress < 1) {
-//                 requestAnimationFrame(animateRewind);
-//             } else {
-//                 triggerRipple();
-//                 isRewinding = false;
-//             }
-//         }
-
-//         function triggerRipple() {
-//             document.querySelectorAll('.bar-fill').forEach(bar => {
-//                 bar.classList.add('ripple');
-//                 setTimeout(() => bar.classList.remove('ripple'), 500);
-//             });
-//         }
-
-//         requestAnimationFrame(animateRewind);
-//     }
-
-//     function resetActivityTimer() {
-//         if (!isUserActive) startRewind();
-//         isUserActive = true;
-//         lastActivityTime = Date.now();
-//     }
-
-//     ['mousemove', 'keydown', 'click', 'touchstart'].forEach(event =>
-//         document.addEventListener(event, resetActivityTimer)
-//     );
-
-//     setInterval(() => {
-//         if (Date.now() - lastActivityTime > 12000) {
-//             if (isUserActive) {
-//                 subCategories[categories.discretionary].forEach(subCat => {
-//                     if (subCat.toLowerCase() !== 'unallocated') {
-//                         growthRates[subCat].savedAvailableAmount = growthRates[subCat].availableAmount;
-//                     }
-//                 });
-//             }
-//             isUserActive = false;
-//         }
-//     }, 1000);
-
-//     setInterval(updateBars, 100);
-// }
 
 /* ========== Contribution Bar Drainer (for Avatar) ========== */
 
@@ -808,6 +678,30 @@ function createBar({
         updateResource: (newSettings = {}) => Object.assign(resource, newSettings),
         getCurrentState: () => ({ ...resource }),
         destroy: () => cancelAnimationFrame(animationFrame), // ✅ cleanup
+        commitToPlayerData: () => {
+            if (!playerDataManager?.updateByKey) return;
+
+            if (availableAmountPath) {
+                playerDataManager.updateByKey(availableAmountPath, resource.availableAmount);
+            }
+            if (capAmountPath) {
+                playerDataManager.updateByKey(capAmountPath, resource.capAmount);
+            }
+            if (storedDaysPath) {
+                playerDataManager.updateByKey(storedDaysPath, resource.storedDays);
+            }
+            if (regenRatePath && resource.regenRate !== null) {
+                playerDataManager.updateByKey(regenRatePath, resource.regenRate * 86400);
+            }
+        },
+        adjustAvailable: (delta) => {
+            resource.availableAmount = Math.max(0, Math.min(resource.capAmount, resource.availableAmount + delta));
+        },
+        adjustStoredDays: (delta) => {
+            resource.storedDays = Math.max(0, resource.storedDays + delta);
+            storedDaysBadge.innerText = `${Math.round(resource.storedDays)}`;
+            applyPulseSettings(storedDaysBadge, resource.storedDays);
+        },
         storedDaysBadge, 
         //badgeWrapper
     };
