@@ -91,6 +91,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("cancel-spending-btn").addEventListener("click", () => closeOverlay("spending"));
   document.getElementById("confirm-spending-btn").addEventListener("click", logSpending);
+
+  document.addEventListener('click', function (e) {
+  if (e.target.classList.contains('remove-entry-btn')) {
+    const type = e.target.getAttribute('data-type');
+    const index = parseInt(e.target.getAttribute('data-index'), 10);
+    removeEntry(type, index);
+  }
+});
 });
 
 // Simple state
@@ -125,15 +133,33 @@ function addEntry(type) {
   }
 }
 
+// function renderExpenseList(type) {
+//   const list = document.getElementById(`${type}-list`);
+//   list.innerHTML = '';
+//   expenseEntries[type].forEach((entry, index) => {
+//     const div = document.createElement("div");
+//     div.innerHTML = `${entry.name}: £${entry.amount} (${entry.date}) <button onclick="removeEntry('${type}', ${index})">X</button>`;
+//     list.appendChild(div);
+//   });
+// }
+
 function renderExpenseList(type) {
   const list = document.getElementById(`${type}-list`);
   list.innerHTML = '';
+
   expenseEntries[type].forEach((entry, index) => {
     const div = document.createElement("div");
-    div.innerHTML = `${entry.name}: £${entry.amount} (${entry.date}) <button onclick="removeEntry('${type}', ${index})">X</button>`;
+    div.classList.add("expense-entry");
+
+    div.innerHTML = `
+      ${entry.name}: £${entry.amount} (${entry.date})
+      <button class="remove-entry-btn" data-type="${type}" data-index="${index}">X</button>
+    `;
+
     list.appendChild(div);
   });
 }
+
 
 function removeEntry(type, index) {
   expenseEntries[type].splice(index, 1);
