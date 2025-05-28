@@ -45,13 +45,14 @@
 
 
 /* Transactions */
+/* Transactions */
 /* Overlay Styles */
 .overlay {
   position: fixed;
   top: 0; left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.6); /* semi-transparent black */
   display: none;
   justify-content: center;
   align-items: center;
@@ -59,7 +60,7 @@
 }
 
 .overlay-content {
-  background: #ffffff;
+  background: #ffffff; /* fully opaque white */
   color: #333333;
   padding: 20px;
   width: 90%;
@@ -182,9 +183,11 @@ input[type="date"] {
   padding: 8px 12px;
   font-size: 0.95em;
   border-radius: 6px;
-  background-color: #eaeaea;
   cursor: pointer;
   border: 1px solid #ccc;
+  color: #222;
+  background-color: #eaeaea;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
 }
 
 .category-option:hover,
@@ -192,11 +195,56 @@ input[type="date"] {
   background-color: #ddd;
 }
 
-.category-option.selected,
-.group-option.selected {
-  background-color: #28a745;
+/* Wants button - faded blue */
+.category-option.wants {
+  background-color: #cce5ff; /* very light blue */
+  color: #004085; /* darker blue text */
+  border-color: #b8daff;
+}
+
+.category-option.wants:hover {
+  background-color: #99ccff; /* medium blue */
+  border-color: #80bdff;
+  color: #003366;
+}
+
+/* Needs button - faded green */
+.category-option.needs {
+  background-color: #d4edda; /* very light green */
+  color: #155724; /* dark green text */
+  border-color: #c3e6cb;
+}
+
+.category-option.needs:hover {
+  background-color: #a8d5a3; /* medium green */
+  border-color: #8fd19e;
+  color: #0b3d0b;
+}
+
+/* Selected states with glow */
+
+/* Wants selected: deep blue with glow */
+.category-option.selected.wants {
+  background-color: #004085; /* deep blue */
+  border-color: #002752;
   color: white;
-  border-color: #1e7e34;
+  box-shadow: 0 0 10px 2px rgba(0, 64, 133, 0.7);
+}
+
+/* Needs selected: deep green with glow */
+.category-option.selected.needs {
+  background-color: #155724; /* deep green */
+  border-color: #0b2f0b;
+  color: white;
+  box-shadow: 0 0 10px 2px rgba(21, 87, 36, 0.7);
+}
+
+/* Group option selected - purple */
+.group-option.selected {
+  background-color: #6f42c1; /* bootstrap purple */
+  border-color: #5a32a3;
+  color: white;
+  box-shadow: 0 0 10px 2px rgba(111, 66, 193, 0.7);
 }
 
 /* Responsive Tweaks */
@@ -222,6 +270,7 @@ input[type="date"] {
     gap: 10px;
   }
 }
+
 
 
 
