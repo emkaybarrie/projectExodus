@@ -361,7 +361,7 @@ export function renderProfile() {
 
 
 /* ========== HUD Renderer ========== */
-
+export const hudBars = {}; // outside your renderHUD function, ideally module/global scope
 export async function renderHUD() {
     console.log('Rendering HUD...' )
     const playerData = playerDataManager.get()
@@ -371,6 +371,8 @@ export async function renderHUD() {
 
     const upperHudContainer_Vitals = document.getElementById('upper-hud-vitals');
     upperHudContainer_Vitals.innerHTML = "";
+
+    
 
     subCategories[categories.discretionary].forEach(subCat => {
     if (subCat.toLowerCase() === 'unallocated') return;
@@ -413,6 +415,8 @@ export async function renderHUD() {
 
             }
         });
+
+        hudBars[subCat.toLowerCase()] = barInstance;  // store by subCat key
 
     });
 

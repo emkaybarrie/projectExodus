@@ -8,7 +8,7 @@ import playerDataManager from "./playerDataManager.js";
 
 
 import { generateCashflowData, generateHudData, generateAvatarData  } from './calculations.js';  
-import { renderProfile, renderHUD, showManualEntryButton, hideManualEntryButton,showLinkAccountButton, 
+import { renderProfile, hudBars, renderHUD, showManualEntryButton, hideManualEntryButton,showLinkAccountButton, 
     hideLinkAccountButton, hideUnlinkAccountButton , showUnlinkAccountButton, setSegmentsCount, openPaymentModal, 
     openLinkSheetModal, closeSheetModal, showTooltip, hideTooltip,updateTooltipPosition,
     submitPayment} from './ui.js';
@@ -240,7 +240,7 @@ export async function loadDashboard(playerData) {
 
               
                     // Run every 5 seconds
-                    //setInterval(setRandomHUDUpdate, 5000);
+                   // setInterval(hudAdjustment, 5000);
                     
                     // Calculate
                     console.log("Refreshing Cashflow Data...")
@@ -397,7 +397,10 @@ export async function loadDashboard(playerData) {
 }
 
 
-
+function hudAdjustment(){
+  hudBars['wants'].adjustAvailable(7); // increases 'wants' bar availableAmount by 10
+  hudBars['needs'].adjustAvailable(-5); // decreases 'needs' bar availableAmount by 5
+}
 
 function setRandomHUDUpdate() {
     console.log('Random Update')
@@ -529,104 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Global functions to open and close modal
-
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     console.log("Document loaded");
-
-//     // OPEN MODAL
-//     const openBtns = document.querySelectorAll('.action-btn');
-//     openBtns.forEach(btn => {
-//         btn.addEventListener('click', () => {
-//             const modal = document.getElementById('payment-modal');
-//             modal.classList.remove('hidden');
-//             modal.style.opacity = 1;
-//             modal.style.visibility = 'visible';
-
-//             // Clear QR code when modal opens
-//             const qrDiv = document.getElementById('qrCode');
-//             qrDiv.innerHTML = ""; // Clear any existing QR code
-//         });
-//     });
-
-//     // CLOSE MODAL on Close Button
-//     const closeBtn = document.getElementById('close-btn');
-//     closeBtn.addEventListener('click', () => {
-//         const modal = document.getElementById('modal');
-//         modal.style.opacity = 0;
-//         modal.style.visibility = 'hidden';
-//         const amountField = document.getElementById('amount');
-//     amountField.value = ''; // Reset value on close
-//         setTimeout(() => {
-//             modal.classList.add('hidden');
-//         }, 300); // Wait for opacity transition to complete
-//     });
-
-//     // GENERATE QR
-//     const generateBtn = document.getElementById('generate-btn');
-//     if (generateBtn) {
-//         console.log("Generate QR button found");
-
-//         generateBtn.addEventListener('click', (e) => {
-//             console.log("Generate QR button clicked");
-
-//             // Prevent this click from propagating up to the modal close event
-//             e.stopPropagation();
-
-//             const amount = document.getElementById('amount').value;
-//             const method = document.getElementById('paymentMethod').value;
-//             const qrDiv = document.getElementById('qrCode');
-
-//             // Clear any previous QR code
-//             qrDiv.innerHTML = "";
-//             console.log("Amount:", amount);
-//             console.log("Payment Method:", method);
-
-//             let qrText = "";
-
-//             if (amount && !isNaN(amount) && amount > 0) {
-//                 console.log("Amount provided:", amount);
-//                 if (method === "monzo") {
-//                     qrText = `https://monzo.me/emkaybarrie/${amount}`;
-//                 } else if (method === "bank") {
-//                     qrText = "Bank Transfer (Coming Soon)";
-//                 } else if (method === "crypto") {
-//                     qrText = "Crypto (Coming Soon)";
-//                 } else {
-//                     qrText = "Invalid Payment Method";
-//                 }
-
-//                 // Generate QR Code only if qrText is valid
-//                 if (qrText) {
-//                     console.log("Generating QR Code with text:", qrText);
-//                     new QRCode(qrDiv, {
-//                         text: qrText,
-//                         width: 128,
-//                         height: 128
-//                     });
-//                 }
-//             } else {
-//                 qrText = "Please enter a valid amount.";
-//                 qrDiv.innerHTML = qrText; // Display message if no valid amount is provided
-//                 console.log("Invalid or missing amount");
-//             }
-//         });
-//     } else {
-//         console.error("Generate QR button not found");
-//     }
-// });
-
-// Profile 
-// Button Listeners
-// document.addEventListener('DOMContentLoaded', () => {
-//     const empowerBtn = document.getElementById('submit-payment');
-//     //const discretionaryData = JSON.parse(localStorage.getItem('discretionaryData'))
-//     // or pass a specific amount if you like
-//     if (empowerBtn) empowerBtn.addEventListener('click', () => { submitPayment(
-//     )});
-//   })
-// Community Contributions
 document.addEventListener('DOMContentLoaded', () => {
     const sendContributionBtn = document.getElementById('send-contribution-btn');
     const discretionaryData = JSON.parse(localStorage.getItem('discretionaryData'))
@@ -704,45 +609,6 @@ document.getElementById('close-payment-modal').addEventListener('click', () => {
     const qrHeader = document.getElementById('qrHeader');
     if (qrHeader) qrHeader.style.display = 'none';
   });
-
-// document.addEventListener('DOMContentLoaded', () => {
-//     const paymentModal = document.getElementById('payment-modal');
-//     const sheetsModal = document.getElementById('sheets-modal');
-//     const openPickerBtn = document.getElementById('open-picker-btn');
-//     const cancelBtn = document.getElementById('cancel-btn');
-//     const confirmBtn = document.getElementById('confirm-btn');
-//     const sheetLinkInput = document.getElementById('sheet-link');
-//     const closeBtn = document.getElementById('close-btn');
-
-//     // --- Modal Helpers ---
-
-//     function openModal(modal) {
-//         modal.classList.remove('hidden');
-//         modal.style.opacity = 1;
-//         modal.style.visibility = 'visible';
-//     }
-
-//     function closeModal(modal) {
-//         modal.style.opacity = 0;
-//         modal.style.visibility = 'hidden';
-//         setTimeout(() => {
-//             modal.classList.add('hidden');
-//         }, 300);
-//     }
-
-
-
-//     // --- Event Listeners ---
-
-//     // Open Google Picker when button clicked
-//     openPickerBtn.addEventListener('click', openGooglePicker);
-
-//     // Cancel button inside Sheets modal
-//     cancelBtn.addEventListener('click', () => closeModal(sheetsModal));
-
-//     // Close button inside Payment modal
-//     closeBtn.addEventListener('click', () => closeModal(paymentModal));
-
 
 
 export function saveToLocalStorage(storageReference, value){

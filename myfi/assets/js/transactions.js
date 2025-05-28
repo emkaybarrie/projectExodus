@@ -1,6 +1,7 @@
 import { collection, query, where, getDocs, doc, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { db, auth } from "./auth.js"; // adjust path if needed
 import playerDataManager from "./playerDataManager.js";
+import {hudBars} from './ui.js';
 
 function generateTransactionId(date, category, amount) {
   const input = `${date}-${category}-${amount}`;
@@ -176,11 +177,51 @@ function selectOption(button, field) {
   spendingState[field] = button.textContent;
 }
 
+// function logSpending() {
+//   const amount = document.getElementById("spend-amount").value;
+//   console.log("Spending logged:", { ...spendingState, amount }); // Replace with playerDataManager logic
+
+//    hudBars['wants'].adjustAvailable(-parseInt(amount)); // increases 'wants' bar availableAmount by 10
+//   closeOverlay("spending");
+// }
+
 function logSpending() {
-  const amount = document.getElementById("spend-amount").value;
-  console.log("Spending logged:", { ...spendingState, amount }); // Replace with playerDataManager logic
+  const amountInput = document.getElementById("spend-amount");
+  const amount = parseInt(amountInput.value);
+
+  if (!spendingState.category) {
+    alert('Please select a category before logging spending.');
+    return;
+  }
+
+  if (isNaN(amount) || amount <= 0) {
+    alert('Please enter a valid amount greater than zero.');
+    return;
+  }
+
+  console.log("Spending logged:", { ...spendingState, amount });
+
+  const categoryKey = spendingState.category.toLowerCase();
+
+  if (hudBars[categoryKey]) {
+    hudBars[categoryKey].adjustAvailable(-amount);
+  } else {
+    console.warn(`No hudBar found for category: ${categoryKey}`);
+  }
+
+  // Reset inputs and state for next entry
+  amountInput.value = '';
+  spendingState.category = null;
+  spendingState.group = null;
+
+  // Clear selection highlights for category and group buttons
+  document.querySelectorAll(".category-option, .group-option").forEach(btn => {
+    btn.classList.remove("selected");
+  });
+
   closeOverlay("spending");
 }
+
 
 
 
