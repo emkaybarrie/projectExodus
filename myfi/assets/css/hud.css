@@ -163,4 +163,15 @@ input[type="date"] {
   cursor: pointer;
 }
 
+.expense-entry input {
+  margin: 4px 4px 4px 0;
+  padding: 6px;
+  width: calc(100% - 12px);
+  font-size: 14px;
+}
+.expense-entry input[type="number"],
+.expense-entry input[type="date"] {
+  max-width: 140px;
+}
+
 

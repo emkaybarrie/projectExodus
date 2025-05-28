@@ -123,15 +123,37 @@ function saveIncome() {
 }
 
 // --- Expenses ---
+// function addEntry(type) {
+//   const name = prompt("Entry name?");
+//   const amount = parseFloat(prompt("Amount?"));
+//   const date = prompt("Date? (YYYY-MM-DD)");
+//   if (name && amount && date) {
+//     expenseEntries[type].push({ name, amount, date });
+//     renderExpenseList(type);
+//   }
+// }
+
 function addEntry(type) {
-  const name = prompt("Entry name?");
-  const amount = parseFloat(prompt("Amount?"));
-  const date = prompt("Date? (YYYY-MM-DD)");
-  if (name && amount && date) {
-    expenseEntries[type].push({ name, amount, date });
-    renderExpenseList(type);
-  }
+  const list = document.getElementById(`${type}-list`);
+  
+  const div = document.createElement("div");
+  div.classList.add("expense-entry");
+
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  div.innerHTML = `
+    <input type="text" placeholder="Name" class="entry-name" />
+    <input type="number" placeholder="Amount" class="entry-amount" min="0" />
+    <input type="date" class="entry-date" value="${today}" />
+    <button class="remove-entry-btn" data-type="${type}" data-index="-1">X</button>
+  `;
+
+  list.appendChild(div);
+
+  // Optional: Reindex remove buttons
+  updateExpenseIndices(type);
 }
+
 
 // function renderExpenseList(type) {
 //   const list = document.getElementById(`${type}-list`);
