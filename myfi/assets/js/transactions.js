@@ -67,22 +67,23 @@ async function testManualTransaction() {
 }
 
 
-
 document.addEventListener("DOMContentLoaded", () => {
+  // Overlay buttons
   document.getElementById("income-btn").addEventListener("click", () => showOverlay('income'));
   document.getElementById("expenses-btn").addEventListener("click", () => showOverlay('expenses'));
   document.getElementById("spending-btn").addEventListener("click", () => showOverlay('spending'));
 
-  // Income overlay actions
+  // Income overlay
   document.getElementById("income-cancel-btn").addEventListener("click", () => closeOverlay("income"));
   document.getElementById("income-confirm-btn").addEventListener("click", saveIncome);
 
-  // Expenses overlay actions
+  // Expenses overlay
   document.getElementById("add-mandatory-btn").addEventListener("click", () => addEntry("mandatory"));
   document.getElementById("add-supplementary-btn").addEventListener("click", () => addEntry("supplementary"));
   document.getElementById("close-expenses-btn").addEventListener("click", () => closeOverlay("expenses"));
+  document.getElementById("confirm-expenses-btn").addEventListener("click", saveExpenses);
 
-  // Spending overlay actions
+  // Spending overlay
   document.querySelectorAll(".category-option").forEach(btn => {
     btn.addEventListener("click", () => selectOption(btn, "category"));
   });
@@ -94,21 +95,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("cancel-spending-btn").addEventListener("click", () => closeOverlay("spending"));
   document.getElementById("confirm-spending-btn").addEventListener("click", logSpending);
 
+  // Handle remove button (for dynamically created entries)
   document.addEventListener('click', function (e) {
     if (e.target.classList.contains('remove-entry-btn')) {
-      const type = e.target.getAttribute('data-type');
-      const index = parseInt(e.target.getAttribute('data-index'), 10);
-      removeEntry(type, index);
+      const entryDiv = e.target.closest('.expense-entry');
+      if (entryDiv) entryDiv.remove();
     }
   });
 });
 
-// Simple state
-const expenseEntries = {
-  mandatory: [],
-  supplementary: []
-};
-
+// --- Overlays ---
 function showOverlay(id) {
   document.getElementById(`${id}-overlay`).style.display = 'flex';
 }
@@ -142,41 +138,29 @@ function addEntry(type) {
     <input type="text" placeholder="Name" class="entry-name" />
     <input type="number" placeholder="Amount" class="entry-amount" min="0" />
     <select class="entry-day">${dayOptions}</select>
-    <button class="remove-entry-btn" data-type="${type}" data-index="-1">X</button>
+    <button class="remove-entry-btn">X</button>
   `;
 
   list.appendChild(div);
-  updateExpenseIndices(type);
 }
 
-function updateExpenseIndices(type) {
-  const entries = document.querySelectorAll(`#${type}-list .expense-entry`);
-  entries.forEach((entry, index) => {
-    const btn = entry.querySelector(".remove-entry-btn");
-    btn.setAttribute("data-index", index);
+function saveExpenses() {
+  const expenseEntries = {
+    mandatory: [],
+    supplementary: []
+  };
+
+  ['mandatory', 'supplementary'].forEach(type => {
+    const entries = document.querySelectorAll(`#${type}-list .expense-entry`);
+    expenseEntries[type] = Array.from(entries).map(entry => ({
+      name: entry.querySelector('.entry-name').value,
+      amount: parseFloat(entry.querySelector('.entry-amount').value),
+      date: parseInt(entry.querySelector('.entry-day').value)
+    }));
   });
-}
 
-function renderExpenseList(type) {
-  const list = document.getElementById(`${type}-list`);
-  list.innerHTML = '';
-
-  expenseEntries[type].forEach((entry, index) => {
-    const div = document.createElement("div");
-    div.classList.add("expense-entry");
-
-    div.innerHTML = `
-      ${entry.name}: £${entry.amount} (Day ${entry.date})
-      <button class="remove-entry-btn" data-type="${type}" data-index="${index}">X</button>
-    `;
-
-    list.appendChild(div);
-  });
-}
-
-function removeEntry(type, index) {
-  expenseEntries[type].splice(index, 1);
-  renderExpenseList(type);
+  console.log("Saved expenses:", expenseEntries); // Replace with playerDataManager logic
+  closeOverlay("expenses");
 }
 
 // --- Spending ---
@@ -194,7 +178,7 @@ function selectOption(button, field) {
 
 function logSpending() {
   const amount = document.getElementById("spend-amount").value;
-  console.log("Spending logged:", { ...spendingState, amount });
+  console.log("Spending logged:", { ...spendingState, amount }); // Replace with playerDataManager logic
   closeOverlay("spending");
 }
 

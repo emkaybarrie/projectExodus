@@ -187,66 +187,77 @@
                         <div class="section" id="hud-upper-bottom">
                             <div class="sub-section">
                                 
-                                <div id="cashflow-buttons">
-                                    <button id="income-btn" class="button">Income</button>
-                                    <button id="expenses-btn" class="button">Expenses</button>
-                                    <button id="spending-btn" class="button">Spending</button>
-                                    </div>
+ <div id="cashflow-buttons">
+  <button id="income-btn" class="button">Income</button>
+  <button id="expenses-btn" class="button">Expenses</button>
+  <button id="spending-btn" class="button">Spending</button>
+</div>
 
-                                    <!-- Overlays -->
-                                    <div class="overlay" id="income-overlay">
-                                    <div class="overlay-content">
-                                        <h3>Income</h3>
-                                        <input type="number" id="income-input" />
-                                        <div class="overlay-actions">
-                                        <button id="income-cancel-btn">Cancel</button>
-                                        <button id="income-confirm-btn">Confirm</button>    
-                                        </div>
-                                    </div>
-                                    </div>
+<!-- Income Overlay -->
+<div class="overlay" id="income-overlay">
+  <div class="overlay-content">
+    <h3>Income</h3>
+    <input type="number" id="income-input" placeholder="Monthly Income" />
+    <div class="overlay-actions">
+      <button id="income-cancel-btn">Cancel</button>
+      <button id="income-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
 
-                                    <div class="overlay" id="expenses-overlay">
-                                    <div class="overlay-content">
-                                        <h3>Expenses</h3>
-                                        <div>
-                                        <strong>Mandatory</strong>
-                                        <div id="mandatory-list"></div>
-                                        <button id="add-mandatory-btn">Add</button>
-                                        </div>
-                                        <div>
-                                        <strong>Supplementary</strong>
-                                        <div id="supplementary-list"></div>
-                                        <button id="add-supplementary-btn">Add</button>
-                                        </div>
-                                        <div class="overlay-actions">
-                                        <button id="close-expenses-btn">Close</button>
-                                        </div>
-                                    </div>
-                                    </div>
+<!-- Expenses Overlay -->
+<div class="overlay" id="expenses-overlay">
+  <div class="overlay-content">
+    <h3>Expenses</h3>
 
-                                    <div class="overlay" id="spending-overlay">
-                                    <div class="overlay-content">
-                                        <h3>Log Spending</h3>
-                                        <div>
-                                        <label>Category:</label>
-                                        <button class="category-option">Wants</button>
-                                        <button class="category-option">Needs</button>
-                                        </div>
-                                        <div>
-                                        <label>Group:</label>
-                                        <button class="group-option">Socialising</button>
-                                        <button class="group-option">Travel</button>
-                                        </div>
-                                        <div>
-                                        <label>Amount:</label>
-                                        <input type="number" id="spend-amount" />
-                                        </div>
-                                        <div class="overlay-actions">
-                                        <button id="cancel-spending-btn">Cancel</button>
-                                        <button id="confirm-spending-btn">Confirm</button>
-                                        </div>
-                                    </div>
-                                    </div>
+    <div>
+      <strong>Mandatory</strong>
+      <div id="mandatory-list"></div>
+      <button id="add-mandatory-btn">Add Mandatory</button>
+    </div>
+
+    <div>
+      <strong>Supplementary</strong>
+      <div id="supplementary-list"></div>
+      <button id="add-supplementary-btn">Add Supplementary</button>
+    </div>
+
+    <div class="overlay-actions">
+      <button id="close-expenses-btn">Cancel</button>
+      <button id="confirm-expenses-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Spending Overlay -->
+<div class="overlay" id="spending-overlay">
+  <div class="overlay-content">
+    <h3>Log Spending</h3>
+
+    <div>
+      <label>Category:</label><br />
+      <button class="category-option">Wants</button>
+      <button class="category-option">Needs</button>
+    </div>
+
+    <div>
+      <label>Group:</label><br />
+      <button class="group-option">Socialising</button>
+      <button class="group-option">Travel</button>
+    </div>
+
+    <div>
+      <label>Amount:</label><br />
+      <input type="number" id="spend-amount" placeholder="0" min="0" />
+    </div>
+
+    <div class="overlay-actions">
+      <button id="cancel-spending-btn">Cancel</button>
+      <button id="confirm-spending-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
 
 
                             </div>

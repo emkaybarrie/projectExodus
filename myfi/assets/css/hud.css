@@ -45,7 +45,7 @@
 
 
 /* Transactions */
-/* Transactions Overlay Styles */
+/* Overlay Styles */
 .overlay {
   position: fixed;
   top: 0; left: 0;
@@ -63,9 +63,9 @@
   color: #333333;
   padding: 20px;
   width: 90%;
-  max-width: 360px;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  max-width: 380px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   font-family: sans-serif;
   overflow-y: auto;
   max-height: 90vh;
@@ -74,25 +74,30 @@
 .overlay h3 {
   margin-top: 0;
   margin-bottom: 15px;
-  font-size: 1.2em;
+  font-size: 1.4em;
   color: #222;
+  text-align: center;
 }
 
 /* Buttons */
 button {
   padding: 8px 14px;
-  margin: 5px 5px 0 0;
+  margin: 6px 6px 0 0;
   border: none;
   border-radius: 6px;
   background-color: #f0f0f0;
   color: #222;
   cursor: pointer;
   font-size: 1em;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 button:hover {
   background-color: #dcdcdc;
+}
+
+button:active {
+  transform: scale(0.98);
 }
 
 button.selected {
@@ -100,12 +105,19 @@ button.selected {
   color: #fff;
 }
 
-/* Form Inputs */
+.overlay-actions {
+  margin-top: 20px;
+  text-align: right;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Inputs */
 input[type="number"],
 input[type="text"],
 input[type="date"] {
   width: 100%;
-  padding: 8px;
+  padding: 10px;
   margin: 6px 0 12px;
   box-sizing: border-box;
   border: 1px solid #ccc;
@@ -113,45 +125,34 @@ input[type="date"] {
   font-size: 1em;
 }
 
-.overlay-actions {
-  margin-top: 15px;
-  text-align: right;
-}
-
-/* Section headers */
+/* Section Headers */
 .overlay-content strong {
   display: block;
-  margin: 12px 0 6px;
+  margin: 16px 0 6px;
   font-weight: bold;
   color: #333;
+  font-size: 1.1em;
 }
 
-/* Lists */
-#mandatory-list,
-#supplementary-list {
-  margin-bottom: 10px;
-}
-
-/* Mobile responsiveness */
-@media (max-width: 480px) {
-  .overlay-content {
-    width: 95%;
-    padding: 15px;
-  }
-
-  button {
-    font-size: 0.95em;
-    padding: 8px 12px;
-  }
-}
-
-
+/* Expense Entry Styles */
 .expense-entry {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  gap: 10px;
+  padding: 6px 0;
   border-bottom: 1px solid #ddd;
+  flex-wrap: nowrap; /* keep all on one line */
+}
+
+.expense-entry input {
+  padding: 6px;
+  font-size: 0.95em;
+  margin: 0;
+}
+
+.expense-entry input[type="number"],
+.expense-entry input[type="date"] {
+  max-width: 140px;
 }
 
 .remove-entry-btn {
@@ -159,19 +160,68 @@ input[type="date"] {
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 4px 8px;
   cursor: pointer;
+  font-size: 0.85em;
+  flex-shrink: 0; /* prevent shrinking */
 }
 
-.expense-entry input {
-  margin: 4px 4px 4px 0;
-  padding: 6px;
-  width: calc(100% - 12px);
-  font-size: 14px;
+/* Expense Lists */
+#mandatory-list,
+#supplementary-list {
+  margin-bottom: 10px;
+  padding-bottom: 6px;
 }
-.expense-entry input[type="number"],
-.expense-entry input[type="date"] {
-  max-width: 140px;
+
+/* Category & Group Buttons */
+.category-option,
+.group-option {
+  display: inline-block;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  padding: 8px 12px;
+  font-size: 0.95em;
+  border-radius: 6px;
+  background-color: #eaeaea;
+  cursor: pointer;
+  border: 1px solid #ccc;
 }
+
+.category-option:hover,
+.group-option:hover {
+  background-color: #ddd;
+}
+
+.category-option.selected,
+.group-option.selected {
+  background-color: #28a745;
+  color: white;
+  border-color: #1e7e34;
+}
+
+/* Responsive Tweaks */
+@media (max-width: 480px) {
+  .overlay-content {
+    width: 95%;
+    padding: 16px;
+  }
+
+  button {
+    font-size: 0.95em;
+    padding: 8px 12px;
+  }
+
+  /* Keep expense entries on one line on mobile too */
+  .expense-entry {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .overlay-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
 
 
