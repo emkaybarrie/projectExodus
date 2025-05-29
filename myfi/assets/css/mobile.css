@@ -177,7 +177,7 @@
 }
 
 /* Small Phones (≤ 480px) */
-@media (max-width: 480px) {
+/* @media (max-width: 480px) {
   .dashboard {
     font-size: 14px;
   }
@@ -196,7 +196,7 @@
     font-size: 0.9rem;
     padding: 10px;
   }
-}
+} */
 
 /* Medium Devices (Tablets landscape) */
 @media (max-width: 1024px) and (min-width: 769px) {
