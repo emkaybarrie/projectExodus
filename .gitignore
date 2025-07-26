@@ -1,0 +1,29 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Firebase
+.firebase/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# OS junk
+*.swp
+*.swo
+
+# Env
+.env
+.env.*
