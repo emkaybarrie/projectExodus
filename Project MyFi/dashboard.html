@@ -16,18 +16,12 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- Main app logic -->
-    <script type="module" src="assets/js/dashboard.js"></script>
+    <script type="module" src="js/dashboard.js"></script>
 
 
 
     <!-- <link rel="stylesheet" href="assets/css/styles.css"> -->
-    <link rel="stylesheet" href="assets/css/base.css">
-    <link rel="stylesheet" href="assets/css/desktop.css">
-    <link rel="stylesheet" href="assets/css/mobile.css">
-    <link rel="stylesheet" href="assets/css/actionGrid.css">
-    <link rel="stylesheet" href="assets/css/modeToggle.css">
-    <link rel="stylesheet" href="assets/css/helpers.css">
-    <link rel="stylesheet" href="assets/css/hud.css">
+    <link rel="stylesheet" href="css/consolidated (legacy).css">
 </head>
 <body>
     <div class="dashboard">
@@ -172,14 +166,15 @@
                 <div class="sub-panel-container">
                     <div class="sub-panel" id="hud-upper">
                         <div class="section" id="hud-upper-top">
-                        <button id="manual-entry-btn" class="button">Manual Entry</button>
-                        <!-- Button to trigger the modal -->
-                        <button id="link-sheet-btn" class="button">🔗 Link</button>
-                        <button id="unlink-sheet-btn" class="button">❌ Unlink</button>
-                        <button id="refresh-link-sheet-btn" class="button">🔄 Refresh</button>
-                        <button id="modeToggle" class="mode-button">Daily</button>
+                            <button id="manual-entry-btn" class="button">Manual Entry</button>
+                            <!-- Button to trigger the modal -->
+                            <button id="link-sheet-btn" class="button">🔗 Link</button>
+                            <button id="unlink-sheet-btn" class="button">❌ Unlink</button>
+                            <button id="refresh-link-sheet-btn" class="button">🔄 Refresh</button>
+                            <button id="modeToggle" class="mode-button">Daily</button>
 
                         </div>
+
                         <div class="section" id="hud-upper-middle">
                         <div id="upper-hud-vitals"></div>
                         </div>
@@ -187,92 +182,89 @@
                         <div class="section" id="hud-upper-bottom">
                             <div class="sub-section">
                                 
- <div id="cashflow-buttons">
-  <button id="income-btn" class="button">Income</button>
-  <button id="expenses-btn" class="button">Expenses</button>
-  <button id="spending-btn" class="button">Spending</button>
-</div>
+                                <div id="cashflow-buttons">
+                                <button id="income-btn" class="button">Income</button>
+                                <button id="expenses-btn" class="button">Expenses</button>
+                                <button id="spending-btn" class="button">Spending</button>
+                                </div>
 
-<!-- Income Overlay -->
-<div class="overlay" id="income-overlay">
-  <div class="overlay-content">
-    <h3>Income</h3>
-    <input type="number" id="income-input" placeholder="Monthly Income" />
-    <div class="overlay-actions">
-      <button id="income-cancel-btn">Cancel</button>
-      <button id="income-confirm-btn">Confirm</button>
-    </div>
-  </div>
-</div>
+                                <!-- Income Overlay -->
+                                <div class="overlay" id="income-overlay">
+                                <div class="overlay-content">
+                                    <h3>Income</h3>
+                                    <input type="number" id="income-input" placeholder="Monthly Income" />
+                                    <div class="overlay-actions">
+                                    <button id="income-cancel-btn">Cancel</button>
+                                    <button id="income-confirm-btn">Confirm</button>
+                                    </div>
+                                </div>
+                                </div>
 
-<!-- Expenses Overlay -->
-<div class="overlay" id="expenses-overlay">
-  <div class="overlay-content">
-    <h3>Expenses</h3>
+                                <!-- Expenses Overlay -->
+                                <div class="overlay" id="expenses-overlay">
+                                <div class="overlay-content">
+                                    <h3>Expenses</h3>
 
-    <div>
-      <strong>Mandatory</strong>
-      <div id="mandatory-list"></div>
-      <button id="add-mandatory-btn">Add Mandatory</button>
-    </div>
+                                    <div>
+                                    <strong>Mandatory</strong>
+                                    <div id="mandatory-list"></div>
+                                    <button id="add-mandatory-btn">Add Mandatory</button>
+                                    </div>
 
-    <div>
-      <strong>Supplementary</strong>
-      <div id="supplementary-list"></div>
-      <button id="add-supplementary-btn">Add Supplementary</button>
-    </div>
+                                    <div>
+                                    <strong>Supplementary</strong>
+                                    <div id="supplementary-list"></div>
+                                    <button id="add-supplementary-btn">Add Supplementary</button>
+                                    </div>
 
-    <div class="overlay-actions">
-      <button id="close-expenses-btn">Cancel</button>
-      <button id="confirm-expenses-btn">Confirm</button>
-    </div>
-  </div>
-</div>
+                                    <div class="overlay-actions">
+                                    <button id="close-expenses-btn">Cancel</button>
+                                    <button id="confirm-expenses-btn">Confirm</button>
+                                    </div>
+                                </div>
+                                </div>
 
-<!-- Spending Overlay -->
-<div class="overlay" id="spending-overlay">
-  <div class="overlay-content">
-    <h3>Log Spending</h3>
+                                <!-- Spending Overlay -->
+                                <div class="overlay" id="spending-overlay">
+                                <div class="overlay-content">
+                                    <h3>Log Spending</h3>
 
-    <div>
-      <label>Category:</label><br />
-      <button class="category-option wants">Wants</button>
-      <button class="category-option needs">Needs</button>
-    </div>
+                                    <div>
+                                    <label>Category:</label><br />
+                                    <button class="category-option wants">Wants</button>
+                                    <button class="category-option needs">Needs</button>
+                                    </div>
 
-    <div>
-      <label>Group:</label><br />
-      <button class="group-option">Socialising</button>
-      <button class="group-option">Travel</button>
-    </div>
+                                    <div>
+                                    <label>Group:</label><br />
+                                    <button class="group-option">Socialising</button>
+                                    <button class="group-option">Travel</button>
+                                    </div>
 
-    <div>
-      <label>Amount:</label><br />
-      <input type="number" id="spend-amount" placeholder="0" min="0" />
-    </div>
+                                    <div>
+                                    <label>Amount:</label><br />
+                                    <input type="number" id="spend-amount" placeholder="0" min="0" />
+                                    </div>
 
-    <div class="overlay-actions">
-      <button id="cancel-spending-btn">Cancel</button>
-      <button id="confirm-spending-btn">Confirm</button>
-    </div>
-  </div>
-</div>
-
-
+                                    <div class="overlay-actions">
+                                    <button id="cancel-spending-btn">Cancel</button>
+                                    <button id="confirm-spending-btn">Confirm</button>
+                                    </div>
+                                </div>
+                                </div>
 
                             </div>
-                            <div class="sub-section">
-                            <div id="energy-summary" class="tooltip-target">
-                                <div id="discretionary-current-balance"></div>
-                                <div id="current-balance"></div>
-                            </div>
-                            </div>
-        
+
+                                <div class="sub-section">
+                                <div id="energy-summary" class="tooltip-target">
+                                    <div id="discretionary-current-balance"></div>
+                                    <div id="current-balance"></div>
+                                </div>
+                                </div>
                         </div>
         
-                    </div>
-                    <div class="sub-panel" id="hud-lower">
-                        <!-- Grid Area -->
+                        <!-- Test placing action grid in upper -->
+                          <!-- Grid Area -->
                         <div id="action-grid"></div>
 
                         <!-- Selection Menu Trigger Buttons -->
@@ -303,28 +295,24 @@
                             <div id="action-list"></div>
                             </div>
                         </div>
-                        </div>
+                    </div>
+
+                    <div class="sub-panel" id="hud-lower">
+      
+                    </div>
 
                 </div>
                 
              </div>
 
-            <!-- Metrics Section -->
+            <!-- Toolkit Section -->
             <div class="panel metrics coming-soon-hover" id="metrics">
-                <div class="metrics-hdr">Metrics</div>
+                <div class="metrics-hdr">Toolkit</div>
                 <div class="sub-panel-container">
                     <div class="sub-panel" id="metrics-upper" >
-                        <div id="chart-container">
-                            <canvas id="metricsChart"></canvas>
-                        </div>
-        
-                        <div id="chart-container">
-                            <canvas id="metricsChart2"></canvas>
-                        </div>
-        
+               
                     </div>
                     <div class="sub-panel" id="metrics-lower">
-                        <div id="glowing-box" class="glow-box"></div>
                         <div id="glowing-box" class="glow-box"></div>
         
                     </div>
@@ -429,7 +417,7 @@
 
     </script>
 
-    <script src="./assets/js/actionGrid2.js"></script>
+    <script src="./js/actionGrid2.js"></script>
 
 </body>
 </html>

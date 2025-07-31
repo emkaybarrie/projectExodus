@@ -50,21 +50,22 @@ export async function loginUser(email, password) {
 }
 
 // 🆕 Signup user
-export async function signUpUser(email, password, alias, firstName, lastName, startBalance) {
+//export async function signupUser(email, password, alias, firstName, lastName, startBalance) {
+export async function signupUser(data) {
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
         const user = userCredential.user;
         //console.log("User signed up:", user);
         const userDocRef = doc(db, "players", user.uid);
         const startDate = new Date();
         await setDoc(userDocRef, {
             startDate: startDate,
-            alias: alias || "No Alias",
-            email: email,
-            firstName: firstName || "",
-            lastName: lastName || "",
-            startBalance: startBalance || 0,
-            currentBalance: startBalance || 0,
+            alias: data.alias || "No Alias",
+            email: data.email,
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            startBalance: data.startBalance || 0,
+            currentBalance: data.startBalance || 0,
             financeSummary: {
                 income: 0,
                 expensesByCategory: generateInitialExpensesByCategory()

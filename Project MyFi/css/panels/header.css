@@ -1,0 +1,6 @@
+/* === Header Section Styling === */
+.hdr {
+  color: var(--primary-text-color);
+  text-align: center;
+  background: var(--header-background-colour);
+}

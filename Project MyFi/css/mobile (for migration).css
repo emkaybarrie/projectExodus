@@ -1,0 +1,70 @@
+@import 'base.css';
+
+@media (max-width: 768px) {
+
+
+  #profile-upper-top {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  }
+
+  #attribute-panel {
+  padding: 0.5rem;
+  background-color: #1e1e1e;
+  border-radius: 12px;
+  color: white;
+  text-align: center;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+}
+
+  #empower-level-container {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+#contributions-bar-container {
+  padding: 0.25rem;
+}
+
+#contributions-drain-btn {
+  max-width: 50%;
+  margin-bottom: 0.25rem;
+}
+
+  #profile-lower-top {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-items: flex-start;
+
+  
+}
+  #profile-lower-bottom{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+
+
+  .bar-background {
+    width: 100%;
+  }
+
+  .bar-inner-content {
+    font-size: 0.75rem;
+    padding: 0 6px;
+  }
+
+
+
+}
+
+
