@@ -1,5 +1,5 @@
 // api.js
-import { auth, db } from './auth.js';
+import { auth, db } from './core/auth.js';
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { loadTransactionData, loadDashboard } from './dashboard.js';
 import playerDataManager from './playerDataManager.js';

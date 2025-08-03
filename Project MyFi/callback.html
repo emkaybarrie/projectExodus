@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Linking...</title>
+</head>
+<body>
+  <script type="module">
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const uid = params.get('state');
+
+  if (code && uid) {
+    const body = JSON.stringify({ code, uid });
+    console.log("Posting to exchangeToken: ", { code, uid });
+
+    fetch("https://exchangetoken-frxqsvlhwq-nw.a.run.app", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Response from token exchange:", data);
+
+        // document.body.innerHTML = `
+        //     <p>Token exchange completed.</p>
+        //     <button id="continueBtn">Go to Dashboard</button>
+        // `;
+        // document.getElementById("continueBtn").addEventListener("click", () => {
+        //     window.location.href = "dashboard (new).html";
+        // });
+
+        if (data.success) {
+          window.location.href = "dashboard (new).html";
+        } else {
+          alert("Token exchange failed: " + JSON.stringify(data.details));
+        }
+      })
+      .catch(err => {
+        console.error("Error exchanging token:", err);
+        alert("Unexpected error occurred.");
+      });
+  } else {
+    console.error("Missing code or state in redirect URL.");
+  }
+</script>
+
+</body>
+</html>

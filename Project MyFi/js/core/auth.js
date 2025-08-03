@@ -1,7 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { categories, incomeCategory, subCategories } from './config.js';
+import { categories, incomeCategory, subCategories } from '../config.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
@@ -41,7 +41,7 @@ export async function loginUser(email, password) {
         const playerData = await getUserDataFromFirestore(user.uid);
         if (playerData) {
             localStorage.setItem("playerData", JSON.stringify(playerData));
-            window.location.href = "dashboard.html";  // Redirect after login
+            window.location.href = "dashboard (new).html";  // Redirect after login
         }
     } catch (error) {
         console.error("Login error:", error.message);

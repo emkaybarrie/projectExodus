@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MyFi Dashboard</title>
 
+   <!-- Main app logic -->
+    <script type="module" src="js/dashboard.js" defer></script>
+    <!-- <script src="js/auth.js" defer></script> -->
+    
+
   <!-- Style Sheets -->
     <!-- Global -->
     <link rel="stylesheet" href="css/global/base.css">
@@ -55,7 +60,7 @@
             <!-- Financial Vitals -->
               <div class="section" id="hud-upper-top">
                   <button id="manual-entry-btn" class="button">Manual Entry</button>
-                  <button id="refresh-link-sheet-btn" class="button">🔄 Refresh</button>
+                  <button id="refresh-link" class="button">🔄 Refresh</button>
                   <!-- Button to trigger the modal -->
                   <button id="link-sheet-btn" class="button">🔗 Link</button>
                   <button id="unlink-sheet-btn" class="button">❌ Unlink</button>
@@ -94,8 +99,7 @@
 
   </div><!-- /.dashboard -->
 
-  <script src="js/auth.js" defer></script>
-  <script src="js/dashboard.js" defer></script>
-  <script src="js/panels.js" defer></script>
+  
 </body>
 </html>
+
