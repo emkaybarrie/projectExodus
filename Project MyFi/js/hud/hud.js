@@ -2,6 +2,7 @@ import { initManualEntryButton} from "./modules/transactionsLogging.js";
 import { triggerTrueLayerFetch } from "../core/truelayer.js";
 import { loadTransactionsFromFirestore, processTransactions, loadClassifiedTransactionsFromFirestore} from "../core/firestore.js";
 import { auth } from "../core/auth.js";
+import { initVitalsHUD, updateVitalsPools } from "./modules/vitals.js";
 
 export async function initHUD() {
   // Initialize HUD components
@@ -30,7 +31,9 @@ export async function initHUD() {
   const classifiedTransactions = await loadClassifiedTransactionsFromFirestore(userId);
   console.log("Classified Transactions:", classifiedTransactions);
 
-  
+  updateVitalsPools(userId)
+
+  initVitalsHUD(userId)
 
   console.log("HUD initialized");
 }
