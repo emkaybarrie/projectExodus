@@ -41,7 +41,7 @@ export async function loginUser(email, password) {
         const playerData = await getUserDataFromFirestore(user.uid);
         if (playerData) {
             localStorage.setItem("playerData", JSON.stringify(playerData));
-            window.location.href = "dashboard (new).html";  // Redirect after login
+            window.location.href = "dashboard.html";  // Redirect after login
         }
     } catch (error) {
         console.error("Login error:", error.message);
