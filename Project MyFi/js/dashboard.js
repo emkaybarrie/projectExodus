@@ -33,8 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
        console.log(playerData)
 
-        initCarousel();
-        initTrueLayerLink();
+
         initHUD(user.uid);
         // loadDashboard(playerData);
 

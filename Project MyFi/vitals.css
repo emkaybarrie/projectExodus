@@ -30,11 +30,12 @@ h1 {
 }
 
 .portrait {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 110px;
   object-fit: cover;
   border: 2px solid #8b6d3d;
   border-radius: 4px;
+   flex-shrink: 0;        /* prevents shrinking if container gets tight */
 }
 
 .vitals-bars {
@@ -48,51 +49,88 @@ h1 {
 .bar {
   position: relative;
   height: 48px;
-  background: linear-gradient(to bottom, #2e2e2e, #1c1c1c);
   border: 2px solid #4a3a1e;
   border-radius: 6px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.3);
   overflow: hidden;
+  font-weight: bold;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 0 12px;
-  color: #f0e5c9;
-  font-weight: bold;
-  margin-top: 8px;
+  background-color: #1a1a1a; /* fallback in case fill doesn't show */
 }
 
 /* Fill values right-aligned */
-.bar .fill {
-  z-index: 2;
+.bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  z-index: 1;
+  border-radius: 6px 0 0 6px;
+  overflow: hidden;
+  transition: width 0.5s ease-in-out;
+}
+
+/* Optional: gradient fill background behind the text */
+.bar-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px 0 0 6px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.3);
 }
 
 /* Bar Labels left-aligned */
-.bar .label {
+.bar-label {
   z-index: 2;
+  position: relative;
+  flex-shrink: 0;
+  color: #f0e5c9;
+  font-size: 0.9rem;
 }
+
+/* Dynamic text overlay */
+.bar-value {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #f0e5c9;
+}
+
+
+
 
 /* === Resource-Specific Gradients === */
-.health {
+#vital-health .bar-fill::before {
   background: linear-gradient(to bottom, #7f1d1d, #400000);
-  color: #fdd;
 }
 
-.mana {
+#vital-mana .bar-fill::before {
   background: linear-gradient(to bottom, #164e63, #002244);
-  color: #cdf;
 }
 
-.stamina {
+#vital-stamina .bar-fill::before {
   background: linear-gradient(to bottom, #14532d, #003300);
-  color: #dfd;
 }
 
-.essence {
+#vital-essence .bar-fill::before {
   background: linear-gradient(to bottom, #6b21a8, #4b006e);
-  color: #fbeaff;
 }
 
+.health { color: #fdd; }
+.mana   { color: #cdf; }
+.stamina { color: #dfd; }
+.essence { color: #fbeaff; }
+
+#vital-stamina {
+  margin-top: 10px;
+}
 
 /* === Skills Row === */
 .skills-row {
@@ -162,3 +200,4 @@ h1 {
 .essence-bar {
   margin-top: 12px;
 }
+
