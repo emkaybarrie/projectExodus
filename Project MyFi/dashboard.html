@@ -1,423 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyFi Dashboard</title>
-
-    <!-- External libraries -->
-     <!-- <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.4/dist/dexie.min.js"></script> -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
-
-    <!-- Google APIs -->
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-    <!-- Main app logic -->
-    <script type="module" src="js/dashboard (legacy).js" defer></script>
-    
-
-
-    <!-- <link rel="stylesheet" href="assets/css/styles.css"> -->
-    <link rel="stylesheet" href="css/consolidated (legacy).css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vitals HUD</title>
+  <link rel="stylesheet" href="vitals.css" />
 </head>
 <body>
-    <div class="dashboard">
-        <!-- Header Section -->
-         <header class="hdr">
-            <div id="title">MyFi</div>
-            <div id="alias-banner"></div>
-            <button id="mode-toggle-btn" class="button">Toggle Mode</button>
-            <button id="logout-btn" class="button">Logout</button>
-        </header>
+  <div class="vitals-container">
+    <h1>VITALS</h1>
 
-        <div class="panel-container">
-            <!-- Profile Section -->
-             <div class="panel" id="profile">
-                <div class="profile-hdr">Profile</div>
-                <div class="sub-panel-container">
-                    <div class="sub-panel" id="profile-upper">
-                        <div class="section" id="profile-upper-top">
-                            <div class="sub-section" id="profile-upper-top-left">
-                                <div id="spending-persona">Rogue</div>
-                                <div id="profile-level">Lvl 1</div>
-                            </div>
-                            <div class="sub-section" id="profile-upper-top-center">
-                            <div id="profile-picture"></div>
-                            </div>
-                            
-                            <div class="sub-section" id="profile-upper-row-right">
-                         
-                                
-                                <div class="glow-box" id="profile-stats">
-                                    <div class="profile-stat"><span class="profile-stat-label">Charge:</span> <span id="power-level" class="profile-stat-value">0</span></div>
-                                    <div class="profile-stat"><span class="profile-stat-label">Power:</span> <span id="power-total" class="profile-stat-value">0</span></div>
-                                </div>
-                                
-                           
-                            </div>
-        
-                        </div>
-                        <div class="section  " id="profile-upper-bottom">
-                        <div class="sub-section" id="profile-upper-bottom-left">
-                            <div class="glow-box" id="attribute-panel">
-                                <div class="attribute-points">
-                                    🌀 Attribute Points: <span id="unspent-value">0</span>
-                                </div>
+    <div class="top-section">
+      <img src="portrait-placeholder.jpg" alt="Avatar Portrait" class="portrait" />
 
-                                <div class="attribute-row" data-attribute="resilience">
-                                    <span class="icon">🛡️</span>
-                                    <span class="label">Resilience</span>
-                                    <button class="decrement">-</button>
-                                    <span class="value" id="resilience-value">0</span>
-                                    <button class="increment">+</button>
-                                </div>
-
-                                <div class="attribute-row" data-attribute="focus">
-                                    <span class="icon">🎯</span>
-                                    <span class="label">Focus</span>
-                                    <button class="decrement">-</button>
-                                    <span class="value" id="focus-value">0</span>
-                                    <button class="increment">+</button>
-                                </div>
-
-                                <div class="attribute-row" data-attribute="adaptability">
-                                    <span class="icon">🔀</span>
-                                    <span class="label">Adaptability</span>
-                                    <button class="decrement">-</button>
-                                    <span class="value" id="adaptability-value">0</span>
-                                    <button class="increment">+</button>
-                                </div>
-
-                                <button id="save-attributes" class="button">Save</button>
-                                <button id="reset-attributes" class="button">Reset</button>
-                            </div>
-                        </div>
-                        <div class="sub-section tooltip-target coming-soon-hover" id="profile-upper-bottom-right">
-                        <div id="contributions-bar-container" class=" tooltip-target">
-                            <div id="empower-level-container">
-                                <div id="empower-level-1" class="empower-level empower-inactive"></div>
-                                <div id="empower-level-2" class="empower-level empower-inactive"></div>
-                                <div id="empower-level-3" class="empower-level empower-inactive"></div>
-                                <div id="empower-level-4" class="empower-level empower-inactive"></div>
-                                <div id="empower-level-5" class="empower-level empower-inactive"></div>
-                            </div>
-                            <div class="bar-wrapper">
-                                <div id="contributions-bar-label" class="bar-label">100%</div>
-                                <div class="bar-background">
-                                    <div id="contributions-bar" class="bar-fill purple-bar"></div>
-                                </div>
-                            </div>
-                            <button class="button" id="contributions-drain-btn" data-category="contributionsCategory">Empower Avatar</button>
-                        </div>
-                        </div>
-                        </div>
-                    </div>
-                    <div class="sub-panel" id="profile-lower">
-                        <div class="section" id="profile-lower-top">
-                             <div class="sub-section">
-                                <div class="glow-box" id="avatar-image"></div>
-                            </div>
-                            <div class="sub-section">
-                                <div class="glow-box" id="avatar-stats">
-                                    <div class="avatar-stat" data-stat="health">
-                                    <span class="stat-label">Health:</span>
-                                    <div class="stat-value stat-blocks"></div>
-                                    </div>
-                                    <div class="avatar-stat" data-stat="mana">
-                                    <span class="stat-label">Mana:</span>
-                                    <div class="stat-value stat-blocks"></div>
-                                    </div>
-                                    <div class="avatar-stat" data-stat="stamina">
-                                    <span class="stat-label">Stamina:</span>
-                                    <div class="stat-value stat-blocks"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-        
-                        <div class="section" id="profile-lower-middle">
-                            <div class="sub-section">
-                            <div class="glow-box" id="igc-stats">🪙 IGC Stats</div>
-                            </div>
-                            <div class="sub-section">
-                            <div class="glow-box" id="community-stats">🏘️ Community Stats</div>
-                            </div>
-                            <div class="sub-section">
-                            <div class="glow-box" id="badlands-stats">🗺️Badlands Stats</div>
-                            </div>
-                        </div>
-
-                        <div class="section" id="profile-lower-bottom">
-                                <button class="button tooltip-target coming-soon-hover" id="purchase-igc-btn">Purchase IGC</button>
-                                <button class="button" id="send-contribution-btn">Contribute</button>
-                                <div class="glow-box">
-                                    <button class="button-special tooltip-target coming-soon-hover" id="enter-badlands-btn">Enter the Badlands</button>
-                                </div>
-                        </div>
-                    </div>
-                </div>
-             </div>
-            <!-- HUD Section -->
-             <div class="panel hud" id="hud">
-                <div class="hud-hdr">HUD</div>
-                <div class="sub-panel-container">
-                    <div class="sub-panel" id="hud-upper">
-                        <div class="section" id="hud-upper-top">
-                            <button id="manual-entry-btn" class="button">Manual Entry</button>
-                            <!-- Button to trigger the modal -->
-                            <button id="link-sheet-btn" class="button">🔗 Link</button>
-                            <button id="unlink-sheet-btn" class="button">❌ Unlink</button>
-                            <button id="refresh-link-sheet-btn" class="button">🔄 Refresh</button>
-                            <button id="modeToggle" class="mode-button">Daily</button>
-
-                        </div>
-
-                        <div class="section" id="hud-upper-middle">
-                        <div id="upper-hud-vitals"></div>
-                        </div>
-        
-                        <div class="section" id="hud-upper-bottom">
-                            <div class="sub-section">
-                                
-                                <div id="cashflow-buttons">
-                                <button id="income-btn" class="button">Income</button>
-                                <button id="expenses-btn" class="button">Expenses</button>
-                                <button id="spending-btn" class="button">Spending</button>
-                                </div>
-
-                                <!-- Income Overlay -->
-                                <div class="overlay" id="income-overlay">
-                                <div class="overlay-content">
-                                    <h3>Income</h3>
-                                    <input type="number" id="income-input" placeholder="Monthly Income" />
-                                    <div class="overlay-actions">
-                                    <button id="income-cancel-btn">Cancel</button>
-                                    <button id="income-confirm-btn">Confirm</button>
-                                    </div>
-                                </div>
-                                </div>
-
-                                <!-- Expenses Overlay -->
-                                <div class="overlay" id="expenses-overlay">
-                                <div class="overlay-content">
-                                    <h3>Expenses</h3>
-
-                                    <div>
-                                    <strong>Mandatory</strong>
-                                    <div id="mandatory-list"></div>
-                                    <button id="add-mandatory-btn">Add Mandatory</button>
-                                    </div>
-
-                                    <div>
-                                    <strong>Supplementary</strong>
-                                    <div id="supplementary-list"></div>
-                                    <button id="add-supplementary-btn">Add Supplementary</button>
-                                    </div>
-
-                                    <div class="overlay-actions">
-                                    <button id="close-expenses-btn">Cancel</button>
-                                    <button id="confirm-expenses-btn">Confirm</button>
-                                    </div>
-                                </div>
-                                </div>
-
-                                <!-- Spending Overlay -->
-                                <div class="overlay" id="spending-overlay">
-                                <div class="overlay-content">
-                                    <h3>Log Spending</h3>
-
-                                    <div>
-                                    <label>Category:</label><br />
-                                    <button class="category-option wants">Wants</button>
-                                    <button class="category-option needs">Needs</button>
-                                    </div>
-
-                                    <div>
-                                    <label>Group:</label><br />
-                                    <button class="group-option">Socialising</button>
-                                    <button class="group-option">Travel</button>
-                                    </div>
-
-                                    <div>
-                                    <label>Amount:</label><br />
-                                    <input type="number" id="spend-amount" placeholder="0" min="0" />
-                                    </div>
-
-                                    <div class="overlay-actions">
-                                    <button id="cancel-spending-btn">Cancel</button>
-                                    <button id="confirm-spending-btn">Confirm</button>
-                                    </div>
-                                </div>
-                                </div>
-
-                            </div>
-
-                                <div class="sub-section">
-                                <div id="energy-summary" class="tooltip-target">
-                                    <div id="discretionary-current-balance"></div>
-                                    <div id="current-balance"></div>
-                                </div>
-                                </div>
-                        </div>
-        
-                        <!-- Test placing action grid in upper -->
-                          <!-- Grid Area -->
-                        <div id="action-grid"></div>
-
-                        <!-- Selection Menu Trigger Buttons -->
-                        <div class="section" id="hud-lower-top">
-                            <div class="category-buttons">
-                            <button class="open-action-menu" data-category="growth">+ Add Growth</button>
-                            </div>
-                        </div>
-                        <div class="section" id="hud-lower-middle">
-                            <div class="sub-section">
-                            <div class="category-buttons">
-                                <button class="open-action-menu" data-category="wants">+ Add Wants</button>
-                            </div>
-                            </div>
-                            <div class="sub-section">
-                            <div class="category-buttons">
-                                <button class="open-action-menu" data-category="needs">+ Add Needs</button>
-                            </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Selection Modal -->
-                        <div id="action-menu" class="hidden">
-                            <div class="menu-overlay"></div>
-                            <div class="menu-content">
-                            <button id="close-action-menu">X</button>
-                            <h3 id="action-menu-title">Select an Action</h3>
-                            <div id="action-list"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="sub-panel" id="hud-lower">
-      
-                    </div>
-
-                </div>
-                
-             </div>
-
-            <!-- Toolkit Section -->
-            <div class="panel metrics coming-soon-hover" id="metrics">
-                <div class="metrics-hdr">Toolkit</div>
-                <div class="sub-panel-container">
-                    <div class="sub-panel" id="metrics-upper" >
-               
-                    </div>
-                    <div class="sub-panel" id="metrics-lower">
-                        <div id="glowing-box" class="glow-box"></div>
-        
-                    </div>
-                </div>
-                
-            </div>
+      <div class="vitals-bars">
+        <div class="bar health">
+          <span class="label">Health</span>
+          <div class="fill">1450/1450</div>
         </div>
-
-    </div>
-
-    <!-- Payments Modal -->
-    <div id="payment-modal" class="modal hidden">
-        <div class="modal-content">
-          <button class="modal-close" id="close-payment-modal">&times;</button>
-
-          <h2>Enter Payment</h2>
-          <input type="number" id="amount" placeholder="Amount spent" />
-          
-          
-          <h2>Select Payment Method</h2>
-          <select id="paymentMethod">
-            <option value="" disabled selected>Select...</option>
-            <option value="monzo">Monzo</option>
-            <option value="paypal">PayPal (Coming Soon)</option>
-            <option value="bank">Bank Transfer (Coming Soon)</option>
-            <option value="crypto">Crypto (USDC) (Coming Soon)</option>
-          </select>
-
-          <div id="paymentDetails" style="margin-top: 20px;"></div>
-
-            <button class="button" id="submit-payment">Proceed</button>
-            <h2 id="qrHeader" style="display: none;"> OR</h2>
-            <div id="qrCode" style="margin-top: 20px"></div>
-
-            
-
-          
+        <div class="bar mana">
+          <span class="label">Mana</span>
+          <div class="fill">75/200</div>
         </div>
       </div>
-
-    
-
-
-    <!-- Google Sheets Link Modal -->
-    <div id="google-sheet-modal" class="modal hidden">
-        <div id="modal-content" class="modal-content">
-          <h2>Connect Your Google Sheets Account</h2>
-          <p>Link your account to easily fetch your financial data. If you don't have a Google Sheets account, use the link below (and earn £10!)</p>
-          <p> Once created, you will need to upgrade to at least Monzo Extra to enable auto-export to Google Sheets </p>
-          <div id="marketing-info">
-            <p>Sign up now on Monzo for exclusive benefits!</p>
-            <a class="button-link" href="https://join.monzo.com/c/hz3b53z" target="_blank">Sign up</a>
-          </div>
-      
-          <!-- Google Picker trigger -->
-          <button id="open-picker-btn" class="action-btn" disabled>
-            Choose Sheet via Google Picker
-          </button>
-      
-          <!-- Manual URL input -->
-          <div id="manual-link">
-            <label for="sheet-link">Or paste your Google Sheets link:</label>
-            <input type="text" id="sheet-link" placeholder="Paste your Google Sheets link here" />
-          </div>
-      
-          <!-- Action buttons -->
-          <div id="action-buttons">
-            <button id="cancel-btn" class="action-btn">Cancel</button>
-            <button id="confirm-btn" class="action-btn">Confirm</button>
-          </div>
-      
-          <!-- Proof that row 2 actually loaded -->
-          <h3>Preview of First Row:</h3>
-          <pre id="preview-row2">[not loaded]</pre>
-        </div>
     </div>
 
-    <!-- Google Picker Modal -->
-    <!-- Modal Overlay -->
-    <div id="picker-modal" style="display: none;">
-        <div class="picker-modal-content">
-        <button class="picker-close-button" id="close-picker-modal">&times;</button>
-        <div class="picker-instructions">
-            <h3>Select a Google Sheet</h3>
-            <p>Please choose the sheet that contains your transaction data.</p>
-            <p>It should be called something like <strong>"Monzo Transactions"</strong> </p>
-        </div>
-        <div id="picker-modal-body" class="picker-scrollable-list">
-            <!-- Sheet buttons will be injected here -->
-        </div>
-        </div>
+    <div class="bar stamina">
+      <span class="label">Stamina</span>
+      <div class="fill">107/150</div>
     </div>
-  
 
-    <script>
-        // Toggle Dark/Light Mode
-        document.getElementById('mode-toggle-btn').addEventListener('click', () => {
-            //document.body.classList.toggle('light-mode');
-            document.body.classList.toggle('debug-outline');
-        });
+    <div class="skills-row">
+      <div class="skill-slot">🔥</div>
+      <div class="skill-slot">💧</div>
+      <div class="skill-slot locked">🔒</div>
+      <div class="skill-slot">⚡</div>
+    </div>
 
+    <div class="update-log-box">
+      <div class="update-log">
+        <h2>UPDATE LOG</h2>
+        <ul>
+          <li><span class="health-damage">-15 Health</span> Subscription Fee</li>
+          <li><span class="mana-damage">-25 Mana</span> Dining Out</li>
+          <li><span class="stamina-damage">-30 Stamina</span> Loan Payment</li>
+        </ul>
+      </div>
+    </div>
 
-    </script>
+    <button class="tag-button">TAG TRANSACTION</button>
 
-    <script src="./js/actionGrid2.js"></script>
-
+    <div class="essence-bar bar essence">
+      <span class="label">Essence</span>
+      <div class="fill">5/5</div>
+    </div>
+  </div>
 </body>
 </html>

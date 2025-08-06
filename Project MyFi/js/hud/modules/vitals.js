@@ -48,7 +48,7 @@ export async function updateVitalsPools(uid) {
     for (const pool of ["health", "mana", "stamina"]) {
       const [regenCurrent, trend] = calculateRegen(regenBaseline[pool], usage7Day[pool]);
       pools[pool] = {
-        current: regenCurrent, // Init assumption — will sync actual later
+        current: regenCurrent * 0.25, // Init assumption — will sync actual later
         regenBaseline: Number(regenBaseline[pool].toFixed(2)),
         regenCurrent: Number(regenCurrent.toFixed(2)),
         max: Number(regenBaseline[pool].toFixed(2)),
@@ -93,9 +93,9 @@ export async function updateVitalsPools(uid) {
   }
 }
 
-export async function initVitalsHUD(uid) {
+export async function initVitalsHUD(uid, timeMultiplier = 60) {
   const db = getFirestore();
-  const ref = doc(db, `players/${uid}/cashflowState/current`);
+  const ref = doc(db, `players/${uid}/cashflowData/current`);
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
@@ -103,15 +103,20 @@ export async function initVitalsHUD(uid) {
     return;
   }
 
-  const { pools, lastSync } = snap.data();
-  const hud = document.getElementById("vitals-hud");
-
-  if (!hud || !pools) return;
-
-  const display = {
-    health: document.getElementById("pool-health"),
-    mana: document.getElementById("pool-mana"),
-    stamina: document.getElementById("pool-stamina")
+  const { pools } = snap.data();
+  const elements = {
+    health: {
+      fill: document.querySelector("#vital-health .bar-fill"),
+      label: document.querySelector("#vital-health .bar-label")
+    },
+    mana: {
+      fill: document.querySelector("#vital-mana .bar-fill"),
+      label: document.querySelector("#vital-mana .bar-label")
+    },
+    stamina: {
+      fill: document.querySelector("#vital-stamina .bar-fill"),
+      label: document.querySelector("#vital-stamina .bar-label")
+    }
   };
 
   const state = {
@@ -120,24 +125,42 @@ export async function initVitalsHUD(uid) {
     stamina: { ...pools.stamina }
   };
 
-  const regenRatePerSecond = {};
-  const regenIntervalMs = 1000; // Every second
+  const regenPerSec = {};
+  const frameRate = 1000; // 1 second update
+  const secondsPerDay = 86400;
+  const multiplier = timeMultiplier;
 
   for (const pool of ["health", "mana", "stamina"]) {
-    regenRatePerSecond[pool] = state[pool].regenCurrent / (24 * 60 * 60); // Regen over 24h
+    regenPerSec[pool] = (state[pool].regenCurrent * multiplier) / secondsPerDay;
   }
 
   function updateDisplay() {
     for (const pool of ["health", "mana", "stamina"]) {
-      state[pool].current = Math.min(
-        state[pool].current + regenRatePerSecond[pool],
-        state[pool].max
-      );
-
-      display[pool].innerText = `${pool.toUpperCase()}: ${state[pool].current.toFixed(2)} / ${state[pool].max}`;
+      state[pool].current = Math.min(state[pool].current + regenPerSec[pool], state[pool].max);
+      const pct = (state[pool].current / state[pool].max) * 100;
+      elements[pool].fill.style.width = `${pct}%`;
+      elements[pool].label.innerText = `${state[pool].current.toFixed(2)} / ${state[pool].max}`;
     }
   }
 
-  updateDisplay(); // Init
-  setInterval(updateDisplay, regenIntervalMs);
+  updateDisplay(); // Initial render
+  setInterval(updateDisplay, frameRate);
+}
+
+export async function loadVitalsToHUD(uid) {
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!snap.exists()) return;
+
+  const pools = snap.data().pools;
+
+  for (const [pool, values] of Object.entries(pools)) {
+    const bar = document.querySelector(`#vital-${pool} .bar-fill`);
+    const label = document.querySelector(`#vital-${pool} .bar-label`);
+    if (!bar || !label) continue;
+
+    const pct = Math.min((values.current / values.max) * 100, 100);
+    bar.style.width = `${pct}%`;
+    label.innerText = `${values.current.toFixed(1)} / ${values.max.toFixed(1)} • ${values.trend}`;
+  }
 }

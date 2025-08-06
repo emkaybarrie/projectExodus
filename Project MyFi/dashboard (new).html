@@ -57,7 +57,7 @@
         <div class="panel-header">HUD</div>
         <div class="sub-panel-container">
           <div class="sub-panel" id="panel-hud-upper">
-            <!-- Financial Vitals -->
+            
               <div class="section" id="hud-upper-top">
                   <button id="manual-entry-btn" class="button">Manual Entry</button>
                   <button id="refresh-link" class="button">🔄 Refresh</button>
@@ -67,13 +67,43 @@
                   <button id="modeToggle" class="mode-button">Daily</button>
 
               </div>
-
-              <div id="vitals-hud" style="padding: 1em; font-family: sans-serif;">
+              <!-- Financial Vitals -->
+              <div id="vitals-hud" style="
+                width: 300px;
+                background: #1e1e2f;
+                padding: 16px;
+                border-radius: 12px;
+                color: #fff;
+                font-family: sans-serif;
+              ">
                 <h3>Vitals</h3>
-                <div id="pool-health"></div>
-                <div id="pool-mana"></div>
-                <div id="pool-stamina"></div>
+
+                <div class="vital-bar" id="vital-health" style="margin-bottom: 12px;">
+                  <span style="display: block; margin-bottom: 4px; font-weight: bold;">❤️ Health</span>
+                  <div class="bar-bg" style="background: #333; width: 100%; height: 16px; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div class="bar-fill health" style="height: 100%; width: 0%; background: linear-gradient(to right, #ff4d4d, #ff9999); transition: width 1s ease-in-out;"></div>
+                  </div>
+                  <div class="bar-label" style="font-size: 12px; margin-top: 2px;"></div>
+                </div>
+
+                <div class="vital-bar" id="vital-mana" style="margin-bottom: 12px;">
+                  <span style="display: block; margin-bottom: 4px; font-weight: bold;">🔮 Mana</span>
+                  <div class="bar-bg" style="background: #333; width: 100%; height: 16px; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div class="bar-fill mana" style="height: 100%; width: 0%; background: linear-gradient(to right, #4d4dff, #9999ff); transition: width 1s ease-in-out;"></div>
+                  </div>
+                  <div class="bar-label" style="font-size: 12px; margin-top: 2px;"></div>
+                </div>
+
+                <div class="vital-bar" id="vital-stamina" style="margin-bottom: 12px;">
+                  <span style="display: block; margin-bottom: 4px; font-weight: bold;">🌿 Stamina</span>
+                  <div class="bar-bg" style="background: #333; width: 100%; height: 16px; border-radius: 10px; overflow: hidden; position: relative;">
+                    <div class="bar-fill stamina" style="height: 100%; width: 0%; background: linear-gradient(to right, #00cc66, #99ffcc); transition: width 1s ease-in-out;"></div>
+                  </div>
+                  <div class="bar-label" style="font-size: 12px; margin-top: 2px;"></div>
+                </div>
               </div>
+
+
 
 
               
