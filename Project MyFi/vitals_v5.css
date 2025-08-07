@@ -1,0 +1,277 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Crimson Pro', serif;
+  background-color: #0b0b18;
+  background-image: 
+    radial-gradient(circle at 30% 90%, #2a0c18, transparent 50%),
+    radial-gradient(circle at 70% 10%, #0c1440, transparent 60%),
+    url('./assets/img/stars-bg.png');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  color: #f0e6d2;
+}
+
+.vitals-container {
+  z-index: 1; /* ensures HUD appears above stars */
+  position: relative;
+  max-width: 480px;
+  margin: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  background-color: rgba(25, 25, 35, 0.5);
+  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 30px rgba(100, 120, 200, 0.15);
+}
+
+h1 {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  margin-bottom: 12px;
+  color: #f0e6d2;
+}
+
+h1, .bar-label, .tag-button, .update-log h2 {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+}
+
+.top-section {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.portrait {
+  width: 120px;
+  height: 110px;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.vitals-bars {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bar {
+  position: relative;
+  height: 48px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background-color: rgba(20, 20, 30, 0.4);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 8px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.05);
+}
+
+.bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  z-index: 1;
+  border-radius: 6px 0 0 6px;
+  overflow: hidden;
+  transition: width 0.5s ease-in-out;
+}
+
+.bar-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 6px 0 0 6px;
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.6),
+    0 0 6px rgba(255, 255, 255, 0.1),
+    inset 0 0 6px rgba(255, 255, 255, 0.05);
+}
+
+.bar-label {
+  z-index: 2;
+  position: relative;
+  flex-shrink: 0;
+  color: #f0e5c9;
+  font-size: 0.9rem;
+}
+
+.bar-value {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  color: #f0e5c9;
+}
+
+#vital-health .bar-fill::before {
+  background: linear-gradient(to bottom, #7f1d1d, #400000);
+}
+#vital-mana .bar-fill::before {
+  background: linear-gradient(to bottom, #164e63, #002244);
+}
+#vital-stamina .bar-fill::before {
+  background: linear-gradient(to bottom, #14532d, #003300);
+}
+#vital-essence .bar-fill::before {
+  background: linear-gradient(to bottom, #6b21a8, #4b006e);
+  box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155, 93, 229, 0.4);
+}
+
+#vital-stamina {
+  margin-top: 10px;
+}
+
+.skills-row {
+  margin: 16px 0;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  background-color: rgba(10, 10, 20, 0.6);
+  border-radius: 8px;
+  backdrop-filter: blur(2px);
+  padding: 6px;
+}
+
+.skill-slot {
+  width: 60px;
+  height: 60px;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background-color: rgba(30, 30, 40, 0.6);
+  border-radius: 6px;
+}
+
+.locked {
+  opacity: 0.3;
+}
+
+.update-log-box {
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 8px;
+  background-color: rgba(20, 20, 30, 0.3);
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.05);
+}
+
+.update-log h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+  text-align: center;
+  color: #f0e6d2;
+}
+
+.update-log ul {
+  list-style: none;
+  padding: 0;
+  font-size: 1rem;
+}
+
+.update-log li {
+  margin-bottom: 4px;
+}
+
+.health-damage { color: #e55; margin-right: 10px; }
+.mana-damage { color: #5bf; margin-right: 10px; }
+.stamina-damage { color: #fc6; margin-right: 10px; }
+
+.tag-button {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  font-size: 1.2rem;
+  font-family: 'Cinzel', serif;
+  background-color: rgba(40, 40, 60, 0.6);
+  color: #f0dca4;
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+
+/* SEE V3 code below for alternative tag button */
+
+/* .tag-button {
+  margin-top: 16px;
+  margin-bottom: 16px;
+  padding: 12px;
+  font-size: 1.2rem;
+  background: linear-gradient(to bottom, #25324a, #1a2336);
+  border: 1px solid #50678c;
+  box-shadow: 0 0 8px rgba(80, 100, 160, 0.4);
+  border-radius: 8px;
+  text-shadow: 0 1px 1px #000;
+  cursor: pointer;
+  color: #f0e6d2;
+} */
+
+.essence-bar {
+  margin-top: 12px;
+}
+
+/* === Animated Starfield Overlay === */
+.starfield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    radial-gradient(2px 2px at 20% 40%, #ffffff66 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 60%, #ffffff88 0%, transparent 100%),
+    radial-gradient(1px 1px at 90% 20%, #ffffff55 0%, transparent 100%),
+    radial-gradient(2px 2px at 40% 80%, #ffffff77 0%, transparent 100%);
+  background-repeat: no-repeat;
+  animation: starTwinkle 6s infinite ease-in-out alternate;
+  opacity: 0.6;
+}
+
+@keyframes starTwinkle {
+  0% {
+    opacity: 0.4;
+    transform: scale(1);
+    filter: blur(0.2px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.01);
+    filter: blur(0.6px);
+  }
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+    filter: blur(0.2px);
+  }
+}
+

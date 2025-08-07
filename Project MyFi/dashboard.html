@@ -6,9 +6,14 @@
   <title>Vitals HUD</title>
   <!-- Main app logic -->
     <script type="module" src="js/dashboard.js" defer></script>
-  <link rel="stylesheet" href="vitals.css" />
+  <!-- Style Sheets -->
+  <link rel="stylesheet" href="vitals_v5.css" />
+  <!-- Add in <head> -->
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+
 </head>
 <body>
+  <div class="starfield"></div>
   <div class="vitals-container">
     <h1>VITALS</h1>
 
@@ -65,12 +70,13 @@
 <div id="vital-essence">
   <div class="bar essence">
     <span class="bar-label">Essence</span>
-    <div class="bar-fill" style="width: 0%;">
-      <span class="bar-value">0 / 0</span>
-    </div>
+    <div class="bar-fill" style="width: 0%;"></div>
+    <span class="bar-value">0 / 0</span>
   </div>
 </div>
 
   </div>
+
+  
 </body>
 </html>

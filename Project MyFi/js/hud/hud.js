@@ -33,7 +33,7 @@ export async function initHUD() {
 
   loadVitalsToHUD(userId)
 
-  initVitalsHUD(userId,500)
+  //initVitalsHUD(userId,500)
 
   console.log("HUD initialized");
 }
