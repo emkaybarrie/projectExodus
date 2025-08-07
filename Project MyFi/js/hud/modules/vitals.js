@@ -42,6 +42,14 @@ export async function updateVitalsPools(uid) {
       usage7Day.stamina = recentUsage?.stamina || 0;
       usage7Day.essence = recentUsage?.essence || 0;
     }
+    const usageAllTime = { health: 0, mana: 0, stamina: 0 , essence: 0 };
+    if (txnsSnap.exists()) {
+      const { historicUsage } = txnsSnap.data();
+      usageAllTime.health = historicUsage?.health || 0;
+      usageAllTime.mana = historicUsage?.mana || 0;
+      usageAllTime.stamina = historicUsage?.stamina || 0;
+      usageAllTime.essence = historicUsage?.essence || 0;
+    }
 
     // Trend & Regen Adjustments
     const calculateRegen = (baseline, usage) => {
@@ -59,7 +67,8 @@ export async function updateVitalsPools(uid) {
         regenCurrent: Number(regenCurrent.toFixed(2)),
         max: Number(regenBaseline[pool].toFixed(2)),
         usage7Day: Number(usage7Day[pool].toFixed(2)),
-        trend
+        trend,
+        spentToDate: Number(usageAllTime[pool].toFixed(2)),
       };
     }
 
@@ -109,13 +118,26 @@ export async function loadVitalsToHUD(uid) {
   console.log("Loaded Vitals Pools:", pools);
   const elements = getVitalsElements();
 
+  const vitalsStartDate = new Date("2025-08-01T00:00:00Z"); // hardcoded tracking start
+  const now = new Date();
+  const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
+  console.log("Days tracked since start:", daysTracked);
+
   for (const [pool, values] of Object.entries(pools)) {
     const el = elements[pool];
     if (!el) continue;
 
-    const pct = Math.min((values.current / values.max) * 100, 100);
+    const regen = values.regenCurrent ?? 0;
+    const spent = values.spentToDate ?? 0;
+    const max = values.regenBaseline ?? 0;
+
+    // NOTE: daily max system → pools can't exceed `max` (baseline)
+    const potentialCurrent = (regen * daysTracked) - spent;
+    const current = Math.max(0, Math.min(potentialCurrent, max));
+
+    const pct = Math.min((current / max) * 100, 100);
     el.fill.style.width = `${pct}%`;
-    el.value.innerText = `${values.current.toFixed(0) * 100} / ${values.max.toFixed(0) * 100}${values.trend ? ` • ${values.trend}` : ''}`;
+    el.value.innerText = `${current.toFixed(2)} / ${max.toFixed(2)}${values.trend ? ` • ${values.trend}` : ''}`;
   }
 }
 
@@ -129,9 +151,14 @@ export async function initVitalsHUD(uid, timeMultiplier = 60) {
     return;
   }
 
+  const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+  const now = new Date();
+  const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
+
   const pools = snap.data().pools;
   console.log("Initializing Vitals HUD with pools:", pools);
   const elements = getVitalsElements();
+  
   const state = {};
   const regenPerSec = {};
   const multiplier = timeMultiplier;
@@ -139,19 +166,32 @@ export async function initVitalsHUD(uid, timeMultiplier = 60) {
 
   for (const pool of Object.keys(elements)) {
     if (!pools[pool]) continue;
-    state[pool] = { ...pools[pool] };
-    regenPerSec[pool] = (pools[pool].regenCurrent * multiplier) / secondsPerDay;
+    const values = pools[pool];
+    const regen = values.regenCurrent ?? 0;
+    const spent = values.spentToDate ?? 0;
+    const max = values.regenBaseline ?? 0;
+
+    const baseCurrent = (regen * daysTracked) - spent;
+    const current = Math.max(0, Math.min(baseCurrent, max));
+
+     state[pool] = {
+      current,
+      max,
+      regenPerSec: (regen * multiplier) / secondsPerDay,
+    };
   }
 
   function updateDisplay() {
     for (const pool of Object.keys(elements)) {
       const el = elements[pool];
-      if (!el || !state[pool]) continue;
+      const data = state[pool];
+      if (!el || !data) continue;
 
-      state[pool].current = Math.min(state[pool].current + regenPerSec[pool], state[pool].max);
-      const pct = (state[pool].current / state[pool].max) * 100;
+      data.current = Math.min(data.current + data.regenPerSec, data.max);
+      const pct = (data.current / data.max) * 100;
+
       el.fill.style.width = `${pct}%`;
-      el.value.innerText = `${state[pool].current.toFixed(0)} / ${state[pool].max.toFixed(0)}`;
+      el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
     }
   }
 
