@@ -45,7 +45,7 @@ export async function updateVitalsPools(uid) {
 
     // Calculate trend-based regen
     const calculateRegen = (baseline, usage) => {
-      if (usage > baseline * 1.1) return [baseline * 0.95, "overspending"];
+      if (usage > baseline * 1.15) return [baseline * 0.95, "overspending"];
       if (usage < baseline * 0.8) return [baseline * 1.05, "underspending"];
       return [baseline, "on target"];
     };
