@@ -139,6 +139,7 @@ h1, .bar-label, .tag-button, .update-log h2 {
   height: 110px;
   object-fit: cover;
   border: 2px solid rgba(255, 255, 255, 0.1);
+  object-position: center 15%; /* horizontal center, vertical shifted down */
   border-radius: 4px;
   flex-shrink: 0;
 }

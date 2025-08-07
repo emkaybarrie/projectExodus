@@ -1,3 +1,4 @@
+
 import { triggerTrueLayerFetch } from "../core/truelayer.js";
 import { loadTransactionsFromFirestore, processTransactions, loadClassifiedTransactionsFromFirestore} from "../core/firestore.js";
 import { auth } from "../core/auth.js";
@@ -31,7 +32,7 @@ export async function initHUD() {
   //console.log("Classified Transactions:", classifiedTransactions);
 
   
-  updateVitalsPools(userId);
+  await updateVitalsPools(userId);
   //loadVitalsToHUD(userId)
   initVitalsHUD(userId, 60)
 
