@@ -1,6 +1,6 @@
 {
   "name": "Project MyFi",
-  "short_name": "MyFi",
+  "short_name": "Project MyFi",
   "start_url": "./dashboard.html",
   "display": "standalone",
   "background_color": "#0b0b18",
