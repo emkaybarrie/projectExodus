@@ -8,6 +8,7 @@
     <script type="module" src="js/dashboard.js" defer></script>
   <!-- Style Sheets -->
   <link rel="stylesheet" href="vitals_v8.css" />
+  <link rel="stylesheet" href="pwa.css" />
   <!-- Add in <head> -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
   <!-- PWA Module -->
@@ -17,11 +18,14 @@
 <body>
   
   
-  <div id="installBanner" class="install-banner" style="display: none;">
-      <span>📲 Install this app for a better experience</span>
-      <button id="installBtn">Install</button>
-      <button id="dismissInstall" class="dismiss-btn">✖</button>
-    </div>
+<div id="installBanner" class="install-banner" style="display: none;">
+  <span>📲 Install MyFi</span>
+  <div class="buttons">
+    <button id="installBtn">Install</button>
+    <button id="dismissInstall" class="dismiss-btn" title="Dismiss">✖</button>
+  </div>
+</div>
+
 
   <div class="vitals-container">
     

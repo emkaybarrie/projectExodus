@@ -64,8 +64,6 @@ export async function signupUser(data) {
             email: data.email,
             firstName: data.firstName || "",
             lastName: data.lastName || "",
-            startBalance: data.startBalance || 0,
-            currentBalance: data.startBalance || 0,
             financeSummary: {
                 income: 0,
                 expensesByCategory: generateInitialExpensesByCategory()
