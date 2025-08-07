@@ -30,15 +30,17 @@ document.addEventListener("DOMContentLoaded", () => {
        console.log(playerData)
 
        const portraitImage = document.querySelector(".portrait");
-       let portraitKey = playerData.portraitKey || "";
+       let portraitKey = playerData.portraitKey || "default";
 
        if (playerData.firstName = "Emkay") {
         portraitKey = 'avatarEmkay';
        } else if (playerData.firstName = "Alie") {
         portraitKey = 'avatarAlie';
        } else if (playerData.firstName = "Mohammed") {  
-        portraitKey = 'avatarSammi';
-       } else {
+        portraitKey = 'avatarMohammed';
+       } else if (playerData.firstName = "Mohammed") {  
+        portraitKey = 'avatarMohammed';
+       }else {
         // Fallback to default portrait if no specific one is set 
         portraitKey = 'default';
        }
