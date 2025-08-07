@@ -65,6 +65,33 @@ export async function signupUser(data) {
             lastName: data.lastName || "",
         });
 
+        await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
+        dCoreExpenses: Number(10),
+        dIncome: Number(100)
+        });
+
+        await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
+        essenceAllocation: Number(0.1),
+        healthAllocation: Number(0.1),
+        manaAllocation: Number(0.3),
+        staminaAllocation: Number(0.5),
+        });
+
+        await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
+        recentUsage: { 
+            essence: Number(5),
+            health: Number(10),
+            mana: Number(23),
+            stamina: Number(87), 
+        },
+        historicUsage: { 
+            essence: Number(52),
+            health: Number(45),
+            mana: Number(153),
+            stamina: Number(237), 
+        },
+        });
+
         window.location.href = "dashboard.html"; // Redirect after signup
     } catch (error) {
         console.error("Signup error:", error.message);

@@ -80,7 +80,7 @@ export async function updateVitalsPools(uid) {
 
     if (mismatch && autoProtectEnabled) {
       for (const pool of Object.keys(pools)) {
-        pools[pool].regenCurrent = Number((pools[pool].regenCurrent * 0.75).toFixed(2));
+        //pools[pool].regenCurrent = Number((pools[pool].regenCurrent * 0.75).toFixed(2));
       }
     }
 

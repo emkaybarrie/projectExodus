@@ -32,18 +32,20 @@ document.addEventListener("DOMContentLoaded", () => {
        const portraitImage = document.querySelector(".portrait");
        let portraitKey = playerData.portraitKey || "default";
 
-       if (playerData.firstName = "Emkay") {
+       if (playerData.firstName == "Emkay") {
         portraitKey = 'avatarEmkay';
-       } else if (playerData.firstName = "Alie") {
+       } else if (playerData.firstName == "Alie") {
         portraitKey = 'avatarAlie';
-       } else if (playerData.firstName = "Mohammed") {  
+       } else if (playerData.firstName == "Mohammed") {  
         portraitKey = 'avatarMohammed';
-       } else if (playerData.firstName = "Jane") {  
+       } else if (playerData.firstName == "Jane") {  
         portraitKey = 'avatarJane';
        }else {
         // Fallback to default portrait if no specific one is set 
         portraitKey = 'default';
        }
+
+       console.log("Using portrait key:", portraitKey);
         portraitImage.src = `./assets/portraits/${portraitKey}.png`;
 
 
