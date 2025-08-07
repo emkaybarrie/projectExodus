@@ -29,11 +29,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
        console.log(playerData)
 
+       const portraitImage = document.querySelector(".portrait");
+       let portraitKey = playerData.portraitKey || "";
+
+       if (playerData.firstName = "Emkay") {
+        portraitKey = 'avatarEmkay';
+       } else if (playerData.firstName = "Alie") {
+        portraitKey = 'avatarAlie';
+       } else if (playerData.firstName = "Mohammed") {  
+        portraitKey = 'avatarSammi';
+       } else {
+        // Fallback to default portrait if no specific one is set 
+        portraitKey = 'default';
+       }
+        portraitImage.src = `./assets/portraits/${portraitKey}.png`;
+
+
 
         initHUD(user.uid);
         // loadDashboard(playerData);
 
-        
+        document.getElementById("essence-btn").addEventListener("click", () => {
+          alert("Essence interaction coming soon...");
+        });
+
+        document.getElementById("settings-btn").addEventListener("click", () => {
+          alert("Settings placeholder");
+        });
+
+        document.getElementById("refresh-btn").addEventListener("click", () => {
+          location.reload(); // Simple full page refresh
+        });
        
        
     }

@@ -44,6 +44,7 @@ function createDefaultPlayer(id) {
       available: [],
       configVersion: "grid"
     },
+    portraitKey: "default",
   };
 }
 
