@@ -34,7 +34,7 @@ export async function initHUD() {
   
   updateVitalsPools(userId);
   //loadVitalsToHUD(userId)
-  initVitalsHUD(userId, 1)
+  initVitalsHUD(userId, 60)
 
   console.log("HUD initialized");
 }

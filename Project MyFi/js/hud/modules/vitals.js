@@ -225,21 +225,27 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   }
 
   // Smooth animation update loop
-  function animateBars() {
+
+  let lastTimestamp = null;
+
+  function animateBars(timestamp) {
+    if (lastTimestamp === null) lastTimestamp = timestamp;
+    const deltaSeconds = (timestamp - lastTimestamp) / 1000;
+    lastTimestamp = timestamp;
+
     for (const pool of Object.keys(state)) {
       const el = elements[pool];
       const data = state[pool];
       if (!el || !data) continue;
 
-      // Regen calculation
-      data.current = Math.min(data.current + regenPerSec[pool], data.max);
+      // Accurate regen per delta time
+      data.current = Math.min(data.current + regenPerSec[pool] * deltaSeconds, data.max);
       const newTargetPct = (data.current / data.max) * 100;
       targetPct[pool] = newTargetPct;
 
-      // Smooth approach to targetPct
+      // Smooth bar fill animation
       displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
 
-      // Update DOM
       el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
       el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
     }
@@ -247,7 +253,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     requestAnimationFrame(animateBars);
   }
 
-  animateBars(); // start loop
+  requestAnimationFrame(animateBars);
 }
 
 
