@@ -1,10 +1,6 @@
 import { auth, db, logoutUser } from './core/auth.js';
 import { getDoc, doc, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import playerDataManager from "./playerDataManager.js";
-
-import { initTrueLayerLink } from './core/truelayer.js';
-
-import { initCarousel } from "./core/carousel.js";
 import { initHUD } from "./hud/hud.js";
 
 // Initialise app

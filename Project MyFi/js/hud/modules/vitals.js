@@ -6,86 +6,6 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// ✅ Updated helper for new DOM structure
-function getVitalsElements() {
-  const pools = ["health", "mana", "stamina", "essence"];
-  const elements = {};
-
-  for (const pool of pools) {
-    const barFill = document.querySelector(`#vital-${pool} .bar-fill`);
-    const barValue = document.querySelector(`#vital-${pool} .bar-value`);
-    const label = document.querySelector(`#vital-${pool} .bar-label`);
-    if (barFill && barValue && label) {
-      elements[pool] = {
-        fill: barFill,
-        value: barValue,
-        label: label
-      };
-    }
-  }
-
-  return elements;
-}
-
-// 🟢 One-time loader (for immediate population)
-export async function loadVitalsToHUD(uid) {
-  const db = getFirestore();
-  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
-  if (!snap.exists()) return;
-
-  const pools = snap.data().pools;
-  console.log("Loaded Vitals Pools:", pools);
-  const elements = getVitalsElements();
-
-  for (const [pool, values] of Object.entries(pools)) {
-    const el = elements[pool];
-    if (!el) continue;
-
-    const pct = Math.min((values.current / values.max) * 100, 100);
-    el.fill.style.width = `${pct}%`;
-    el.value.innerText = `${values.current.toFixed(1)} / ${values.max.toFixed(1)}${values.trend ? ` • ${values.trend}` : ''}`;
-  }
-}
-
-// 🌀 Optional: Animated Regen Mode
-export async function initVitalsHUD(uid, timeMultiplier = 60) {
-  const db = getFirestore();
-  const ref = doc(db, `players/${uid}/cashflowData/current`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    console.warn("No vitals data found.");
-    return;
-  }
-
-  const pools = snap.data().pools;
-  const elements = getVitalsElements();
-  const state = {};
-  const regenPerSec = {};
-  const multiplier = timeMultiplier;
-  const secondsPerDay = 86400;
-
-  for (const pool of Object.keys(elements)) {
-    if (!pools[pool]) continue;
-    state[pool] = { ...pools[pool] };
-    regenPerSec[pool] = (pools[pool].regenCurrent * multiplier) / secondsPerDay;
-  }
-
-  function updateDisplay() {
-    for (const pool of Object.keys(elements)) {
-      const el = elements[pool];
-      if (!el || !state[pool]) continue;
-
-      state[pool].current = Math.min(state[pool].current + regenPerSec[pool], state[pool].max);
-      const pct = (state[pool].current / state[pool].max) * 100;
-      el.fill.style.width = `${pct}%`;
-      el.value.innerText = `${state[pool].current.toFixed(2)} / ${state[pool].max}`;
-    }
-  }
-
-  updateDisplay();
-  setInterval(updateDisplay, 1000);
-}
-
 export async function updateVitalsPools(uid) {
   const db = getFirestore();
 
@@ -99,27 +19,28 @@ export async function updateVitalsPools(uid) {
       return;
     }
 
-    const { dIncome, dCoreExpenses, dContributionsTarget } = dailyAverages.data();
-    const { healthAllocation, manaAllocation, staminaAllocation } = poolAllocations.data();
+    const { dIncome, dCoreExpenses } = dailyAverages.data();
+    const { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation } = poolAllocations.data();
     const autoProtectEnabled = true;
-    const daysInMonth = 30;
-    const dailyDisposable = (dIncome - dCoreExpenses - dContributionsTarget) // / daysInMonth;
+    const dailyDisposable = (dIncome - dCoreExpenses)
 
     // Calculate regenBaseline
     const regenBaseline = {
       health: dailyDisposable * healthAllocation, //poolSplit.health,
       mana: dailyDisposable * manaAllocation,//poolSplit.mana,
-      stamina: dailyDisposable * staminaAllocation//poolSplit.stamina
+      stamina: dailyDisposable * staminaAllocation,//poolSplit.stamina
+      essence: dailyDisposable * essenceAllocation//poolSplit.stamina
     };
 
     // Load classifiedTransactions (assumes collection of docs)
     const txnsSnap = await getDoc(doc(db, `players/${uid}/classifiedTransactions/summary`));
-    const usage7Day = { health: 0, mana: 0, stamina: 0 };
+    const usage7Day = { health: 0, mana: 0, stamina: 0 , essence: 0 };
     if (txnsSnap.exists()) {
       const { recentUsage } = txnsSnap.data();
       usage7Day.health = recentUsage?.health || 0;
       usage7Day.mana = recentUsage?.mana || 0;
       usage7Day.stamina = recentUsage?.stamina || 0;
+      usage7Day.essence = recentUsage?.essence || 0;
     }
 
     // Trend & Regen Adjustments
@@ -130,7 +51,7 @@ export async function updateVitalsPools(uid) {
     };
 
     const pools = {};
-    for (const pool of ["health", "mana", "stamina"]) {
+    for (const pool of ["health", "mana", "stamina", "essence"]) {
       const [regenCurrent, trend] = calculateRegen(regenBaseline[pool], usage7Day[pool]);
       pools[pool] = {
         current: regenCurrent, // Init assumption — will sync actual later
@@ -154,8 +75,8 @@ export async function updateVitalsPools(uid) {
       }
     }
 
-    console.log("→ Daily Averages", { dIncome, dCoreExpenses, dContributionsTarget });
-    console.log("→ Pool Allocations", { healthAllocation, manaAllocation, staminaAllocation });
+    console.log("→ Daily Averages", { dIncome, dCoreExpenses });
+    console.log("→ Pool Allocations", { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation });
     console.log("→ Regen Baseline", regenBaseline);
     console.log("→ Usage (last 7d)", usage7Day);
     console.log("→ Calculated Pools", pools);
@@ -177,3 +98,86 @@ export async function updateVitalsPools(uid) {
     console.error("Failed to update vitals pools:", err);
   }
 }
+
+// 🟢 One-time loader (for immediate population)
+export async function loadVitalsToHUD(uid) {
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!snap.exists()) return;
+
+  const pools = snap.data().pools;
+  console.log("Loaded Vitals Pools:", pools);
+  const elements = getVitalsElements();
+
+  for (const [pool, values] of Object.entries(pools)) {
+    const el = elements[pool];
+    if (!el) continue;
+
+    const pct = Math.min((values.current / values.max) * 100, 100);
+    el.fill.style.width = `${pct}%`;
+    el.value.innerText = `${values.current.toFixed(0) * 100} / ${values.max.toFixed(0) * 100}${values.trend ? ` • ${values.trend}` : ''}`;
+  }
+}
+
+// 🌀 Optional: Animated Regen Mode
+export async function initVitalsHUD(uid, timeMultiplier = 60) {
+  const db = getFirestore();
+  const ref = doc(db, `players/${uid}/cashflowData/current`);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    console.warn("No vitals data found.");
+    return;
+  }
+
+  const pools = snap.data().pools;
+  console.log("Initializing Vitals HUD with pools:", pools);
+  const elements = getVitalsElements();
+  const state = {};
+  const regenPerSec = {};
+  const multiplier = timeMultiplier;
+  const secondsPerDay = 86400;
+
+  for (const pool of Object.keys(elements)) {
+    if (!pools[pool]) continue;
+    state[pool] = { ...pools[pool] };
+    regenPerSec[pool] = (pools[pool].regenCurrent * multiplier) / secondsPerDay;
+  }
+
+  function updateDisplay() {
+    for (const pool of Object.keys(elements)) {
+      const el = elements[pool];
+      if (!el || !state[pool]) continue;
+
+      state[pool].current = Math.min(state[pool].current + regenPerSec[pool], state[pool].max);
+      const pct = (state[pool].current / state[pool].max) * 100;
+      el.fill.style.width = `${pct}%`;
+      el.value.innerText = `${state[pool].current.toFixed(0)} / ${state[pool].max.toFixed(0)}`;
+    }
+  }
+
+  updateDisplay();
+  setInterval(updateDisplay, 1000);
+}
+
+// ✅ Updated helper for new DOM structure
+function getVitalsElements() {
+  const pools = ["health", "mana", "stamina", "essence"];
+  const elements = {};
+
+  for (const pool of pools) {
+    const barFill = document.querySelector(`#vital-${pool} .bar-fill`);
+    const barValue = document.querySelector(`#vital-${pool} .bar-value`);
+    const label = document.querySelector(`#vital-${pool} .bar-label`);
+    if (barFill && barValue && label) {
+      elements[pool] = {
+        fill: barFill,
+        value: barValue,
+        label: label
+      };
+    }
+  }
+
+  return elements;
+}
+
+

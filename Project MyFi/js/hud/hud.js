@@ -2,7 +2,7 @@ import { initManualEntryButton} from "./modules/transactionsLogging.js";
 import { triggerTrueLayerFetch } from "../core/truelayer.js";
 import { loadTransactionsFromFirestore, processTransactions, loadClassifiedTransactionsFromFirestore} from "../core/firestore.js";
 import { auth } from "../core/auth.js";
-import { initVitalsHUD, loadVitalsToHUD } from "./modules/vitals.js";
+import { updateVitalsPools, initVitalsHUD, loadVitalsToHUD } from "./modules/vitals.js";
 
 export async function initHUD() {
   // Initialize HUD components
@@ -23,17 +23,18 @@ export async function initHUD() {
   const userId = auth.currentUser.uid;
 
   // Test for Truelayer Raw Data fetch and prcoessing
-  const transactions = await loadTransactionsFromFirestore(userId);
-  const processedTransactions = processTransactions(transactions);
-  console.log("Processed Truelayer Transactions:", processedTransactions)
+  //const transactions = await loadTransactionsFromFirestore(userId);
+  //const processedTransactions = processTransactions(transactions);
+  //console.log("Processed Truelayer Transactions:", processedTransactions)
   
   // Test for classified transactions fetch 
-  const classifiedTransactions = await loadClassifiedTransactionsFromFirestore(userId);
-  console.log("Classified Transactions:", classifiedTransactions);
+  //const classifiedTransactions = await loadClassifiedTransactionsFromFirestore(userId);
+  //console.log("Classified Transactions:", classifiedTransactions);
 
-  loadVitalsToHUD(userId)
-
-  //initVitalsHUD(userId,500)
+  
+  //updateVitalsPools(userId);
+  //loadVitalsToHUD(userId)
+  initVitalsHUD(userId,500)
 
   console.log("HUD initialized");
 }
