@@ -1,90 +1,174 @@
-/* Shared form container */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
+
 body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Crimson Pro', serif;
+  background-color: #0b0b18;
+  background-image:
+    radial-gradient(circle at 30% 90%, #2a0c18, transparent 50%),
+    radial-gradient(circle at 70% 10%, #0c1440, transparent 60%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  overflow-x: hidden;
+  color: #f0e6d2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 1rem;
 }
 
+/* Heading */
+h1 {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  color: #f0e6d2;
+  font-size: 1.8rem;
+  margin-bottom: 1.2rem;
+  letter-spacing: 1px;
+}
+
+/* Login/Signup Form Containers */
 #login-form,
 #signup-form {
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 2rem;
-  border-radius: 1rem;
-  box-shadow: 0 0 25px rgba(98, 0, 234, 0.3);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  width: 90%;
+  align-items: center;
+  gap: 1.25rem; /* Already spacing items - keep */
+  padding: 2rem 1.5rem;
+  background-color: rgba(25, 25, 35, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: 16px;
+  box-shadow: 0 0 30px rgba(100, 120, 200, 0.15);
   max-width: 400px;
-  animation: fadeInForm 0.6s ease;
+  width: 90%;
+  margin: 2rem auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Form Heading */
-#login-form h1,
-#signup-form h1 {
-  font-size: 2rem;
-  color: #fff;
-
-  text-align: center;
-  margin-bottom: 1rem;
-  text-shadow: 0 0 5px #6200ea;
-}
 
 /* Input Fields */
 #login-form input,
 #signup-form input {
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  width: 100%;
+  padding: 12px 16px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(30, 30, 45, 0.8);
+  color: #f0e6d2;
+  font-size: 1rem;
+  transition: border 0.3s ease;
+  font-family: 'Crimson Pro', serif;
+  box-sizing: border-box;
+}
+
+#signup-form input {
+  margin-bottom: 0.75rem; /* ⬅️ add spacing between fields */
+}
+
+
+input:focus {
+  border-color: #8ab4f8;
   outline: none;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #2a005f; /* dark purple input text */
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-
-
-#login-form input:focus,
-#signup-form input:focus {
-  background-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 10px #6a11cb;
-}
-
-/* Buttons */
+/* Buttons (Submit and Login) */
 #login-form button,
 #signup-form button {
-  padding: 0.8rem;
+  padding: 12px 24px;
+  font-family: 'Cinzel', serif;
   font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(45deg, #6a11cb, #2575fc);
-  color: white;
+  background: linear-gradient(to bottom, #25324a, #1a2336);
+  border: 1px solid #50678c;
+  color: #f0e6d2;
+  border-radius: 8px;
   cursor: pointer;
-  box-shadow: 0 0 12px #2575fc;
-  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 0 12px rgba(80, 100, 160, 0.4);
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 180px;
+  align-self: center;
 }
 
-#login-form button:hover,
-#signup-form button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px #6a11cb, 0 0 12px #2575fc;
+#signup-form button[type="submit"] {
+  display: block;
+  margin: 0 auto;
+  margin-top: 0.75rem;
 }
 
-/* Animate form on load */
-@keyframes fadeInForm {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
+
+button:hover {
+  background: linear-gradient(to bottom, #3a4f72, #27374a);
+  box-shadow: 0 0 18px rgba(100, 160, 255, 0.6);
+}
+
+/* Glow Aura for Signup Submit Button */
+button[type="submit"] {
+  background: linear-gradient(to bottom, #2a2f55, #1a1e3f);
+  box-shadow:
+    0 0 10px #8b5cf6,
+    0 0 20px rgba(139, 92, 246, 0.6),
+    inset 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+button[type="submit"]:hover {
+  box-shadow:
+    0 0 15px #a78bfa,
+    0 0 25px rgba(167, 139, 250, 0.8),
+    inset 0 0 6px rgba(255, 255, 255, 0.15);
+}
+
+/* Toggle Tabs (Login/Signup Switch) */
+.tab-toggle {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  gap: 1rem;
+  width: 90%;
+  max-width: 400px;
+}
+
+.tab-toggle button {
+  flex: 1;
+  padding: 0.75rem;
+  background-color: rgba(30, 30, 40, 0.6);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  opacity: 0.6;
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.tab-toggle button.active {
+  background: linear-gradient(45deg, #6a11cb, #2575fc);
+  box-shadow: 0 0 14px #2575fc, inset 0 0 8px rgba(255,255,255,0.1);
+  opacity: 1;
+  color: #f0e6d2;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 480px) {
+  #login-form,
+  #signup-form {
+    margin: 1rem;
+    padding: 1.5rem 1rem;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+
+  .tab-toggle {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tab-toggle button {
+    width: 100%;
+  }
+
+  button {
+    width: 100%;
   }
 }
-
-

@@ -1,10 +1,10 @@
 // ui.js
-import { auth, db } from './core/auth.js';
+import { auth, db } from '../core/auth.js';
 import { getDoc, doc, setDoc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { categories, subCategories, incomeCategory } from './config.js';
-import { loadDashboard, getPlayerData, loadFromLocalStorage, saveAttributesToFirestore, saveToLocalStorage } from './dashboard.js';
+import { loadDashboard, getPlayerData, loadFromLocalStorage, saveAttributesToFirestore, saveToLocalStorage } from '../dashboard.js';
 import { generateCashflowData, generateHudData, getAvatarStatData } from './calculations.js'; 
-import playerDataManager from './playerDataManager.js';
+import playerDataManager from '../playerDataManager.js';
 
 
 /* ========== Helpers ========== */

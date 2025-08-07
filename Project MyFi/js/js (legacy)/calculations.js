@@ -1,8 +1,8 @@
 import { doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db } from './core/auth.js';
+import { db } from '../core/auth.js';
 import { categories, subCategories } from './config.js'; // Categories for mandatory, discretionary
-import { getPlayerData, saveToLocalStorage} from "./dashboard.js";
-import playerDataManager from "./playerDataManager.js";
+import { getPlayerData, saveToLocalStorage} from "../dashboard.js";
+import playerDataManager from "../playerDataManager.js";
 
 
 // Function to process transactions from Google Sheets

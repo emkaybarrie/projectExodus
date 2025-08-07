@@ -37,7 +37,7 @@
   </style>
 </head>
 <body>
-
+  
   <div class="tab-toggle">
     <button id="login-tab" class="active">Login</button>
     <button id="signup-tab">Signup</button>
@@ -60,7 +60,6 @@
       <input type="text" id="alias" placeholder="Alias" required />
       <input type="text" id="firstName" placeholder="First Name" required />
       <input type="text" id="lastName" placeholder="Last Name" required />
-      <input type="number" id="startBalance" placeholder="Start Balance" required />
       <button type="submit">Signup</button>
     </form>
   </div>
@@ -114,5 +113,16 @@
       signupUser(data);
     });
   </script>
+
+    <script>
+    // Disable all context menus and long press interactions
+    window.addEventListener("DOMContentLoaded", () => {
+      document.addEventListener("contextmenu", e => e.preventDefault());
+      document.addEventListener("touchstart", e => {
+        if (e.touches.length > 1) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener("gesturestart", e => e.preventDefault());
+    });
+    </script>
 </body>
 </html>

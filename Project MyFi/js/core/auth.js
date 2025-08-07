@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { categories, incomeCategory, subCategories } from '../config.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
@@ -64,38 +63,16 @@ export async function signupUser(data) {
             email: data.email,
             firstName: data.firstName || "",
             lastName: data.lastName || "",
-            financeSummary: {
-                income: 0,
-                expensesByCategory: generateInitialExpensesByCategory()
-            },
-            avatarData: {
-                avatarContribution: 0
-            },
-            monthsSinceStart: 0
         });
 
-        window.location.href = "connect-bank.html"; // Redirect after signup
+        window.location.href = "dashboard.html"; // Redirect after signup
     } catch (error) {
         console.error("Signup error:", error.message);
         alert("Signup failed: " + error.message);
     }
 }
 
-// 🧰 Generate expensesByCategory dynamically (with Discretionary nested)
-function generateInitialExpensesByCategory() {
-    const initial = {};
-    // Mandatory and Supplementary categories
-    initial[categories.mandatory] = 0;
-    initial[categories.supplementary] = 0;
 
-    // Discretionary nested categories
-    initial[categories.discretionary] = {};
-    subCategories[categories.discretionary].forEach(subcategory => {
-        initial[categories.discretionary][subcategory] = 0;
-    });
-
-    return initial;
-}
 
 // 🚪 Logout user
 export async function logoutUser() {

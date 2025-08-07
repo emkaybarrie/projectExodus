@@ -1,6 +1,6 @@
 import { collection, query, where, getDocs, doc, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { db, auth } from "./core/auth.js"; // adjust path if needed
-import playerDataManager from "./playerDataManager.js";
+import { db, auth } from "../core/auth.js"; // adjust path if needed
+import playerDataManager from "../playerDataManager.js";
 import {hudBars} from './ui.js';
 
 function generateTransactionId(date, category, amount) {

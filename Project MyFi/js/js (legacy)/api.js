@@ -1,8 +1,8 @@
 // api.js
-import { auth, db } from './core/auth.js';
+import { auth, db } from '../core/auth.js';
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { loadTransactionData, loadDashboard } from './dashboard.js';
-import playerDataManager from './playerDataManager.js';
+import { loadTransactionData, loadDashboard } from '../dashboard.js';
+import playerDataManager from '../playerDataManager.js';
 
 // ─── GCP Credentials ─────────────────────────────────────────────────────────
 const API_KEY   = 'AIzaSyAZVC4hK92uYH8xQ5eB9GRWayUPcTJo84o';
