@@ -10,72 +10,72 @@ export async function updateVitalsPools(uid) {
   const db = getFirestore();
 
   try {
-    // Load income config
-    const dailyAverages = await getDoc(doc(db, `players/${uid}/cashflowData/dailyAverages`));
-    const poolAllocations = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
+    const dailyAveragesSnap = await getDoc(doc(db, `players/${uid}/cashflowData/dailyAverages`));
+    const poolAllocationsSnap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
 
-    if (!dailyAverages.exists() || !poolAllocations.exists()) {
+    if (!dailyAveragesSnap.exists() || !poolAllocationsSnap.exists()) {
       console.warn("Missing dailyAverages or poolAllocations");
       return;
     }
 
-    const { dIncome, dCoreExpenses } = dailyAverages.data();
-    const { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation } = poolAllocations.data();
+    const { dIncome, dCoreExpenses } = dailyAveragesSnap.data();
+    const { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation } = poolAllocationsSnap.data();
+    const dailyDisposable = dIncome - dCoreExpenses;
     const autoProtectEnabled = true;
-    const dailyDisposable = (dIncome - dCoreExpenses)
 
-    // Calculate regenBaseline
     const regenBaseline = {
-      health: dailyDisposable * healthAllocation, //poolSplit.health,
-      mana: dailyDisposable * manaAllocation,//poolSplit.mana,
-      stamina: dailyDisposable * staminaAllocation,//poolSplit.stamina
-      essence: dailyDisposable * essenceAllocation//poolSplit.stamina
+      health: dailyDisposable * healthAllocation,
+      mana: dailyDisposable * manaAllocation,
+      stamina: dailyDisposable * staminaAllocation,
+      essence: dailyDisposable * essenceAllocation
     };
 
-    // Load classifiedTransactions (assumes collection of docs)
+    // Load 7-day and all-time usage
     const txnsSnap = await getDoc(doc(db, `players/${uid}/classifiedTransactions/summary`));
-    const usage7Day = { health: 0, mana: 0, stamina: 0 , essence: 0 };
+    const usage7Day = { health: 0, mana: 0, stamina: 0, essence: 0 };
+    const usageAllTime = { health: 0, mana: 0, stamina: 0, essence: 0 };
+
     if (txnsSnap.exists()) {
-      const { recentUsage } = txnsSnap.data();
-      usage7Day.health = recentUsage?.health || 0;
-      usage7Day.mana = recentUsage?.mana || 0;
-      usage7Day.stamina = recentUsage?.stamina || 0;
-      usage7Day.essence = recentUsage?.essence || 0;
-    }
-    const usageAllTime = { health: 0, mana: 0, stamina: 0 , essence: 0 };
-    if (txnsSnap.exists()) {
-      const { historicUsage } = txnsSnap.data();
-      usageAllTime.health = historicUsage?.health || 0;
-      usageAllTime.mana = historicUsage?.mana || 0;
-      usageAllTime.stamina = historicUsage?.stamina || 0;
-      usageAllTime.essence = historicUsage?.essence || 0;
+      const { recentUsage = {}, historicUsage = {} } = txnsSnap.data();
+      for (const pool of ["health", "mana", "stamina", "essence"]) {
+        usage7Day[pool] = recentUsage[pool] || 0;
+        usageAllTime[pool] = historicUsage[pool] || 0;
+      }
     }
 
-    // Trend & Regen Adjustments
+    // Calculate trend-based regen
     const calculateRegen = (baseline, usage) => {
       if (usage > baseline * 1.1) return [baseline * 0.95, "overspending"];
       if (usage < baseline * 0.8) return [baseline * 1.05, "underspending"];
       return [baseline, "on target"];
     };
 
+    const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+    const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / (1000 * 60 * 60 * 24)));
+
     const pools = {};
+    let totalCurrent = 0;
+
     for (const pool of ["health", "mana", "stamina", "essence"]) {
       const [regenCurrent, trend] = calculateRegen(regenBaseline[pool], usage7Day[pool]);
+      const regenTotal = regenCurrent * daysTracked;
+      const spent = usageAllTime[pool];
+      const current = Math.max(0, Math.min(regenTotal - spent, regenBaseline[pool]));
+
+      totalCurrent += current;
+
       pools[pool] = {
-        current: regenCurrent, // Init assumption — will sync actual later
         regenBaseline: Number(regenBaseline[pool].toFixed(2)),
         regenCurrent: Number(regenCurrent.toFixed(2)),
-        max: Number(regenBaseline[pool].toFixed(2)),
         usage7Day: Number(usage7Day[pool].toFixed(2)),
         trend,
-        spentToDate: Number(usageAllTime[pool].toFixed(2)),
+        spentToDate: Number(spent.toFixed(2))
       };
     }
 
-    // Load bank balance snapshot (TrueLayer)
+    // Load bank balance snapshot
     const balanceSnap = await getDoc(doc(db, `players/${uid}/financialData_TRUELAYER/accounts`));
     const availableBalance = balanceSnap.exists() ? (balanceSnap.data().available || 0) : 0;
-    const totalCurrent = Object.values(pools).reduce((sum, p) => sum + p.current, 0);
     const mismatch = availableBalance < totalCurrent * 0.9;
 
     if (mismatch && autoProtectEnabled) {
@@ -84,29 +84,21 @@ export async function updateVitalsPools(uid) {
       }
     }
 
-    console.log("→ Daily Averages", { dIncome, dCoreExpenses });
-    console.log("→ Pool Allocations", { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation });
-    console.log("→ Regen Baseline", regenBaseline);
-    console.log("→ Usage (last 7d)", usage7Day);
-    console.log("→ Calculated Pools", pools);
-    console.log("→ Available Bank Balance", availableBalance);
-    console.log("→ Total Current (Pools)", totalCurrent);
-    console.log("→ Balance Mismatch", mismatch);
-
-
     await setDoc(doc(db, `players/${uid}/cashflowData/current`), {
       pools,
       dailyAverages: { dailyDisposable: Number(dailyDisposable.toFixed(2)) },
       balanceSnapshot: Number(availableBalance.toFixed(2)),
       mismatch,
+      daysTracked,
       lastSync: new Date().toISOString()
     });
 
-    console.log("Vitals updated.");
+    console.log("✔ Vitals updated successfully.");
   } catch (err) {
-    console.error("Failed to update vitals pools:", err);
+    console.error("❌ Failed to update vitals pools:", err);
   }
 }
+
 
 // 🟢 One-time loader (for immediate population)
 export async function loadVitalsToHUD(uid) {
@@ -142,62 +134,122 @@ export async function loadVitalsToHUD(uid) {
 }
 
 // 🌀 Optional: Animated Regen Mode
-export async function initVitalsHUD(uid, timeMultiplier = 60) {
+// export async function initVitalsHUD(uid, timeMultiplier = 60) {
+//   const db = getFirestore();
+//   const ref = doc(db, `players/${uid}/cashflowData/current`);
+//   const snap = await getDoc(ref);
+//   if (!snap.exists()) {
+//     console.warn("No vitals data found.");
+//     return;
+//   }
+
+//   const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+//   const now = new Date();
+//   const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
+
+//   const pools = snap.data().pools;
+//   console.log("Initializing Vitals HUD with pools:", pools);
+//   const elements = getVitalsElements();
+  
+//   const state = {};
+//   const regenPerSec = {};
+//   const multiplier = timeMultiplier;
+//   const secondsPerDay = 86400;
+
+//   for (const pool of Object.keys(elements)) {
+//     if (!pools[pool]) continue;
+//     const values = pools[pool];
+//     const regen = values.regenCurrent ?? 0;
+//     const spent = values.spentToDate ?? 0;
+//     const max = values.regenBaseline ?? 0;
+
+//     const baseCurrent = (regen * daysTracked) - spent;
+//     const current = Math.max(0, Math.min(baseCurrent, max));
+
+//      state[pool] = {
+//       current,
+//       max,
+//       regenPerSec: (regen * multiplier) / secondsPerDay,
+//     };
+//   }
+
+//   function updateDisplay() {
+//     for (const pool of Object.keys(elements)) {
+//       const el = elements[pool];
+//       const data = state[pool];
+//       if (!el || !data) continue;
+
+//       data.current = Math.min(data.current + data.regenPerSec, data.max);
+//       const pct = (data.current / data.max) * 100;
+
+//       el.fill.style.width = `${pct}%`;
+//       el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
+//     }
+//   }
+
+//   updateDisplay();
+//   setInterval(updateDisplay, 1000);
+// }
+
+export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
-  const ref = doc(db, `players/${uid}/cashflowData/current`);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
-    console.warn("No vitals data found.");
-    return;
-  }
+  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!snap.exists()) return;
 
   const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
   const now = new Date();
   const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
 
   const pools = snap.data().pools;
-  console.log("Initializing Vitals HUD with pools:", pools);
   const elements = getVitalsElements();
-  
+
   const state = {};
   const regenPerSec = {};
-  const multiplier = timeMultiplier;
+  const targetPct = {};
+  const displayPct = {};
   const secondsPerDay = 86400;
 
-  for (const pool of Object.keys(elements)) {
-    if (!pools[pool]) continue;
-    const values = pools[pool];
-    const regen = values.regenCurrent ?? 0;
-    const spent = values.spentToDate ?? 0;
-    const max = values.regenBaseline ?? 0;
+  for (const pool of Object.keys(pools)) {
+    const data = pools[pool];
+    const regen = data.regenCurrent ?? 0;
+    const spent = data.spentToDate ?? 0;
+    const max = data.regenBaseline ?? 0;
 
-    const baseCurrent = (regen * daysTracked) - spent;
-    const current = Math.max(0, Math.min(baseCurrent, max));
+    const regenTotal = regen * daysTracked;
+    const current = Math.max(0, Math.min(regenTotal - spent, max));
 
-     state[pool] = {
-      current,
-      max,
-      regenPerSec: (regen * multiplier) / secondsPerDay,
-    };
+    state[pool] = { current, max };
+    regenPerSec[pool] = (regen * timeMultiplier) / secondsPerDay;
+    displayPct[pool] = (current / max) * 100;
+    targetPct[pool] = displayPct[pool]; // initialized same
   }
 
-  function updateDisplay() {
-    for (const pool of Object.keys(elements)) {
+  // Smooth animation update loop
+  function animateBars() {
+    for (const pool of Object.keys(state)) {
       const el = elements[pool];
       const data = state[pool];
       if (!el || !data) continue;
 
-      data.current = Math.min(data.current + data.regenPerSec, data.max);
-      const pct = (data.current / data.max) * 100;
+      // Regen calculation
+      data.current = Math.min(data.current + regenPerSec[pool], data.max);
+      const newTargetPct = (data.current / data.max) * 100;
+      targetPct[pool] = newTargetPct;
 
-      el.fill.style.width = `${pct}%`;
+      // Smooth approach to targetPct
+      displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
+
+      // Update DOM
+      el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
       el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
     }
+
+    requestAnimationFrame(animateBars);
   }
 
-  updateDisplay();
-  setInterval(updateDisplay, 1000);
+  animateBars(); // start loop
 }
+
 
 // ✅ Updated helper for new DOM structure
 function getVitalsElements() {

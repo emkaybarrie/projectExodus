@@ -32,9 +32,9 @@ export async function initHUD() {
   //console.log("Classified Transactions:", classifiedTransactions);
 
   
-  //updateVitalsPools(userId);
+  updateVitalsPools(userId);
   //loadVitalsToHUD(userId)
-  initVitalsHUD(userId, 500)
+  initVitalsHUD(userId, 1)
 
   console.log("HUD initialized");
 }
