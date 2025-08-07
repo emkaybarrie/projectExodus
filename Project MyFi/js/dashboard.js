@@ -45,3 +45,40 @@ if ('serviceWorker' in navigator) {
     .then(reg => console.log("SW registered", reg))
     .catch(err => console.error("SW failed", err));
 }
+
+// PWA INstall
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+
+  const banner = document.getElementById('installBanner');
+  if (banner) banner.style.display = 'flex';
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const installBtn = document.getElementById('installBtn');
+  const dismissBtn = document.getElementById('dismissInstall');
+  const banner = document.getElementById('installBanner');
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const result = await deferredPrompt.userChoice;
+        console.log("User choice:", result.outcome);
+        deferredPrompt = null;
+        if (banner) banner.style.display = 'none';
+      }
+    });
+  }
+
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      if (banner) banner.style.display = 'none';
+    });
+  }
+});
+
+
