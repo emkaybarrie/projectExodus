@@ -1,4 +1,3 @@
-import { initManualEntryButton} from "./modules/transactionsLogging.js";
 import { triggerTrueLayerFetch } from "../core/truelayer.js";
 import { loadTransactionsFromFirestore, processTransactions, loadClassifiedTransactionsFromFirestore} from "../core/firestore.js";
 import { auth } from "../core/auth.js";
