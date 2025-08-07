@@ -235,6 +235,16 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
     for (const pool of Object.keys(state)) {
       const el = elements[pool];
+      // Apply trend class
+      const barContainer = el.fill.closest('.bar');
+      barContainer.classList.remove("overspending", "underspending");
+
+      const trend = pools[pool].trend;
+      if (trend === "overspending") {
+        barContainer.classList.add("overspending");
+      } else if (trend === "underspending") {
+        barContainer.classList.add("underspending");
+      }
       const data = state[pool];
       if (!el || !data) continue;
 
