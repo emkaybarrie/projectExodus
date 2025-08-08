@@ -103,19 +103,6 @@ export async function updateVitalsPools(uid) {
   }
 }
 
-// Calcs - WIP
-function ensureGhostLayers(elements) {
-  for (const pool of Object.keys(elements)) {
-    const barEl = elements[pool]?.fill?.closest('.bar');
-    if (!barEl) continue;
-    if (!barEl.querySelector('.bar-ghost-cap')) {
-      const cap = document.createElement('div');
-      cap.className = 'bar-ghost-cap';
-      barEl.appendChild(cap);
-    }
-  }
-}
-
 
 function normalizeTxn(docSnap) {
   const d = docSnap.data();
@@ -212,86 +199,15 @@ export async function loadVitalsToHUD(uid) {
 }
 
 // 🌀 Animated Regen Mode
-// export async function initVitalsHUD(uid, timeMultiplier = 1) {
-//   const db = getFirestore();
-//   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
-//   if (!snap.exists()) return;
-
-//   const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
-//   const now = new Date();
-//   const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
-
-//   const pools = snap.data().pools;
-//   const elements = getVitalsElements();
-
-//   const state = {};
-//   const regenPerSec = {};
-//   const targetPct = {};
-//   const displayPct = {};
-//   const secondsPerDay = 86400;
-
-//   for (const pool of Object.keys(pools)) {
-//     const data = pools[pool];
-//     const regen = data.regenCurrent ?? 0;
-//     const spent = data.spentToDate ?? 0;
-//     const max = data.regenBaseline ?? 0;
-
-//     const regenTotal = regen * daysTracked;
-//     const current = Math.max(0, Math.min(regenTotal - spent, max));
-
-//     state[pool] = { current, max };
-//     regenPerSec[pool] = (regen * timeMultiplier) / secondsPerDay;
-//     displayPct[pool] = (current / max) * 100;
-//     targetPct[pool] = displayPct[pool]; // initialized same
-//   }
-
-//   // Smooth animation update loop
-
-//   let lastTimestamp = null;
-
-//   function animateBars(timestamp) {
-//     if (lastTimestamp === null) lastTimestamp = timestamp;
-//     const deltaSeconds = (timestamp - lastTimestamp) / 1000;
-//     lastTimestamp = timestamp;
-
-//     for (const pool of Object.keys(state)) {
-//       const el = elements[pool];
-//       // Apply trend class
-//       const barContainer = el.fill.closest('.bar');
-//       barContainer.classList.remove("overspending", "underspending");
-
-//       const trend = pools[pool].trend;
-//       if (trend === "overspending") {
-//         barContainer.classList.add("overspending");
-//       } else if (trend === "underspending") {
-//         barContainer.classList.add("underspending");
-//       }
-//       const data = state[pool];
-//       if (!el || !data) continue;
-
-//       // Accurate regen per delta time
-//       data.current = Math.min(data.current + regenPerSec[pool] * deltaSeconds, data.max);
-//       const newTargetPct = (data.current / data.max) * 100;
-//       targetPct[pool] = newTargetPct;
-
-//       // Smooth bar fill animation
-//       displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
-
-//       el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
-//       el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
-//     }
-
-//     requestAnimationFrame(animateBars);
-//   }
-
-//   requestAnimationFrame(animateBars);
-// }
 
 // Updated w/ Ghost Preview Integration
+// Updated w/ Ghost Preview Integration + Snap Commit Effect
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
 
-  // 1) Load cashflow / pools (unchanged)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 1) LOAD BASE DATA
+  // ─────────────────────────────────────────────────────────────────────────────
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
 
@@ -299,40 +215,55 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const now = new Date();
   const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
 
-  const pools = snap.data().pools; // { stamina: {regenCurrent, spentToDate, regenBaseline, trend}, ... }
+  const pools = snap.data().pools;
   const elements = getVitalsElements();
+  ensureReclaimLayers(elements);
 
-  // Ensure ghost overlay layers exist
-  ensureGhostLayers(elements);
-
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 2) STATE
+  // ─────────────────────────────────────────────────────────────────────────────
   const state = {};
   const regenPerSec = {};
-  const targetPct = {};
   const displayPct = {};
-  const ghostImpact = { stamina: 0, mana: 0, health: 0 }; // amounts to subtract from "current" for preview
-  const secondsPerDay = 86400;
 
-  // 2) Build base state from regen/spent (your logic)
+  const ghostImpact = { stamina: 0, mana: 0, health: 0 };
+  const pendingLossBase = {};
+  const pendingLossDisplay = {};
+  const regenEaten = {};
+
+  const revealTriggered = {};
+  const revealTimers = {};
+
+  const secondsPerDay = 86400;
+  const REVEAL_DELAY_MS = 600;
+  const TINY_MARGIN = 0.1;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 3) INIT FROM POOLS
+  // ─────────────────────────────────────────────────────────────────────────────
   for (const pool of Object.keys(pools)) {
     const data = pools[pool];
     const regen = data.regenCurrent ?? 0;
-    const spent = data.spentToDate ?? 0; // Derived from classifiedTransactions that have been commited to pool (i.e status = final)
-    const max = (data.regenBaseline ?? 0) 
+    const spent = data.spentToDate ?? 0;
+    const max = data.regenBaseline ?? 0;
+
     const regenTotal = regen * daysTracked;
     const current = Math.max(0, Math.min(regenTotal - spent, max));
 
     state[pool] = { current, max };
     regenPerSec[pool] = (regen * timeMultiplier) / secondsPerDay;
     displayPct[pool] = max > 0 ? (current / max) * 100 : 0;
-    targetPct[pool] = displayPct[pool];
 
+    pendingLossBase[pool] = 0;
+    pendingLossDisplay[pool] = 0;
+    regenEaten[pool] = 0;
+    revealTriggered[pool] = false;
+    revealTimers[pool] = null;
   }
 
-  console.log("Stamina Vitals State:", state['stamina']);
-  console.log("Stamina Vitals Regen Per Sec:", regenPerSec['stamina']);
-
-  // 3) Load PENDING transactions for ghost preview
-  //    (client-side filter to avoid index drama; feel free to add a composite index and push filters into the query)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 4) LOAD PENDING TX + COMPUTE GHOST IMPACT
+  // ─────────────────────────────────────────────────────────────────────────────
   const q = query(collection(db, `players/${uid}/classifiedTransactions`));
   const qs = await getDocs(q);
   const allTx = qs.docs.map(normalizeTxn);
@@ -340,24 +271,20 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const nowMs = Date.now();
   const pending = allTx.filter(tx => tx.status === "pending" && nowMs < tx.ghostExpiryMs);
 
-  console.log("Pending transactions for ghost preview:", pending);
+  const staminaRemaining = Math.max(0, state.stamina?.current ?? 0);
 
-  // 4) Compute stamina remaining from current committed data
-  const staminaCap = (pools.stamina?.regenBaseline ?? 0);
-  const staminaUsed = Math.min(staminaCap, pools.stamina?.spentToDate ?? 0); 
-  const staminaRemaining = Math.max(0, staminaCap - staminaUsed); // should be same as state['stamina'].current
-  console.log("Stamina remaining (committed):", staminaRemaining);
-
-  // 5) Compute ghost impact (amounts we’d lose if these snap now)
   const impact = computeGhostImpact({ pendingTxns: pending, staminaRemaining });
-  console.log("Ghost impact from pending transactions:", impact);
-
-
   ghostImpact.stamina = impact.stamina;
-  ghostImpact.mana    = impact.mana;
-  ghostImpact.health  = impact.health;
+  ghostImpact.mana = impact.mana;
+  ghostImpact.health = impact.health;
 
-  // 6) Animation loop (keep your regen logic; add ghost overlay)
+  for (const pool of Object.keys(state)) {
+    pendingLossBase[pool] = Math.max(0, ghostImpact[pool] || 0);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // 5) ANIMATE
+  // ─────────────────────────────────────────────────────────────────────────────
   let lastTimestamp = null;
 
   function animateBars(timestamp) {
@@ -365,46 +292,90 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     const deltaSeconds = (timestamp - lastTimestamp) / 1000;
     lastTimestamp = timestamp;
 
+    const nowMs = Date.now();
+
     for (const pool of Object.keys(state)) {
       const el = elements[pool];
       if (!el) continue;
-
-      // Trend classes (unchanged)
       const barContainer = el.fill.closest('.bar');
+      const reclaimEl = barContainer.querySelector('.bar-reclaim');
+
+      // Trend styling
       barContainer.classList.remove("overspending", "underspending");
       const trend = pools[pool].trend;
-      if (trend === "overspending") {
-        barContainer.classList.add("overspending");
-      } else if (trend === "underspending") {
-        barContainer.classList.add("underspending");
-      }
+      if (trend === "overspending") barContainer.classList.add("overspending");
+      else if (trend === "underspending") barContainer.classList.add("underspending");
 
-      // Regen (unchanged)
+      // Regen
       const data = state[pool];
       data.current = Math.min(data.current + regenPerSec[pool] * deltaSeconds, data.max);
-      const newTargetPct = data.max > 0 ? (data.current / data.max) * 100 : 0;
-      targetPct[pool] = newTargetPct;
 
-      // Smooth solid bar fill (unchanged)
-      displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
-      el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
-      el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
+      const fullPct = data.max > 0 ? (data.current / data.max) * 100 : 0;
 
-      // --- Ghost overlay width ---
-      // --- Pending loss "cap" (yellow slice at right edge) ---
-      const ghostAmt = Math.max(0, ghostImpact[pool] || 0);
-      const pendingLoss = Math.min(ghostAmt, data.current); // can't preview more than we have
-      const capPct = data.max > 0 ? (pendingLoss / data.max) * 100 : 0;
+      // Phase 1
+      if (!revealTriggered[pool]) {
+        displayPct[pool] += (fullPct - displayPct[pool]) * 0.08;
+        el.fill.style.width = `${displayPct[pool].toFixed(2)}%`;
+        reclaimEl.style.opacity = '0';
+        reclaimEl.style.width = '0%';
+        el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
 
-      const capEl = barContainer.querySelector('.bar-ghost-cap');
-      if (capEl) {
-        capEl.style.width = `${capPct.toFixed(1)}%`;
-        capEl.style.opacity = pendingLoss > 0 ? '0.65' : '0';
+        if (Math.abs(fullPct - displayPct[pool]) < TINY_MARGIN) {
+          if (!revealTimers[pool]) {
+            revealTimers[pool] = performance.now();
+          } else if (performance.now() - revealTimers[pool] >= REVEAL_DELAY_MS) {
+            revealTriggered[pool] = true;
+          }
+        } else {
+          revealTimers[pool] = null;
+        }
+        continue;
       }
 
-      // Optional: show pending in the text readout
-      const pendingTxt = pendingLoss > 0 ? ` (−${pendingLoss.toFixed(2)})` : '';
-      el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}${pendingTxt}`;
+      // Phase 2
+      regenEaten[pool] += regenPerSec[pool] * deltaSeconds;
+      const targetPendingLoss = Math.max(0, pendingLossBase[pool] - regenEaten[pool]);
+      const clampedPendingLoss = Math.min(targetPendingLoss, data.current);
+      pendingLossDisplay[pool] += (clampedPendingLoss - pendingLossDisplay[pool]) * 0.12;
+
+      const effectiveCurrent = Math.max(0, data.current - pendingLossDisplay[pool]);
+      const effectivePct = data.max > 0 ? (effectiveCurrent / data.max) * 100 : 0;
+
+      displayPct[pool] += (effectivePct - displayPct[pool]) * 0.08;
+      el.fill.style.width = `${displayPct[pool].toFixed(2)}%`;
+
+      const reclaimPct = data.max > 0 ? (pendingLossDisplay[pool] / data.max) * 100 : 0;
+      reclaimEl.style.left = `${displayPct[pool].toFixed(2)}%`;
+      reclaimEl.style.width = `${reclaimPct.toFixed(2)}%`;
+      reclaimEl.style.opacity = reclaimPct > 0.1 ? '1' : '0';
+
+      const reclaimTxt = pendingLossDisplay[pool] > 0 ? ` (+${pendingLossDisplay[pool].toFixed(2)})` : '';
+      el.value.innerText = `${effectiveCurrent.toFixed(2)} / ${data.max.toFixed(2)}${reclaimTxt}`;
+
+      // ───── SNAP COMMIT EFFECT ─────
+      pending.forEach(tx => {
+        if (tx.pool === pool && nowMs >= tx.ghostExpiryMs && tx.status === "pending") {
+          tx.status = "final";
+          ghostImpact[pool] -= Math.abs(tx.amount);
+
+          // Pulse
+          reclaimEl.classList.add('flash');
+          setTimeout(() => {
+            reclaimEl.classList.remove('flash');
+            // Shrink
+            let width = parseFloat(reclaimEl.style.width);
+            const shrink = setInterval(() => {
+              width -= 1;
+              if (width <= 0) {
+                clearInterval(shrink);
+                reclaimEl.style.opacity = '0';
+              } else {
+                reclaimEl.style.width = `${width}%`;
+              }
+            }, 16);
+          }, 400);
+        }
+      });
     }
 
     requestAnimationFrame(animateBars);
@@ -412,6 +383,29 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
   requestAnimationFrame(animateBars);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   HELPERS
+   ────────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Ensure an opaque yellow "reclaim" slice exists in each bar container.
+ * It renders immediately to the right of the solid bar so there’s no color tinting.
+ */
+function ensureReclaimLayers(elements) {
+  for (const pool of Object.keys(elements)) {
+    const barEl = elements[pool]?.fill?.closest('.bar');
+    if (!barEl) continue;
+    if (!barEl.querySelector('.bar-reclaim')) {
+      const seg = document.createElement('div');
+      seg.className = 'bar-reclaim';
+      barEl.appendChild(seg);
+    }
+  }
+}
+
+
+
 
 
 

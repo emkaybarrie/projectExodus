@@ -103,19 +103,6 @@ export async function updateVitalsPools(uid) {
   }
 }
 
-// Calcs - WIP
-function ensureGhostLayers(elements) {
-  for (const pool of Object.keys(elements)) {
-    const barEl = elements[pool]?.fill?.closest('.bar');
-    if (!barEl) continue;
-    if (!barEl.querySelector('.bar-ghost-cap')) {
-      const cap = document.createElement('div');
-      cap.className = 'bar-ghost-cap';
-      barEl.appendChild(cap);
-    }
-  }
-}
-
 
 function normalizeTxn(docSnap) {
   const d = docSnap.data();
@@ -212,80 +199,6 @@ export async function loadVitalsToHUD(uid) {
 }
 
 // 🌀 Animated Regen Mode
-// export async function initVitalsHUD(uid, timeMultiplier = 1) {
-//   const db = getFirestore();
-//   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
-//   if (!snap.exists()) return;
-
-//   const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
-//   const now = new Date();
-//   const daysTracked = Math.max(1, Math.floor((now - vitalsStartDate) / (1000 * 60 * 60 * 24)));
-
-//   const pools = snap.data().pools;
-//   const elements = getVitalsElements();
-
-//   const state = {};
-//   const regenPerSec = {};
-//   const targetPct = {};
-//   const displayPct = {};
-//   const secondsPerDay = 86400;
-
-//   for (const pool of Object.keys(pools)) {
-//     const data = pools[pool];
-//     const regen = data.regenCurrent ?? 0;
-//     const spent = data.spentToDate ?? 0;
-//     const max = data.regenBaseline ?? 0;
-
-//     const regenTotal = regen * daysTracked;
-//     const current = Math.max(0, Math.min(regenTotal - spent, max));
-
-//     state[pool] = { current, max };
-//     regenPerSec[pool] = (regen * timeMultiplier) / secondsPerDay;
-//     displayPct[pool] = (current / max) * 100;
-//     targetPct[pool] = displayPct[pool]; // initialized same
-//   }
-
-//   // Smooth animation update loop
-
-//   let lastTimestamp = null;
-
-//   function animateBars(timestamp) {
-//     if (lastTimestamp === null) lastTimestamp = timestamp;
-//     const deltaSeconds = (timestamp - lastTimestamp) / 1000;
-//     lastTimestamp = timestamp;
-
-//     for (const pool of Object.keys(state)) {
-//       const el = elements[pool];
-//       // Apply trend class
-//       const barContainer = el.fill.closest('.bar');
-//       barContainer.classList.remove("overspending", "underspending");
-
-//       const trend = pools[pool].trend;
-//       if (trend === "overspending") {
-//         barContainer.classList.add("overspending");
-//       } else if (trend === "underspending") {
-//         barContainer.classList.add("underspending");
-//       }
-//       const data = state[pool];
-//       if (!el || !data) continue;
-
-//       // Accurate regen per delta time
-//       data.current = Math.min(data.current + regenPerSec[pool] * deltaSeconds, data.max);
-//       const newTargetPct = (data.current / data.max) * 100;
-//       targetPct[pool] = newTargetPct;
-
-//       // Smooth bar fill animation
-//       displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
-
-//       el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
-//       el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
-//     }
-
-//     requestAnimationFrame(animateBars);
-//   }
-
-//   requestAnimationFrame(animateBars);
-// }
 
 // Updated w/ Ghost Preview Integration
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
@@ -302,13 +215,14 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const pools = snap.data().pools; // { stamina: {regenCurrent, spentToDate, regenBaseline, trend}, ... }
   const elements = getVitalsElements();
 
-  // Ensure ghost overlay layers exist
-  ensureGhostLayers(elements);
+  // Ensure yellow "reclaim" layers exist (opaque segment that sits after the solid fill)
+  ensureReclaimLayers(elements);
 
   const state = {};
   const regenPerSec = {};
-  const targetPct = {};
-  const displayPct = {};
+  const targetPct = {};             // kept for minimal diff, but we now drive from effectivePct
+  const displayPct = {};            // solid bar eased percent
+  const displayReclaimPct = {};     // yellow eased percent (width only)
   const ghostImpact = { stamina: 0, mana: 0, health: 0 }; // amounts to subtract from "current" for preview
   const secondsPerDay = 86400;
 
@@ -316,23 +230,28 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   for (const pool of Object.keys(pools)) {
     const data = pools[pool];
     const regen = data.regenCurrent ?? 0;
-    const spent = data.spentToDate ?? 0; // Derived from classifiedTransactions that have been commited to pool (i.e status = final)
-    const max = (data.regenBaseline ?? 0) 
-    const regenTotal = regen * daysTracked;
-    const current = Math.max(0, Math.min(regenTotal - spent, max));
+    const spent = data.spentToDate ?? 0; // Derived from classifiedTransactions that have been committed (status = final)
+    console.log(`Pool ${pool}: Regen=${regen}, Spent=${spent}`);
+
+    // NOTE: Using "per-period max" (no * daysTracked) as in your current version.
+    // If you want period-scaling later, set: const max = (data.regenBaseline ?? 0) * daysTracked;
+    const max = (data.regenBaseline ?? 0);
+
+    const regenTotal = regen * daysTracked; // total generated since vitalsStartDate
+    const current = Math.max(0, Math.min(regenTotal - spent, max)); // remaining after committed spend
 
     state[pool] = { current, max };
     regenPerSec[pool] = (regen * timeMultiplier) / secondsPerDay;
-    displayPct[pool] = max > 0 ? (current / max) * 100 : 0;
-    targetPct[pool] = displayPct[pool];
 
+    const startPct = max > 0 ? (current / max) * 100 : 0;
+    displayPct[pool] = startPct;
+    displayReclaimPct[pool] = 0;           // yellow fades in after initial solid animation
+    targetPct[pool] = startPct;
   }
 
-  console.log("Stamina Vitals State:", state['stamina']);
-  console.log("Stamina Vitals Regen Per Sec:", regenPerSec['stamina']);
+
 
   // 3) Load PENDING transactions for ghost preview
-  //    (client-side filter to avoid index drama; feel free to add a composite index and push filters into the query)
   const q = query(collection(db, `players/${uid}/classifiedTransactions`));
   const qs = await getDocs(q);
   const allTx = qs.docs.map(normalizeTxn);
@@ -342,23 +261,25 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
   console.log("Pending transactions for ghost preview:", pending);
 
-  // 4) Compute stamina remaining from current committed data
-  const staminaCap = (pools.stamina?.regenBaseline ?? 0);
-  const staminaUsed = Math.min(staminaCap, pools.stamina?.spentToDate ?? 0); 
-  const staminaRemaining = Math.max(0, staminaCap - staminaUsed); // should be same as state['stamina'].current
-  console.log("Stamina remaining (committed):", staminaRemaining);
+  // 4) Compute stamina remaining for preview **from HUD state** to keep visuals consistent
+  //    This mirrors what the user sees right now.
+  const staminaRemaining = Math.max(0, state['stamina']?.current ?? 0);
+  console.log("Stamina remaining (HUD-based):", staminaRemaining);
 
   // 5) Compute ghost impact (amounts we’d lose if these snap now)
   const impact = computeGhostImpact({ pendingTxns: pending, staminaRemaining });
   console.log("Ghost impact from pending transactions:", impact);
 
-
   ghostImpact.stamina = impact.stamina;
   ghostImpact.mana    = impact.mana;
   ghostImpact.health  = impact.health;
 
-  // 6) Animation loop (keep your regen logic; add ghost overlay)
+  // 6) Animation loop (regen + synced yellow reclaim)
   let lastTimestamp = null;
+
+  // Delay yellow reveal so the solid can animate first
+  const firstFrameAt = performance.now();
+  const reclaimVisibleAt = firstFrameAt + 500; // ms; tweak 350–600 to taste
 
   function animateBars(timestamp) {
     if (lastTimestamp === null) lastTimestamp = timestamp;
@@ -379,32 +300,40 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
         barContainer.classList.add("underspending");
       }
 
-      // Regen (unchanged)
+      // Regen the *committed* current
       const data = state[pool];
       data.current = Math.min(data.current + regenPerSec[pool] * deltaSeconds, data.max);
-      const newTargetPct = data.max > 0 ? (data.current / data.max) * 100 : 0;
-      targetPct[pool] = newTargetPct;
 
-      // Smooth solid bar fill (unchanged)
-      displayPct[pool] += (targetPct[pool] - displayPct[pool]) * 0.05;
-      el.fill.style.width = `${displayPct[pool].toFixed(1)}%`;
-      el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}`;
-
-      // --- Ghost overlay width ---
-      // --- Pending loss "cap" (yellow slice at right edge) ---
+      // --- Ghost-as-applied model ---
+      // Treat ghost as already "hit" visually; show reclaimable part as yellow.
       const ghostAmt = Math.max(0, ghostImpact[pool] || 0);
       const pendingLoss = Math.min(ghostAmt, data.current); // can't preview more than we have
-      const capPct = data.max > 0 ? (pendingLoss / data.max) * 100 : 0;
 
-      const capEl = barContainer.querySelector('.bar-ghost-cap');
-      if (capEl) {
-        capEl.style.width = `${capPct.toFixed(1)}%`;
-        capEl.style.opacity = pendingLoss > 0 ? '0.65' : '0';
+      const effectiveCurrent = Math.max(0, data.current - pendingLoss);
+      const effectivePct = data.max > 0 ? (effectiveCurrent / data.max) * 100 : 0;
+      const reclaimPct   = data.max > 0 ? (pendingLoss      / data.max) * 100 : 0;
+
+      // Ease BOTH with the same factor so they feel like one bar
+      displayPct[pool]        += (effectivePct - displayPct[pool]) * 0.08;
+
+      // Reveal yellow after initial solid animation
+      const targetReclaim = (timestamp >= reclaimVisibleAt) ? reclaimPct : 0;
+      displayReclaimPct[pool] += (targetReclaim - displayReclaimPct[pool]) * 0.08;
+
+      // Solid
+      el.fill.style.width = `${displayPct[pool].toFixed(2)}%`;
+
+      // Yellow sits right after solid (same eased left), fully opaque (no tinting)
+      const reclaimEl = barContainer.querySelector('.bar-reclaim');
+      if (reclaimEl) {
+        reclaimEl.style.left = `${displayPct[pool].toFixed(2)}%`;
+        reclaimEl.style.width = `${displayReclaimPct[pool].toFixed(2)}%`;
+        reclaimEl.style.opacity = displayReclaimPct[pool] > 0.2 ? '1' : '0';
       }
 
-      // Optional: show pending in the text readout
-      const pendingTxt = pendingLoss > 0 ? ` (−${pendingLoss.toFixed(2)})` : '';
-      el.value.innerText = `${data.current.toFixed(2)} / ${data.max.toFixed(2)}${pendingTxt}`;
+      // Value text: show effective current with reclaim hint
+      const reclaimTxt = pendingLoss > 0 ? ` (+${pendingLoss.toFixed(2)} reclaimable)` : '';
+      el.value.innerText = `${effectiveCurrent.toFixed(2)} / ${data.max.toFixed(2)}${reclaimTxt}`;
     }
 
     requestAnimationFrame(animateBars);
@@ -412,6 +341,26 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
   requestAnimationFrame(animateBars);
 }
+
+/* ===================== helpers ===================== */
+
+/**
+ * Ensure we have a yellow reclaim segment per bar.
+ * This is an opaque slice placed immediately after the solid fill,
+ * so it won’t get tinted by the base bar color.
+ */
+function ensureReclaimLayers(elements) {
+  for (const pool of Object.keys(elements)) {
+    const barEl = elements[pool]?.fill?.closest('.bar');
+    if (!barEl) continue;
+    if (!barEl.querySelector('.bar-reclaim')) {
+      const seg = document.createElement('div');
+      seg.className = 'bar-reclaim';
+      barEl.appendChild(seg);
+    }
+  }
+}
+
 
 
 

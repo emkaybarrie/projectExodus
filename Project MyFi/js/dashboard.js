@@ -40,7 +40,9 @@ document.addEventListener("DOMContentLoaded", () => {
         portraitKey = 'avatarMohammed';
        } else if (playerData.firstName == "Jane") {  
         portraitKey = 'avatarJane';
-       }else {
+       } else if (playerData.firstName == "Amandeep") {  
+        portraitKey = 'avatarAmandeep';
+       } else {
         // Fallback to default portrait if no specific one is set 
         portraitKey = 'default';
        }
