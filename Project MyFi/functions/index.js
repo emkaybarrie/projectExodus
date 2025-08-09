@@ -25,31 +25,22 @@ exports.exchangeToken = onRequest({
   secrets: [TRUELAYER_CLIENT_ID, TRUELAYER_CLIENT_SECRET],
 }, async (req, res) => {
   corsHandler(req, res, async () => {
-    if (req.method === 'OPTIONS') {
-      res.status(204).send('');
-      return;
-    }
-
-    const { code, uid } = req.body;
-    if (!code || !uid) {
-      return res.status(400).json({ error: 'Missing code or uid' });
-    }
-
-    // NOTE: This must match the registered TrueLayer redirect URI
-    // const isLocal = window.location.hostname === 'localhost';
-    const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-    const redirectUri = isLocal
-      ? 'http://127.0.0.1:5500/Project%20MyFi/callback.html'
-      : 'https://emkaybarrie.github.io/foranteGamesStudio/Project%20MyFi/callback.html';
-
-    // const redirectUri = 'http://127.0.0.1:5500/Project%20MyFi/callback.html';
+    if (req.method === 'OPTIONS') return res.status(204).send('');
 
     try {
+      const { code, uid, redirect_uri } = req.body || {};
+      if (!code || !uid || !redirect_uri) {
+        return res.status(400).json({
+          error: 'missing_params',
+          details: { hasCode: !!code, hasUid: !!uid, hasRedirectUri: !!redirect_uri }
+        });
+      }
+
       const params = new URLSearchParams();
       params.append('grant_type', 'authorization_code');
       params.append('client_id', TRUELAYER_CLIENT_ID.value());
       params.append('client_secret', TRUELAYER_CLIENT_SECRET.value());
-      params.append('redirect_uri', redirectUri);
+      params.append('redirect_uri', redirect_uri); // must exactly match authorize
       params.append('code', code);
 
       const response = await axios.post(
@@ -69,13 +60,14 @@ exports.exchangeToken = onRequest({
 
       return res.status(200).json({ success: true });
     } catch (err) {
-      return res.status(500).json({
-        error: 'Token exchange failed',
-        details: err.response?.data || err.message,
-      });
+      const status = err.response?.status ?? 500;
+      const details = err.response?.data ?? err.message;
+      console.error('Token exchange failed:', status, details);
+      return res.status(status).json({ error: 'token_exchange_failed', details });
     }
   });
 });
+
 
 /**
  * =====================
