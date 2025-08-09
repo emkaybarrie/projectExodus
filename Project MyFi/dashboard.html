@@ -99,103 +99,123 @@
 
 </div>
 
-  <!-- ============ Modal & Settings Menu (Drop-in) ============ -->
+<!-- ============ Modal (Responsive Settings: Sidebar on Desktop, Scroll Tabs on Mobile) ============ -->
 <style>
-  :root {
-    --modal-backdrop: rgba(10, 12, 16, 0.55);
-    --modal-bg: #0f1115;
-    --modal-card: #141821;
-    --modal-text: #e9edf1;
-    --modal-muted: #94a3b8;
-    --modal-accent: #6ee7ff;
-    --border: #1f2430;
-    --radius: 16px;
+  /* ---- Theme tokens (tweak to match your app) ---- */
+  :root{
+    --modal-backdrop: rgba(10,12,16,.55);
+    --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
+    --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
   }
-  .modal-backdrop {
-    position: fixed; inset: 0;
-    background: var(--modal-backdrop);
-    display: none;
-    align-items: center; justify-content: center;
-    z-index: 1000;
+
+  /* ---- Backdrop and modal container ---- */
+  .modal-backdrop{position:fixed;inset:0;background:var(--modal-backdrop);display:none;align-items:center;justify-content:center;z-index:1000;}
+  .modal-backdrop[data-open="true"]{display:flex;}
+  .modal{
+    width:min(720px,92vw);
+    max-height:86svh; /* better on mobile toolbars; falls back fine */
+    background:linear-gradient(145deg,var(--modal-card),var(--modal-bg));
+    color:var(--modal-text);
+    border:1px solid var(--border); border-radius:var(--radius);
+    box-shadow:0 10px 40px rgba(0,0,0,.45);
+    display:grid; grid-template-columns:220px minmax(0,1fr); /* desktop: sidebar + content */
+    overflow:hidden;
+    transform:translateY(8px); opacity:0; transition:opacity .15s ease, transform .15s ease;
   }
-  .modal-backdrop[data-open="true"] { display: flex; }
-  .modal {
-    width: min(720px, 92vw);
-    max-height: 86vh;
-    background: linear-gradient(145deg, var(--modal-card), var(--modal-bg));
-    color: var(--modal-text);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 10px 40px rgba(0,0,0,.45);
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    overflow: hidden;
-    transform: translateY(8px);
-    opacity: 0;
-    transition: opacity .15s ease, transform .15s ease;
+  .modal-backdrop[data-open="true"] .modal{opacity:1; transform:translateY(0);}
+
+  /* ---- Sidebar menu (desktop) ---- */
+  .modal__menu{background:rgba(255,255,255,.02); border-right:1px solid var(--border); padding:10px; overflow:auto;}
+  .modal__menu h3{font:600 13px/1.1 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted); padding:8px 10px; margin:2px 0 6px;}
+  .menu__btn{width:100%; text-align:left; padding:12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--modal-text); cursor:pointer; font:500 14px/1.25 system-ui;}
+  .menu__btn:hover,.menu__btn[aria-current="true"]{background:rgba(110,231,255,.08); border-color:rgba(110,231,255,.3);}
+
+  /* ---- Body: header + tabs (mobile) + content + footer ---- */
+  .modal__body{display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; min-height:360px;}
+  .modal__header{padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;}
+  .modal__title{font:700 16px system-ui,sans-serif;}
+  .modal__back{display:none; margin-right:4px;} /* only used if you later re‑enable single‑pane */
+
+  /* ---- Mobile tabs row ---- */
+  .tabs-wrap{display:none;} /* hidden on desktop; shown on mobile via media query */
+  .modal__tabs{
+    display:flex; gap:8px; padding:8px 12px 4px; overflow-x:auto; scrollbar-width:none; position:relative;
+    /* Edge fade mask to hint scrollability */
+    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
   }
-  .modal-backdrop[data-open="true"] .modal { opacity: 1; transform: translateY(0); }
-  .modal__menu {
-    background: rgba(255,255,255,0.02);
-    border-right: 1px solid var(--border);
-    padding: 10px;
-    overflow: auto;
+  .modal__tabs::-webkit-scrollbar{display:none;}
+  /* Gradient overlays as additional hint (toggled via JS classes) */
+  .modal__tabs::before,
+  .modal__tabs::after{
+    content:""; position:absolute; top:0; bottom:0; width:16px; pointer-events:none;
   }
-  .modal__menu h3 {
-    font: 600 13px/1.1 system-ui, sans-serif;
-    letter-spacing: .08em; text-transform: uppercase; color: var(--modal-muted);
-    padding: 8px 10px; margin: 2px 0 6px;
+  .modal__tabs::before{ left:0; background:linear-gradient(to right, rgba(15,17,21,1), rgba(15,17,21,0)); opacity:0; transition:opacity .15s;}
+  .modal__tabs::after{ right:0; background:linear-gradient(to left, rgba(15,17,21,1), rgba(15,17,21,0)); opacity:0; transition:opacity .15s;}
+  .modal__tabs--canLeft::before{ opacity:1; }
+  .modal__tabs--canRight::after{ opacity:1; }
+
+  .tab__btn{
+    flex:0 0 auto; border:1px solid var(--border);
+    background:rgba(255,255,255,.03); color:var(--modal-text);
+    border-radius:999px; padding:8px 12px; font:600 13px system-ui; cursor:pointer; white-space:nowrap;
   }
-  .menu__btn {
-    width: 100%; text-align: left; padding: 12px 12px;
-    border-radius: 10px; border: 1px solid transparent;
-    background: transparent; color: var(--modal-text); cursor: pointer;
-    font: 500 14px/1.25 system-ui, sans-serif;
+  .tab__btn[aria-selected="true"]{border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12);}
+
+  /* Small chevrons to nudge scroll; touch‑friendly */
+  .tabs-nav{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:28px; height:28px; border:1px solid var(--border);
+    border-radius:999px; background:rgba(255,255,255,.03); cursor:pointer; user-select:none;
   }
-  .menu__btn:hover, .menu__btn[aria-current="true"] {
-    background: rgba(110,231,255,0.08);
-    border-color: rgba(110,231,255,0.3);
-  }
-  .modal__body {
-    display: grid; grid-template-rows: auto 1fr auto; min-height: 360px;
-  }
-  .modal__header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  .modal__title { font: 700 16px system-ui, sans-serif; }
-  .modal__content { padding: 14px 16px; overflow: auto; }
-  .modal__footer {
-    padding: 12px 16px; border-top: 1px solid var(--border);
-    display: flex; gap: 8px; justify-content: flex-end;
-  }
-  .btn {
-    appearance: none; border: 1px solid var(--border);
-    background: rgba(255,255,255,0.03); color: var(--modal-text);
-    padding: 10px 14px; border-radius: 10px; cursor: pointer; font: 600 14px system-ui;
-  }
-  .btn--accent { border-color: rgba(110,231,255,0.4); background: rgba(110,231,255,0.12); }
-  .field { display: grid; gap: 6px; margin-bottom: 12px; }
-  .field label { font: 600 12px/1 system-ui; color: var(--modal-muted); letter-spacing: .02em; }
-  .input, .select {
-    width: 100%; border: 1px solid var(--border); background: #0b0d12;
-    color: var(--modal-text); border-radius: 10px; padding: 10px 12px; font: 14px system-ui;
-  }
-  .helper { color: var(--modal-muted); font-size: 12px; margin-top: -6px; margin-bottom: 12px; }
-  @media (max-width: 640px) {
-    .modal { grid-template-columns: 1fr; width: 96vw; }
-    .modal__menu { order: 2; border-right: none; border-top: 1px solid var(--border); }
+
+  /* ---- Content & footer ---- */
+  .modal__content{padding:14px 16px; overflow:auto;}
+  .modal__footer{padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;}
+
+  /* ---- Buttons & fields ---- */
+  .btn{appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text); padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;}
+  .btn--accent{border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12);}
+  .field{display:grid; gap:6px; margin-bottom:12px;}
+  .field label{font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em;}
+  .input,.select{width:100%; border:1px solid var(--border); background:#0b0d12; color:var(--modal-text); border-radius:10px; padding:10px 12px; font:14px system-ui;}
+  .helper{color:var(--modal-muted); font-size:12px; margin-top:-6px; margin-bottom:12px;}
+
+  /* ---- Responsive behavior ---- */
+  @media (max-width:640px){
+    .modal{grid-template-columns:1fr;}   /* no sidebar column on mobile */
+    .modal__menu{display:none;}          /* hide sidebar on mobile */
+    .tabs-wrap{display:flex; align-items:center; gap:6px; padding:0 8px;} /* show tabs + chevrons */
+    .modal__back{display:none !important;} /* tabs replace Back on mobile */
   }
 </style>
 
 <div class="modal-backdrop" id="appModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal" role="document">
+    <!-- Desktop sidebar -->
     <nav class="modal__menu" aria-label="Settings menu">
       <h3>Settings</h3>
       <div id="modalMenu"></div>
     </nav>
+
     <section class="modal__body">
+      <!-- Header (title; Back hidden by default in this layout) -->
       <header class="modal__header">
+        <button class="btn modal__back" type="button" aria-label="Back">Back</button>
         <div class="modal__title" id="modalTitle">Menu</div>
       </header>
+
+      <!-- Mobile tabs row with scroll chevrons -->
+      <div class="tabs-wrap">
+        <button class="tabs-nav" id="tabsPrev" aria-label="Scroll left">‹</button>
+        <nav class="modal__tabs" id="modalTabs" aria-label="Settings tabs"></nav>
+        <button class="tabs-nav" id="tabsNext" aria-label="Scroll right">›</button>
+      </div>
+
+      <!-- Swappable content -->
       <div class="modal__content" id="modalContent"></div>
+
+      <!-- Footer actions (per‑view buttons can replace these) -->
       <footer class="modal__footer" id="modalFooter">
         <button class="btn" data-action="close">Close</button>
       </footer>
@@ -204,259 +224,289 @@
 </div>
 
 <script>
-/* ========== Tiny Modal Core (reusable) ========== */
+/* ========================================================================================
+   Modal Core (responsive): desktop sidebar + mobile scrollable tabs
+   - Accessible: focus trap, ESC to close, click-outside to close
+   - Data-driven views (menuConfig)
+   - Auto-scrolls active tab into view on mobile; edge-fade shows scrollability
+======================================================================================== */
 const Modal = (() => {
-  const backdrop = document.getElementById('appModalBackdrop');
-  const titleEl  = document.getElementById('modalTitle');
+  // ---- Cache DOM refs ----
+  const backdrop  = document.getElementById('appModalBackdrop');
+  const titleEl   = document.getElementById('modalTitle');
   const contentEl = document.getElementById('modalContent');
-  const footerEl = document.getElementById('modalFooter');
-  const menuEl = document.getElementById('modalMenu');
+  const footerEl  = document.getElementById('modalFooter');
+  const menuEl    = document.getElementById('modalMenu');
+  const tabsEl    = document.getElementById('modalTabs');
+  const tabsPrev  = document.getElementById('tabsPrev');
+  const tabsNext  = document.getElementById('tabsNext');
+  const backBtn   = document.querySelector('.modal__back');
 
-  let lastFocused = null;
-  let currentKey = null;
-  let menuConfig = {};
+  let lastFocused = null;         // to restore focus on close
+  let currentKey = null;          // active view key
+  let menuConfig = {};            // { key: {label, title?, render(), footer?()} }
 
-  // Focus trap
-  function trap(e) {
+  /* ---------------- a11y: focus trap & hotkeys ---------------- */
+  function trap(e){
     if (e.key !== 'Tab') return;
-    const focusables = backdrop.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const focusables = backdrop.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
     const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
-    const first = list[0], last = list[list.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    if (!list.length) return;
+    const first = list[0], last = list[list.length-1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
   }
+  function onKey(e){ if (e.key === 'Escape') close(); }
 
-  function open(defaultKey) {
+  /* ---------------- public: open/close/switch ---------------- */
+  function open(defaultKey = null){
     lastFocused = document.activeElement;
     backdrop.dataset.open = "true";
     backdrop.removeAttribute('aria-hidden');
     document.addEventListener('keydown', onKey);
     backdrop.addEventListener('keydown', trap);
-    if (defaultKey && menuConfig[defaultKey]) switchTo(defaultKey);
-    else if (Object.keys(menuConfig).length) switchTo(Object.keys(menuConfig)[0]);
-    // Focus first interactive
+
+    // Pick default view: passed key or first item
+    const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : Object.keys(menuConfig)[0];
+    switchTo(key);
+
+    // Focus first interactive (prefer active tab on mobile)
     setTimeout(() => {
-      const first = backdrop.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-      if (first) first.focus();
+      const mobile = window.matchMedia('(max-width: 640px)').matches;
+      if (mobile) tabsEl?.querySelector('.tab__btn[aria-selected="true"]')?.focus();
+      else menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus();
     }, 0);
   }
 
-  function close() {
+  function close(){
     backdrop.dataset.open = "false";
-    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.setAttribute('aria-hidden','true');
     document.removeEventListener('keydown', onKey);
     backdrop.removeEventListener('keydown', trap);
-    if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
   }
 
-  function onKey(e) {
-    if (e.key === 'Escape') close();
-  }
-
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) close(); // click outside
-  });
-  footerEl.addEventListener('click', (e) => {
-    if (e.target.matches('[data-action="close"]')) close();
-  });
-
-  function setMenu(config) {
-    menuConfig = config;
-    renderMenu();
-  }
-
-  function renderMenu() {
-    menuEl.innerHTML = '';
-    Object.entries(menuConfig).forEach(([key, def]) => {
-      const b = document.createElement('button');
-      b.className = 'menu__btn';
-      b.type = 'button';
-      b.textContent = def.label;
-      b.setAttribute('data-key', key);
-      b.addEventListener('click', () => switchTo(key));
-      menuEl.appendChild(b);
-    });
-    highlightCurrent();
-  }
-
-  function highlightCurrent() {
-    menuEl.querySelectorAll('.menu__btn').forEach(btn => {
-      btn.setAttribute('aria-current', btn.dataset.key === currentKey ? 'true' : 'false');
-    });
-  }
-
-  function switchTo(key) {
-    const def = menuConfig[key];
-    if (!def) return;
+  function switchTo(key){
+    const def = menuConfig[key]; if (!def) return;
     currentKey = key;
     titleEl.textContent = def.title || def.label;
     contentEl.replaceChildren(...[].concat(def.render()));
     footerEl.replaceChildren(...(def.footer?.() || defaultFooter()));
     highlightCurrent();
+    ensureActiveTabVisible();
+    // Focus first field for quick input
+    setTimeout(()=>{
+      const first = contentEl.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
+      (first || backBtn)?.focus();
+    },0);
   }
 
-  function defaultFooter() {
+  function setMenu(config){ menuConfig = config; renderMenu(); renderTabs(); highlightCurrent(); ensureActiveTabVisible(); }
+
+  /* ---------------- renderers & state sync ---------------- */
+  function renderMenu(){
+    menuEl.innerHTML = '';
+    Object.entries(menuConfig).forEach(([key, def])=>{
+      const b = document.createElement('button');
+      b.className='menu__btn';
+      b.type='button';
+      b.textContent=def.label;
+      b.dataset.key=key;
+      b.addEventListener('click', ()=>switchTo(key));
+      menuEl.appendChild(b);
+    });
+  }
+
+  function renderTabs(){
+    if (!tabsEl) return;
+    tabsEl.innerHTML = '';
+    Object.entries(menuConfig).forEach(([key, def])=>{
+      const b = document.createElement('button');
+      b.className='tab__btn';
+      b.type='button';
+      b.textContent=def.label;
+      b.dataset.key=key;
+      b.setAttribute('role','tab');
+      b.setAttribute('aria-selected', String(key===currentKey));
+      b.addEventListener('click', ()=>switchTo(key));
+      tabsEl.appendChild(b);
+    });
+    ensureActiveTabVisible();  // compute fades/chevrons
+  }
+
+  function highlightCurrent(){
+    menuEl.querySelectorAll('.menu__btn').forEach(btn=>{
+      btn.setAttribute('aria-current', btn.dataset.key === currentKey ? 'true' : 'false');
+    });
+    tabsEl?.querySelectorAll('.tab__btn').forEach(btn=>{
+      btn.setAttribute('aria-selected', btn.dataset.key === currentKey ? 'true' : 'false');
+    });
+  }
+
+  function defaultFooter(){
     const closeBtn = html`<button class="btn" data-action="close" type="button">Close</button>`;
     return [closeBtn];
   }
 
-  // Tiny html helper
-  function html(strings, ...values) {
-    const tpl = document.createElement('template');
-    tpl.innerHTML = strings.map((s, i) => s + (values[i] ?? '')).join('').trim();
-    return tpl.content.firstElementChild;
+  /* ---------------- tabs: scroll chevrons & edge fades ---------------- */
+  function updateTabOverflowHints(){
+    if (!tabsEl) return;
+    const canLeft  = tabsEl.scrollLeft > 2;
+    const canRight = tabsEl.scrollLeft + tabsEl.clientWidth < tabsEl.scrollWidth - 2;
+    tabsEl.classList.toggle('modal__tabs--canLeft',  canLeft);
+    tabsEl.classList.toggle('modal__tabs--canRight', canRight);
   }
 
-  return { open, close, setMenu, switchTo, el: { backdrop, titleEl, contentEl, footerEl, menuEl }, html };
+  function scrollTabsBy(delta){
+    tabsEl.scrollBy({ left: delta, behavior: 'smooth' });
+    setTimeout(updateTabOverflowHints, 200);
+  }
+
+  function ensureActiveTabVisible(){
+    if (!tabsEl) return;
+    const active = tabsEl.querySelector(`.tab__btn[aria-selected="true"]`);
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    updateTabOverflowHints();
+  }
+
+  // Pointer drag for nice horizontal scroll (desktop & mobile)
+  let isDown=false, startX=0, startLeft=0;
+  tabsEl?.addEventListener('pointerdown', e=>{ isDown=true; startX=e.clientX; startLeft=tabsEl.scrollLeft; tabsEl.setPointerCapture(e.pointerId); });
+  tabsEl?.addEventListener('pointermove', e=>{ if(!isDown) return; tabsEl.scrollLeft = startLeft - (e.clientX - startX); });
+  tabsEl?.addEventListener('pointerup', ()=>{ isDown=false; updateTabOverflowHints(); });
+  tabsEl?.addEventListener('pointercancel', ()=>{ isDown=false; });
+
+  tabsEl?.addEventListener('scroll', updateTabOverflowHints);
+  window.addEventListener('resize', updateTabOverflowHints);
+  document.getElementById('tabsPrev')?.addEventListener('click', ()=>scrollTabsBy(-Math.max(120, tabsEl.clientWidth * 0.6)));
+  document.getElementById('tabsNext')?.addEventListener('click', ()=>scrollTabsBy(+Math.max(120, tabsEl.clientWidth * 0.6)));
+
+  /* ---------------- global listeners ---------------- */
+  backdrop.addEventListener('click', (e)=>{ if (e.target === backdrop) close(); });
+  footerEl.addEventListener('click', (e)=>{ if (e.target.matches('[data-action="close"]')) close(); });
+
+  /* ---------------- tiny HTML helper ---------------- */
+  function html(strings,...values){
+    const t=document.createElement('template');
+    t.innerHTML=strings.map((s,i)=>s+(values[i]??'')).join('').trim();
+    return t.content.firstElementChild;
+  }
+
+  // Public API
+  return { open, close, setMenu, switchTo, el:{backdrop,titleEl,contentEl,footerEl,menuEl,tabsEl}, html };
 })();
 
-/* ========== Settings Menu Config (data-driven) ========== */
+/* ========================================================================================
+   Settings menu views (edit freely). Each view:
+   - label: menu/tab text
+   - title?: header title (falls back to label)
+   - render(): returns DOM nodes (array or single)
+   - footer?(): returns array of buttons (default is [Close])
+======================================================================================== */
 const SettingsMenu = {
   setIncome: {
     label: 'Set Income',
     title: 'Set Daily/Monthly Income',
-    render() {
+    render(){
       return [
-        elField('Income Amount', 'number', 'incomeAmount', { min: 0, step: '0.01', placeholder: 'e.g. 3200.00' }),
-        elSelect('Cadence', 'incomeCadence', [
-          ['monthly','Monthly'], ['weekly','Weekly'], ['daily','Daily']
-        ]),
+        elField('Income Amount','number','incomeAmount',{min:0,step:'0.01',placeholder:'e.g. 3200.00'}),
+        elSelect('Cadence','incomeCadence',[['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]),
         helper('This updates your regen baseline and HUD projections.')
       ];
     },
-    footer() {
-      return [ primary('Save', () => emit('income:save')),
-               cancel() ];
-    }
+    footer(){ return [ primary('Save',()=>emit('income:save')), cancel() ]; }
   },
   setCoreExpenses: {
     label: 'Set Core Expenses',
     title: 'Set Core Expenses',
-    render() {
+    render(){
       return [
-        elField('Core Expenses Amount', 'number', 'coreAmount', { min: 0, step: '0.01', placeholder: 'e.g. 1850.00' }),
-        elSelect('Cadence', 'coreCadence', [
-          ['monthly','Monthly'], ['weekly','Weekly']
-        ]),
+        elField('Core Expenses Amount','number','coreAmount',{min:0,step:'0.01',placeholder:'e.g. 1850.00'}),
+        elSelect('Cadence','coreCadence',[['monthly','Monthly'],['weekly','Weekly']]),
         helper('Core expenses inform Health/Mana/Stamina baselines.')
       ];
     },
-    footer() {
-      return [ primary('Save', () => emit('core:save')),
-               cancel() ];
-    }
+    footer(){ return [ primary('Save',()=>emit('core:save')), cancel() ]; }
   },
   addTransaction: {
     label: 'Add Transaction',
     title: 'Add Transaction',
-    render() {
+    render(){
       return [
-        elField('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' }),
-        elField('Amount', 'number', 'txAmount', { min: 0, step: '0.01', placeholder: 'e.g. 23.40' }),
-        elSelect('Type', 'txType', [['debit','Expense'],['credit','Income']]),
-        elSelect('Pool (optional)', 'txPool', [['','Unassigned'],['stamina','Stamina'],['mana','Mana'],['health','Health']]),
-        elField('Date', 'date', 'txDate', {}),
-        helper('If left unassigned, your fallback logic will route it (Stamina first, overflow to Health).')
+        elField('Description','text','txDesc',{placeholder:'e.g. Groceries'}),
+        elField('Amount','number','txAmount',{min:0,step:'0.01',placeholder:'e.g. 23.40'}),
+        elSelect('Type','txType',[['debit','Expense'],['credit','Income']]),
+        elSelect('Pool (optional)','txPool',[['','Unassigned'],['stamina','Stamina'],['mana','Mana'],['health','Health']]),
+        elField('Date','date','txDate',{}),
+        helper('If unassigned, fallback routes it: Stamina first, overflow to Health.')
       ];
     },
-    footer() {
-      return [ primary('Add', () => emit('tx:add')),
-               cancel() ];
-    }
+    footer(){ return [ primary('Add',()=>emit('tx:add')), cancel() ]; }
   },
   connectAccount: {
     label: 'Connect Account',
     title: 'Connect a Bank Account',
-    render() {
+    render(){
       return [
         p('Connect a bank via TrueLayer to sync transactions automatically.'),
         Modal.html`<button class="btn btn--accent" type="button" id="btnStartOAuth">Start Connection</button>`,
         helper('You’ll be redirected to your bank to authorise access.')
       ];
     },
-    footer() { return [ cancel() ]; }
+    footer(){ return [ cancel() ]; }
   },
   logout: {
     label: 'Log Out',
     title: 'Log Out',
-    render() {
-      return [
-        p('<strong>Are you sure?</strong> You’ll be signed out from this device.'),
-      ];
-    },
-    footer() {
-      return [ danger('Log Out', () => emit('auth:logout')),
-               cancel('Cancel') ];
-    }
+    render(){ return [ p('<strong>Are you sure?</strong> You’ll be signed out from this device.') ]; },
+    footer(){ return [ danger('Log Out',()=>emit('auth:logout')), cancel('Cancel') ]; }
   }
 };
 
-/* ========== Element helpers & event wiring ========== */
-function elField(labelTxt, type, id, attrs = {}) {
-  const wrap = document.createElement('div'); wrap.className = 'field';
-  const label = document.createElement('label'); label.setAttribute('for', id); label.textContent = labelTxt;
-  const input = document.createElement('input'); input.className = 'input'; input.type = type; input.id = id; Object.assign(input, attrs);
-  wrap.append(label, input); return wrap;
-}
-function elSelect(labelTxt, id, options) {
-  const wrap = document.createElement('div'); wrap.className = 'field';
-  const label = document.createElement('label'); label.setAttribute('for', id); label.textContent = labelTxt;
-  const select = document.createElement('select'); select.className = 'select'; select.id = id;
-  options.forEach(([val, txt]) => { const o = document.createElement('option'); o.value = val; o.textContent = txt; select.appendChild(o); });
-  wrap.append(label, select); return wrap;
-}
-function helper(text) { const s = document.createElement('div'); s.className = 'helper'; s.innerHTML = text; return s; }
-function p(text) { const el = document.createElement('div'); el.className = 'helper'; el.innerHTML = text; return el; }
-
-function btn(label, className, onClick) { const b = document.createElement('button'); b.type='button'; b.className=`btn ${className||''}`; b.textContent=label; b.addEventListener('click', onClick); return b; }
-function primary(label, onClick){ return btn(label, 'btn--accent', onClick); }
-function cancel(label='Close'){ const b = btn(label, '', () => Modal.close()); b.setAttribute('data-action','close'); return b; }
-function danger(label, onClick){ return btn(label, '', onClick); }
-
-/* Event bus: dispatch granular events the app can handle */
-function emit(type) {
-  // Collect current form values into detail for convenience
+/* ========================================================================================
+   Element helpers + event bus
+======================================================================================== */
+function elField(labelTxt,type,id,attrs={}){ const w=document.createElement('div'); w.className='field';
+  const l=document.createElement('label'); l.htmlFor=id; l.textContent=labelTxt;
+  const i=document.createElement('input'); i.className='input'; i.type=type; i.id=id; Object.assign(i,attrs);
+  w.append(l,i); return w; }
+function elSelect(labelTxt,id,options){ const w=document.createElement('div'); w.className='field';
+  const l=document.createElement('label'); l.htmlFor=id; l.textContent=labelTxt;
+  const s=document.createElement('select'); s.className='select'; s.id=id;
+  options.forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; s.appendChild(o); });
+  w.append(l,s); return w; }
+function helper(text){ const s=document.createElement('div'); s.className='helper'; s.innerHTML=text; return s; }
+function p(text){ const el=document.createElement('div'); el.className='helper'; el.innerHTML=text; return el; }
+function btn(label,klass,fn){ const b=document.createElement('button'); b.type='button'; b.className=`btn ${klass||''}`; b.textContent=label; b.addEventListener('click',fn); return b; }
+function primary(label,fn){ return btn(label,'btn--accent',fn); }
+function cancel(label='Close'){ const b=btn(label,'',()=>Modal.close()); b.dataset.action='close'; return b; }
+function danger(label,fn){ return btn(label,'',fn); }
+function emit(type){
   const values = {};
-  Modal.el.contentEl.querySelectorAll('input, select, textarea').forEach(i => { values[i.id] = i.value; });
-  const evt = new CustomEvent(type, { detail: values });
-  window.dispatchEvent(evt);
+  Modal.el.contentEl.querySelectorAll('input,select,textarea').forEach(i=>values[i.id]=i.value);
+  window.dispatchEvent(new CustomEvent(type,{ detail: values }));
 }
 
-/* ========== Bootstrapping ========== */
-// Register the menu
+/* ========================================================================================
+   Boot: register menu + hook Settings button
+======================================================================================== */
 Modal.setMenu(SettingsMenu);
 
-// Hook up the Settings button on the Vitals screen
-document.getElementById('settings-btn')?.addEventListener('click', () => {
- //Modal.open('setIncome'); // default view when opening (pick any key)
-  Modal.open(); // default view when opening (pick any key)
+// Your Settings button on the Vitals screen
+document.getElementById('settings-btn')?.addEventListener('click',()=>{
+  // Open directly to your preferred default view (change key if desired)
+  Modal.open('setIncome');
 });
 
-// Example: handle emitted actions in your app layer
-window.addEventListener('income:save', (e) => {
-  // TODO: persist to Firestore + recompute regen baseline
-  // e.detail = { incomeAmount, incomeCadence }
-  console.log('Save income', e.detail);
-});
-window.addEventListener('core:save', (e) => {
-  console.log('Save core expenses', e.detail);
-});
-window.addEventListener('tx:add', (e) => {
-  console.log('Add transaction', e.detail);
-});
-window.addEventListener('auth:logout', () => {
-  console.log('Log out clicked');
-  // TODO: firebase.auth().signOut() ...
-  Modal.close();
-});
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'btnStartOAuth') {
-    console.log('Start TrueLayer OAuth flow');
-    // TODO: trigger your backend function to generate auth URL
-  }
-});
+// Example app handlers (replace with your Firestore/TrueLayer calls)
+window.addEventListener('income:save', e => console.log('Save income', e.detail));
+window.addEventListener('core:save',   e => console.log('Save core', e.detail));
+window.addEventListener('tx:add',      e => console.log('Add tx', e.detail));
+window.addEventListener('auth:logout', () => { console.log('Logout'); Modal.close(); });
+document.addEventListener('click', e => { if (e.target?.id==='btnStartOAuth'){ console.log('Start TrueLayer OAuth'); }});
 </script>
-<!-- ============ /Modal & Settings Menu ============ -->
+<!-- ============ /Modal ============ -->
+
 
 </body>
 </html>
