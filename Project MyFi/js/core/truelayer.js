@@ -23,6 +23,24 @@ export function initTrueLayerLink() {
   });
 }
 
+export function connectTrueLayerAccount() {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Please log in first.");
+      return;
+    }
+
+    const clientId = "sandbox-projectmyfi-f89485";
+    const redirectUri = encodeURIComponent("http://127.0.0.1:5500/Project%20MyFi/callback.html");
+    const scope = encodeURIComponent("info accounts balance cards transactions direct_debits standing_orders offline_access");
+    const state = encodeURIComponent(user.uid);
+    const providers = encodeURIComponent("uk-cs-mock uk-ob-all uk-oauth-all");
+
+    const authUrl = `https://auth.truelayer-sandbox.com/?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&state=${state}&providers=${providers}`;
+
+    window.location.href = authUrl;
+}
+
 
 export async function triggerTrueLayerFetch(type) {
   const user = auth.currentUser;

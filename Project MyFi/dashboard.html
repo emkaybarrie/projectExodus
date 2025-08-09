@@ -99,123 +99,150 @@
 
 </div>
 
-<!-- ============ Modal (Responsive Settings: Sidebar on Desktop, Scroll Tabs on Mobile) ============ -->
+<!-- ============ Modal (Sidebar kept on Mobile; Content Squishes Responsively) ============ -->
 <style>
-  /* ---- Theme tokens (tweak to match your app) ---- */
+  /* ---- Theme tokens ---- */
   :root{
     --modal-backdrop: rgba(10,12,16,.55);
     --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
     --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
+
+    --sidebar-min-mobile: 150px;  /* minimum sidebar width on mobile */
+    --sidebar-max-mobile: 35%;    /* max percentage sidebar can take on mobile */
+
+    /* Presets you can try */
+    /* Narrow sidebar */
+    /* --sidebar-min-mobile: 160px; --sidebar-max-mobile: 40%; */
+    /* Wide sidebar */
+    /* --sidebar-min-mobile: 200px; --sidebar-max-mobile: 52%; */
   }
 
-  /* ---- Backdrop and modal container ---- */
+  /* ---- Backdrop, shell ---- */
   .modal-backdrop{position:fixed;inset:0;background:var(--modal-backdrop);display:none;align-items:center;justify-content:center;z-index:1000;}
   .modal-backdrop[data-open="true"]{display:flex;}
   .modal{
     width:min(720px,92vw);
-    max-height:86svh; /* better on mobile toolbars; falls back fine */
+    max-height:86svh; /* mobile toolbar friendly */
     background:linear-gradient(145deg,var(--modal-card),var(--modal-bg));
     color:var(--modal-text);
     border:1px solid var(--border); border-radius:var(--radius);
     box-shadow:0 10px 40px rgba(0,0,0,.45);
-    display:grid; grid-template-columns:220px minmax(0,1fr); /* desktop: sidebar + content */
+
+    /* KEY: keep sidebar visible on all sizes.
+       Left column flexible with min (so it doesn't vanish),
+       right column can shrink all the way down. */
+    display:grid;
+    grid-template-columns: minmax(140px, 35%) minmax(0, 1fr);
     overflow:hidden;
+
     transform:translateY(8px); opacity:0; transition:opacity .15s ease, transform .15s ease;
   }
   .modal-backdrop[data-open="true"] .modal{opacity:1; transform:translateY(0);}
 
-  /* ---- Sidebar menu (desktop) ---- */
-  .modal__menu{background:rgba(255,255,255,.02); border-right:1px solid var(--border); padding:10px; overflow:auto;}
-  .modal__menu h3{font:600 13px/1.1 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted); padding:8px 10px; margin:2px 0 6px;}
-  .menu__btn{width:100%; text-align:left; padding:12px; border-radius:10px; border:1px solid transparent; background:transparent; color:var(--modal-text); cursor:pointer; font:500 14px/1.25 system-ui;}
-  .menu__btn:hover,.menu__btn[aria-current="true"]{background:rgba(110,231,255,.08); border-color:rgba(110,231,255,.3);}
-
-  /* ---- Body: header + tabs (mobile) + content + footer ---- */
-  .modal__body{display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; min-height:360px;}
-  .modal__header{padding:12px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px;}
-  .modal__title{font:700 16px system-ui,sans-serif;}
-  .modal__back{display:none; margin-right:4px;} /* only used if you later re‑enable single‑pane */
-
-  /* ---- Mobile tabs row ---- */
-  .tabs-wrap{display:none;} /* hidden on desktop; shown on mobile via media query */
-  .modal__tabs{
-    display:flex; gap:8px; padding:8px 12px 4px; overflow-x:auto; scrollbar-width:none; position:relative;
-    /* Edge fade mask to hint scrollability */
-    mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+  /* ---- Sidebar (always visible) ---- */
+  .modal__menu{
+    background:rgba(255,255,255,.02);
+    border-right:1px solid var(--border);
+    padding:10px;
+    overflow:auto;
   }
-  .modal__tabs::-webkit-scrollbar{display:none;}
-  /* Gradient overlays as additional hint (toggled via JS classes) */
-  .modal__tabs::before,
-  .modal__tabs::after{
-    content:""; position:absolute; top:0; bottom:0; width:16px; pointer-events:none;
+  .modal__menu h3{
+    font:600 13px/1.1 system-ui,sans-serif;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted);
+    padding:8px 10px; margin:2px 0 6px;
   }
-  .modal__tabs::before{ left:0; background:linear-gradient(to right, rgba(15,17,21,1), rgba(15,17,21,0)); opacity:0; transition:opacity .15s;}
-  .modal__tabs::after{ right:0; background:linear-gradient(to left, rgba(15,17,21,1), rgba(15,17,21,0)); opacity:0; transition:opacity .15s;}
-  .modal__tabs--canLeft::before{ opacity:1; }
-  .modal__tabs--canRight::after{ opacity:1; }
-
-  .tab__btn{
-    flex:0 0 auto; border:1px solid var(--border);
-    background:rgba(255,255,255,.03); color:var(--modal-text);
-    border-radius:999px; padding:8px 12px; font:600 13px system-ui; cursor:pointer; white-space:nowrap;
+  .menu__btn{
+    width:100%; text-align:left; padding:12px;
+    border-radius:10px; border:1px solid transparent;
+    background:transparent; color:var(--modal-text); cursor:pointer;
+    font:500 14px/1.25 system-ui;
   }
-  .tab__btn[aria-selected="true"]{border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12);}
-
-  /* Small chevrons to nudge scroll; touch‑friendly */
-  .tabs-nav{
-    display:inline-flex; align-items:center; justify-content:center;
-    width:28px; height:28px; border:1px solid var(--border);
-    border-radius:999px; background:rgba(255,255,255,.03); cursor:pointer; user-select:none;
+  .menu__btn:hover,
+  .menu__btn[aria-current="true"]{
+    background:rgba(110,231,255,.08);
+    border-color:rgba(110,231,255,.3);
   }
 
-  /* ---- Content & footer ---- */
-  .modal__content{padding:14px 16px; overflow:auto;}
-  .modal__footer{padding:12px 16px; border-top:1px solid var(--border); display:flex; gap:8px; justify-content:flex-end;}
+  /* ---- Body layout (header + content + footer) ---- */
+  .modal__body{
+    display:grid;
+    grid-template-rows: auto minmax(0, 1fr) auto; /* content scrolls only */
+    min-width:0; /* CRITICAL for shrinking on small screens */
+    min-height:360px;
+  }
+  .modal__header{
+    padding:12px 12px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  .modal__title{ font:700 16px system-ui,sans-serif; }
+  .modal__back{ display:none; } /* back not needed with constant sidebar */
 
-  /* ---- Buttons & fields ---- */
-  .btn{appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text); padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;}
+  .modal__content{
+    padding: 0.75rem 1.5rem;  /* top/bottom, left/right */
+    box-sizing: border-box; /* keep padding inside the width */
+    overflow:auto; 
+    min-width:0; /* allow inputs to shrink */
+  }
+
+  .modal__content form {
+    padding-bottom: 1rem;
+  }
+  .modal__footer{
+    padding:10px 12px; border-top:1px solid var(--border);
+    display:flex; gap:8px; justify-content:flex-end;
+  }
+
+  /* ---- Inputs & buttons ---- */
+  .btn{appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text);
+       padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;}
   .btn--accent{border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12);}
-  .field{display:grid; gap:6px; margin-bottom:12px;}
+
+  .field{display:grid; gap:6px; margin-bottom:12px; min-width:0;}
   .field label{font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em;}
-  .input,.select{width:100%; border:1px solid var(--border); background:#0b0d12; color:var(--modal-text); border-radius:10px; padding:10px 12px; font:14px system-ui;}
+  .input,.select{
+    width:100%; max-width:100%; /* prevent overflow */
+    border:1px solid var(--border); background:#0b0d12; color:var(--modal-text);
+    border-radius:10px; padding:10px 12px; font:14px system-ui; min-width:0;
+  }
   .helper{color:var(--modal-muted); font-size:12px; margin-top:-6px; margin-bottom:12px;}
 
-  /* ---- Responsive behavior ---- */
+  /* ---- Mobile tweaks: give sidebar a bit more room, tighten paddings ---- */
   @media (max-width:640px){
-    .modal{grid-template-columns:1fr;}   /* no sidebar column on mobile */
-    .modal__menu{display:none;}          /* hide sidebar on mobile */
-    .tabs-wrap{display:flex; align-items:center; gap:6px; padding:0 8px;} /* show tabs + chevrons */
-    .modal__back{display:none !important;} /* tabs replace Back on mobile */
+    .modal{
+      grid-template-columns: minmax(var(--sidebar-min-mobile), var(--sidebar-max-mobile)) minmax(0, calc(100% - var(--sidebar-max-mobile)));
+      width: 96vw; /* a touch wider on tiny screens */
+    }
+    .menu__btn{ padding:10px; font-size:13px; }
+    .modal__header{ padding:10px 10px; }
+    .modal__content{ 
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+      padding-left: 1rem;
+      padding-right: 2rem; /* extra space on the right */
+      box-sizing: border-box;
+    }
+    .btn{ padding:9px 12px; font-size:13px; }
   }
 </style>
 
 <div class="modal-backdrop" id="appModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
   <div class="modal" role="document">
-    <!-- Desktop sidebar -->
+    <!-- Sidebar: stays visible on all sizes -->
     <nav class="modal__menu" aria-label="Settings menu">
       <h3>Settings</h3>
       <div id="modalMenu"></div>
     </nav>
 
+    <!-- Right side: header + content + footer -->
     <section class="modal__body">
-      <!-- Header (title; Back hidden by default in this layout) -->
       <header class="modal__header">
+        <!-- Back button kept in DOM for future variants; hidden by CSS -->
         <button class="btn modal__back" type="button" aria-label="Back">Back</button>
         <div class="modal__title" id="modalTitle">Menu</div>
       </header>
 
-      <!-- Mobile tabs row with scroll chevrons -->
-      <div class="tabs-wrap">
-        <button class="tabs-nav" id="tabsPrev" aria-label="Scroll left">‹</button>
-        <nav class="modal__tabs" id="modalTabs" aria-label="Settings tabs"></nav>
-        <button class="tabs-nav" id="tabsNext" aria-label="Scroll right">›</button>
-      </div>
-
-      <!-- Swappable content -->
       <div class="modal__content" id="modalContent"></div>
 
-      <!-- Footer actions (per‑view buttons can replace these) -->
       <footer class="modal__footer" id="modalFooter">
         <button class="btn" data-action="close">Close</button>
       </footer>
@@ -225,26 +252,22 @@
 
 <script>
 /* ========================================================================================
-   Modal Core (responsive): desktop sidebar + mobile scrollable tabs
+   Modal Core (sidebar always visible)
+   - Responsive grid: left column has a floor; right column can "squish"
    - Accessible: focus trap, ESC to close, click-outside to close
    - Data-driven views (menuConfig)
-   - Auto-scrolls active tab into view on mobile; edge-fade shows scrollability
 ======================================================================================== */
 const Modal = (() => {
-  // ---- Cache DOM refs ----
+  // ---- DOM refs ----
   const backdrop  = document.getElementById('appModalBackdrop');
   const titleEl   = document.getElementById('modalTitle');
   const contentEl = document.getElementById('modalContent');
   const footerEl  = document.getElementById('modalFooter');
   const menuEl    = document.getElementById('modalMenu');
-  const tabsEl    = document.getElementById('modalTabs');
-  const tabsPrev  = document.getElementById('tabsPrev');
-  const tabsNext  = document.getElementById('tabsNext');
-  const backBtn   = document.querySelector('.modal__back');
 
-  let lastFocused = null;         // to restore focus on close
-  let currentKey = null;          // active view key
-  let menuConfig = {};            // { key: {label, title?, render(), footer?()} }
+  let lastFocused = null;
+  let currentKey = null;
+  let menuConfig = {}; // { key: { label, title?, render(), footer?() } }
 
   /* ---------------- a11y: focus trap & hotkeys ---------------- */
   function trap(e){
@@ -266,16 +289,12 @@ const Modal = (() => {
     document.addEventListener('keydown', onKey);
     backdrop.addEventListener('keydown', trap);
 
-    // Pick default view: passed key or first item
+    // Default to provided key or first menu item
     const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : Object.keys(menuConfig)[0];
     switchTo(key);
 
-    // Focus first interactive (prefer active tab on mobile)
-    setTimeout(() => {
-      const mobile = window.matchMedia('(max-width: 640px)').matches;
-      if (mobile) tabsEl?.querySelector('.tab__btn[aria-selected="true"]')?.focus();
-      else menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus();
-    }, 0);
+    // Focus the active item in sidebar so keyboard users can navigate
+    setTimeout(() => menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus(), 0);
   }
 
   function close(){
@@ -290,18 +309,26 @@ const Modal = (() => {
     const def = menuConfig[key]; if (!def) return;
     currentKey = key;
     titleEl.textContent = def.title || def.label;
-    contentEl.replaceChildren(...[].concat(def.render()));
+
+    // Swap content + footer
+    const nodes = [].concat(def.render());
+    contentEl.replaceChildren(...nodes);
     footerEl.replaceChildren(...(def.footer?.() || defaultFooter()));
+
     highlightCurrent();
-    ensureActiveTabVisible();
-    // Focus first field for quick input
+
+    // Focus first interactive for fast entry
     setTimeout(()=>{
       const first = contentEl.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
-      (first || backBtn)?.focus();
+      if (first) first.focus();
     },0);
   }
 
-  function setMenu(config){ menuConfig = config; renderMenu(); renderTabs(); highlightCurrent(); ensureActiveTabVisible(); }
+  function setMenu(config){
+    menuConfig = config;
+    renderMenu();
+    highlightCurrent();
+  }
 
   /* ---------------- renderers & state sync ---------------- */
   function renderMenu(){
@@ -317,29 +344,9 @@ const Modal = (() => {
     });
   }
 
-  function renderTabs(){
-    if (!tabsEl) return;
-    tabsEl.innerHTML = '';
-    Object.entries(menuConfig).forEach(([key, def])=>{
-      const b = document.createElement('button');
-      b.className='tab__btn';
-      b.type='button';
-      b.textContent=def.label;
-      b.dataset.key=key;
-      b.setAttribute('role','tab');
-      b.setAttribute('aria-selected', String(key===currentKey));
-      b.addEventListener('click', ()=>switchTo(key));
-      tabsEl.appendChild(b);
-    });
-    ensureActiveTabVisible();  // compute fades/chevrons
-  }
-
   function highlightCurrent(){
     menuEl.querySelectorAll('.menu__btn').forEach(btn=>{
       btn.setAttribute('aria-current', btn.dataset.key === currentKey ? 'true' : 'false');
-    });
-    tabsEl?.querySelectorAll('.tab__btn').forEach(btn=>{
-      btn.setAttribute('aria-selected', btn.dataset.key === currentKey ? 'true' : 'false');
     });
   }
 
@@ -347,39 +354,6 @@ const Modal = (() => {
     const closeBtn = html`<button class="btn" data-action="close" type="button">Close</button>`;
     return [closeBtn];
   }
-
-  /* ---------------- tabs: scroll chevrons & edge fades ---------------- */
-  function updateTabOverflowHints(){
-    if (!tabsEl) return;
-    const canLeft  = tabsEl.scrollLeft > 2;
-    const canRight = tabsEl.scrollLeft + tabsEl.clientWidth < tabsEl.scrollWidth - 2;
-    tabsEl.classList.toggle('modal__tabs--canLeft',  canLeft);
-    tabsEl.classList.toggle('modal__tabs--canRight', canRight);
-  }
-
-  function scrollTabsBy(delta){
-    tabsEl.scrollBy({ left: delta, behavior: 'smooth' });
-    setTimeout(updateTabOverflowHints, 200);
-  }
-
-  function ensureActiveTabVisible(){
-    if (!tabsEl) return;
-    const active = tabsEl.querySelector(`.tab__btn[aria-selected="true"]`);
-    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    updateTabOverflowHints();
-  }
-
-  // Pointer drag for nice horizontal scroll (desktop & mobile)
-  let isDown=false, startX=0, startLeft=0;
-  tabsEl?.addEventListener('pointerdown', e=>{ isDown=true; startX=e.clientX; startLeft=tabsEl.scrollLeft; tabsEl.setPointerCapture(e.pointerId); });
-  tabsEl?.addEventListener('pointermove', e=>{ if(!isDown) return; tabsEl.scrollLeft = startLeft - (e.clientX - startX); });
-  tabsEl?.addEventListener('pointerup', ()=>{ isDown=false; updateTabOverflowHints(); });
-  tabsEl?.addEventListener('pointercancel', ()=>{ isDown=false; });
-
-  tabsEl?.addEventListener('scroll', updateTabOverflowHints);
-  window.addEventListener('resize', updateTabOverflowHints);
-  document.getElementById('tabsPrev')?.addEventListener('click', ()=>scrollTabsBy(-Math.max(120, tabsEl.clientWidth * 0.6)));
-  document.getElementById('tabsNext')?.addEventListener('click', ()=>scrollTabsBy(+Math.max(120, tabsEl.clientWidth * 0.6)));
 
   /* ---------------- global listeners ---------------- */
   backdrop.addEventListener('click', (e)=>{ if (e.target === backdrop) close(); });
@@ -393,19 +367,15 @@ const Modal = (() => {
   }
 
   // Public API
-  return { open, close, setMenu, switchTo, el:{backdrop,titleEl,contentEl,footerEl,menuEl,tabsEl}, html };
+  return { open, close, setMenu, switchTo, el:{backdrop,titleEl,contentEl,footerEl,menuEl}, html };
 })();
 
 /* ========================================================================================
-   Settings menu views (edit freely). Each view:
-   - label: menu/tab text
-   - title?: header title (falls back to label)
-   - render(): returns DOM nodes (array or single)
-   - footer?(): returns array of buttons (default is [Close])
+   Settings views (edit freely)
 ======================================================================================== */
 const SettingsMenu = {
   setIncome: {
-    label: 'Set Income',
+    label: 'Income',
     title: 'Set Daily/Monthly Income',
     render(){
       return [
@@ -417,7 +387,7 @@ const SettingsMenu = {
     footer(){ return [ primary('Save',()=>emit('income:save')), cancel() ]; }
   },
   setCoreExpenses: {
-    label: 'Set Core Expenses',
+    label: 'Core Expenses',
     title: 'Set Core Expenses',
     render(){
       return [
@@ -429,7 +399,7 @@ const SettingsMenu = {
     footer(){ return [ primary('Save',()=>emit('core:save')), cancel() ]; }
   },
   addTransaction: {
-    label: 'Add Transaction',
+    label: 'Transactions',
     title: 'Add Transaction',
     render(){
       return [
@@ -492,9 +462,8 @@ function emit(type){
 ======================================================================================== */
 Modal.setMenu(SettingsMenu);
 
-// Your Settings button on the Vitals screen
+// Open with your preferred default view
 document.getElementById('settings-btn')?.addEventListener('click',()=>{
-  // Open directly to your preferred default view (change key if desired)
   Modal.open('setIncome');
 });
 
@@ -506,6 +475,7 @@ window.addEventListener('auth:logout', () => { console.log('Logout'); Modal.clos
 document.addEventListener('click', e => { if (e.target?.id==='btnStartOAuth'){ console.log('Start TrueLayer OAuth'); }});
 </script>
 <!-- ============ /Modal ============ -->
+
 
 
 </body>
