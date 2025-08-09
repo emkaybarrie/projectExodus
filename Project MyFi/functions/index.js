@@ -36,7 +36,13 @@ exports.exchangeToken = onRequest({
     }
 
     // NOTE: This must match the registered TrueLayer redirect URI
-    const redirectUri = 'http://127.0.0.1:5500/Project%20MyFi/callback.html';
+    // const isLocal = window.location.hostname === 'localhost';
+    const isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const redirectUri = isLocal
+      ? 'http://127.0.0.1:5500/Project%20MyFi/callback.html'
+      : 'https://emkaybarrie.github.io/foranteGamesStudio/Project%20MyFi/callback.html';
+
+    // const redirectUri = 'http://127.0.0.1:5500/Project%20MyFi/callback.html';
 
     try {
       const params = new URLSearchParams();

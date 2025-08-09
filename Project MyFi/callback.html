@@ -24,13 +24,6 @@
       .then(data => {
         console.log("Response from token exchange:", data);
 
-        // document.body.innerHTML = `
-        //     <p>Token exchange completed.</p>
-        //     <button id="continueBtn">Go to Dashboard</button>
-        // `;
-        // document.getElementById("continueBtn").addEventListener("click", () => {
-        //     window.location.href = "dashboard (new).html";
-        // });
 
         if (data.success) {
           window.location.href = "dashboard_v2.html";
