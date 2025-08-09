@@ -8,9 +8,12 @@ export function connectTrueLayerAccount() {
 
   const clientId = "sandbox-projectmyfi-f89485";
 
-  // Build callback right next to current page
-  const redirectUri = encodeURIComponent(new URL('callback.html', window.location.href).toString());
+  // Build the clean callback URL beside the current page (no query string)
+  const rawRedirect = new URL('callback.html', window.location.href);
+  rawRedirect.search = ''; // ensure no ?code&state on the string we use
+  sessionStorage.setItem('tl_redirect_uri', rawRedirect.toString());
 
+  const redirectUri = encodeURIComponent(rawRedirect.toString());
   const scope = encodeURIComponent("info accounts balance cards transactions direct_debits standing_orders offline_access");
   const state = encodeURIComponent(user.uid);
   const providers = encodeURIComponent("uk-cs-mock uk-ob-all uk-oauth-all");
@@ -21,7 +24,6 @@ export function connectTrueLayerAccount() {
 
   window.location.href = authUrl;
 }
-
 
 window.connectTrueLayerAccount = connectTrueLayerAccount; // <-- make it global
 
