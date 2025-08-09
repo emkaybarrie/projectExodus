@@ -206,6 +206,19 @@
   }
   .helper{color:var(--modal-muted); font-size:12px; margin-top:-6px; margin-bottom:12px;}
 
+  /* Make everything inside the content area stack with a consistent gap */
+.modal__content > * + * { margin-top: 10px; }
+
+/* Remove the negative top margin on helper text */
+.helper {
+  margin-top: 0.5rem;     /* was negative earlier */
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+/* Optional: give primary buttons a touch more breathing room */
+.modal__content .btn { margin-top: 2px; }
+
   /* ---- Mobile tweaks: give sidebar a bit more room, tighten paddings ---- */
   @media (max-width:640px){
     .modal{
@@ -472,7 +485,7 @@ window.addEventListener('income:save', e => console.log('Save income', e.detail)
 window.addEventListener('core:save',   e => console.log('Save core', e.detail));
 window.addEventListener('tx:add',      e => console.log('Add tx', e.detail));
 window.addEventListener('auth:logout', () => { console.log('Logout'); Modal.close(); });
-document.addEventListener('click', e => { if (e.target?.id==='btnStartOAuth'){ console.log('Start TrueLayer OAuth'); }});
+document.addEventListener('click', e => { if (e.target?.id==='btnStartOAuth'){ connectTrueLayerAccount(); console.log('Start TrueLayer OAuth'); }});
 </script>
 <!-- ============ /Modal ============ -->
 

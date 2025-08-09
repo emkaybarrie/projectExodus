@@ -41,6 +41,9 @@ export function connectTrueLayerAccount() {
     window.location.href = authUrl;
 }
 
+window.connectTrueLayerAccount = connectTrueLayerAccount; // <-- make it global
+
+
 
 export async function triggerTrueLayerFetch(type) {
   const user = auth.currentUser;

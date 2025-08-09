@@ -3,6 +3,10 @@ import { getDoc, doc, setDoc, updateDoc, deleteField } from "https://www.gstatic
 import playerDataManager from "./playerDataManager.js";
 import { initHUD } from "./hud/hud.js";
 
+import "./core/truelayer.js";
+import "./modal.js";
+import "./settingsMenu.js";
+
 // Initialise app
 document.addEventListener("DOMContentLoaded", () => {
   
@@ -51,9 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
         portraitImage.src = `./assets/portraits/${portraitKey}.png`;
 
 
-
+       // Initialise Dashboard modules
         initHUD(user.uid);
-        // loadDashboard(playerData);
+
+        // Modal setup
+
 
         document.getElementById("essence-btn").addEventListener("click", () => {
           alert("Essence interaction coming soon...");
