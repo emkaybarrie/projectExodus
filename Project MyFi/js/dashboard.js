@@ -59,9 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("Essence interaction coming soon...");
         });
 
-        document.getElementById("settings-btn").addEventListener("click", () => {
-          alert("Settings placeholder");
-        });
+        // document.getElementById("settings-btn").addEventListener("click", () => {
+        //   alert("Settings placeholder");
+        // });
 
         document.getElementById("refresh-btn").addEventListener("click", () => {
           location.reload(); // Simple full page refresh
