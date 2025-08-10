@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vitals HUD</title>
+
+  <!-- App bootstrap -->
+  <script type="module" src="js/dashboard.js" defer></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="vitals_v10.css" />
+  <link rel="stylesheet" href="modal.css" />
+  <link rel="stylesheet" href="pwa.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- Install banner (kept) -->
+  <div id="installBanner" class="install-banner" style="display: none;">
+    <span>📲 Install MyFi</span>
+    <div class="buttons">
+      <button id="installBtn">Install</button>
+      <button id="dismissInstall" class="dismiss-btn" title="Dismiss">✖</button>
+    </div>
+  </div>
+
+  <div class="vitals-container">
+    <div id="background-layer"></div>
+    <div class="starfield-overlay"></div>
+    <h1>VITALS</h1>
+
+    <div class="top-section">
+      <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" />
+      <div class="vitals-bars">
+        <div id="vital-health">
+          <div class="bar health">
+            <span class="bar-label">Health</span>
+            <div class="bar-fill" style="width: 0%;"></div>
+            <span class="bar-value">0 / 0</span>
+          </div>
+        </div>
+        <div id="vital-mana">
+          <div class="bar mana">
+            <span class="bar-label">Mana</span>
+            <div class="bar-fill" style="width: 0%;"></div>
+            <span class="bar-value">0 / 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="vital-stamina">
+      <div class="bar stamina">
+        <span class="bar-label">Stamina</span>
+        <div class="bar-fill" style="width: 0%;"></div>
+        <span class="bar-value">0 / 0</span>
+      </div>
+    </div>
+
+    <div class="skills-row">
+      <div class="skill-slot">🔥</div>
+      <div class="skill-slot">💧</div>
+      <div class="skill-slot locked">🔒</div>
+      <div class="skill-slot">⚡</div>
+    </div>
+
+    <!-- UPDATE LOG + RECENTLY LOCKED -->
+    <div class="update-log-box">
+      <div class="update-log">
+        <h2>UPDATE LOG</h2>
+        <!-- Latest 5 pending entries render here -->
+        <ul id="update-log-list"></ul>
+      </div>
+
+      <div class="section-divider"></div>
+
+      <div class="recently-locked">
+        <h2>RECENTLY LOCKED</h2>
+        <!-- Last 24h (latest 5) confirmed items -->
+        <ul id="recently-locked-list"></ul>
+      </div>
+    </div>
+
+    <button class="tag-button">TAG TRANSACTION</button>
+
+    <div id="vital-essence">
+      <div class="bar essence">
+        <span class="bar-label">Essence</span>
+        <div class="bar-fill" style="width: 0%;"></div>
+        <span class="bar-value">0 / 0</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="side-btn" id="settings-btn" title="Settings">⚙️</button>
+      <button class="main-btn" id="essence-btn" title="Use Essence"></button>
+      <button class="side-btn" id="refresh-btn" title="Refresh">🔄</button>
+    </div>
+  </div>
+
+  <!-- Modal (kept) -->
+  <div class="modal-backdrop" id="appModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <nav class="modal__menu" aria-label="Settings menu">
+        <h3>Settings</h3>
+        <div id="modalMenu"></div>
+      </nav>
+      <section class="modal__body">
+        <header class="modal__header">
+          <button class="btn modal__back" type="button" aria-label="Back">Back</button>
+          <div class="modal__title" id="modalTitle">Menu</div>
+        </header>
+        <div class="modal__content" id="modalContent"></div>
+        <footer class="modal__footer" id="modalFooter">
+          <button class="btn" data-action="close">Close</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+
+  <!-- Auto-wire Update Log + Recently Locked -->
+  <script type="module">
+    import { autoInitUpdateLog } from './js/hud/modules/vitals_v7.js';
+    autoInitUpdateLog();
+  </script>
+</body>
+</html>

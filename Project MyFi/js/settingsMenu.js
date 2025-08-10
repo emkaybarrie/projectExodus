@@ -1,5 +1,8 @@
 // js/settingsMenu.js
+import { initHUD } from './hud/hud.js'; 
 import { connectTrueLayerAccount } from './core/truelayer.js';
+import { updateIncome, updateCoreExpenses } from './data/cashflowData.js';
+import { addTransaction } from './data/financialData_USER_v2.js';
 
 (function(){
   const { el, open, setMenu } = window.MyFiModal;
@@ -17,8 +20,8 @@ import { connectTrueLayerAccount } from './core/truelayer.js';
     setCoreExpenses: {
       label:'Core Expenses', title:'Set Core Expenses',
       render(){ return [
-        field('Core Expenses Amount','number','coreAmount',{min:0,step:'0.01',placeholder:'e.g. 1850.00'}),
-        select('Cadence','coreCadence',[['monthly','Monthly'],['weekly','Weekly']]),
+        field('Core Expenses Amount','number','expenseAmount',{min:0,step:'0.01',placeholder:'e.g. 1850.00'}),
+        select('Cadence','expenseCadence',[['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]),
         helper('Core expenses inform Health/Mana/Stamina baselines.')
       ];},
       footer(){ return [ primary('Save',()=>emit('core:save')), cancel() ]; }
@@ -29,8 +32,8 @@ import { connectTrueLayerAccount } from './core/truelayer.js';
         field('Description','text','txDesc',{placeholder:'e.g. Groceries'}),
         field('Amount','number','txAmount',{min:0,step:'0.01',placeholder:'e.g. 23.40'}),
         select('Type','txType',[['debit','Expense'],['credit','Income']]),
-        select('Pool (optional)','txPool',[['','Unassigned'],['stamina','Stamina'],['mana','Mana'],['health','Health']]),
         field('Date','date','txDate',{}),
+        select('Pool (optional)','txPool',[['','Unassigned'],['stamina','Stamina'],['mana','Mana']]),
         helper('If unassigned, fallback routes it: Stamina first, overflow to Health.')
       ];},
       footer(){ return [ primary('Add',()=>emit('tx:add')), cancel() ]; }
@@ -84,8 +87,8 @@ import { connectTrueLayerAccount } from './core/truelayer.js';
   document.getElementById('settings-btn')?.addEventListener('click', ()=> window.MyFiModal.open('setIncome'));
 
   // demo listeners (replace with real logic)
-  window.addEventListener('income:save', e=>console.log('Save income', e.detail));
-  window.addEventListener('core:save',   e=>console.log('Save core', e.detail));
-  window.addEventListener('tx:add',      e=>console.log('Add tx', e.detail));
+  window.addEventListener('income:save', async e=>{console.log('Save income', e.detail); await updateIncome(e.detail.incomeAmount, e.detail.incomeCadence); await initHUD(); });
+  window.addEventListener('core:save',   async e=>{console.log('Save expenses', e.detail); await updateCoreExpenses(e.detail.expenseAmount, e.detail.expenseCadence); await initHUD(); });
+  window.addEventListener('tx:add',      async e=>{console.log('Add txn', e.detail); await addTransaction(e.detail); await initHUD(); });
   window.addEventListener('auth:logout', ()=>{ console.log('Logout'); window.MyFiModal.close(); });
 })();
