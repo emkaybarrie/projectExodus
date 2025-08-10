@@ -64,6 +64,7 @@ body {
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow: 0 0 60px rgba(120,150,250,0.15);
+  overflow: hidden; /* prevent the whole page from scrolling */
 }
 
 h1 { text-align:center; font-family:'Cinzel',serif; font-size:2rem; margin-bottom:12px; color:#f0e6d2; }
@@ -133,6 +134,11 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   border-radius: 16px;
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(6px);
+
+   flex: 1 1 auto;              /* take remaining space between header and footer */
+  min-height: 220px;           /* adjust to taste */
+  max-height: none;            /* flex will govern height */
+  overflow: auto;              /* scroll inside this panel */
 }
 .update-log h2, .recently-locked h2 { margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9; }
 .update-log ul, .recently-locked ul { list-style:none; margin:0; padding:0; }
@@ -202,6 +208,32 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   cursor: pointer;
   backdrop-filter: blur(4px);
   box-shadow: 0 0 6px rgba(0,0,0,0.3);
+}
+
+
+/* Footer: always visible at the bottom */
+.hud-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: linear-gradient(
+    to top,
+    rgba(10,10,20,0.85),
+    rgba(10,10,20,0.65),
+    rgba(10,10,20,0)
+  );
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* small spacing tweak so essence bar doesn’t glue to footer edge */
+.hud-footer #vital-essence { margin-bottom: 8px; }
+
+/* optional: make the update log list itself a little roomier on short screens */
+@media (max-height: 700px) {
+  .update-log-box { min-height: 160px; }
 }
 
 /* Action buttons */
