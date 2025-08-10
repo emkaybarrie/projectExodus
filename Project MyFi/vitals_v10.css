@@ -366,6 +366,7 @@ h1, .bar-label, .tag-button, .update-log h2 {
 /* UPDATE LOG / RECENTLY LOCKED — minimal glassy styling */
 .update-log-box {
   margin-top: 0px;
+  margin-bottom: 16px;
   padding: 12px;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 16px;

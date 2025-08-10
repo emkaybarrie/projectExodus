@@ -5,20 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vitals HUD</title>
 
-  <!-- App bootstrap -->
+  <!-- Main app logic -->
   <script type="module" src="js/dashboard.js" defer></script>
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="vitals_v10.css" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="vitals_v11.css" />
   <link rel="stylesheet" href="modal.css" />
   <link rel="stylesheet" href="pwa.css" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <!-- Install banner (kept) -->
   <div id="installBanner" class="install-banner" style="display: none;">
     <span>📲 Install MyFi</span>
     <div class="buttons">
@@ -34,6 +32,7 @@
 
     <div class="top-section">
       <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" />
+
       <div class="vitals-bars">
         <div id="vital-health">
           <div class="bar health">
@@ -67,11 +66,10 @@
       <div class="skill-slot">⚡</div>
     </div>
 
-    <!-- UPDATE LOG + RECENTLY LOCKED -->
+    <!-- Update Log + Recently Locked -->
     <div class="update-log-box">
       <div class="update-log">
         <h2>UPDATE LOG</h2>
-        <!-- Latest 5 pending entries render here -->
         <ul id="update-log-list"></ul>
       </div>
 
@@ -79,7 +77,6 @@
 
       <div class="recently-locked">
         <h2>RECENTLY LOCKED</h2>
-        <!-- Last 24h (latest 5) confirmed items -->
         <ul id="recently-locked-list"></ul>
       </div>
     </div>
@@ -123,7 +120,7 @@
 
   <!-- Auto-wire Update Log + Recently Locked -->
   <script type="module">
-    import { autoInitUpdateLog } from './js/hud/modules/vitals_v7.js';
+    import { autoInitUpdateLog } from './js/hud/modules/vitals_v8.js';
     autoInitUpdateLog();
   </script>
 </body>
