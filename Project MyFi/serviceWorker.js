@@ -8,6 +8,7 @@ const FILES_TO_CACHE = [
   './vitals_v11.css',
   './css/global/forms.css',
   './js/core/auth.js',
+  './js/data/financialData_USER_v2.js',
   './js/dashboard.js',
   './js/hud/modules/vitals_v8.js',
   './js/hud/hud.js',

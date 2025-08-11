@@ -1,7 +1,7 @@
 {
   "name": "Project MyFi",
   "short_name": "Project MyFi",
-  "start_url": "./dashboard.html",
+  "start_url": "./auth.html",
   "display": "standalone",
   "background_color": "#0b0b18",
   "theme_color": "#1a1a2a",
