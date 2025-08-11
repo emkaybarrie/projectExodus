@@ -229,14 +229,19 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   z-index: 5;
   padding-top: 8px;
   padding-bottom: 8px;
-  background: linear-gradient(
+  /* background: linear-gradient(
     to top,
     rgba(10,10,20,0.85),
     rgba(10,10,20,0.65),
     rgba(10,10,20,0)
-  );
-  backdrop-filter: blur(6px);
-  border-top: 1px solid rgba(255,255,255,0.08);
+  ); */
+   background: none !important;        /* removes the gradient */
+  background-color: transparent !important;
+  backdrop-filter: none;               /* remove frosted blur (causes a dark haze) */
+  -webkit-backdrop-filter: none;
+  /* border-top: 1px solid rgba(255,255,255,0.08); */
+   border-top: none;                    /* optional: drop the divider line */
+  box-shadow: none;                    /* just in case */
 }
 
 /* small spacing tweak so essence bar doesn’t glue to footer edge */
