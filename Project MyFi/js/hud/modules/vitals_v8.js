@@ -31,6 +31,31 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+/* ────────────────────────────────────────────────────────────────────────────
+   View mode helpers (daily / weekly / monthly)
+   ──────────────────────────────────────────────────────────────────────────── */
+const VIEW_MODES   = ["daily", "weekly", "monthly"];
+const VIEW_FACTORS = { daily: 1, weekly: 7, monthly: 30 };
+
+function getViewMode() {
+  return localStorage.getItem("vitals:viewMode") || "daily";
+}
+function setViewMode(mode) {
+  const next = VIEW_MODES.includes(mode) ? mode : "daily";
+  localStorage.setItem("vitals:viewMode", next);
+  const btn = document.getElementById("left-btn");
+  if (btn) btn.title = `View: ${next}`;
+  // Tell HUD animation to rescale and redraw
+  window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: next }}));
+  // Repaint grids immediately for static/snap view
+  refreshBarGrids();
+}
+function cycleViewMode() {
+  const i = VIEW_MODES.indexOf(getViewMode());
+  setViewMode(VIEW_MODES[(i + 1) % VIEW_MODES.length]);
+}
+
+
 /* ──────────────────────────────────────────────────────────────────────────────
    1) VITALS SNAPSHOT WRITER (compatible with existing flow)
    ────────────────────────────────────────────────────────────────────────────── */
@@ -173,21 +198,27 @@ export async function loadVitalsToHUD(uid) {
   const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
   const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
 
+  const factor = VIEW_FACTORS[getViewMode()];
+
   for (const [pool, values] of Object.entries(pools)) {
     const el = elements[pool];
     if (!el) continue;
 
     const regen = values.regenCurrent ?? 0;
     const spent = values.spentToDate ?? 0;
-    const max = values.regenBaseline ?? 0;
+    const max   = (values.regenBaseline ?? 0) * factor;
 
     const current = Math.max(0, Math.min((regen * daysTracked) - spent, max));
-    const pct = max > 0 ? Math.min((current / max) * 100, 100) : 0;
+    const pct     = max > 0 ? Math.min((current / max) * 100, 100) : 0;
 
     el.fill.style.width = `${pct}%`;
     el.value.innerText  = `${current.toFixed(2)} / ${max.toFixed(2)}${values.trend ? ` • ${values.trend}` : ''}`;
   }
+
+  // ensure grid exists for snap view
+  refreshBarGrids();
 }
+
 
 /* ──────────────────────────────────────────────────────────────────────────────
    4) Ghost builder (per‑tx allocation) — shared by initVitalsHUD
@@ -246,7 +277,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
   const pools = snap.data().pools;
   const elements = getVitalsElements();
-  ensureReclaimLayers(elements);
+    // NEW: create grid layers now so they sit under fill
+  ensureGridLayers(elements);     // <── add this
+  ensureReclaimLayers(elements);  // (yours, unchanged)
 
   // Local animated state
   const state = {};
@@ -265,12 +298,16 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const REVEAL_DELAY_MS = 600;
   const TINY_MARGIN = 0.1;
 
+  // NEW: view factor on first init
+  let viewMode = getViewMode();
+  let factor = VIEW_FACTORS[viewMode];
+
   // Initialise bar state from committed values
   for (const pool of Object.keys(pools)) {
     const data = pools[pool];
     const regen = data.regenCurrent ?? 0;
     const spent = data.spentToDate ?? 0;
-    const max   = data.regenBaseline ?? 0;
+    const max   = (data.regenBaseline ?? 0) * factor;  // <── changed
 
     const regenTotal = regen * daysTracked;
     const current = Math.max(0, Math.min(regenTotal - spent, max));
@@ -395,6 +432,35 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     requestAnimationFrame(animateBars);
   }
   requestAnimationFrame(animateBars);
+
+    // ── NEW: react to mode changes while running ───────────────────────────────
+  window.addEventListener("vitals:viewmode", (e) => {
+    viewMode = e?.detail?.mode || "daily";
+    factor = VIEW_FACTORS[viewMode];
+
+    // Rescale max and refresh instantaneous display pct + labels
+    for (const pool of Object.keys(state)) {
+      const el = elements[pool];
+      if (!el) continue;
+
+      const poolData = pools[pool];
+      state[pool].max = (poolData.regenBaseline ?? 0) * factor;
+
+      // Keep current the same; only the denominator changes
+      const effectiveCurrent = Math.max(0, state[pool].current - (pendingLossDisplay[pool] || 0));
+      const pct = state[pool].max > 0 ? (effectiveCurrent / state[pool].max) * 100 : 0;
+
+      displayPct[pool] = pct;
+      el.fill.style.width = `${pct.toFixed(2)}%`;
+
+      // Update value text to reflect new max
+      const reclaimTxt = pendingLossDisplay[pool] > 0 ? ` (+${pendingLossDisplay[pool].toFixed(2)})` : '';
+      el.value.innerText = `${effectiveCurrent.toFixed(2)} / ${state[pool].max.toFixed(2)}${reclaimTxt}`;
+    }
+
+    // Redraw the day grid for the new mode
+    refreshBarGrids();
+  });
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
@@ -624,3 +690,75 @@ function getVitalsElements() {
   }
   return elements;
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Grid layer: vertical day dividers under the green fill
+   ──────────────────────────────────────────────────────────────────────────── */
+function ensureGridLayers(elements) {
+  const days = VIEW_FACTORS[getViewMode()];
+  for (const pool of Object.keys(elements)) {
+    const barEl = elements[pool]?.fill?.closest('.bar');
+    if (!barEl) continue;
+
+    let grid = barEl.querySelector('.bar-grid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'bar-grid';
+      // Insert before fill so it sits under it naturally
+      const fill = elements[pool].fill;
+      barEl.insertBefore(grid, fill);
+    }
+    paintBarGrid(grid, days);
+  }
+}
+
+function paintBarGrid(gridEl, days) {
+  // days-1 lines at 1/d, 2/d, ..., (d-1)/d
+  const needed = Math.max(0, (days|0) - 1);
+  gridEl.innerHTML = '';
+  for (let i = 1; i <= needed; i++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    line.style.left = ((i / days) * 100).toFixed(4) + '%';
+    gridEl.appendChild(line);
+  }
+}
+
+// Can be called on mode change or initial snap
+function refreshBarGrids() {
+  const elements = getVitalsElements();
+  const days = VIEW_FACTORS[getViewMode()];
+  for (const pool of Object.keys(elements)) {
+    const barEl = elements[pool]?.fill?.closest('.bar');
+    if (!barEl) continue;
+    let grid = barEl.querySelector('.bar-grid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'bar-grid';
+      const fill = elements[pool].fill;
+      barEl.insertBefore(grid, fill);
+    }
+    paintBarGrid(grid, days);
+  }
+}
+
+// Auto-wire left button to cycle view mode
+(function wireLeftButtonForViewMode() {
+  const run = () => {
+    const btn = document.getElementById("left-btn");
+    if (!btn) return;
+    // Init tooltip with current mode
+    btn.title = `View: ${getViewMode()}`;
+    btn.addEventListener("click", cycleViewMode);
+    // Ensure initial grids are drawn if HUD not animated yet
+    refreshBarGrids();
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run, { once: true });
+  } else {
+    run();
+  }
+})();
+
+

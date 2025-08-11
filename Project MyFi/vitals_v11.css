@@ -82,8 +82,19 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   display: flex; align-items: center; padding: 0 12px;
   background-color: rgba(20,20,30,0.4); backdrop-filter: blur(4px);
   box-shadow: 0 0 8px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.05);
+  overflow: hidden;
 }
 .bar .bar-bg { position:absolute; inset:0; z-index:1; }
+
+.bar .bar-grid {
+  position: absolute; inset: 0;
+  z-index: 1; /* under fill, above background */
+  pointer-events: none;
+}
+.bar .bar-grid .grid-line {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,255,255,0.08); /* subtle tick */
+}
 
 .bar-fill {
   position: absolute; inset:0 auto 0 0; left:0; width:0%; z-index:1;
