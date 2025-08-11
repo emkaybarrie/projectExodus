@@ -6,6 +6,7 @@ import { initHUD } from "./hud/hud.js";
 import "./core/truelayer.js";
 import "./modal.js";
 import "./settingsMenu.js";
+import "./financesMenu.js";
 
 // Initialise app
 document.addEventListener("DOMContentLoaded", () => {
@@ -59,19 +60,10 @@ document.addEventListener("DOMContentLoaded", () => {
         initHUD(user.uid);
 
         // Modal setup
-
-
         document.getElementById("essence-btn").addEventListener("click", () => {
           alert("Essence interaction coming soon...");
         });
 
-        // document.getElementById("settings-btn").addEventListener("click", () => {
-        //   alert("Settings placeholder");
-        // });
-
-        document.getElementById("refresh-btn").addEventListener("click", () => {
-          location.reload(); // Simple full page refresh
-        });
        
        
     }

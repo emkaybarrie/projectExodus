@@ -10,7 +10,6 @@ export async function initHUD() {
   const userId = auth.currentUser.uid;
 
   await updateVitalsPools(userId);
-  //loadVitalsToHUD(userId)
   initVitalsHUD(userId, 60)
 
   console.log("HUD initialized");

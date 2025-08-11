@@ -79,7 +79,7 @@ export async function updateVitalsPools(uid) {
       return [baseline, "on target"];
     };
 
-    const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+    const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
     const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
 
     const pools = {};
@@ -170,7 +170,7 @@ export async function loadVitalsToHUD(uid) {
   const pools = snap.data().pools;
   const elements = getVitalsElements();
 
-  const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+  const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
   const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
 
   for (const [pool, values] of Object.entries(pools)) {
@@ -240,8 +240,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
 
-  const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
+  const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
   const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
+  console.log ('Days tracked:', daysTracked);
 
   const pools = snap.data().pools;
   const elements = getVitalsElements();
