@@ -1,5 +1,5 @@
 /**
- * vitals_v7.js
+ * vitals_v8.js
  * ---------------------------------------------------------------------------
  * What this file does:
  * 1) Maintains "current" vitals (regen, spent, trend) in cashflowData/current
@@ -104,8 +104,10 @@ export async function updateVitalsPools(uid) {
       return [baseline, "on target"];
     };
 
+    const MS_PER_DAY = 86_400_000;
     const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
-    const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
+    const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / MS_PER_DAY));
+    const elapsedDays = (Date.now() - vitalsStartDate) / MS_PER_DAY;
 
     const pools = {};
     let totalCurrent = 0;
@@ -141,6 +143,7 @@ export async function updateVitalsPools(uid) {
       balanceSnapshot: Number(availableBalance.toFixed(2)),
       mismatch,
       daysTracked,
+      elapsedDays,
       lastSync: new Date().toISOString(),
     });
 
@@ -195,8 +198,9 @@ export async function loadVitalsToHUD(uid) {
   const pools = snap.data().pools;
   const elements = getVitalsElements();
 
+  const MS_PER_DAY = 86_400_000;
   const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
-  const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
+  const daysElapsed = Math.max(0, (Date.now() - vitalsStartDate.getTime()) / MS_PER_DAY);
 
   const factor = VIEW_FACTORS[getViewMode()];
 
@@ -208,7 +212,7 @@ export async function loadVitalsToHUD(uid) {
     const spent = values.spentToDate ?? 0;
     const max   = (values.regenBaseline ?? 0) * factor;
 
-    const current = Math.max(0, Math.min((regen * daysTracked) - spent, max));
+    const current = Math.max(0, Math.min((regen * daysElapsed) - spent, max));
     const pct     = max > 0 ? Math.min((current / max) * 100, 100) : 0;
 
     el.fill.style.width = `${pct}%`;
@@ -223,43 +227,76 @@ export async function loadVitalsToHUD(uid) {
 /* ──────────────────────────────────────────────────────────────────────────────
    4) Ghost builder (per‑tx allocation) — shared by initVitalsHUD
    ────────────────────────────────────────────────────────────────────────────── */
+// Config: how should Mana overflow behave?
+// 'health' = spend goes to Mana up to current Mana, remainder → Health
+// 'stamina_then_health' = remainder → Stamina (up to current Stamina), then → Health
+const MANA_OVERFLOW_MODE = 'health'; // or 'stamina_then_health'
+
 function buildGhostFromPending(pendingTx, state) {
   let remainingForStamina = Math.max(0, state.stamina?.current ?? 0);
-  const sorted = [...pendingTx].sort((a, b) => a.dateMs - b.dateMs);
+  let remainingForMana    = Math.max(0, state.mana?.current ?? 0);
 
+  const sorted = [...pendingTx].sort((a, b) => a.dateMs - b.dateMs);
   const perPoolTotals = { stamina: 0, mana: 0, health: 0 };
   const newWatch = []; // [{pool, amount, expiry}]
 
   for (const tx of sorted) {
-    if (tx.amount >= 0) continue; // income/contrib don't ghost
+    if (tx.amount >= 0) continue; // income doesn't ghost
     const spend  = -tx.amount;
     const intent = previewPool(tx);
     const expiry = tx.ghostExpiryMs;
 
-    if (intent === "mana") {
-      perPoolTotals.mana += spend;
-      newWatch.push({ pool: "mana", amount: spend, expiry });
+    if (intent === 'mana') {
+      // 1) Fill Mana up to what's currently available
+      const toMana = Math.min(spend, remainingForMana);
+      if (toMana > 0) {
+        perPoolTotals.mana += toMana;
+        newWatch.push({ pool: 'mana', amount: toMana, expiry });
+        remainingForMana -= toMana;
+      }
+
+      // 2) Overflow handling
+      const leftover = spend - toMana;
+      if (leftover > 0) {
+        if (MANA_OVERFLOW_MODE === 'stamina_then_health') {
+          const toStamina = Math.min(leftover, remainingForStamina);
+          if (toStamina > 0) {
+            perPoolTotals.stamina += toStamina;
+            newWatch.push({ pool: 'stamina', amount: toStamina, expiry });
+            remainingForStamina -= toStamina;
+          }
+          const toHealth = leftover - toStamina;
+          if (toHealth > 0) {
+            perPoolTotals.health += toHealth;
+            newWatch.push({ pool: 'health', amount: toHealth, expiry });
+          }
+        } else {
+          // default: overflow directly to Health
+          perPoolTotals.health += leftover;
+          newWatch.push({ pool: 'health', amount: leftover, expiry });
+        }
+      }
       continue;
     }
 
-    // stamina-first with overflow → health
+    // stamina-first with overflow → health (unchanged)
     const toStamina = Math.min(spend, remainingForStamina);
     const toHealth  = spend - toStamina;
 
     if (toStamina > 0) {
       perPoolTotals.stamina += toStamina;
-      newWatch.push({ pool: "stamina", amount: toStamina, expiry });
+      newWatch.push({ pool: 'stamina', amount: toStamina, expiry });
+      remainingForStamina -= toStamina;
     }
     if (toHealth > 0) {
       perPoolTotals.health += toHealth;
-      newWatch.push({ pool: "health", amount: toHealth, expiry });
+      newWatch.push({ pool: 'health', amount: toHealth, expiry });
     }
-
-    remainingForStamina -= toStamina;
   }
 
   return { perPoolTotals, newWatch };
 }
+
 
 /* ──────────────────────────────────────────────────────────────────────────────
    5) Animated HUD with LIVE Ghost Preview (pending items only)
@@ -271,9 +308,10 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
 
+  const MS_PER_DAY = 86_400_000;
   const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
-  const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / 86400000));
-  console.log ('Days tracked:', daysTracked);
+  const daysElapsed = Math.max(0, (Date.now() - vitalsStartDate.getTime()) / MS_PER_DAY);
+  console.log ('Days tracked:', daysElapsed);
 
   const pools = snap.data().pools;
   const elements = getVitalsElements();
@@ -309,7 +347,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     const spent = data.spentToDate ?? 0;
     const max   = (data.regenBaseline ?? 0) * factor;  // <── changed
 
-    const regenTotal = regen * daysTracked;
+    const regenTotal = regen * daysElapsed;
     const current = Math.max(0, Math.min(regenTotal - spent, max));
 
     state[pool] = { current, max };
