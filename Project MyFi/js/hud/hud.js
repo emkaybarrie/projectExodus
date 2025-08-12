@@ -20,7 +20,7 @@ export async function initHUD() {
   await updateVitalsPools(userId);
 
   // Start the animated HUD (includes live ghost + mode handling)
-  initVitalsHUD(userId, 1);
+  initVitalsHUD(userId, 60);
 
   console.log("HUD initialized");
 }
