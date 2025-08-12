@@ -40,7 +40,7 @@ export async function loginUser(email, password) {
         const playerData = await getUserDataFromFirestore(user.uid);
         if (playerData) {
             localStorage.setItem("playerData", JSON.stringify(playerData));
-            window.location.href = "dashboard_v4.html";  // Redirect after login
+            window.location.href = "dashboard.html";  // Redirect after login
         }
     } catch (error) {
         console.error("Login error:", error.message);
@@ -92,7 +92,7 @@ export async function signupUser(data) {
         },
         });
 
-        window.location.href = "dashboard_v4.html"; // Redirect after signup
+        window.location.href = "dashboard.html"; // Redirect after signup
     } catch (error) {
         console.error("Signup error:", error.message);
         alert("Signup failed: " + error.message);

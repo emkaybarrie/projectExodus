@@ -11,7 +11,7 @@ import {
   updateVitalsPools,
   initVitalsHUD,
   loadVitalsToHUD
-} from "./modules/vitals_v10.js";
+} from "./modules/vitals.js";
 
 export async function initHUD() {
   const userId = auth.currentUser.uid;
