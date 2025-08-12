@@ -82,7 +82,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   display: flex; align-items: center; padding: 0 12px;
   background-color: rgba(20,20,30,0.4); backdrop-filter: blur(4px);
   box-shadow: 0 0 8px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.05);
-  overflow: hidden;
+  overflow: visible;
 }
 .bar .bar-bg { position:absolute; inset:0; z-index:1; }
 
@@ -103,6 +103,33 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar-fill::before {
   content:''; position:absolute; inset:0; z-index:-1; border-radius:6px 0 0 6px;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 0 6px rgba(255,255,255,0.1), inset 0 0 6px rgba(255,255,255,0.05);
+}
+
+/* Surplus pill (shows how many full bars of surplus remain after pending) */
+.bar .bar-surplus {
+  position: absolute;
+  right: -6px;
+  top: auto;
+  bottom: -10px;
+  transform: none;
+  z-index: 4;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0a0a12;
+  background: linear-gradient(to bottom, #f0dca4, #e6c980);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+
+/* Make sure the value text and pill don’t overlap visually */
+.bar .bar-value {
+  right: 12px;
+  transform: translateY(-50%);
 }
 
 .bar .bar-reclaim {
@@ -265,3 +292,5 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   50%  { box-shadow: 0 0 16px #c084fc, 0 0 32px rgba(192,132,252,.8), inset 0 0 6px rgba(255,255,255,.15); }
   100% { box-shadow: 0 0 8px #a855f7, 0 0 12px rgba(168,85,247,.5), inset 0 0 3px rgba(255,255,255,.1); }
 }
+
+

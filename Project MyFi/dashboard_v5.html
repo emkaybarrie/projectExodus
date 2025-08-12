@@ -23,7 +23,7 @@
       <button id="installBtn">Install</button>
       <button id="dismissInstall" class="dismiss-btn" title="Dismiss">✖</button>
     </div>
-  </div>
+  </div>s
 
   <div class="vitals-container">
     <div id="background-layer"></div>
@@ -39,6 +39,7 @@
             <span class="bar-label">Health</span>
             <div class="bar-fill" style="width: 0%;"></div>
             <span class="bar-value">0 / 0</span>
+            <span class="bar-surplus" aria-hidden="true"></span>
           </div>
         </div>
         <div id="vital-mana">
@@ -46,6 +47,7 @@
             <span class="bar-label">Mana</span>
             <div class="bar-fill" style="width: 0%;"></div>
             <span class="bar-value">0 / 0</span>
+            <span class="bar-surplus" aria-hidden="true"></span>
           </div>
         </div>
       </div>
@@ -56,6 +58,7 @@
         <span class="bar-label">Stamina</span>
         <div class="bar-fill" style="width: 0%;"></div>
         <span class="bar-value">0 / 0</span>
+        <span class="bar-surplus" aria-hidden="true"></span>
       </div>
     </div>
 
@@ -81,21 +84,21 @@
       </div>
     </div>
 
-    <!-- <button class="tag-button">TAG TRANSACTION</button> -->
     <div class="hud-footer">
-    <div id="vital-essence">
-      <div class="bar essence">
-        <span class="bar-label">Essence</span>
-        <div class="bar-fill" style="width: 0%;"></div>
-        <span class="bar-value">0 / 0</span>
+      <div id="vital-essence">
+        <div class="bar essence">
+          <span class="bar-label">Essence</span>
+          <div class="bar-fill" style="width: 0%;"></div>
+          <span class="bar-value">0 / 0</span>
+          <span class="bar-surplus" aria-hidden="true"></span>
+        </div>
       </div>
-    </div>
 
-    <div class="actions">
-      <button class="side-btn" id="left-btn" title="Time Mode">🌀</button>
-      <button class="main-btn" id="essence-btn" title="Use Essence"></button>
-      <button class="side-btn" id="right-btn" title="Finances">📜</button>
-    </div>
+      <div class="actions">
+        <button class="side-btn" id="left-btn" title="Time Mode">🌀</button>
+        <button class="main-btn" id="essence-btn" title="Use Essence"></button>
+        <button class="side-btn" id="right-btn" title="Finances">📜</button>
+      </div>
     </div>
   </div>
 
@@ -119,7 +122,7 @@
     </div>
   </div>
 
-  <!-- Auto-wire Update Log + Recently Locked -->
+  <!-- Auto-wire Update Log (point to v16) -->
   <script type="module">
     import { autoInitUpdateLog } from './js/hud/modules/vitals_v10.js';
     autoInitUpdateLog();

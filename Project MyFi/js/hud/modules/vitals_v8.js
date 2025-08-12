@@ -105,7 +105,7 @@ export async function updateVitalsPools(uid) {
     };
 
     const MS_PER_DAY = 86_400_000;
-    const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
+    const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
     const daysTracked = Math.max(1, Math.floor((new Date() - vitalsStartDate) / MS_PER_DAY));
     const elapsedDays = (Date.now() - vitalsStartDate) / MS_PER_DAY;
 
@@ -199,7 +199,7 @@ export async function loadVitalsToHUD(uid) {
   const elements = getVitalsElements();
 
   const MS_PER_DAY = 86_400_000;
-  const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
+  const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
   const daysElapsed = Math.max(0, (Date.now() - vitalsStartDate.getTime()) / MS_PER_DAY);
 
   const factor = VIEW_FACTORS[getViewMode()];
@@ -309,7 +309,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   if (!snap.exists()) return;
 
   const MS_PER_DAY = 86_400_000;
-  const vitalsStartDate = new Date("2025-08-11T00:00:00Z");
+  const vitalsStartDate = new Date("2025-08-01T00:00:00Z");
   const daysElapsed = Math.max(0, (Date.now() - vitalsStartDate.getTime()) / MS_PER_DAY);
   console.log ('Days tracked:', daysElapsed);
 
