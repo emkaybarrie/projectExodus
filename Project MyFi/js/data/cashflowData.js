@@ -1,43 +1,46 @@
-import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const db = getFirestore();
 const auth = getAuth();
 
-export async function updateIncome(newIncome, frequency) {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Not logged in");
-
-  const ref = doc(db, "players", user.uid, "cashflowData", "dailyAverages");
-
-    if (frequency === "daily") {
-
-    } else if (frequency === "weekly") {
-      newIncome = newIncome / 7; // Convert weekly to daily 
-    } else if (frequency === "monthly") {
-      newIncome = newIncome / 30; // Convert monthly to daily   
-    }
-
-  await updateDoc(ref, {
-    "dIncome": Number(newIncome)
-  });
+export async function updateIncome(amount, cadence) {
+  const daily = toDaily(amount, cadence);
+  const uid = getAuth().currentUser.uid;
+  const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
+  await setDoc(ref, { dIncome: daily }, { merge: true });
 }
 
-export async function updateCoreExpenses(newExpenses, frequency) {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Not logged in");
+export async function updateCoreExpenses(amount, cadence) {
+  const daily = toDaily(amount, cadence);
+  const uid = getAuth().currentUser.uid;
+  const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
+  await setDoc(ref, { dCoreExpenses: daily }, { merge: true });
+}
 
-  const ref = doc(db, "players", user.uid, "cashflowData", "dailyAverages");
+// NEW: getters used by the menu
+export async function getDailyIncome() {
+  const uid = getAuth().currentUser.uid;
+  const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
+  const snap = await getDoc(ref);
+  const v = snap.exists() ? snap.data().dIncome : null;
+  return typeof v === 'number' ? v : 0;
+}
 
-    if (frequency === "daily") {
+export async function getDailyCoreExpenses() {
+  const uid = getAuth().currentUser.uid;
+  const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
+  const snap = await getDoc(ref);
+  const v = snap.exists() ? snap.data().dCoreExpenses : null;
+  return typeof v === 'number' ? v : 0;
+}
 
-    } else if (frequency === "weekly") {
-      newExpenses = newExpenses / 7; // Convert weekly to daily 
-    } else if (frequency === "monthly") {
-      newExpenses = newExpenses / 30; // Convert monthly to daily   
-    }
-
-  await updateDoc(ref, {
-    "dCoreExpenses": Number(newExpenses)
-  });
+// helpers
+function toDaily(amount, cadence) {
+  const a = Number(amount) || 0;
+  switch ((cadence || 'monthly').toLowerCase()) {
+    case 'daily':   return a;
+    case 'weekly':  return a / 7;
+    default:        return a / 30; // monthly
+  }
 }

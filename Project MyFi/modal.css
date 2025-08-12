@@ -133,3 +133,8 @@
     }
     .btn{ padding:9px 12px; font-size:13px; }
   }
+
+  /* in your modal css */
+.current-row { display:flex; justify-content:space-between; align-items:center; }
+.current-row > label { opacity:.8; }
+.current-value { padding:.5rem .75rem; border:1px solid var(--border-color, #2a2f3a); border-radius:.6rem; background:rgba(255,255,255,0.02); }
