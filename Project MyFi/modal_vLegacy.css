@@ -138,14 +138,3 @@
 .current-row { display:flex; justify-content:space-between; align-items:center; }
 .current-row > label { opacity:.8; }
 .current-value { padding:.5rem .75rem; border:1px solid var(--border-color, #2a2f3a); border-radius:.6rem; background:rgba(255,255,255,0.02); }
-
-/* --- Help modal extras --- */
-.help-media { margin-top: 6px; }
-.help-media img, .help-media video {
-  width: 100%; height: auto; display: block;
-  border: 1px solid var(--border); border-radius: 12px;
-}
-.subnav { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
-.subnav .btn { padding:8px 12px; }
-.subnav .seg--current { outline: 2px solid rgba(110,231,255,.35); }
-.help-body { display:grid; gap:10px; }

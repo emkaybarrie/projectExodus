@@ -6,6 +6,7 @@ import { initHUD } from "./hud/hud.js";
 import "./core/truelayer.js";
 import "./modal.js";
 import "./settingsMenu.js";
+import "./helpMenu.js";
 import "./financesMenu.js";
 
 // Initialise app

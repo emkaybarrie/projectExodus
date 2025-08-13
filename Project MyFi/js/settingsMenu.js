@@ -22,10 +22,10 @@ import { logoutUser } from './core/auth.js';
     window.dispatchEvent(new CustomEvent(type,{detail:values}));
   }
 
-  // document.getElementById('left-btn')?.addEventListener('click', ()=>{
-  //   setMenu(SettingsMenu);      // load settings menu items
-  //   open('logout');              // open default to logout option
-  // });
+  document.getElementById('settings-btn')?.addEventListener('click', ()=>{
+    setMenu(SettingsMenu);      // load settings menu items
+    open('logout');              // open default to logout option
+  });
 
   window.addEventListener('auth:logout', ()=>{ 
     console.log('Logout'); 
