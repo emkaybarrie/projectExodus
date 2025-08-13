@@ -1,0 +1,125 @@
+/* --- Splash Overlay --- */
+/* Move the whole splash stack down a bit */
+:root { --splash-shift-y: 35vh; }           /* tweak this number */
+
+#splash-root .splash-content {
+  transform: translateY(var(--splash-shift-y));
+}
+
+/* Short screens: reduce the shift so nothing clips */
+@media (max-height: 700px) {
+  :root { --splash-shift-y: 2vh; }
+}
+
+#splash-root {
+  position: fixed; inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 420ms ease, visibility 420ms ease;
+  visibility: visible;
+  font-family: 'Crimson Pro', serif;
+  color: #f0e6d2;
+}
+
+#splash-root.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#splash-root .splash-bg {
+  position: absolute; inset: 0; overflow: hidden;
+}
+
+#splash-root .splash-bg img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  filter: saturate(1.05) contrast(1.05) brightness(0.85);
+  transform: scale(1.04);
+}
+
+#splash-root .splash-vignette {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 80%),
+    linear-gradient(#0b0b18aa, #0b0b18dd);
+  pointer-events: none;
+}
+
+#splash-root .splash-content {
+  position: relative;
+  width: min(680px, 92vw);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  text-align: center;
+}
+
+.splash-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(22px, 4vw, 36px);
+  letter-spacing: 0.04em;
+}
+
+.splash-subtitle {
+  display: block;
+  opacity: 0.85;
+  font-size: clamp(12px, 2.2vw, 14px);
+  margin-top: 4px;
+}
+
+.splash-tip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 10px;
+  align-items: baseline;
+  font-size: clamp(12px, 2.6vw, 14px);
+  background: rgba(11,11,24,0.45);
+  border: 1px solid rgba(240,230,210,0.15);
+  padding: 10px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+}
+
+#splash-tip-label {
+  font-weight: 600;
+  color: #e4d8b4;
+}
+
+.splash-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(240,230,210,0.12);
+  overflow: hidden;
+  border: 1px solid rgba(240,230,210,0.18);
+}
+
+.splash-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #64ffa8, #9ef7ff, #c0a3ff);
+  transition: width 120ms linear;
+}
+
+.splash-skip {
+  justify-self: center;
+  margin-top: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(240,230,210,0.2);
+  background: rgba(11,11,24,0.35);
+  color: #f0e6d2;
+  cursor: pointer;
+}
+.splash-skip:disabled { opacity: 0.45; cursor: default; }
+
+/* Accessibility: respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  #splash-root { transition: none; }
+  .splash-progress-bar { transition: none; }
+}

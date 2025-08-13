@@ -40,6 +40,7 @@ export async function loginUser(email, password) {
         const playerData = await getUserDataFromFirestore(user.uid);
         if (playerData) {
             localStorage.setItem("playerData", JSON.stringify(playerData));
+            sessionStorage.setItem('showSplashNext', '1'); // Show splash on next load
             window.location.href = "dashboard.html";  // Redirect after login
         }
     } catch (error) {
@@ -91,7 +92,7 @@ export async function signupUser(data) {
             stamina: Number(237), 
         },
         });
-
+        sessionStorage.setItem('showSplashNext', '1');
         window.location.href = "dashboard.html"; // Redirect after signup
     } catch (error) {
         console.error("Signup error:", error.message);

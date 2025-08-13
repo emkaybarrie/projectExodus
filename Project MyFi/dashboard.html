@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vitals HUD</title>
 
+  
+
   <!-- Main app logic -->
   <script type="module" src="js/dashboard.js" defer></script>
+  
 
   <!-- Styles -->
+   <link rel="stylesheet" href="splash.css" />
   <link rel="stylesheet" href="vitals.css" />
   <link rel="stylesheet" href="modal.css" />
   <link rel="stylesheet" href="pwa.css" />
@@ -17,6 +21,10 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+
+<div id="app" class="app-root">
+
+  <!-- Install Banner -->
   <div id="installBanner" class="install-banner" style="display: none;">
     <span>📲 Install MyFi</span>
     <div class="buttons">
@@ -30,13 +38,15 @@
     <div class="starfield-overlay"></div>
     <div class="topbar" role="region" aria-label="Vitals header">
       <h1>VITALS</h1>
+    
       <div class="topbar-actions">
         <button class="icon-circle" id="help-btn" title="Help" aria-label="Help">?</button>
         <button class="icon-circle" id="settings-btn" title="Settings" aria-label="Settings">⚙️</button>
       </div>
     </div>
-
+    
     <div class="top-section">
+      
       <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" />
 
       <div class="vitals-bars">
@@ -60,6 +70,7 @@
     </div>
 
     <div id="vital-stamina">
+      
       <div class="bar stamina">
         <span class="bar-label">Stamina</span>
         <div class="bar-fill" style="width: 0%;"></div>
@@ -68,7 +79,15 @@
       </div>
     </div>
 
+    <!-- Mode row: sits between your skills row and the bars -->
+<div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
+  <button class="mode-btn" data-mode="daily"   role="tab" aria-selected="false">Daily</button>
+  <button class="mode-btn" data-mode="weekly"  role="tab" aria-selected="false">Weekly</button>
+  <button class="mode-btn" data-mode="monthly" role="tab" aria-selected="false">Monthly</button>
+</div>
+
     <div class="skills-row">
+      
       <div class="skill-slot">🔥</div>
       <div class="skill-slot">💧</div>
       <div class="skill-slot locked">🔒</div>
@@ -128,10 +147,14 @@
     </div>
   </div>
 
+  </div>
+
   <!-- Auto-wire Update Log (point to v16) -->
   <script type="module">
     import { autoInitUpdateLog } from './js/hud/modules/vitals.js';
     autoInitUpdateLog();
   </script>
+
+
 </body>
 </html>

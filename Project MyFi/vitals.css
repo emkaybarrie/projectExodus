@@ -1,5 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
+/* Keep app hidden until splash says go */
+.app-root { visibility: hidden; }
+.app-root.app-show { visibility: visible; }
+
 body {
   margin: 0;
   padding: 0;
@@ -158,15 +162,62 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
 @keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
 
+/* Belt row centered, tidy spacing */
+.mode-engrave{
+  display: flex; justify-content: center; align-items: center;
+  gap: clamp(10px, 2.8vw, 18px);
+  margin: 6px 0 0px;   /* adjust vertical spacing as needed */
+}
+
+/* Buttons as engraved labels (small, non-invasive) */
+.mode-btn{
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 4px 8px; line-height: 1;
+  font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
+  font-size: clamp(11px, 1.8vw, 14px);
+  user-select: none;
+
+  /* Engraved/etched: outline + subtle bevel */
+  color: transparent;                           /* no fill */
+  -webkit-text-stroke: 1px rgba(228,216,180,.45);
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.75),                    /* faux inner bevel */
+    0 -1px 0 rgba(255,255,255,.05);
+  opacity: .65;
+  transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
+}
+
+/* Hover focus polish */
+.mode-btn:hover, .mode-btn:focus-visible{
+  opacity: .9; outline: none;
+  -webkit-text-stroke: 1px rgba(240,230,210,.7);
+}
+
+/* Active = “filled” with a gentle glow */
+.mode-btn.is-active{
+  color: #e4d8b4;               /* visible fill */
+  -webkit-text-stroke: 0;       /* no outline */
+  text-shadow:
+    0 0 10px rgba(192,163,255,.25),
+    0 1px 0 rgba(0,0,0,.55);
+  opacity: 1;
+}
+
+/* Optional per-mode accents (very subtle) */
+.mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+
+
 /* Skills (decorative) */
-.skills-row { margin:16px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
+.skills-row { margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
 .skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
 .locked { opacity: .3; }
 
 /* UPDATE LOG / RECENTLY LOCKED */
 .update-log-box {
   margin-top: 0;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   padding: 12px;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 16px;
@@ -233,20 +284,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .countdown { white-space:nowrap; font-variant-numeric: tabular-nums; }
 .section-divider { height:1px; background: rgba(255,255,255,0.08); margin:12px 0; }
 
-/* Big CTA (kept) */
-.tag-button {
-  margin: 16px 0;
-  padding: 12px;
-  font-size: 1.2rem;
-  font-family: 'Cinzel', serif;
-  background-color: rgba(40, 40, 60, 0.6);
-  color: #f0dca4;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
-}
+
 
 
 /* Footer: always visible at the bottom */

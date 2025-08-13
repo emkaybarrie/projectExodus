@@ -4,7 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login / Signup</title>
-  <link rel="stylesheet" href="forms.css" />
+
+  <script>
+  (function () {
+    // paths are relative to auth.css (same as your current image path)
+    const picks = [
+      "./assets/img/auth-bg1.png",
+      "./assets/img/auth-bg2.png",
+      "./assets/img/auth-bg3.png",
+    ];
+    const chosen = picks[Math.floor(Math.random() * picks.length)];
+    // optional preload to avoid a pop-in
+    const img = new Image();
+    img.onload = () => document.documentElement.style.setProperty('--auth-bg', `url("${chosen}")`);
+    img.src = chosen;
+  })();
+</script>
+  <link rel="stylesheet" href="auth.css" />
   <style>
     .tab-toggle {
       display: flex;
@@ -37,6 +53,7 @@
   </style>
 </head>
 <body>
+
   
   <div class="tab-toggle">
     <button id="login-tab" class="active">Login</button>

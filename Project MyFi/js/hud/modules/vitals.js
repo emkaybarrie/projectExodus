@@ -33,6 +33,7 @@ export function setViewMode(mode) {
   if (btn) btn.title = `View: ${next}`;
   window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: next }}));
   refreshBarGrids();
+  updateModeEngrave(next);
 }
 export function cycleViewMode() {
   const i = VIEW_MODES.indexOf(getViewMode());
@@ -702,6 +703,16 @@ function refreshBarGrids() {
   }
 }
 
+function updateModeEngrave(mode = getViewMode()){
+  const row = document.getElementById('mode-engrave'); if (!row) return;
+  const key = String(mode).toLowerCase();
+  row.querySelectorAll('.mode-btn').forEach(btn => {
+    const is = btn.dataset.mode === key;
+    btn.classList.toggle('is-active', is);
+    btn.setAttribute('aria-selected', is ? 'true' : 'false');
+  });
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
    8) Wire view button
    ──────────────────────────────────────────────────────────────────────────── */
@@ -712,6 +723,7 @@ function refreshBarGrids() {
     btn.title = `View: ${getViewMode()}`;
     btn.addEventListener("click", cycleViewMode);
     refreshBarGrids();
+    updateModeEngrave(getViewMode());
   };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", run, { once: true });
