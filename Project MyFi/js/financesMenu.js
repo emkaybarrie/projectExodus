@@ -169,6 +169,7 @@ window.addEventListener('core:save', async (e) => {
 });
   window.addEventListener('tx:add', async e=>{
     await addTransaction(e.detail);
+    window.MyFiModal.close();
     await initHUD();
   });
 })();
