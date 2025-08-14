@@ -194,6 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
         portraitKey = 'avatarEmkay';
       } else if (playerData.firstName == "Alie") {
         portraitKey = 'avatarAlie';
+      } else if (playerData.firstName == "Richard") {
+        portraitKey = 'avatarRichard';
       } else if (playerData.firstName == "Mohammed") {
         portraitKey = 'avatarMohammed';
       } else if (playerData.firstName == "Jane") {
