@@ -3,15 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Forante Hub</title>
+  <title>Project Exodus</title>
   <link rel="stylesheet" href="index.css" />
 </head>
 <body>
   <div class="hub-container">
-    <h1>Welcome to Forante Hub</h1>
+    <h1>Project Exodus</h1>
     <p>Choose your service</p>
-    <button class="hub-button" onclick="location.href='myfi/login.html'">MyFi Dashboard</button>
-    <button class="hub-button" onclick="location.href='badlands/index.html'">The Badlands</button>
+    <button class="hub-button" onclick="location.href='Project MyFi/auth.html'">Project MyFi</button>
+    <button disabled class="hub-button" onclick="location.href='Project Badlands/index.html'">Project Badlands (Coming Soon)</button>
   </div>
 </body>
+
+    <script>
+    // Disable all context menus and long press interactions
+    window.addEventListener("DOMContentLoaded", () => {
+      document.addEventListener("contextmenu", e => e.preventDefault());
+      document.addEventListener("touchstart", e => {
+        if (e.touches.length > 1) e.preventDefault();
+      }, { passive: false });
+      document.addEventListener("gesturestart", e => e.preventDefault());
+    });
+    </script>
 </html>
