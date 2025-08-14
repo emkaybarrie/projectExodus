@@ -1,4 +1,13 @@
 // js/helpMenu.js
+import { db, auth } from './core/auth.js';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 (function(){
   const { el, open, setMenu } = window.MyFiModal;
 
@@ -149,9 +158,9 @@
                            media:{type:'image', src:'assets/help/faq-start.png'} },
       'tagging':         { text:`Tag planned spending as Mana. Everything else defaults to Stamina and overflows to Health.`,
                            media:{type:'image', src:'assets/help/faq-tag.png'} },
-      'regen':           { text:`Current = (regenCurrent × daysTracked) − spentToDate. Max = regenBaseline × daysTracked.`, 
+      'regen':           { text:`Current = (regenCurrent × daysTracked) − spentToDate. Max = regenBaseline × daysTracked.`,
                            media:{type:'image', src:'assets/help/faq-regen.png'} },
-      'privacy':         { text:`Your data stays yours. Bank connections use trusted providers; you control access.`, 
+      'privacy':         { text:`Your data stays yours. Bank connections use trusted providers; you control access.`,
                            media:{type:'image', src:'assets/help/faq-privacy.png'} },
     };
 
@@ -209,7 +218,34 @@
     open('overview');
   });
 
-  window.addEventListener('help:report', (e)=>{
+  // Save bug reports to Firestore
+  window.addEventListener('help:report', async (e)=>{
     console.log('[Help Report]', e.detail);
+
+    let alias = null;
+    try {
+      const uid = auth.currentUser?.uid;
+      if (uid) {
+        const playerSnap = await getDoc(doc(db, 'players', uid));
+        if (playerSnap.exists()) {
+          alias = playerSnap.data().alias || null;
+        }
+      }
+    } catch (err) {
+      console.warn('[Help Report] Could not fetch alias:', err);
+    }
+
+    try {
+      await addDoc(collection(db, 'bugReports'), {
+        ...e.detail,
+        alias: alias,
+        uid: auth.currentUser?.uid || null,
+        createdAt: serverTimestamp()
+      });
+      console.log('[Help Report] Saved to Firestore');
+    } catch (err) {
+      console.error('[Help Report] Failed to save', err);
+      alert('Sorry, we could not submit your report. Please try again later.');
+    }
   });
 })();
