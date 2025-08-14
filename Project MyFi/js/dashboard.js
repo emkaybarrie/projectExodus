@@ -40,10 +40,10 @@ document.addEventListener("DOMContentLoaded", () => {
         <p class="lead">Appreciate you joining us at such an early stage, and look forward to your input!</p>
         <p class="lead">Just a couple of quick start tips below to help you get started. Feel free to use the "Learn More" or "?" button in the top right to find out more (coming soon)</p>
         <ol class="steps">
-          <li>Press the button to the bottom right to open the Finances menu.  Update your income, and core expenses to get started with your avatar.</li>
-          <li>Your avatar's vitals are divided into Stamina (general spending), Mana (power spending), Health (minimum target savings, to be protected).  Use the button in the bottom left to toggle the context mode between Daily, Weekly, and Monthly</li>
-          <li>Log spending via the Finance menu.  After adding a transaction, you have 1 hour to lock in details and target vitals pool.  Manage your enrgy carefully to avoid taking damage to your health!</li>
-          <li>Keep your avatar in good health to give them the best chance at earning rewards when entering The Badlands (coming soon!)</li>
+          <li>Open the Finances menu from the bottom right.  Update your income, and core expenses (things you have to pay without fail each month) to get started with your avatar.</li>
+          <li>Your avatar's vitals are divided into Stamina (general spending), Mana (power spending), Health (minimum target savings, to be protected).  Toggle context mode via the bottom left button</li>
+          <li>Log spending via the Finance menu.  After adding a transaction, you have 1 hour to lock in details and target vitals pool.  Manage your energy carefully to avoid taking damage to your health!</li>
+          <li>Keep your avatar in good health and empower them with Essence to give them the best chance at earning rewards when entering The Badlands (coming soon!)</li>
         </ol>
         <div class="actions">
           <button id="wo-primary" class="ws-btn ws-primary">Open Vitals</button>
