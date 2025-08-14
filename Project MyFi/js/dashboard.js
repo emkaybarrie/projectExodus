@@ -31,22 +31,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!FORCE_SHOW_WELCOME && already) return;
 
-      // Create shell
-      const shell = document.createElement('div');
-      shell.className = 'wshell';
-      shell.innerHTML = `
-        <div class="wcard">
-          <h1>Welcome to Project MyFi</h1>
-          <p class="lead">You’re all set! Here’s how to get started:</p>
-          <ol class="steps">
-            <li>Open the Vitals screen to see your Health / Mana / Stamina / Essence.</li>
-            <li>Connect your bank (or add a manual transaction) to train your vitals.</li>
-            <li>Use the Mode toggle to switch Daily / Weekly / Monthly views.</li>
-          </ol>
-          <div class="actions">
-            <button id="wo-primary" class="ws-btn ws-primary">Open Vitals</button>
-            <button id="wo-secondary" class="ws-btn ws-ghost">Learn More</button>
-          </div>
+    // Create shell
+    const shell = document.createElement('div');
+    shell.className = 'wshell';
+    shell.innerHTML = `
+      <div class="wcard">
+        <h1>Welcome to Project MyFi</h1>
+        <p class="lead">Appreciate you joining us at such an early stage, and look forward to your input!</p>
+        <p class="lead">Just a couple of quick start tips below to help you get started. Feel free to use the "Learn More" or "?" button in the top right to find out more (coming soon)</p>
+        <ol class="steps">
+          <li>Press the button to the bottom right to open the Finances menu.  Update your income, and core expenses to get started with your avatar.</li>
+          <li>Your avatar's vitals are divided into Stamina (general spending), Mana (power spending), Health (minimum target savings, to be protected).  Use the button in the bottom left to toggle the context mode between Daily, Weekly, and Monthly</li>
+          <li>Log spending via the Finance menu.  After adding a transaction, you have 1 hour to lock in details and target vitals pool.  Manage your enrgy carefully to avoid taking damage to your health!</li>
+          <li>Keep your avatar in good health to give them the best chance at earning rewards when entering The Badlands (coming soon!)</li>
+        </ol>
+        <div class="actions">
+          <button id="wo-primary" class="ws-btn ws-primary">Open Vitals</button>
+          <button id="wo-secondary" class="ws-btn ws-ghost">Learn More</button>
         </div>
       `;
 
