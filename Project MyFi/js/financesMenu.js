@@ -64,7 +64,7 @@ import { addTransaction } from './data/financialData_USER.js';
     },
 
     setCoreExpenses: {
-      label:'Core Expenses', title:'Set Core Expenses',
+      label:'Expenses', title:'Set Core Expenses',
       render(){ 
         const current = currentRow('Current Core Expenses','expenseCurrent');
         const amount = field('Core Expenses Amount','number','expenseAmount',{min:0,step:'0.01',placeholder:'e.g. 1850.00'});

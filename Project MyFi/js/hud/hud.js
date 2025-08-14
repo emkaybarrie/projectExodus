@@ -10,11 +10,15 @@ import { auth } from "../core/auth.js";
 import {
   updateVitalsPools,
   initVitalsHUD,
-  loadVitalsToHUD
+  startAliasListener,
+  startLevelListener
 } from "./modules/vitals.js";
 
 export async function initHUD() {
   const userId = auth.currentUser.uid;
+
+  startAliasListener(userId)
+  startLevelListener(userId);
 
   // Ensure vitals snapshot exists and is fresh
   await updateVitalsPools(userId);

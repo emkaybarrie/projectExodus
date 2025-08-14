@@ -13,9 +13,66 @@
 
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, where,
-  getDocs, orderBy, limit, onSnapshot, updateDoc, writeBatch,
+  getDocs, orderBy, limit, onSnapshot, updateDoc, writeBatch, deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Alias & Level helpers
+   ──────────────────────────────────────────────────────────────────────────── */
+const db = getFirestore();
+
+const titleEl = document.getElementById("header-title");
+const DEFAULT_TITLE = "VITALS";
+let unsubPlayer = null;
+
+export async function startAliasListener(uid) {
+  if (unsubPlayer) { unsubPlayer(); unsubPlayer = null; }
+  const ref = doc(db, "players", uid);
+
+  // Live updates (preferred so name changes reflect immediately)
+  unsubPlayer = onSnapshot(ref, (snap) => {
+    const alias =
+      snap.exists() && typeof snap.data().alias === "string"
+        ? snap.data().alias.trim()
+        : "";
+    titleEl.textContent = alias || DEFAULT_TITLE;
+
+  }, (err) => {
+    console.warn("Alias listener error:", err);
+    titleEl.textContent = DEFAULT_TITLE;
+  });
+}
+
+// DOM target for the level pill
+const levelEl = document.getElementById("player-level");
+
+// separate unsubscribe for level
+let unsubPlayerLevel = null;
+
+export async function startLevelListener(uid) {
+  if (unsubPlayerLevel) { unsubPlayerLevel(); unsubPlayerLevel = null; }
+  const ref = doc(db, "players", uid);
+
+  unsubPlayerLevel = onSnapshot(ref, (snap) => {
+    let lvl;
+    if (snap.exists()) {
+      const d = snap.data();
+      // try common property names; adjust if yours differs
+      lvl = Number(d.level ?? d.playerLevel ?? d.stats?.level);
+    }
+
+    if (Number.isFinite(lvl)) {
+      levelEl.textContent = String(lvl);
+      levelEl.hidden = false;      // show pill
+    } else {
+      levelEl.hidden = true;       // hide if no level
+    }
+  }, (err) => {
+    console.warn("Level listener error:", err);
+    levelEl.hidden = true;
+  });
+}
 
 /* ────────────────────────────────────────────────────────────────────────────
    View mode helpers
@@ -41,15 +98,39 @@ export function cycleViewMode() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Time + math
+   Time + math (now uses players/{uid}.startDate from Firestore)
    ──────────────────────────────────────────────────────────────────────────── */
 const MS_PER_DAY  = 86_400_000;
 const SEC_PER_DAY = 86_400;
-const VITALS_START_DATE = new Date("2025-08-01T00:00:00Z");
 
-function elapsedDaysNow() {
-  return Math.max(0, (Date.now() - VITALS_START_DATE.getTime()) / MS_PER_DAY);
+// Cached signup start time in ms for this page session
+let START_MS = null;
+
+async function ensureStartMs(uid) {
+  if (START_MS !== null) return START_MS;
+  try {
+    const pSnap = await getDoc(doc(db, "players", uid));
+    if (pSnap.exists()) {
+      const raw = pSnap.data()?.startDate;
+      if (raw?.toMillis) {
+        START_MS = raw.toMillis();           // Firestore Timestamp
+      } else if (raw instanceof Date) {
+        START_MS = raw.getTime();
+      } else if (typeof raw === "number") {
+        START_MS = raw;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to read startDate; defaulting to now.", e);
+  }
+  if (!START_MS) START_MS = Date.now();     // safe fallback if missing
+  return START_MS;
 }
+
+function elapsedDaysFrom(startMs) {
+  return Math.max(0, (Date.now() - startMs) / MS_PER_DAY);
+}
+
 function modCap(x, cap) {
   if (cap <= 0) return 0;
   const m = x % cap;
@@ -83,7 +164,7 @@ function previewPool(tx) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   1) Snapshot writer (kept)
+   1) Snapshot writer (kept) — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 export async function updateVitalsPools(uid) {
   const db = getFirestore();
@@ -120,8 +201,10 @@ export async function updateVitalsPools(uid) {
       return [baseline, "on target"];
     };
 
-    const daysTracked = Math.max(1, Math.floor((Date.now() - VITALS_START_DATE.getTime()) / MS_PER_DAY));
-    const elapsedDays = elapsedDaysNow();
+    // ⬇️ use Firestore startDate
+    const startMs    = await ensureStartMs(uid);
+    const daysTracked= Math.max(1, Math.floor((Date.now() - startMs) / MS_PER_DAY));
+    const elapsedDays= elapsedDaysFrom(startMs);
 
     const pools = {};
     for (const pool of ["health","mana","stamina","essence"]) {
@@ -149,7 +232,7 @@ export async function updateVitalsPools(uid) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   2) Static snap
+   2) Static snap — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 export async function loadVitalsToHUD(uid) {
   const db = getFirestore();
@@ -159,7 +242,9 @@ export async function loadVitalsToHUD(uid) {
   const pools = snap.data().pools;
   const elements = getVitalsElements();
   const factor = VIEW_FACTORS[getViewMode()];
-  const days   = elapsedDaysNow();
+
+  const startMs = await ensureStartMs(uid);
+  const days    = elapsedDaysFrom(startMs);
 
   for (const [pool, v] of Object.entries(pools)) {
     const el = elements[pool]; if (!el) continue;
@@ -270,7 +355,7 @@ function applyRemainderFirst(T, cap, L) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   4) Animated HUD (uses remainder-first per pool)
+   4) Animated HUD (uses remainder-first per pool) — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
@@ -282,7 +367,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   ensureGridLayers(elements);
   ensureReclaimLayers(elements);
 
-  const days0 = elapsedDaysNow();
+  const startMs = await ensureStartMs(uid);
+  const days0   = elapsedDaysFrom(startMs);
+
   const truth = {};
   const regenPerSec = {};
   for (const pool of Object.keys(pools)) {
@@ -381,7 +468,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   5) Lock + summary (kept)
+   5) Lock + summary (kept) — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 function roundPools(p){ return {
   health:Number((p.health||0).toFixed(2)),
@@ -430,7 +517,10 @@ export async function lockExpiredOrOverflow(uid,queueCap=50){
   const currentSnap=await getDoc(doc(db,`players/${uid}/cashflowData/current`));
   if(!currentSnap.exists()) return;
   const pools=currentSnap.data().pools||{};
-  const days=elapsedDaysNow();
+
+  const startMs = await ensureStartMs(uid);
+  const days    = elapsedDaysFrom(startMs);
+
   const availTruth={
     health: Math.max(0,(pools.health?.regenCurrent ||0)*days - (pools.health?.spentToDate ||0)),
     mana:   Math.max(0,(pools.mana?.regenCurrent   ||0)*days - (pools.mana?.spentToDate   ||0)),
@@ -474,7 +564,7 @@ export async function lockExpiredOrOverflow(uid,queueCap=50){
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   6) Update Log + Recently Locked (kept)
+   6) Update Log + Recently Locked (kept) + Long‑press inline edit
    ──────────────────────────────────────────────────────────────────────────── */
 export function listenUpdateLogPending(uid, cb) {
   const db = getFirestore();
@@ -511,8 +601,134 @@ export function listenRecentlyConfirmed(uid, lookbackMs = 24 * 60 * 60 * 1000, c
   });
 }
 
+/* ────────────────────────────────────────────────────────────────────────────
+   Long‑press helper + Inline editor (NEW)
+   ──────────────────────────────────────────────────────────────────────────── */
+const LONG_PRESS_MS = 550;
+
+function onLongPress(targetEl, startCb) {
+  let timer = null;
+  let hasFired = false;
+
+  const start = (ev) => {
+    hasFired = false;
+    timer = setTimeout(() => {
+      hasFired = true;
+      startCb(ev);
+    }, LONG_PRESS_MS);
+  };
+  const clear = () => { if (timer) clearTimeout(timer); timer = null; };
+
+  // mouse
+  targetEl.addEventListener('mousedown', start);
+  targetEl.addEventListener('mouseup', clear);
+  targetEl.addEventListener('mouseleave', clear);
+
+  // touch
+  targetEl.addEventListener('touchstart', start, { passive: true });
+  targetEl.addEventListener('touchend', clear);
+  targetEl.addEventListener('touchcancel', clear);
+
+  // Prevent accidental click after a long‑press
+  targetEl.addEventListener('click', (e) => { if (hasFired) { e.preventDefault(); e.stopPropagation(); } }, true);
+}
+
+/* Inline editor for a pending tx row */
+function mountTxInlineEditor(li, tx, { uid, onDone }) {
+  // Guard: only editable while pending
+  if (tx.status !== "pending") return;
+
+  const main = li.querySelector('.ul-main');
+  const actions = li.querySelector('.ul-actions');
+  if (!main) return;
+
+  // Freeze current layout
+  li.classList.add('is-editing');
+  if (actions) actions.style.display = 'none';
+
+  const name = tx.transactionData?.description || "";
+  const amt = Number(tx.amount || 0);
+
+  const editor = document.createElement('div');
+  editor.className = 'ul-editor';
+  editor.innerHTML = `
+    <div class="ul-edit-fields">
+      <label class="ul-edit-row">
+        <span class="ul-edit-label">Description</span>
+        <input class="ul-edit-input" type="text" value="${name.replace(/"/g,'&quot;')}" />
+      </label>
+      <label class="ul-edit-row">
+        <span class="ul-edit-label">Amount (£)</span>
+        <input class="ul-edit-input" type="number" step="0.01" inputmode="decimal" value="${amt}" />
+      </label>
+    </div>
+    <div class="ul-edit-actions">
+      <button class="btn-save">Save</button>
+      <button class="btn-cancel">Cancel</button>
+      <button class="btn-delete">Delete</button>
+    </div>
+  `;
+
+  editor.style.marginTop = '0.5rem';
+  main.appendChild(editor);
+
+  const [descInput, amtInput] = editor.querySelectorAll('.ul-edit-input');
+  const btnSave = editor.querySelector('.btn-save');
+  const btnCancel = editor.querySelector('.btn-cancel');
+  const btnDelete = editor.querySelector('.btn-delete');
+
+  const cleanup = () => {
+    editor.remove();
+    li.classList.remove('is-editing');
+    if (actions) actions.style.display = '';
+    onDone && onDone();
+  };
+
+  btnCancel.addEventListener('click', cleanup);
+
+  btnSave.addEventListener('click', async () => {
+    const nextDesc = (descInput.value || '').trim();
+    let nextAmt = Number(amtInput.value);
+    if (!Number.isFinite(nextAmt)) nextAmt = amt;
+
+    // Preserve your sign convention (spend = negative)
+    const wasSpend = amt < 0;
+    if (wasSpend && nextAmt > 0) nextAmt = -Math.abs(nextAmt);
+    if (!wasSpend && nextAmt < 0) nextAmt = Math.abs(nextAmt);
+
+    try {
+      const db = getFirestore();
+      await updateDoc(doc(db, `players/${uid}/classifiedTransactions/${tx.id}`), {
+        amount: nextAmt,
+        transactionData: {
+          ...(tx.transactionData || {}),
+          description: nextDesc,
+        },
+        editedAtMs: Date.now(),
+      });
+    } catch (e) {
+      console.warn('Edit failed:', e);
+    } finally {
+      cleanup();
+    }
+  });
+
+  btnDelete.addEventListener('click', async () => {
+    // ultra‑simple safety check
+    if (!confirm('Delete this entry? This cannot be undone.')) return;
+    try {
+      const db = getFirestore();
+      await deleteDoc(doc(db, `players/${uid}/classifiedTransactions/${tx.id}`));
+    } catch (e) {
+      console.warn('Delete failed:', e);
+    } finally {
+      cleanup();
+    }
+  });
+}
+
 /* ──────────────────────────────────────────────────────────────────────────────
-   7) Auto-wire Update Log (unchanged)
+   7) Auto-wire Update Log (unchanged except long‑press hook)
    ────────────────────────────────────────────────────────────────────────────── */
 export function autoInitUpdateLog() {
   const listEl   = document.querySelector("#update-log-list");
@@ -574,6 +790,14 @@ export function autoInitUpdateLog() {
               await setProvisionalTag(uid, tx.id, pool);
             });
           });
+
+          // NEW: long‑press to edit inline
+          const mainEl = li.querySelector('.ul-main');
+          if (mainEl) {
+            onLongPress(mainEl, () => {
+              mountTxInlineEditor(li, tx, { uid, onDone: () => {} });
+            });
+          }
 
           listEl.appendChild(li);
         });

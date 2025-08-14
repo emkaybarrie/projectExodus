@@ -4,8 +4,8 @@
     --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
     --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
 
-    --sidebar-min-mobile: 150px;  /* minimum sidebar width on mobile */
-    --sidebar-max-mobile: 35%;    /* max percentage sidebar can take on mobile */
+    --sidebar-min-mobile: 125px;  /* minimum sidebar width on mobile */
+    --sidebar-max-mobile: 25%;    /* max percentage sidebar can take on mobile */
 
     /* Presets you can try */
     /* Narrow sidebar */

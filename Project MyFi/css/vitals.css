@@ -25,7 +25,7 @@ body {
   position: fixed; inset: 0;
   z-index: -1; pointer-events: none;
   background:
-    url('./assets/img/stars-bg.png') repeat,
+    url('../assets/img/stars-bg.png') repeat,
     radial-gradient(circle at 30% 90%, #2a0c18, transparent 50%),
     radial-gradient(circle at 70% 10%, #0c1440, transparent 60%);
   background-size: cover, cover, cover;
@@ -71,11 +71,105 @@ body {
   overflow: hidden; /* prevent the whole page from scrolling */
 }
 
+/* === Topbar with pinned actions === */
+.topbar { 
+  position: relative; 
+  display: flex; 
+  align-items: center; 
+  justify-content: flex-start;   /* ← was center */ 
+  margin-bottom: 12px;
+  min-height: 40px;
+}
+.topbar-actions {
+  position: absolute; 
+  right: 0; 
+  top: 50%; 
+  transform: translateY(-50%);
+  display: flex; 
+  gap: 10px;
+}
+.icon-circle {
+  width: 40px; 
+  height: 40px; 
+  border-radius: 999px; 
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  background: rgba(30,30,45,.5);
+  color: #f0e6d2;
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 0 6px rgba(255,255,255,.06);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  transition: transform .15s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.icon-circle:hover { 
+  transform: translateY(-1px) scale(1.03);
+  background: rgba(70,70,110,.6); 
+}
+.icon-circle:active { transform: translateY(0) scale(.98); }
+.icon-circle:focus-visible { 
+  outline: none; 
+  box-shadow: 0 0 0 3px rgba(155,93,229,.35);
+  border-color: rgba(155,93,229,.6);
+}
+
 h1 { text-align:center; font-family:'Cinzel',serif; font-size:2rem; margin-bottom:12px; color:#f0e6d2; }
 h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-weight:600; }
 
+/* Override the global h1 centering just for this header */
+.topbar h1{
+  margin: 0;
+  text-align: left;              /* ← override */
+  /* optional: prevent stretching */
+  flex: 0 0 auto;
+}
+
 .top-section { display:flex; gap:16px; align-items:flex-start; }
 .portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
+
+/* Portrait wrapper stays the same */
+.portrait-wrapper {
+  position: relative;
+  width: 120px;
+  height: 110px;
+  flex-shrink: 0;
+  cursor: pointer
+}
+
+.portrait-wrapper .portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 15%;
+  border: 2px solid #ffffff1a;
+  border-radius: 4px;
+}
+
+/* Level pill now bottom-right, centred on corner */
+.level-pill {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  transform: translate(50%, 50%); /* pushes it out diagonally from corner */
+  
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-family: 'Cinzel', serif;
+  color: #0a0a12;
+  background: linear-gradient(to bottom, #f0dca4, #e6c980);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  line-height: 1;
+  z-index: 2;
+}
+
+
 
 .vitals-bars { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
 
@@ -258,11 +352,13 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   background: rgba(16, 185, 129, 0.18);
   border-color: rgba(16, 185, 129, 0.6);
   box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
+  color: white;
 }
 .ul-actions .tag-btn.active.mana {
   background: rgba(59, 130, 246, 0.18);
   border-color: rgba(59, 130, 246, 0.6);
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
+  color: white;
 }
 
 /* Compact two-button grid */
@@ -284,8 +380,22 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .countdown { white-space:nowrap; font-variant-numeric: tabular-nums; }
 .section-divider { height:1px; background: rgba(255,255,255,0.08); margin:12px 0; }
 
+/* Inline Editor */
+#update-log-list li.is-editing .ul-meta { opacity: 0.5; }
+.ul-editor .ul-edit-row { display:flex; align-items:center; gap:.6rem; margin:.35rem 0; }
+.ul-editor .ul-edit-label { width: 6.5rem; opacity:.8; font-size:.9em; }
+.ul-editor .ul-edit-input { flex:1; padding:.4rem .6rem; border-radius:.5rem; border:1px solid var(--line, #333); background: rgba(255,255,255,.04); color: white; }
+.ul-editor .ul-edit-actions { display:flex; gap:.5rem; margin-top:.5rem;  }
+.ul-editor .btn-save, .ul-editor .btn-cancel { padding:.45rem .7rem; border-radius:.6rem; border:1px solid var(--line, #333); background: rgba(255,255,255,.06); ; color: white; }
+.ul-editor .btn-save { font-weight:600; }
 
-
+.ul-editor .btn-delete {
+  margin-left:auto;
+  border: 1px solid #a33;
+  background: rgba(255, 0, 0, 0.06);
+  color: white;
+}
+.ul-editor .btn-delete:hover { background: rgba(255, 0, 0, 0.12); }
 
 /* Footer: always visible at the bottom */
 .hud-footer {
@@ -334,48 +444,4 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 
 
 
-/* === Topbar with pinned actions === */
-.topbar { 
-  position: relative; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  margin-bottom: 12px;
-  min-height: 40px;
-}
-.topbar-actions {
-  position: absolute; 
-  right: 0; 
-  top: 50%; 
-  transform: translateY(-50%);
-  display: flex; 
-  gap: 10px;
-}
-.icon-circle {
-  width: 40px; 
-  height: 40px; 
-  border-radius: 999px; 
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center;
-  font-size: 1rem;
-  line-height: 1;
-  background: rgba(30,30,45,.5);
-  color: #f0e6d2;
-  border: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 0 6px rgba(255,255,255,.06);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  cursor: pointer;
-  transition: transform .15s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.icon-circle:hover { 
-  transform: translateY(-1px) scale(1.03);
-  background: rgba(70,70,110,.6); 
-}
-.icon-circle:active { transform: translateY(0) scale(.98); }
-.icon-circle:focus-visible { 
-  outline: none; 
-  box-shadow: 0 0 0 3px rgba(155,93,229,.35);
-  border-color: rgba(155,93,229,.6);
-}
+

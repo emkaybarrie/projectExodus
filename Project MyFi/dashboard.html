@@ -12,10 +12,10 @@
   
 
   <!-- Styles -->
-   <link rel="stylesheet" href="splash.css" />
-  <link rel="stylesheet" href="vitals.css" />
-  <link rel="stylesheet" href="modal.css" />
-  <link rel="stylesheet" href="pwa.css" />
+   <link rel="stylesheet" href="css/splash.css" />
+  <link rel="stylesheet" href="css/vitals.css" />
+  <link rel="stylesheet" href="css/modal.css" />
+  <link rel="stylesheet" href="css/pwa.css" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
 
   <link rel="manifest" href="manifest.json">
@@ -37,7 +37,7 @@
     <div id="background-layer"></div>
     <div class="starfield-overlay"></div>
     <div class="topbar" role="region" aria-label="Vitals header">
-      <h1>VITALS</h1>
+      <h1 id="header-title">VITALS</h1>
     
       <div class="topbar-actions">
         <button class="icon-circle" id="help-btn" title="Help" aria-label="Help">?</button>
@@ -46,8 +46,12 @@
     </div>
     
     <div class="top-section">
-      
-      <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" />
+      <div class="portrait-wrapper">
+      <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" id="player-portrait" />
+
+        <!-- level pill top-left (hidden until we have a value) -->
+        <div class="level-pill" id="player-level" hidden>1</div>
+       </div>
 
       <div class="vitals-bars">
         <div id="vital-health">

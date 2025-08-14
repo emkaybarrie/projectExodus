@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
@@ -57,18 +57,19 @@ export async function signupUser(data) {
         const user = userCredential.user;
         //console.log("User signed up:", user);
         const userDocRef = doc(db, "players", user.uid);
-        const startDate = new Date();
+        const startDateTime = serverTimestamp();      // ⬅️ was: new Date()
         await setDoc(userDocRef, {
-            startDate: startDate,
+            startDate: startDateTime,
             alias: data.alias || "No Alias",
             email: data.email,
             firstName: data.firstName || "",
             lastName: data.lastName || "",
+            level: Number(1)
         });
 
         await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
-        dCoreExpenses: Number(10),
-        dIncome: Number(100)
+        dCoreExpenses: Number(0),
+        dIncome: Number(0)
         });
 
         await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
@@ -80,16 +81,16 @@ export async function signupUser(data) {
 
         await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
         recentUsage: { 
-            essence: Number(5),
-            health: Number(10),
-            mana: Number(23),
-            stamina: Number(87), 
+            essence: Number(0),
+            health: Number(0),
+            mana: Number(0),
+            stamina: Number(0), 
         },
         historicUsage: { 
-            essence: Number(52),
-            health: Number(45),
-            mana: Number(153),
-            stamina: Number(237), 
+            essence: Number(0),
+            health: Number(0),
+            mana: Number(0),
+            stamina: Number(0), 
         },
         });
         sessionStorage.setItem('showSplashNext', '1');
