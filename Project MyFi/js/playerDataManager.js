@@ -1,23 +1,89 @@
 import Dexie from "https://cdn.jsdelivr.net/npm/dexie@3.2.4/+esm";
 
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+  getAuth,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+/* -----------------------------------------------------------
+   Firebase singletons
+----------------------------------------------------------- */
 const auth = getAuth();
 const firestore = getFirestore();
 
+/* -----------------------------------------------------------
+   In-memory store
+----------------------------------------------------------- */
 const memoryStore = {
   player: null,
   lastSaved: 0,
 };
 
+/* -----------------------------------------------------------
+   Dexie (local cache) — store timestamps as millis
+----------------------------------------------------------- */
 const db = new Dexie("PlayerDataDB");
 db.version(1).stores({
-  playerData: "&id, lastUpdated"
+  playerData: "&id, lastUpdated",
 });
 
+/* -----------------------------------------------------------
+   Timestamp helpers (cache-safe)
+----------------------------------------------------------- */
+function isSecondsNanosMap(v) {
+  return (
+    v &&
+    typeof v === "object" &&
+    Number.isInteger(v.seconds) &&
+    Number.isInteger(v.nanoseconds)
+  );
+}
+
+function tsToMillis(ts) {
+  if (ts instanceof Timestamp) return ts.toMillis();
+  if (isSecondsNanosMap(ts))
+    return ts.seconds * 1000 + Math.floor(ts.nanoseconds / 1e6);
+  if (typeof ts === "number") return ts;
+  return null;
+}
+
+function millisToTimestamp(ms) {
+  return typeof ms === "number" ? Timestamp.fromMillis(ms) : null;
+}
+
+// Prepare object for cache (convert Firestore Timestamps to millis)
+function normalizeForCache(player) {
+  if (!player || typeof player !== "object") return player;
+  const copy = { ...player };
+  if ("startDate" in copy) copy.startDate = tsToMillis(copy.startDate);
+  if ("createdAt" in copy) copy.createdAt = tsToMillis(copy.createdAt);
+  if ("updatedAt" in copy) copy.updatedAt = tsToMillis(copy.updatedAt);
+  return copy;
+}
+
+// Prepare object for in-app use (convert millis to Timestamps)
+function normalizeFromCache(cached) {
+  if (!cached || typeof cached !== "object") return cached;
+  const copy = { ...cached };
+  if ("startDate" in copy) copy.startDate = millisToTimestamp(copy.startDate);
+  if ("createdAt" in copy) copy.createdAt = millisToTimestamp(copy.createdAt);
+  if ("updatedAt" in copy) copy.updatedAt = millisToTimestamp(copy.updatedAt);
+  return copy;
+}
+
+/* -----------------------------------------------------------
+   Utils
+----------------------------------------------------------- */
 function getCurrentUserId() {
   const user = auth.currentUser;
   return user?.uid || null;
@@ -26,25 +92,10 @@ function getCurrentUserId() {
 function createDefaultPlayer(id) {
   return {
     id,
-    score: 0,
     level: 1,
-    coins: 0,
-    unspentPoints: 5,
-    attributes: {
-      strength: 0,
-      agility: 0,
-      intelligence: 0
-    },
-    financeData: {},
-    avatarData: {},
-    heroData: {},
     lastUpdated: Date.now(),
-    actions: {
-      equipped: [],
-      available: [],
-      configVersion: "grid"
-    },
     portraitKey: "default",
+    // NOTE: startDate is NOT set here; we set it via serverTimestamp() in a txn.
   };
 }
 
@@ -64,33 +115,65 @@ function deepMerge(target, updates) {
   return target;
 }
 
+/* -----------------------------------------------------------
+   Transaction-safe startDate create/repair (IMMUTABLE)
+----------------------------------------------------------- */
+async function ensureStartDateOnce(uid) {
+  const ref = doc(firestore, "players", uid);
+  await runTransaction(firestore, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) {
+      // create minimal doc with immutable startDate
+      tx.set(ref, {
+        startDate: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      return;
+    }
+    const sd = snap.data().startDate;
+    if (!sd) {
+      tx.set(ref, { startDate: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    }
+    // if present as a proper Timestamp, do nothing.
+  });
+}
+
+async function repairStartDateIfNeeded(uid) {
+  const ref = doc(firestore, "players", uid);
+  await runTransaction(firestore, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const sd = snap.data().startDate;
+    if (!sd) return;
+
+    const isTs = typeof sd?.toMillis === "function";
+    const looksLikeMap =
+      sd && typeof sd === "object" && Number.isInteger(sd.seconds) && Number.isInteger(sd.nanoseconds);
+
+    if (looksLikeMap && !isTs) {
+      const ms = sd.seconds * 1000 + Math.floor(sd.nanoseconds / 1e6);
+      tx.update(ref, { startDate: Timestamp.fromMillis(ms) });
+    }
+  });
+}
+
+/* -----------------------------------------------------------
+   Player Data Manager (public API unchanged)
+----------------------------------------------------------- */
 const playerDataManager = (() => {
   let syncInterval = null;
-  const saveFrequency_Minutes = 10
-  const syncFrequencyMs = saveFrequency_Minutes * 60 * 1000
+  const saveFrequency_Minutes = 10;
+  const syncFrequencyMs = saveFrequency_Minutes * 60 * 1000;
 
-  // Event listeners storage for hooks
-  const listeners = {
-    update: [],
-    save: [],
-    load: []
-  };
+  const listeners = { update: [], save: [], load: [] };
 
-  // Register a listener callback for events: 'update', 'save', 'load'
   function on(event, callback) {
-    if (listeners[event]) {
-      listeners[event].push(callback);
-    }
+    if (listeners[event]) listeners[event].push(callback);
   }
-
-  // Trigger all listeners for a specific event with optional data
   function trigger(event, data) {
-    listeners[event]?.forEach(cb => {
-      try {
-        cb(data);
-      } catch (err) {
-        console.error(`Error in ${event} listener:`, err);
-      }
+    listeners[event]?.forEach((cb) => {
+      try { cb(data); } catch (err) { console.error(`Error in ${event} listener:`, err); }
     });
   }
 
@@ -100,22 +183,31 @@ const playerDataManager = (() => {
       if (!playerId) throw new Error("No player ID or authenticated user found.");
     }
 
+    // Always ensure/repair startDate in Firestore first (transaction-safe).
+    await ensureStartDateOnce(playerId);
+    await repairStartDateIfNeeded(playerId);
+
+    // Try cache first
     const local = await db.playerData.get(playerId);
     if (local) {
-     memoryStore.player = local;
-   } else {
-      const docRef = doc(firestore, "players", playerId);
-      const userDoc = await getDoc(docRef);
+      memoryStore.player = normalizeFromCache({ ...local, id: playerId });
+    } else {
+      const ref = doc(firestore, "players", playerId);
+      const snap = await getDoc(ref);
 
-      if (userDoc.exists()) {
-        memoryStore.player = userDoc.data();
-        await db.playerData.put({ ...memoryStore.player, id: playerId });
+      if (snap.exists()) {
+        const live = snap.data();
+        memoryStore.player = { ...live, id: playerId };
+        await db.playerData.put({ ...normalizeForCache(memoryStore.player), id: playerId });
       } else {
-        memoryStore.player = createDefaultPlayer(playerId);
-        await db.playerData.put(memoryStore.player);
-        await setDoc(docRef, memoryStore.player);
+        // brand new — write minimal defaults (WITHOUT startDate) then cache
+        const fresh = createDefaultPlayer(playerId);
+        memoryStore.player = fresh;
+        await db.playerData.put(normalizeForCache(fresh));
+        // merge defaults; startDate already handled by ensureStartDateOnce()
+        await setDoc(ref, { ...fresh, updatedAt: serverTimestamp() }, { merge: true });
       }
-   }
+    }
 
     startAutoSync();
     trigger("load", memoryStore.player);
@@ -129,7 +221,7 @@ const playerDataManager = (() => {
   function update(updates = {}, replace = false) {
     if (!memoryStore.player) return;
     if (replace) {
-      memoryStore.player = { ...updates, lastUpdated: Date.now() };
+      memoryStore.player = { ...updates, id: memoryStore.player.id, lastUpdated: Date.now() };
     } else {
       deepMerge(memoryStore.player, updates);
       memoryStore.player.lastUpdated = Date.now();
@@ -150,42 +242,52 @@ const playerDataManager = (() => {
 
     obj[keys[keys.length - 1]] = value;
     memoryStore.player.lastUpdated = Date.now();
-
     trigger("update", memoryStore.player);
   }
 
+  // Save to Dexie and Firestore.
+  // IMPORTANT: Never write startDate/createdAt from cache (immutable).
   async function save(andLocalStorage = false) {
     if (!memoryStore.player) return;
     const id = memoryStore.player.id;
-    await db.playerData.put(memoryStore.player);
-    await setDoc(doc(firestore, "players", id), memoryStore.player);
-    if (andLocalStorage){
-      saveToLocalStorage(); // 👈 Add this
-    }
+
+    // 1) Local cache — normalize timestamps to millis
+    await db.playerData.put({ ...normalizeForCache(memoryStore.player), id });
+
+    // 2) Cloud save — strip immutable fields and set updatedAt
+    const { startDate, createdAt, id: _dropId, ...rest } = memoryStore.player || {};
+    const safePatch = { ...rest, updatedAt: serverTimestamp() };
+
+    await setDoc(doc(firestore, "players", id), safePatch, { merge: true });
+
+    if (andLocalStorage) saveToLocalStorage();
+
     memoryStore.lastSaved = Date.now();
     trigger("save", memoryStore.player);
-
-    console.log('Backing up to cloud storage')
-    return memoryStore.player
+    console.log("Backing up to cloud storage");
+    return memoryStore.player;
   }
 
   function saveToLocalStorage() {
-  try {
-    const player = memoryStore.player;
-    if (player) {
-      localStorage.setItem("playerSnapshot", JSON.stringify({
-        id: player.id,
-        alias: player.alias || "",
-        avatarData: player.avatarData,
-        coins: player.coins,
-        lastUpdated: player.lastUpdated
-      }));
-      console.log("Storing playerData to Local Storage: playerSnapshot" )
+    try {
+      const p = memoryStore.player;
+      if (p) {
+        localStorage.setItem(
+          "playerSnapshot",
+          JSON.stringify({
+            id: p.id,
+            alias: p.alias || "",
+            avatarData: p.avatarData,
+            coins: p.coins,
+            lastUpdated: p.lastUpdated,
+          })
+        );
+        console.log("Storing playerData to Local Storage: playerSnapshot");
+      }
+    } catch (e) {
+      console.warn("Could not save to localStorage:", e);
     }
-  } catch (e) {
-    console.warn("Could not save to localStorage:", e);
   }
-}
 
   async function forceLoadFromCloud(playerId = null) {
     if (!playerId) {
@@ -193,24 +295,27 @@ const playerDataManager = (() => {
       if (!playerId) throw new Error("No player ID or authenticated user found.");
     }
 
-    const docRef = doc(firestore, "players", playerId);
-    const userDoc = await getDoc(docRef);
+    // Heal startDate if needed before reloading
+    await ensureStartDateOnce(playerId);
+    await repairStartDateIfNeeded(playerId);
 
-    if (userDoc.exists()) {
-      memoryStore.player = userDoc.data();
-      await db.playerData.put({ ...memoryStore.player, id: playerId });
+    const ref = doc(firestore, "players", playerId);
+    const snap = await getDoc(ref);
 
+    if (snap.exists()) {
+      const live = snap.data();
+      memoryStore.player = { ...live, id: playerId };
+      await db.playerData.put({ ...normalizeForCache(memoryStore.player), id: playerId });
       trigger("load", memoryStore.player);
       return memoryStore.player;
     }
-
     return null;
   }
 
   function startAutoSync() {
     stopAutoSync();
     syncInterval = setInterval(() => {
-      console.log('Auto-Backup triggered...')
+      console.log("Auto-Backup triggered...");
       save();
     }, syncFrequencyMs);
   }
@@ -237,10 +342,8 @@ const playerDataManager = (() => {
     forceLoadFromCloud,
     startAutoSync,
     stopAutoSync,
-    on // expose event listener registration
+    on,
   };
 })();
 
 export default playerDataManager;
-
-

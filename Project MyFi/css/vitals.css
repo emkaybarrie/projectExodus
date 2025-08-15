@@ -304,7 +304,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 
 
 /* Skills (decorative) */
-.skills-row { margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
+.skills-row { align-items: center; margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
 .skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
 .locked { opacity: .3; }
 
@@ -371,10 +371,30 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 
 /* Tiny badges (Recently Locked) */
 .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.75rem; border:1px solid #ffffff29; background: rgba(255,255,255,0.06); margin-left:6px; }
-.badge.stamina {}
-.badge.mana {}
-.badge.health {}
-.badge.essence {}
+.badge.stamina {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
+  color: #eafff4;
+}
+.badge.mana {
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
+  color: #e9f3ff;
+}
+.badge.health {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+  color: #ffecec;
+}
+.badge.essence {
+  background: rgba(155, 93, 229, 0.18);
+  border-color: rgba(155, 93, 229, 0.55);
+  box-shadow: 0 0 8px rgba(155, 93, 229, 0.3);
+  color: #f6ecff;
+}
 
 /* Countdown & divider */
 .countdown { white-space:nowrap; font-variant-numeric: tabular-nums; }
@@ -440,8 +460,3 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   50%  { box-shadow: 0 0 16px #c084fc, 0 0 32px rgba(192,132,252,.8), inset 0 0 6px rgba(255,255,255,.15); }
   100% { box-shadow: 0 0 8px #a855f7, 0 0 12px rgba(168,85,247,.5), inset 0 0 3px rgba(255,255,255,.1); }
 }
-
-
-
-
-

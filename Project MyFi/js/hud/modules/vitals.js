@@ -157,6 +157,8 @@ function normalizeTxn(docSnap) {
       description: d?.transactionData?.description ?? "",
       entryDateMs: d?.transactionData?.entryDate?.toMillis?.() ?? null,
     },
+    // 🔧 REQUIRED for overflow badges:
+    appliedAllocation: d?.appliedAllocation ?? null,
   };
 }
 function previewPool(tx) {
@@ -815,16 +817,43 @@ export function autoInitUpdateLog() {
         }
         items.forEach(tx => {
           const li = document.createElement("li");
-          const pool = tx.tag?.pool ?? "stamina";
+          const intentPool = tx.tag?.pool ?? "stamina"; // chosen/intent at lock time
           const name = tx.transactionData?.description || "Transaction";
           const amt  = Number(tx.amount).toFixed(2);
           const when = tx.tag?.setAtMs ? new Date(tx.tag.setAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+          // Build badges:
+          // - For spends with appliedAllocation, show split (intent first, then by amount desc).
+          // - Otherwise show a single intent badge.
+          const alloc = tx.appliedAllocation || null;
+          let badgesHtml = "";
+
+          if (alloc && typeof tx.amount === "number" && tx.amount < 0) {
+            const entries = Object.entries(alloc)
+              .filter(([_, v]) => Number(v) > 0);
+
+            const poolOrder = ["stamina","mana","health","essence"];
+            entries.sort((a, b) => {
+              const [pa, va] = a, [pb, vb] = b;
+              if (pa === intentPool && pb !== intentPool) return -1;
+              if (pb === intentPool && pa !== intentPool) return 1;
+              if (vb !== va) return Number(vb) - Number(va);
+              return poolOrder.indexOf(pa) - poolOrder.indexOf(pb);
+            });
+
+            badgesHtml = entries.map(([p, v]) => {
+              const n = Number(v).toFixed(2);
+              return `<span class="badge ${p}" title="${p}: £${n}">${p}</span>`;
+            }).join(" ");
+          } else {
+            badgesHtml = `<span class="badge ${intentPool}">${intentPool}</span>`;
+          }
 
           li.innerHTML = `
             <div class="ul-row">
               <div class="ul-main">
                 <strong>${name}</strong>
-                <div class="ul-meta">£${amt} • ${when} <span class="badge ${pool}">${pool}</span></div>
+                <div class="ul-meta">£${amt} • ${when} ${badgesHtml}</div>
               </div>
             </div>
           `;
