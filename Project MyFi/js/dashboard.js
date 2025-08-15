@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <ol class="steps">
           <li>Open the Finances menu from the bottom right.  Update your income, and core expenses (things you have to pay without fail each month) to get started with your avatar.</li>
           <li>Your avatar's vitals are divided into Stamina (general spending), Mana (power spending), Health (minimum target savings, to be protected).  Toggle context mode via the bottom left button</li>
-          <li>Log spending via the Finance menu.  After adding a transaction, you have 1 hour to lock in details and target vitals pool.  Manage your energy carefully to avoid taking damage to your health!</li>
+          <li>Log spending via the Finance menu and see them appear in the Update Log.  After adding, you have 1 hour before details and pool are final (long press an entry if you need to edit).  Manage your energy carefully to avoid taking damage to your health!</li>
           <li>Keep your avatar in good health and empower them with Essence to give them the best chance at earning rewards when entering The Badlands (coming soon!)</li>
         </ol>
         <div class="actions">
@@ -172,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const userRef = doc(db, 'players', user.uid);
       const docSnap = await getDoc(userRef);
       if (!docSnap.exists()) {
-        await setDoc(userRef, { startDate: new Date() }, { merge: true });
+        await setDoc(userRef, { startDate: serverTimestamp }, { merge: true }); // Guard if startDate not present
       }
 
       // Load player data
