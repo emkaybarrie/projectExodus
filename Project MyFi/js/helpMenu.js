@@ -11,6 +11,7 @@ import {
 (function(){
   const { el, open, setMenu } = window.MyFiModal;
 
+  // --- UI helpers ---
   function field(labelTxt,type,id,attrs={}){
     const wrap=document.createElement('div'); wrap.className='field';
     const l=document.createElement('label'); l.htmlFor=id; l.textContent=labelTxt;
@@ -71,39 +72,72 @@ import {
     return wrap;
   }
 
+  // --- Overview (now includes "Introduction" and "The Basics") ---
   function overviewRender(){
     const pages = [
-      { label:'Introduction', text:`Welcome to <strong>MyFi</strong>. This screen is your home base: watch your <em>Health</em>, <em>Mana</em>, <em>Stamina</em>, and <em>Essence</em> change as you tag transactions and set goals.`,
-        media:{type:'image', src:'assets/help/overview-1.png'} },
-      { label:'HUD Basics', text:`The toggle 🌀 switches Daily/Weekly/Monthly views. Bars show your projected max and current position. Surplus pills show how many full bars remain after pending actions.`,
-        media:{type:'video', src:'assets/help/overview-basics.mp4', poster:'assets/help/overview-basics.jpg'} },
-      { label:'Next Steps', text:`Use <strong>Settings</strong> to set Income/Core Expenses. Connect a bank to sync data automatically, or add manual transactions to start right away.`,
-        media:{type:'image', src:'assets/help/overview-next.png'} },
+      {
+        label:'Introduction',
+        text: `
+          Welcome to <strong>Project MyFi</strong> — a living world where your real-life money habits power your in-game journey.
+          The app blends financial tracking with RPG adventure to help you spend wisely, plan intentionally, and grow stronger over time.
+          Every choice shapes your avatar, progress, and ability to face The Badlands ahead.
+        `,
+        media:{ type:'image', src:'assets/help/overview-1.png' }
+      },
+      {
+        label:'The Basics',
+        text: `
+          <strong>Navigation</strong><br>
+          • Swipe between panels to explore your hub.<br>
+          • Tap icons to open details; long-press where noted for extra options.<br><br>
+          <strong>Main Screens</strong><br>
+          • <em>Vitals</em> — your financial health as game-like resources.<br>
+          • <em>Quests</em> — goals/challenges that build habits.<br>
+          • <em>Avatar</em> — customise, level up, and equip perks.<br>
+          • <em>The Badlands</em> — the 2D rogue-lite where your prep is tested.<br><br>
+          Tip: Use the 🌀 toggle on Vitals to switch Daily/Weekly/Monthly context.
+        `,
+        media:{ type:'image', src:'assets/help/basics-nav.png' }
+      }
     ];
-
     const container = document.createElement('div');
     const subnav = segmentedNav(pages, showPage);
-    const body = document.createElement('div');
-    body.className = 'help-body';
+    const body = document.createElement('div'); body.className = 'help-body';
     container.append(subnav, body);
-
     function showPage(i){
       const p = pages[i];
-      body.replaceChildren(
-        helper(p.text),
-        mediaBlock(p.media)
-      );
+      body.replaceChildren(helper(p.text), mediaBlock(p.media));
     }
     showPage(0);
     return [container];
   }
 
-  function basicsRender(){
+  // --- Vitals ---
+  function vitalsRender(){
     const pages = [
-      { label:'Tagging', text:`Tag transactions as <strong>Mana</strong> for intentional spending. Unassigned debits default to <strong>Stamina</strong> and overflow to <strong>Health</strong> when needed.`,
-        media:{type:'image', src:'assets/help/basics-tagging.png'} },
-      { label:'Ghost Preview', text:`The update log shows pending items with a countdown. Ghost overlays preview the impact before expiry; tag to confirm or let the default apply.`,
-        media:{type:'video', src:'assets/help/ghost-preview.mp4', poster:'assets/help/ghost-preview.jpg'} },
+      {
+        label:'Purpose',
+        text: `
+          The <strong>Vitals</strong> screen is your central dashboard. It tracks:
+          <br>• <em>Stamina</em> — day-to-day spending.
+          <br>• <em>Mana</em> — intentional/power spending.
+          <br>• <em>Health</em> — protected savings baseline.
+          <br>• <em>Essence</em> — boosts, unlocks, and cosmetics.
+          <br><br>
+          As transactions flow in, tag them to the right pool. Ghost overlays preview impact before confirmation.
+          From Vitals, everything else flows: quests, avatar growth, and deeper Badlands runs.
+        `,
+        media:{ type:'image', src:'assets/help/vitals-overview.png' }
+      },
+      {
+        label:'Using It',
+        text: `
+          • Toggle 🌀 to view Daily/Weekly/Monthly context.<br>
+          • Watch bars for current vs. max; surplus pills hint how many full bars remain.<br>
+          • Use the Update Log to review pending items: tag to confirm, or let defaults apply.
+        `,
+        media:{ type:'video', src:'assets/help/vitals-using.mp4', poster:'assets/help/vitals-using.jpg' }
+      }
     ];
     const container = document.createElement('div');
     const subnav = segmentedNav(pages, showPage);
@@ -114,38 +148,103 @@ import {
     return [container];
   }
 
-  function resourcesRender(){
-    const text = helper(`Useful links and references will appear here. Placeholder for now.`);
-    const media = mediaBlock({type:'image', src:'assets/help/resources.png'});
-    return [text, media];
+  // --- Quests ---
+  function questsRender(){
+    const content = helper(`
+      <strong>Quests</strong> turn financial goals into adventures. Complete daily, weekly, or long-term challenges
+      (e.g., tagging streaks, savings targets, clearing your Update Log). Rewards strengthen your avatar and unlock progression.
+      Active quests appear in your Journal; completion builds habits and momentum.
+    `);
+    const media = mediaBlock({ type:'image', src:'assets/help/quests.png' });
+    return [content, media];
   }
 
+  // --- Avatars ---
   function avatarsRender(){
     const pages = [
-      {label:'Styles', text:`Avatars evolve with your progress. Cosmetics and abilities tie to your financial milestones.`, media:{type:'image', src:'assets/help/avatars-1.png'}},
-      {label:'Loadouts', text:`Equip skills that reflect your habits—automations, tagging streaks, and savings unlock buffs.`, media:{type:'image', src:'assets/help/avatars-2.png'}},
+      {
+        label:'Progress',
+        text: `
+          Your <strong>Avatar</strong> reflects your journey. Customise look, gear, and abilities as you level up.
+          Progress ties directly to Vitals and Quest completions.
+          <br><br>
+          • <em>Levelling</em> = financial resilience.<br>
+          • <em>Gear & Skills</em> = perks linked to milestones.<br>
+          • <em>Cosmetics</em> = unlocked with Essence or earned rewards.
+          <br><br>
+          A stronger avatar unlocks deeper power in The Badlands.
+        `,
+        media:{ type:'image', src:'assets/help/avatars-1.png' }
+      },
+      {
+        label:'Loadout',
+        text: `
+          Equip skills and passives that mirror your habits (e.g., consistent tagging, savings streaks).
+          These amplify your performance during runs and future events.
+        `,
+        media:{ type:'image', src:'assets/help/avatars-2.png' }
+      }
     ];
     const sub = segmentedNav(pages, show);
     const body = document.createElement('div'); body.className='help-body';
     function show(i){ const p=pages[i]; body.replaceChildren(helper(p.text), mediaBlock(p.media)); }
-    const note = helper(`All artwork TBD; these are placeholders.`);
-    const wrap = document.createElement('div'); wrap.append(sub, body, note);
+    const wrap = document.createElement('div'); wrap.append(sub, body);
     show(0);
     return [wrap];
   }
 
-  function questsRender(){
-    const text = helper(`Quests guide your next actions—complete tagging streaks, hit savings goals, or clear your update log.`);
-    const media = mediaBlock({type:'image', src:'assets/help/quests.png'});
-    return [text, media];
-  }
-
+  // --- The Badlands ---
   function badlandsRender(){
-    const text = helper(`<strong>The Badlands</strong> is a challenge zone that reacts to overspending and missed goals. Expect temporary debuffs—and rare rewards.`);
-    const media = mediaBlock({type:'video', src:'assets/help/badlands.mp4', poster:'assets/help/badlands.jpg'});
-    return [text, media];
+    const content = helper(`
+      <strong>The Badlands</strong> is the core gameplay: a 2D endless-runner rogue-lite where your avatar becomes a hero.
+      Explore, defeat enemies, liberate towns, and discover routes that change over time. Success depends on your Vitals and Avatar strength.
+      Compete or cooperate with others for leaderboards and seasonal prizes—better real-world habits fuel deeper runs.
+    `);
+    const media = mediaBlock({ type:'video', src:'assets/help/badlands.mp4', poster:'assets/help/badlands.jpg' });
+    return [content, media];
   }
 
+  // --- Resources (updated: Products / Financial Guidance) ---
+  function resourcesRender(){
+    const pages = [
+      {
+        label:'Overview',
+        text: `
+          The <strong>Products & Guidance</strong> screen gives deeper insight into your financial health and habits,
+          and connects you to partner products/services that fit your profile.
+          You’ll see trends, spending patterns, risk flags, and opportunities to optimise.
+        `,
+        media:{ type:'image', src:'assets/help/resources-overview.png' }
+      },
+      {
+        label:'Insights',
+        text: `
+          • Behavioural trends (e.g., streaks, category drift, burn rate).<br>
+          • Projections and alerts based on your Vitals and recent activity.<br>
+          • Actionable tips that feed back into Quests and Avatar perks.
+        `,
+        media:{ type:'image', src:'assets/help/resources-insights.png' }
+      },
+      {
+        label:'Partner Products',
+        text: `
+          Curated links to banks, cards, savings, utilities, and other services.
+          Offers are <em>context-aware</em> and optional; picking one may grant in-game bonuses or Essence.
+          We prioritise clarity and suitability—no pressure, just options that might help.
+        `,
+        media:{ type:'image', src:'assets/help/resources-products.png' }
+      }
+    ];
+    const container = document.createElement('div');
+    const subnav = segmentedNav(pages, show);
+    const body = document.createElement('div'); body.className='help-body';
+    container.append(subnav, body);
+    function show(i){ const p = pages[i]; body.replaceChildren(helper(p.text), mediaBlock(p.media)); }
+    show(0);
+    return [container];
+  }
+
+  // --- FAQ (kept succinct) ---
   function faqRender(){
     const faqs = [
       ['getting-started','How do I get started?'],
@@ -154,25 +253,33 @@ import {
       ['privacy','What data do you store?'],
     ];
     const content = {
-      'getting-started': { text:`Set income & core expenses in Settings, then add a few transactions. Watch the HUD update live.`,
-                           media:{type:'image', src:'assets/help/faq-start.png'} },
-      'tagging':         { text:`Tag planned spending as Mana. Everything else defaults to Stamina and overflows to Health.`,
-                           media:{type:'image', src:'assets/help/faq-tag.png'} },
-      'regen':           { text:`Current = (regenCurrent × daysTracked) − spentToDate. Max = regenBaseline × daysTracked.`,
-                           media:{type:'image', src:'assets/help/faq-regen.png'} },
-      'privacy':         { text:`Your data stays yours. Bank connections use trusted providers; you control access.`,
-                           media:{type:'image', src:'assets/help/faq-privacy.png'} },
+      'getting-started': {
+        text:`Set income & core expenses in Settings, then add a few transactions. Watch the HUD update live.`,
+        media:{type:'image', src:'assets/help/faq-start.png'}
+      },
+      'tagging': {
+        text:`Tag planned spending as Mana. Everything else defaults to Stamina and can overflow to Health when needed.`,
+        media:{type:'image', src:'assets/help/faq-tag.png'}
+      },
+      'regen': {
+        text:`Current = (regenCurrent × daysTracked) − spentToDate. Max = regenBaseline × daysTracked.`,
+        media:{type:'image', src:'assets/help/faq-regen.png'}
+      },
+      'privacy': {
+        text:`Your data stays yours. Bank connections use trusted providers; you control access.`,
+        media:{type:'image', src:'assets/help/faq-privacy.png'}
+      },
     };
 
     const dd = select('Question','faqSelect',faqs);
     const body = document.createElement('div'); body.className='help-body';
     function renderKey(k){ const d=content[k]; body.replaceChildren(helper(d.text), mediaBlock(d.media)); }
-
     dd.querySelector('select').addEventListener('change', (e)=> renderKey(e.target.value));
     renderKey(faqs[0][0]);
     return [dd, body];
   }
 
+  // --- Report an Issue (saves to Firestore) ---
   function reportIssueRender(){
     const cat = select('Category (optional)','issueCategory',[
       ['bug-ui','UI bug'],
@@ -200,19 +307,22 @@ import {
     ];
   }
 
+  // --- Menu map ---
   const HelpMenu = {
-    overview: { label:'Overview', title:'Help • Overview', render: overviewRender },
-    basics:   { label:'Basics', title:'Help • Basics', render: basicsRender },
-    resources:{ label:'Resources', title:'Help • Resources', render: resourcesRender },
-    avatars:  { label:'Avatars', title:'Help • Avatars', render: avatarsRender },
-    quests:   { label:'Quests', title:'Help • Quests', render: questsRender },
-    badlands: { label:'The Badlands', title:'Help • The Badlands', render: badlandsRender },
-    faq:      { label:'FAQ', title:'Help • FAQ', render: faqRender },
-    report:   { label:'Report an Issue', title:'Help • Report an Issue', render: reportIssueRender, footer: reportFooter },
+    overview:  { label:'Overview', title:'Help • Overview', render: overviewRender },
+    vitals:    { label:'Vitals',   title:'Help • Vitals',   render: vitalsRender },
+    quests:    { label:'Quests',   title:'Help • Quests',   render: questsRender },
+    avatars:   { label:'Avatars',  title:'Help • Avatars',  render: avatarsRender },
+    badlands:  { label:'The Badlands', title:'Help • The Badlands', render: badlandsRender },
+    resources: { label:'Products / Guidance', title:'Help • Products & Guidance', render: resourcesRender },
+    faq:       { label:'FAQ',      title:'Help • FAQ',      render: faqRender },
+    report:    { label:'Report an Issue', title:'Help • Report an Issue', render: reportIssueRender, footer: reportFooter },
   };
 
+  // expose to app
   window.MyFiHelpMenu = HelpMenu;
 
+  // Open Help (defaults to Overview)
   document.getElementById('help-btn')?.addEventListener('click', ()=>{
     setMenu(HelpMenu);
     open('overview');
