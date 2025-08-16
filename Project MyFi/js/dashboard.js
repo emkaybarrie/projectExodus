@@ -38,12 +38,12 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="wcard">
         <h1>Welcome to Project MyFi</h1>
         <p class="lead">Thanks for joining us early—your journey (and feedback) starts here!</p>
-        <p class="lead">Here’s a quick guide to get going. Use “Learn More” (top right) anytime for deeper help.</p>
+        <p class="lead">Here’s a quick guide to get going. Use “Learn More” for more detailed help.</p>
         <ol class="steps">
           <li>📜 Open <strong>Finances</strong> to set your income and core expenses—this powers your avatar.</li>
           <li>🌀 Track your <strong>Vitals</strong>: 
             Stamina (daily spend), Mana (intentional spend), Health (protected savings), and Essence (avatar growth).</li>
-          <li>💸 Log transactions in Finances—review them in the Update Log before they lock in after 1 hour.</li>
+          <li>📜 Log spending in <strong>Finances</strong>—review them in the Update Log before they lock in after 1 hour.</li>
           <li>⚔️ Keep your avatar healthy and use Essence to prepare for <strong>The Badlands</strong> (coming soon!)—
             where you’ll battle, explore, and earn rewards for your progress.</li>
         </ol>
