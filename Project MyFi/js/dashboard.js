@@ -37,18 +37,21 @@ document.addEventListener("DOMContentLoaded", () => {
     shell.innerHTML = `
       <div class="wcard">
         <h1>Welcome to Project MyFi</h1>
-        <p class="lead">Appreciate you joining us at such an early stage, and look forward to your input!</p>
-        <p class="lead">Just a couple of quick start tips below to help you get started. Feel free to use the "Learn More" or "?" button in the top right to find out more (coming soon)</p>
+        <p class="lead">Thanks for joining us early—your journey (and feedback) starts here!</p>
+        <p class="lead">Here’s a quick guide to get going. Use “Learn More” (top right) anytime for deeper help.</p>
         <ol class="steps">
-          <li>Open the Finances menu from the bottom right.  Update your income, and core expenses (things you have to pay without fail each month) to get started with your avatar.</li>
-          <li>Your avatar's vitals are divided into Stamina (general spending), Mana (power spending), Health (minimum target savings, to be protected).  Toggle context mode via the bottom left button</li>
-          <li>Log spending via the Finance menu and see them appear in the Update Log.  After adding, you have 1 hour before details and pool are final (long press an entry if you need to edit).  Manage your energy carefully to avoid taking damage to your health!</li>
-          <li>Keep your avatar in good health and empower them with Essence to give them the best chance at earning rewards when entering The Badlands (coming soon!)</li>
+          <li>📜 Open <strong>Finances</strong> to set your income and core expenses—this powers your avatar.</li>
+          <li>🌀 Track your <strong>Vitals</strong>: 
+            Stamina (daily spend), Mana (intentional spend), Health (protected savings), and Essence (avatar growth).</li>
+          <li>💸 Log transactions in Finances—review them in the Update Log before they lock in after 1 hour.</li>
+          <li>⚔️ Keep your avatar healthy and use Essence to prepare for <strong>The Badlands</strong> (coming soon!)—
+            where you’ll battle, explore, and earn rewards for your progress.</li>
         </ol>
         <div class="actions">
           <button id="wo-primary" class="ws-btn ws-primary">Open Vitals</button>
           <button id="wo-secondary" class="ws-btn ws-ghost">Learn More</button>
         </div>
+      </div>
       `;
 
       // Apply CSS from welcomeSplash.css inline
