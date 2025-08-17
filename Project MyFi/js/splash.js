@@ -10,6 +10,9 @@ const DEFAULT_IMAGES = [
   './assets/splash/avatarGerard.png',
   './assets/splash/avatarMatthew.png',
   // './assets/splash/avatarHaiyang.png',
+  './assets/splash/splash_01.png',
+  './assets/splash/splash_02.png',
+    './assets/splash/splash_03.png'
 ];
 
 const DEFAULT_TIPS = [
