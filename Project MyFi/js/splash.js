@@ -1,16 +1,15 @@
 // js/splash.js
 const DEFAULT_IMAGES = [
-  './assets/splash/splash_01.png',
-  './assets/splash/splash_02.png',
-  './assets/splash/splash_03.png',
-  './assets/splash/splash_04.png',
-  './assets/splash/splash_05.png',
-  './assets/splash/splash_06.png',
-  './assets/splash/splash_07.png',
-  './assets/splash/splash_08.png',
-  './assets/splash/splash_09.png',
-  './assets/splash/splash_10.png',
-  './assets/splash/splash_11.png'
+  './assets/splash/avatarEmkay.png',
+  './assets/splash/avatarRichard.png',
+  './assets/splash/avatarAlie.png',
+  './assets/splash/avatarJane.png',
+  './assets/splash/avatarSammi.png',
+  './assets/splash/avatarAmandeep.png',
+  './assets/splash/avatarMohammed.png',
+  './assets/splash/avatarGerard.png',
+  './assets/splash/avatarMatthew.png',
+  // './assets/splash/avatarHaiyang.png',
 ];
 
 const DEFAULT_TIPS = [

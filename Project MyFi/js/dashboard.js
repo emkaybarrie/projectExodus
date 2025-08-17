@@ -188,26 +188,24 @@ document.addEventListener("DOMContentLoaded", () => {
       const portraitImage = document.querySelector(".portrait");
       let portraitKey = playerData.portraitKey || "default";
 
-      if (playerData.firstName == "Emkay") {
-        portraitKey = 'avatarEmkay';
-      } else if (playerData.firstName == "Alie") {
-        portraitKey = 'avatarAlie';
-      } else if (playerData.firstName == "Richard") {
-        portraitKey = 'avatarRichard';
-      } else if (playerData.firstName == "Mohammed") {
-        portraitKey = 'avatarMohammed';
-      } else if (playerData.firstName == "Jane") {
-        portraitKey = 'avatarJane';
-      } else if (playerData.firstName == "Amandeep") {
-        portraitKey = 'avatarAmandeep';
-      } else if (playerData.firstName == "Matthew") {
-        portraitKey = 'avatarMatthew';
-      } else if (playerData.firstName == "Gerard") {
-        portraitKey = 'avatarGerard';
-      } else if (playerData.firstName == "Sammi") {
-        portraitKey = 'avatarSammi';
+      // Randomly select between realistic and cartoon mode.
+      // If cartoon mode, append _v2 to filename.
+      const isCartoonMode = Math.random() < 1.0; // 50% chance
+
+      // List of supported names for portraits
+      const portraitNames = [
+        "Emkay", "Alie", "Richard", "Mohammed", "Jane",
+        "Amandeep", "Matthew", "Gerard", "Sammi"
+      ];
+
+      if (portraitNames.includes(playerData.firstName)) {
+        portraitKey = 'avatar' + playerData.firstName;
       } else {
         portraitKey = 'default';
+      }
+
+      if (!isCartoonMode) {
+        portraitKey += '_v2';
       }
 
       console.log("Using portrait key:", portraitKey);
