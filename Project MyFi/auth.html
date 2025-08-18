@@ -5,99 +5,122 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Login / Signup</title>
 
+  <!-- Randomize background image (writes to --auth-bg) -->
   <script>
   (function () {
-    // paths are relative to auth.css (same as your current image path)
     const picks = [
       "./assets/img/auth-bg1.png",
       "./assets/img/auth-bg2.png",
       "./assets/img/auth-bg3.png",
     ];
     const chosen = picks[Math.floor(Math.random() * picks.length)];
-    // optional preload to avoid a pop-in
     const img = new Image();
     img.onload = () => document.documentElement.style.setProperty('--auth-bg', `url("${chosen}")`);
     img.src = chosen;
   })();
-</script>
+  </script>
+
   <link rel="stylesheet" href="auth.css" />
-  <style>
-    .tab-toggle {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 1rem;
-      gap: 1rem;
-    }
-
-    .tab-toggle button {
-      flex: 1;
-      padding: 0.75rem;
-      background-color: #222;
-      color: white;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: bold;
-      cursor: pointer;
-      opacity: 0.6;
-    }
-
-    .tab-toggle button.active {
-      background: linear-gradient(45deg, #6a11cb, #2575fc);
-      box-shadow: 0 0 12px #2575fc;
-      opacity: 1;
-    }
-
-    #signup-form {
-      display: none;
-    }
-  </style>
 </head>
 <body>
 
-  
+  <!-- Tabs -->
   <div class="tab-toggle">
     <button id="login-tab" class="active">Login</button>
     <button id="signup-tab">Signup</button>
   </div>
 
-  <!-- Login Form -->
-  <div id="login-form">
+  <!-- Login Card -->
+  <div id="login-form" class="auth-card">
     <h1>Login</h1>
-    <input type="email" id="login-email" placeholder="Email" required />
-    <input type="password" id="login-password" placeholder="Password" required />
-    <button id="login-btn">Login</button>
+
+    <div class="field">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <button type="button" class="info-btn" aria-label="Email help" aria-expanded="false">i</button>
+      <div class="tooltip" role="tooltip">
+        Use the email you registered with.
+      </div>
+    </div>
+
+    <div class="field">
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="button" class="info-btn" aria-label="Password help" aria-expanded="false">i</button>
+      <div class="tooltip" role="tooltip">
+        Enter your account password. Keep it secure and unique.
+      </div>
+    </div>
+
+    <button class="form-btn" id="login-btn">Login</button>
   </div>
 
-  <!-- Signup Form -->
-  <div id="signup-form">
+  <!-- Signup Card -->
+  <div id="signup-form" class="auth-card" style="display:none">
     <h1>Signup</h1>
+
     <form id="signup-form-element">
-      <input type="email" id="signup-email" placeholder="Email" required />
-      <input type="password" id="signup-password" placeholder="Password" required />
-      <input type="text" id="alias" placeholder="Alias" required />
-      <input type="text" id="firstName" placeholder="First Name" required />
-      <input type="text" id="lastName" placeholder="Last Name" required />
-      <button type="submit">Signup</button>
+      <div class="field">
+        <input type="email" id="signup-email" placeholder="Email" required />
+        <button type="button" class="info-btn" aria-label="Email help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          We’ll send verification to this address. You’ll use it to sign in.
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="password" id="signup-password" placeholder="Password" required />
+        <button type="button" class="info-btn" aria-label="Password help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Choose a strong password (12+ chars recommended).
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="text" id="alias" placeholder="Alias" required />
+        <button type="button" class="info-btn" aria-label="Alias help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          <strong>Avatar name</strong>. Shown to others and used to identify you.
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="text" id="firstName" placeholder="First Name" required />
+        <button type="button" class="info-btn" aria-label="First name help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Your real first name. Helps personalize your experience.
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="text" id="lastName" placeholder="Last Name" required />
+        <button type="button" class="info-btn" aria-label="Last name help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Your real last name. Stored securely.
+        </div>
+      </div>
+
+      <button class="form-btn" type="submit">Signup</button>
     </form>
   </div>
 
-  <script type="module" src="js/core/auth.js"></script>
+  <!-- Firebase + auth helpers -->
+  <script type="module" src="./js/core/auth.js"></script>
+
+  <!-- Page logic -->
   <script type="module">
-    import { loginUser , signupUser} from './js/core/auth.js'; // Need to integrate sign up lofgic form signup .js
+    import { loginUser , signupUser } from './js/core/auth.js';  /* uses your auth.js */
 
     const loginForm = document.getElementById("login-form");
     const signupForm = document.getElementById("signup-form");
     const loginTab = document.getElementById("login-tab");
     const signupTab = document.getElementById("signup-tab");
 
-    // Tab toggle logic
+    // Tab toggle (no layout jump)
     loginTab.addEventListener("click", () => {
       loginForm.style.display = "flex";
       signupForm.style.display = "none";
       loginTab.classList.add("active");
       signupTab.classList.remove("active");
     });
-
     signupTab.addEventListener("click", () => {
       loginForm.style.display = "none";
       signupForm.style.display = "flex";
@@ -109,18 +132,15 @@
     document.getElementById("login-btn").addEventListener("click", () => {
       const email = document.getElementById("login-email").value;
       const password = document.getElementById("login-password").value;
-      if (email && password) {
-        loginUser(email, password);
-      } else {
-        alert("Please enter both email and password.");
-      }
+      if (email && password) loginUser(email, password);
+      else alert("Please enter both email and password.");
     });
 
     // Signup
     document.getElementById("signup-form-element").addEventListener("submit", (e) => {
       e.preventDefault();
       const data = {
-        email: document.getElementById("signup-email").value, // add .trim(),
+        email: document.getElementById("signup-email").value,
         password: document.getElementById("signup-password").value,
         alias: document.getElementById("alias").value,
         firstName: document.getElementById("firstName").value,
@@ -128,17 +148,33 @@
       };
       signupUser(data);
     });
-  </script>
 
-    <script>
-    // Disable all context menus and long press interactions
+    // Tooltip toggle (tap/click + ESC)
+    const fields = Array.from(document.querySelectorAll('.field'));
+    function closeAllTips(exceptBtn = null) {
+      fields.forEach(f => {
+        const btn = f.querySelector('.info-btn');
+        f.classList.remove('show-tip');
+        if (btn) btn.setAttribute('aria-expanded', (btn === exceptBtn) ? btn.getAttribute('aria-expanded') : 'false');
+      });
+    }
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.info-btn');
+      if (!btn) { closeAllTips(); return; }
+      const field = btn.closest('.field');
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      closeAllTips(btn);
+      btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      field.classList.toggle('show-tip', !expanded);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllTips(); });
+
+    // Disable context menu/long-press
     window.addEventListener("DOMContentLoaded", () => {
       document.addEventListener("contextmenu", e => e.preventDefault());
-      document.addEventListener("touchstart", e => {
-        if (e.touches.length > 1) e.preventDefault();
-      }, { passive: false });
+      document.addEventListener("touchstart", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
       document.addEventListener("gesturestart", e => e.preventDefault());
     });
-    </script>
+  </script>
 </body>
 </html>
