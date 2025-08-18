@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const isCartoonMode = Math.random() < 1.0;
       const portraitNames = [
         "Emkay", "Alie", "Richard", "Mohammed", "Jane",
-        "Amandeep", "Matthew", "Gerard", "Sammi"
+        "Amandeep", "Matthew", "Gerard", "Sammi", "Kirsty"
       ];
 
       if (portraitNames.includes(playerData.firstName)) {
