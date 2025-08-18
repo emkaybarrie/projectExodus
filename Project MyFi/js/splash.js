@@ -12,7 +12,7 @@ const DEFAULT_IMAGES = [
   // './assets/splash/avatarHaiyang.png',
   './assets/splash/splash_01.png',
   './assets/splash/splash_02.png',
-    './assets/splash/splash_03.png'
+  './assets/splash/splash_03.png'
 ];
 
 const DEFAULT_TIPS = [
@@ -59,7 +59,6 @@ function ensureMarkup() {
         </div>
         <button class="splash-skip" id="splash-skip" type="button" aria-label="Skip loading">Skip</button>
       </div>`;
-    // minimal inline fallback so it shows even if CSS isn’t loaded
     Object.assign(root.style, {
       position: 'fixed', inset: '0', zIndex: '9999',
       display: 'grid', placeItems: 'center',
@@ -81,7 +80,7 @@ function ensureMarkup() {
  * @param {Object} opts
  * @param {string[]} [opts.images]
  * @param {string[]} [opts.tips]
- * @param {number}   [opts.minDuration=900]
+ * @param {number}   [opts.minDuration=1000]
  * @param {Promise}  [opts.until]
  * @param {boolean}  [opts.allowSkip=true]
  * @param {number}   [opts.maxWait=12000]
@@ -95,11 +94,9 @@ export function createSplash(opts = {}) {
 
   const { root, imgEl, tipEl, barEl, progEl, skipBtn } = ensureMarkup();
 
-  // random content (non-blocking)
   try { if (tipEl) tipEl.textContent = pick(tips); } catch {}
   preload(pick(images)).then((src) => { try { if (imgEl && src) imgEl.src = src; } catch {} });
 
-  // state
   let progress = 0, externalDone = false, minElapsed = false, closed = false, rafId = 0, tipTimer;
 
   const setProgress = (val) => {
@@ -116,15 +113,17 @@ export function createSplash(opts = {}) {
     if (app) app.classList.add('app-show');
 
     try { root.classList.add('hidden'); } catch {}
-    // hard fallback if CSS missing
+    // Fade out + then signal done
     setTimeout(() => {
       root.style.opacity = '0';
       root.style.visibility = 'hidden';
       root.style.pointerEvents = 'none';
       // If you prefer, remove from DOM:
       // root.remove();
-    }, 300);
 
+      // 🔔 Notify the app that splash is fully gone
+      try { window.dispatchEvent(new CustomEvent('splash:done')); } catch {}
+    }, 300);
 
     closed = true;
   };

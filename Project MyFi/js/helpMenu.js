@@ -94,7 +94,7 @@ import {
           • <em>Vitals</em> — your financial health as game-like resources.<br>
           • <em>Quests</em> — goals/challenges that build habits.<br>
           • <em>Avatar</em> — customise, level up, and equip perks.<br>
-          • <em>The Badlands</em> — the 2D rogue-lite where your prep is tested.<br><br>
+          • <em>The Badlands</em> — the 2D rogue-lite where your prep is tested and rewarded.<br><br>
           Tip: Use the 🌀 toggle on Vitals to switch Daily/Weekly/Monthly context.
         `,
         media:{ type:'image', src:'assets/help/basics-nav.png' }
@@ -122,9 +122,9 @@ import {
           <br>• <em>Stamina</em> — day-to-day spending.
           <br>• <em>Mana</em> — intentional/power spending.
           <br>• <em>Health</em> — protected savings baseline.
-          <br>• <em>Essence</em> — boosts, unlocks, and cosmetics.
+          <br>• <em>Essence</em> — avatar growth, boosts, unlocks, and cosmetics.
           <br><br>
-          As transactions flow in, tag them to the right pool. Ghost overlays preview impact before confirmation.
+          As transactions flow in, tag them to the right pool. Manage your energy carefully, and see how your spending will impact your avatar's reosurces before confirmation.
           From Vitals, everything else flows: quests, avatar growth, and deeper Badlands runs.
         `,
         media:{ type:'image', src:'assets/help/vitals-overview.png' }
@@ -133,7 +133,7 @@ import {
         label:'Using It',
         text: `
           • Toggle 🌀 to view Daily/Weekly/Monthly context.<br>
-          • Watch bars for current vs. max; surplus pills hint how many full bars remain.<br>
+          • Watch bars for current vs. max; surplus pills hint how many full bars remain based on the current time context.<br>
           • Use the Update Log to review pending items: tag to confirm, or let defaults apply.
         `,
         media:{ type:'video', src:'assets/help/vitals-using.mp4', poster:'assets/help/vitals-using.jpg' }
@@ -179,8 +179,8 @@ import {
       {
         label:'Loadout',
         text: `
-          Equip skills and passives that mirror your habits (e.g., consistent tagging, savings streaks).
-          These amplify your performance during runs and future events.
+          Equip skills and items that reflect your spending style and compliment your habits (e.g., consistent tagging, savings streaks).
+          Use these to amplify your performance and see them reflected in your chosen hero during Badlands runs and events.
         `,
         media:{ type:'image', src:'assets/help/avatars-2.png' }
       }
@@ -197,7 +197,7 @@ import {
   function badlandsRender(){
     const content = helper(`
       <strong>The Badlands</strong> is the core gameplay: a 2D endless-runner rogue-lite where your avatar becomes a hero.
-      Explore, defeat enemies, liberate towns, and discover routes that change over time. Success depends on your Vitals and Avatar strength.
+      Explore the lands surrounding Kianova, defeat enemies, liberate towns, and discover routes that change over time. Success depends on your Avatar's strength as well as your own skill and commitment.
       Compete or cooperate with others for leaderboards and seasonal prizes—better real-world habits fuel deeper runs.
     `);
     const media = mediaBlock({ type:'video', src:'assets/help/badlands.mp4', poster:'assets/help/badlands.jpg' });
@@ -229,8 +229,8 @@ import {
         label:'Partner Products',
         text: `
           Curated links to banks, cards, savings, utilities, and other services.
-          Offers are <em>context-aware</em> and optional; picking one may grant in-game bonuses or Essence.
-          We prioritise clarity and suitability—no pressure, just options that might help.
+          Offers are <em>context-aware</em> and optional; picking one may grant in-game bonuses or other perks.
+          We prioritise clarity and suitability—no pressure, just options that might help you on your journey to financial independence.
         `,
         media:{ type:'image', src:'assets/help/resources-products.png' }
       }

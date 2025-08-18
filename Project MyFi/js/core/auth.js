@@ -3,13 +3,13 @@ import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPas
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
-    authDomain: "myfi-app-7fa78.firebaseapp.com",
-    projectId: "myfi-app-7fa78",
-    storageBucket: "myfi-app-7fa78.appspot.com", 
-    messagingSenderId: "720285758770",
-    appId: "1:720285758770:web:ed7d646efac936993b532b",
-    measurementId: "G-GDR4RQ25T3"
+  apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
+  authDomain: "myfi-app-7fa78.firebaseapp.com",
+  projectId: "myfi-app-7fa78",
+  storageBucket: "myfi-app-7fa78.appspot.com",
+  messagingSenderId: "720285758770",
+  appId: "1:720285758770:web:ed7d646efac936993b532b",
+  measurementId: "G-GDR4RQ25T3"
 };
 
 // Initialize Firebase
@@ -17,101 +17,85 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🦸‍♂️ Helper function to get user data from Firestore
+// Helper
 const getUserDataFromFirestore = async (uid) => {
-    const userDocRef = doc(db, "players", uid);
-    try {
-        const userDoc = await getDoc(userDocRef);
-        return userDoc.exists() ? userDoc.data() : null;
-    } catch (error) {
-        console.error("Error fetching user data:", error.message);
-        return null;
-    }
+  const userDocRef = doc(db, "players", uid);
+  try {
+    const userDoc = await getDoc(userDocRef);
+    return userDoc.exists() ? userDoc.data() : null;
+  } catch (error) {
+    console.error("Error fetching user data:", error.message);
+    return null;
+  }
 };
 
-// 🔐 Login user
+// Login
 export async function loginUser(email, password) {
-    console.log('User Attempting to Log In')
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        console.log("User signed in:", user);
+  console.log('User Attempting to Log In');
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-        const playerData = await getUserDataFromFirestore(user.uid);
-        if (playerData) {
-            localStorage.setItem("playerData", JSON.stringify(playerData));
-            sessionStorage.setItem('showSplashNext', '1'); // Show splash on next load
-            window.location.href = "dashboard.html";  // Redirect after login
-        }
-    } catch (error) {
-        console.error("Login error:", error.message);
-        alert("Login failed: " + error.message);
+    const playerData = await getUserDataFromFirestore(user.uid);
+    if (playerData) {
+      localStorage.setItem("playerData", JSON.stringify(playerData));
+      sessionStorage.setItem('showSplashNext', '1');
+      window.location.href = "dashboard.html";
     }
+  } catch (error) {
+    console.error("Login error:", error.message);
+    alert("Login failed: " + error.message);
+  }
 }
 
-// 🆕 Signup user
-//export async function signupUser(email, password, alias, firstName, lastName, startBalance) {
+// Signup
 export async function signupUser(data) {
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-        const user = userCredential.user;
-        //console.log("User signed up:", user);
-        const userDocRef = doc(db, "players", user.uid);
-        const startDateTime = serverTimestamp();      // ⬅️ was: new Date()
-        await setDoc(userDocRef, {
-            startDate: startDateTime,
-            alias: data.alias || "No Alias",
-            email: data.email,
-            firstName: data.firstName || "",
-            lastName: data.lastName || "",
-            level: Number(1)
-        });
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const user = userCredential.user;
 
-        await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
-        dCoreExpenses: Number(0),
-        dIncome: Number(0)
-        });
+    await setDoc(doc(db, "players", user.uid), {
+      startDate: serverTimestamp(),
+      alias: data.alias || "No Alias",
+      email: data.email,
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+      level: Number(1)
+    });
 
-        await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
-        essenceAllocation: Number(0.1),
-        healthAllocation: Number(0.1),
-        manaAllocation: Number(0.3),
-        staminaAllocation: Number(0.5),
-        });
+    await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
+      dCoreExpenses: Number(0),
+      dIncome: Number(0)
+    });
 
-        await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
-        recentUsage: { 
-            essence: Number(0),
-            health: Number(0),
-            mana: Number(0),
-            stamina: Number(0), 
-        },
-        historicUsage: { 
-            essence: Number(0),
-            health: Number(0),
-            mana: Number(0),
-            stamina: Number(0), 
-        },
-        });
-        sessionStorage.setItem('showSplashNext', '1');
-        window.location.href = "dashboard.html"; // Redirect after signup
-    } catch (error) {
-        console.error("Signup error:", error.message);
-        alert("Signup failed: " + error.message);
-    }
+    await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
+      essenceAllocation: Number(0.1),
+      healthAllocation: Number(0.1),
+      manaAllocation: Number(0.3),
+      staminaAllocation: Number(0.5),
+    });
+
+    await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
+      recentUsage: { essence: 0, health: 0, mana: 0, stamina: 0 },
+      historicUsage: { essence: 0, health: 0, mana: 0, stamina: 0 },
+    });
+
+    sessionStorage.setItem('showSplashNext', '1');
+    window.location.href = "dashboard.html";
+  } catch (error) {
+    console.error("Signup error:", error.message);
+    alert("Signup failed: " + error.message);
+  }
 }
 
-
-
-// 🚪 Logout user
+// Logout
 export async function logoutUser() {
-    try {
-        await signOut(auth);
-        
-        window.location.href = "auth.html";
-    } catch (error) {
-        console.error("Logout error:", error.message);
-    }
+  try {
+    await signOut(auth);
+    window.location.href = "auth.html";
+  } catch (error) {
+    console.error("Logout error:", error.message);
+  }
 }
 
 export { auth, db };
