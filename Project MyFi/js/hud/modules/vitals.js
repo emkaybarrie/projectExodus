@@ -248,6 +248,10 @@ export async function loadVitalsToHUD(uid) {
   const startMs = await ensureStartMs(uid);
   const days    = elapsedDaysFrom(startMs);
 
+    // NEW: running sums for totals (only H/M/S)
+  let sumCurrent = 0;
+  let sumMax = 0;
+
   for (const [pool, v] of Object.entries(pools)) {
     const el = elements[pool]; if (!el) continue;
     const cap   = (v.regenBaseline ?? 0) * factor;
@@ -259,7 +263,17 @@ export async function loadVitalsToHUD(uid) {
     el.fill.style.width = `${pct}%`;
     el.value.innerText  = `${rNow.toFixed(2)} / ${cap.toFixed(2)}`;
     setSurplusPill(el, sNow, sNow);
+
+        // NEW: include only health/mana/stamina in totals
+    if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+      sumCurrent += rNow;
+      sumMax     += cap;
+    }
   }
+
+    // NEW: write totals to the right-hand pill
+  setVitalsTotals(sumCurrent, sumMax);
+
   refreshBarGrids();
 }
 
@@ -421,6 +435,11 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
     // 3) render per pool (remainder-first)
     const factor = VIEW_FACTORS[viewMode];
+
+    // NEW: reset per-frame totals
+    let sumCurrent = 0;
+    let sumMax = 0;
+
     for (const pool of Object.keys(pools)) {
       const el = elements[pool]; if (!el) continue;
       const v  = pools[pool];
@@ -456,7 +475,17 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       barEl.classList.remove("overspending","underspending");
       if (v.trend === "overspending")  barEl.classList.add("overspending");
       if (v.trend === "underspending") barEl.classList.add("underspending");
+
+          // NEW: include only health/mana/stamina in totals
+    if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+      sumCurrent += proj.rAfter;
+      sumMax     += cap;
     }
+    }
+
+
+  // NEW: update totals display each frame
+  setVitalsTotals(sumCurrent, sumMax);
 
     requestAnimationFrame(frame);
   }
@@ -964,6 +993,19 @@ function updateModeEngrave(mode = getViewMode()){
     btn.classList.toggle('is-active', is);
     btn.setAttribute('aria-selected', is ? 'true' : 'false');
   });
+}
+
+function formatNum(n){ return (Math.round(n)||0).toLocaleString('en-GB'); }
+
+function setVitalsTotals(currentTotal, maxTotal){
+  const el = document.getElementById('vitals-total');
+  if (!el) return;
+  el.innerHTML = `
+    <span class="label">Total</span>
+    <span class="vital-value">${formatNum(currentTotal)}</span>
+    <span class="sep">/</span>
+    <span class="vital-max">${formatNum(maxTotal)}</span>
+  `;
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
