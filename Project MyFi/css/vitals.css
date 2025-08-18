@@ -256,9 +256,30 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
 @keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
 
+/* Top row: engravings (left) + totals (right) */
+.vitals-toprow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:.75rem;
+  margin: 6px 0 0;
+}
+
+/* Totals pinned right; match bar value styling */
+.vitals-total{
+  margin-left:auto;
+  font-variant-numeric: tabular-nums;
+  white-space:nowrap;
+  opacity:.95;
+}
+.vitals-total .label{ opacity:.8; margin-right:.35rem; }
+.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
+.vitals-total .vital-value{ font-weight:600; }
+.vitals-total .vital-max{ opacity:.8; }
+
 /* Belt row centered, tidy spacing */
 .mode-engrave{
-  display: flex; justify-content: center; align-items: center;
+  display: flex; justify-content: flex-start; align-items: center;
   gap: clamp(10px, 2.8vw, 18px);
   margin: 6px 0 0px;   /* adjust vertical spacing as needed */
 }

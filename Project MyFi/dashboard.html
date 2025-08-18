@@ -104,11 +104,16 @@
       </div>
     </div>
 
-    <!-- Mode row: sits between your skills row and the bars -->
-    <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
-      <button class="mode-btn" data-mode="daily"   role="tab" aria-selected="false">Daily</button>
-      <button class="mode-btn" data-mode="weekly"  role="tab" aria-selected="false">Weekly</button>
-      <button class="mode-btn" data-mode="monthly" role="tab" aria-selected="false">Monthly</button>
+    <!-- Mode row + totals (left/right) -->
+    <div class="vitals-toprow">
+      <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
+        <button class="mode-btn" data-mode="daily"   role="tab" aria-selected="false">Daily</button>
+        <button class="mode-btn" data-mode="weekly"  role="tab" aria-selected="false">Weekly</button>
+        <button class="mode-btn" data-mode="monthly" role="tab" aria-selected="false">Monthly</button>
+      </div>
+
+      <!-- Totals pinned right; filled by JS -->
+      <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
     </div>
 
     <div class="skills-row">Skills
