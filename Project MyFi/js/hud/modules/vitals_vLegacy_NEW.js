@@ -199,100 +199,54 @@ function shouldApplySeed(pools) {
   return z(pools?.health?.spentToDate) && z(pools?.mana?.spentToDate) && z(pools?.stamina?.spentToDate);
 }
 
-// Read pool allocation shares from Firestore (fallback to baselines if missing)
-async function getPoolShares(uid, pools) {
-  try {
-    const snap = await getDoc(doc(getFirestore(), `players/${uid}/cashflowData/poolAllocations`));
-    if (snap.exists()) {
-      const d = snap.data() || {};
-      // Use only discretionary shares (exclude health from remainder split)
-      const mana = Number(d.manaAllocation ?? 0);
-      console.log(mana)
-      const stamina = Number(d.staminaAllocation ?? 0);
-      const essence = Number(d.essenceAllocation ?? 0);
-      const sum = mana + stamina + essence;
-      if (sum > 0) return {
-        mana: mana / sum,
-        stamina: stamina / sum,
-        essence: essence / sum,
-      };
-    }
-  } catch (_) {}
-  // Fallback: infer shares from regen baselines (proportional)
-  const m1 = Number(pools?.mana?.regenBaseline    || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline || 0);
-  const e1 = Number(pools?.essence?.regenBaseline || 0);
-  const sum = m1 + s1 + e1;
-  return sum > 0 ? { mana: m1/sum, stamina: s1/sum, essence: e1/sum } : { mana: 0, stamina: 0, essence: 0 };
-}
-
-// Compute Safe/Accelerated seed currents using startMonth + Day‑1 fractional rule
-async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) {
+// Compute Safe/Accelerated seed currents using startMonth + day1 fractional rule
+function computeSeedCurrents(pools, mode, startMs, { p = 0.6 } = {}) {
   const { d, n, f, fracDay1 } = monthFromTimestamp(startMs);
 
   // daily baselines
-  const h1 = Number(pools?.health?.regenBaseline   || 0);
-  const m1 = Number(pools?.mana?.regenBaseline     || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline  || 0);
-  const e1 = Number(pools?.essence?.regenBaseline  || 0);
+  const h1 = Number(pools?.health?.regenBaseline || 0);
+  const m1 = Number(pools?.mana?.regenBaseline   || 0);
+  const s1 = Number(pools?.stamina?.regenBaseline|| 0);
 
-  // accrued maxima to date
+  // accrued maxima up to start calendar day (cap for seed)
   const Hmax = h1 * n * f;
   const Mmax = m1 * n * f;
   const Smax = s1 * n * f;
-  const Emax = e1 * n * f;
 
+  // SAFE floor:
+  // - Health: full accrued to date
+  // - Mana/Stamina: 1 day, except Day 1 uses fractional from startDateTime
   const isDay1 = d === 1;
-
-  // ── SAFE floor ────────────────────────────────────────────────────────────
-  // Mana/Stamina/Essence: Day1 = fractional only; Day>1 = 1 day + fractional
-  const fracOnly = (x1) => x1 * fracDay1;
-  const onePlusFrac = (x1) => x1 * (1 + fracDay1);
-
-  const manaSafe    = isDay1 ? fracOnly(m1)    : onePlusFrac(m1);
-  const staminaSafe = isDay1 ? fracOnly(s1)    : onePlusFrac(s1);
-  const essenceSafe = isDay1 ? fracOnly(e1)    : onePlusFrac(e1);
+  const manaSafe    = isDay1 ? (m1 * fracDay1) : m1;
+  const staminaSafe = isDay1 ? (s1 * fracDay1) : s1;
 
   if (mode !== 'accelerated') {
     return {
-      health:  { current: Hmax,                         max: Hmax },
-      mana:    { current: Math.min(Mmax, manaSafe),     max: Mmax },
-      stamina: { current: Math.min(Smax, staminaSafe),  max: Smax },
-      essence: { current: Math.min(Emax, essenceSafe),  max: Emax },
+      health:  { current: Hmax,        max: Hmax },
+      mana:    { current: Math.min(Mmax, manaSafe),    max: Mmax },
+      stamina: { current: Math.min(Smax, staminaSafe), max: Smax },
     };
   }
 
-  // ── ACCELERATED ──────────────────────────────────────────────────────────
-  // Floor: Day1 = fractional only; Day>1 = 0 (no extra full day)
-  const manaFloorAccel    = isDay1 ? fracOnly(m1) : 0;
-  const staminaFloorAccel = isDay1 ? fracOnly(s1) : 0;
-  const essenceFloorAccel = isDay1 ? fracOnly(e1) : 0;
+  // ACCELERATED: Floor + proportion of accrued discretionary remaining
+  const manaFloorAccel    = isDay1 ? (m1 * fracDay1) : 0;
+  const staminaFloorAccel = isDay1 ? (s1 * fracDay1) : 0;
 
-  // Accrued discretionary so far (exclude Health):
-  const Dsum = m1 + s1 + e1;
-  const A    = Dsum * n * f;
+  const D1 = m1 + s1;                    // daily discretionary
+  const A  = D1 * n * f;                 // accrued discretionary so far (month-aware)
+  const R  = Math.max(0, A * (1 - Math.max(0, Math.min(1, p)))); // remaining within accrued
+  const shareM = D1 > 0 ? (m1 / D1) : 0;
+  const shareS = D1 > 0 ? (s1 / D1) : 0;
 
-  // Remaining within accrued using proportion p (e.g., 0.6 spent → 0.4 remaining)
-  const R = Math.max(0, A * (1 - Math.max(0, Math.min(1, p))));
-
-  // Split R using Firestore allocation shares (fallback to baselines)
-  const shares = await getPoolShares(uid, pools);
-  const addM = R * (shares.mana    || 0);
-  const addS = R * (shares.stamina || 0);
-  const addE = R * (shares.essence || 0);
-
-  const manaCur    = Math.min(Mmax, manaFloorAccel    + addM);
-  const staminaCur = Math.min(Smax, staminaFloorAccel + addS);
-  const essenceCur = Math.min(Emax, essenceFloorAccel + addE);
+  const manaCur    = Math.min(Mmax, manaFloorAccel    + R * shareM);
+  const staminaCur = Math.min(Smax, staminaFloorAccel + R * shareS);
 
   return {
     health:  { current: Hmax,     max: Hmax },
     mana:    { current: manaCur,  max: Mmax },
     stamina: { current: staminaCur, max: Smax },
-    essence: { current: essenceCur, max: Emax },
   };
 }
-
 
 /* ────────────────────────────────────────────────────────────────────────────
    [SEED] Helpers for MANUAL mode (based on startMonth)
@@ -480,7 +434,7 @@ export async function loadVitalsToHUD(uid) {
   // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
   if (mode === 'safe' || mode === 'accelerated') {
     if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+      seed = computeSeedCurrents(pools, mode, startMs, { p: 0.6 });
     }
   }
 
@@ -489,7 +443,7 @@ export async function loadVitalsToHUD(uid) {
     const anyPostStart = await hasPostStartSpend(uid, startMs);
     if (!anyPostStart) {
       // Default behaviour: Accelerated until user provides pre‑start backfill
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
+      const accel = computeSeedCurrents(pools, 'accelerated', startMs, { p: 0.6 });
 
       // If they’ve provided manual backfill (summary and/or itemised), subtract it
       seed = await applyManualAdjustments(uid, accel, startMs);
@@ -648,7 +602,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
   if (mode === 'safe' || mode === 'accelerated') {
     if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+      seed = computeSeedCurrents(pools, mode, startMs, { p: 0.6 });
     }
   }
 
@@ -657,7 +611,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     const anyPostStart = await hasPostStartSpend(uid, startMs);
     if (!anyPostStart) {
       // Default behaviour: Accelerated until user provides pre‑start backfill
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
+      const accel = computeSeedCurrents(pools, 'accelerated', startMs, { p: 0.6 });
 
       // If they’ve provided manual backfill (summary and/or itemised), subtract it
       seed = await applyManualAdjustments(uid, accel, startMs);

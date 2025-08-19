@@ -54,6 +54,12 @@ export async function signupUser(data) {
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const user = userCredential.user;
 
+    // Get current date/time in local timezone
+    const now = new Date();
+
+    // Reset time to 00:00:00.000
+    now.setHours(0, 0, 0, 0);
+
     await setDoc(doc(db, "players", user.uid), {
       startDate: serverTimestamp(),
       alias: data.alias || "No Alias",
