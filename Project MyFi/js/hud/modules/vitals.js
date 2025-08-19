@@ -1194,6 +1194,15 @@ function getVitalsElements() {
 function setSurplusPill(el, countNow, countAfter) {
   const pill = el.pill; if (!pill) return;
 
+  // NEW: toggle stored-bars background if there’s at least 1 full bar saved
+  const barEl = pill.closest('.bar');
+  if (barEl) {
+    // Activate below to do surplus fill based on pre-Pending state
+    // barEl.classList.toggle('has-surplus', (countNow || 0) > 0);
+    // Activate below to do surplus fill based on post-Pending state
+    barEl.classList.toggle('has-surplus', (countAfter || 0) > 0);  
+  }
+
   // show if either side non-zero so "0 → 1" is visible
   const shouldShow = (countNow || 0) > 0 || (countAfter || 0) > 0;
   if (!shouldShow) {
@@ -1217,6 +1226,7 @@ function setSurplusPill(el, countNow, countAfter) {
     pill.classList.remove("with-next");
   }
 }
+
 
 function ensureReclaimLayers(elements) {
   for (const p of Object.keys(elements)) {
@@ -1292,16 +1302,44 @@ function setVitalsTotals(currentTotal, maxTotal){
    ──────────────────────────────────────────────────────────────────────────── */
 (function () {
   const run = () => {
+    // Left button: keep cycle behaviour
     const btn = document.getElementById("left-btn");
-    if (!btn) return;
-    btn.title = `View: ${getViewMode()}`;
-    btn.addEventListener("click", cycleViewMode);
+    if (btn) {
+      btn.title = `View: ${getViewMode()}`;
+      btn.addEventListener("click", cycleViewMode);
+    }
+
+    // NEW: tap/click engravings to set mode directly
+    const engrave = document.getElementById("mode-engrave");
+    if (engrave) {
+      // Click/tap
+      engrave.addEventListener("click", (ev) => {
+        const b = ev.target.closest(".mode-btn");
+        if (!b || !engrave.contains(b)) return;
+        const mode = b.dataset.mode;
+        if (mode) setViewMode(mode); // updates UI + grids via existing logic
+      });
+
+      // Keyboard (Enter/Space) for accessibility
+      engrave.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        const b = ev.target.closest(".mode-btn");
+        if (!b || !engrave.contains(b)) return;
+        ev.preventDefault();
+        const mode = b.dataset.mode;
+        if (mode) setViewMode(mode);
+      });
+    }
+
+    // Paint initial state
     refreshBarGrids();
     updateModeEngrave(getViewMode());
   };
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", run, { once: true });
   } else {
     run();
   }
 })();
+
