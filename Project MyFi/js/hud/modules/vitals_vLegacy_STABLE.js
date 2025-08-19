@@ -98,7 +98,7 @@ export function cycleViewMode() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Time + math (uses players/{uid}.startDate from Firestore)
+   Time + math (now uses players/{uid}.startDate from Firestore)
    ──────────────────────────────────────────────────────────────────────────── */
 const MS_PER_DAY  = 86_400_000;
 const SEC_PER_DAY = 86_400;
@@ -164,231 +164,6 @@ function normalizeTxn(docSnap) {
 function previewPool(tx) {
   return tx.provisionalTag?.pool ?? tx.suggestedPool ?? "stamina";
 }
-
-/* ────────────────────────────────────────────────────────────────────────────
-   [SEED] Helpers for Safe/Accelerated modes (based on startMonth)
-   ──────────────────────────────────────────────────────────────────────────── */
-
-// Read vitals mode once (defaults to 'safe' if unset/unknown)
-async function getVitalsMode(uid) {
-  try {
-    const p = await getDoc(doc(db, "players", uid));
-    if (p.exists()) {
-      const mode = String(p.data().vitalsMode || '').toLowerCase();
-      if (['safe','accelerated','manual','true'].includes(mode)) return mode;
-    }
-  } catch (_) {}
-  return 'safe';
-}
-
-// Calendar values from a specific timestamp (startDate)
-function monthFromTimestamp(ms) {
-  const dt = new Date(ms);
-  const n  = new Date(dt.getFullYear(), dt.getMonth()+1, 0).getDate();
-  const d  = dt.getDate();
-  const f  = d / n;
-  // fractional part of Day 1 (0..1) measured from midnight of startDate's day
-  const startOfDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
-  const fracDay1 = Math.max(0, Math.min(1, (ms - startOfDay) / MS_PER_DAY));
-  return { d, n, f, fracDay1 };
-}
-
-// Should we apply the seed? (only before any confirmed usage exists)
-function shouldApplySeed(pools) {
-  const z = (x)=>!x || Math.abs(Number(x)) < 0.000001;
-  return z(pools?.health?.spentToDate) && z(pools?.mana?.spentToDate) && z(pools?.stamina?.spentToDate);
-}
-
-// Read pool allocation shares from Firestore (fallback to baselines if missing)
-async function getPoolShares(uid, pools) {
-  try {
-    const snap = await getDoc(doc(getFirestore(), `players/${uid}/cashflowData/poolAllocations`));
-    if (snap.exists()) {
-      const d = snap.data() || {};
-      // Use only discretionary shares (exclude health from remainder split)
-      const mana = Number(d.manaAllocation ?? 0);
-      console.log(mana)
-      const stamina = Number(d.staminaAllocation ?? 0);
-      const essence = Number(d.essenceAllocation ?? 0);
-      const sum = mana + stamina + essence;
-      if (sum > 0) return {
-        mana: mana / sum,
-        stamina: stamina / sum,
-        essence: essence / sum,
-      };
-    }
-  } catch (_) {}
-  // Fallback: infer shares from regen baselines (proportional)
-  const m1 = Number(pools?.mana?.regenBaseline    || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline || 0);
-  const e1 = Number(pools?.essence?.regenBaseline || 0);
-  const sum = m1 + s1 + e1;
-  return sum > 0 ? { mana: m1/sum, stamina: s1/sum, essence: e1/sum } : { mana: 0, stamina: 0, essence: 0 };
-}
-
-// Compute Safe/Accelerated seed currents using startMonth + Day‑1 fractional rule
-async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) {
-  const { d, n, f, fracDay1 } = monthFromTimestamp(startMs);
-
-  // daily baselines
-  const h1 = Number(pools?.health?.regenBaseline   || 0);
-  const m1 = Number(pools?.mana?.regenBaseline     || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline  || 0);
-  const e1 = Number(pools?.essence?.regenBaseline  || 0);
-
-  // accrued maxima to date
-  const Hmax = h1 * n * f;
-  const Mmax = m1 * n * f;
-  const Smax = s1 * n * f;
-  const Emax = e1 * n * f;
-
-  const isDay1 = d === 1;
-
-  // ── SAFE floor ────────────────────────────────────────────────────────────
-  // Mana/Stamina/Essence: Day1 = fractional only; Day>1 = 1 day + fractional
-  const fracOnly = (x1) => x1 * fracDay1;
-  const onePlusFrac = (x1) => x1 * (1 + fracDay1);
-
-  const manaSafe    = isDay1 ? fracOnly(m1)    : onePlusFrac(m1);
-  const staminaSafe = isDay1 ? fracOnly(s1)    : onePlusFrac(s1);
-  const essenceSafe = isDay1 ? fracOnly(e1)    : onePlusFrac(e1);
-
-  if (mode !== 'accelerated') {
-    return {
-      health:  { current: Hmax,                         max: Hmax },
-      mana:    { current: Math.min(Mmax, manaSafe),     max: Mmax },
-      stamina: { current: Math.min(Smax, staminaSafe),  max: Smax },
-      essence: { current: Math.min(Emax, essenceSafe),  max: Emax },
-    };
-  }
-
-  // ── ACCELERATED ──────────────────────────────────────────────────────────
-  // Floor: Day1 = fractional only; Day>1 = 0 (no extra full day)
-  const manaFloorAccel    = isDay1 ? fracOnly(m1) : 0;
-  const staminaFloorAccel = isDay1 ? fracOnly(s1) : 0;
-  const essenceFloorAccel = isDay1 ? fracOnly(e1) : 0;
-
-  // Accrued discretionary so far (exclude Health):
-  const Dsum = m1 + s1 + e1;
-  const A    = Dsum * n * f;
-
-  // Remaining within accrued using proportion p (e.g., 0.6 spent → 0.4 remaining)
-  const R = Math.max(0, A * (1 - Math.max(0, Math.min(1, p))));
-
-  // Split R using Firestore allocation shares (fallback to baselines)
-  const shares = await getPoolShares(uid, pools);
-  const addM = R * (shares.mana    || 0);
-  const addS = R * (shares.stamina || 0);
-  const addE = R * (shares.essence || 0);
-
-  const manaCur    = Math.min(Mmax, manaFloorAccel    + addM);
-  const staminaCur = Math.min(Smax, staminaFloorAccel + addS);
-  const essenceCur = Math.min(Emax, essenceFloorAccel + addE);
-
-  return {
-    health:  { current: Hmax,     max: Hmax },
-    mana:    { current: manaCur,  max: Mmax },
-    stamina: { current: staminaCur, max: Smax },
-    essence: { current: essenceCur, max: Emax },
-  };
-}
-
-
-/* ────────────────────────────────────────────────────────────────────────────
-   [SEED] Helpers for MANUAL mode (based on startMonth)
-   ──────────────────────────────────────────────────────────────────────────── */
-
-// Returns { startMonthStartMs, startDateMs }
-function manualWindowFromStart(startMs) {
-  const d = new Date(startMs);
-  const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-  return { startMonthStartMs, startDateMs: startMs };
-}
-
-// Check if any confirmed spend exists on/after startDate (to disable seeding)
-async function hasPostStartSpend(uid, startMs) {
-  const db = getFirestore();
-  const col = collection(db, `players/${uid}/classifiedTransactions`);
-  const qy  = query(
-    col,
-    where('status','==','confirmed'),
-    where('amount','<', 0),
-    where('dateMs','>=', startMs),
-    limit(1)
-  );
-  const snap = await getDocs(qy);
-  return !!snap.size;
-}
-
-// Read manual opening summary (optional)
-async function readManualOpeningSummary(uid) {
-  const db = getFirestore();
-  const sumSnap = await getDoc(doc(db, `players/${uid}/manualSeed/openingSummary`));
-  if (!sumSnap.exists()) return null;
-  const d = sumSnap.data() || {};
-  return {
-    total: Number(d.totalPrestartDiscretionary || 0),
-    manaPct: Number(d.split?.manaPct ?? 0.4),
-    staminaPct: Number(d.split?.staminaPct ?? 0.6),
-  };
-}
-
-// Sum itemised pre‑start transactions (flagged isPrestart: true within window)
-async function sumManualItemised(uid, windowStart, windowEnd) {
-  const db = getFirestore();
-  const col = collection(db, `players/${uid}/classifiedTransactions`);
-  const qy  = query(
-    col,
-    where('isPrestart','==',true),
-    where('dateMs','>=', windowStart),
-    where('dateMs','<',  windowEnd)
-  );
-  const snap = await getDocs(qy);
-  let Pmana = 0, Pstamina = 0;
-  snap.forEach(d => {
-    const tx = d.data() || {};
-    const amt = Number(tx.amount || 0);
-    if (amt >= 0) return; // only expenses
-    const spend = Math.abs(amt);
-    const pool  = tx?.provisionalTag?.pool ?? tx?.tag?.pool ?? 'stamina';
-    if (pool === 'mana') Pmana += spend; else Pstamina += spend;
-  });
-  return { Pmana, Pstamina };
-}
-
-// Apply manual adjustments (Accelerated seed − pre‑start spend, remainder‑first S→M)
-async function applyManualAdjustments(uid, accelSeed, startMs) {
-  const { startMonthStartMs, startDateMs } = manualWindowFromStart(startMs);
-
-  const summary = await readManualOpeningSummary(uid);
-  let Pmana = 0, Pstamina = 0;
-
-  if (summary && summary.total > 0) {
-    Pmana    += summary.total * (summary.manaPct || 0);
-    Pstamina += summary.total * (summary.staminaPct || 0);
-  }
-
-  // If the app supports itemised backfill, include it; harmless if none exist.
-  const itemised = await sumManualItemised(uid, startMonthStartMs, startDateMs);
-  Pmana    += itemised.Pmana;
-  Pstamina += itemised.Pstamina;
-
-  // Remainder‑first remove from discretionary seed
-  const H0 = accelSeed.health.current;
-  const M0 = accelSeed.mana.current;
-  const S0 = accelSeed.stamina.current;
-
-  const S1    = Math.max(0, S0 - Pstamina);
-  const spill = Math.max(0, Pstamina - S0);
-  const M1    = Math.max(0, M0 - (Pmana + spill));
-
-  return {
-    health:  { current: H0, max: accelSeed.health.max },
-    mana:    { current: M1, max: accelSeed.mana.max },
-    stamina: { current: S1, max: accelSeed.stamina.max },
-  };
-}
-
 
 /* ────────────────────────────────────────────────────────────────────────────
    1) Snapshot writer (kept) — now uses real elapsed days
@@ -459,7 +234,7 @@ export async function updateVitalsPools(uid) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   2) Static snap — uses real elapsed days + [SEED] override before first spend
+   2) Static snap — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 export async function loadVitalsToHUD(uid) {
   const db = getFirestore();
@@ -473,62 +248,32 @@ export async function loadVitalsToHUD(uid) {
   const startMs = await ensureStartMs(uid);
   const days    = elapsedDaysFrom(startMs);
 
-  // [SEED] apply Safe/Accelerated only before first spend is confirmed
-  let seed = null;
-  const mode = await getVitalsMode(uid);
-
-  // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
-  if (mode === 'safe' || mode === 'accelerated') {
-    if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-    }
-  }
-
-  // Manual: use seed only while there is NO confirmed post‑start spend
-  if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      // Default behaviour: Accelerated until user provides pre‑start backfill
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-
-      // If they’ve provided manual backfill (summary and/or itemised), subtract it
-      seed = await applyManualAdjustments(uid, accel, startMs);
-    }
-  }
-
-
-  // Totals (H/M/S only)
+    // NEW: running sums for totals (only H/M/S)
   let sumCurrent = 0;
   let sumMax = 0;
 
   for (const [pool, v] of Object.entries(pools)) {
     const el = elements[pool]; if (!el) continue;
     const cap   = (v.regenBaseline ?? 0) * factor;
-
-    let rNow, sNow;
-
-    if (seed && seed[pool]) {
-      // Use seeded remainder for the initial HUD paint
-      rNow = Math.max(0, seed[pool].current);
-      sNow = 0;
-    } else {
-      const T = Math.max(0, (v.regenCurrent ?? 0) * days - (v.spentToDate ?? 0));
-      rNow  = cap > 0 ? modCap(T, cap) : 0;
-      sNow  = cap > 0 ? Math.floor(T / cap) : 0;
-    }
+    const T     = Math.max(0, (v.regenCurrent ?? 0) * days - (v.spentToDate ?? 0));
+    const rNow  = cap > 0 ? modCap(T, cap) : 0;
+    const sNow  = cap > 0 ? Math.floor(T / cap) : 0;
 
     const pct = cap > 0 ? (rNow / cap) * 100 : 0;
     el.fill.style.width = `${pct}%`;
     el.value.innerText  = `${rNow.toFixed(2)} / ${cap.toFixed(2)}`;
     setSurplusPill(el, sNow, sNow);
 
+        // NEW: include only health/mana/stamina in totals
     if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
       sumCurrent += rNow;
       sumMax     += cap;
     }
   }
 
+    // NEW: write totals to the right-hand pill
   setVitalsTotals(sumCurrent, sumMax);
+
   refreshBarGrids();
 }
 
@@ -626,7 +371,7 @@ function applyRemainderFirst(T, cap, L) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   4) Animated HUD (remainder-first) — uses [SEED] start if no spend yet
+   4) Animated HUD (uses remainder-first per pool) — now uses real elapsed days
    ──────────────────────────────────────────────────────────────────────────── */
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
@@ -641,39 +386,11 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const startMs = await ensureStartMs(uid);
   const days0   = elapsedDaysFrom(startMs);
 
-  // [SEED] start truth from seed remainder if no spend yet
-  let seed = null;
-  const mode = await getVitalsMode(uid);
-
-  // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
-  if (mode === 'safe' || mode === 'accelerated') {
-    if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-    }
-  }
-
-  // Manual: use seed only while there is NO confirmed post‑start spend
-  if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      // Default behaviour: Accelerated until user provides pre‑start backfill
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-
-      // If they’ve provided manual backfill (summary and/or itemised), subtract it
-      seed = await applyManualAdjustments(uid, accel, startMs);
-    }
-  }
-
-
   const truth = {};
   const regenPerSec = {};
   for (const pool of Object.keys(pools)) {
     const v = pools[pool];
-    if (seed && seed[pool]) {
-      truth[pool] = Math.max(0, seed[pool].current);
-    } else {
-      truth[pool] = Math.max(0, (v.regenCurrent ?? 0) * days0 - (v.spentToDate ?? 0));
-    }
+    truth[pool] = Math.max(0, (v.regenCurrent ?? 0) * days0 - (v.spentToDate ?? 0));
     regenPerSec[pool] = (v.regenCurrent ?? 0) * (timeMultiplier / SEC_PER_DAY);
   }
 
@@ -719,7 +436,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     // 3) render per pool (remainder-first)
     const factor = VIEW_FACTORS[viewMode];
 
-    // Totals per frame
+    // NEW: reset per-frame totals
     let sumCurrent = 0;
     let sumMax = 0;
 
@@ -733,15 +450,15 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
       const proj = applyRemainderFirst(T, cap, L);
 
-      // GREEN FILL & VALUE — use predicted remainder AFTER pending
+      // GREEN FILL & VALUE — use the predicted remainder AFTER pending
       const pctAfter = cap > 0 ? (proj.rAfter / cap) * 100 : 0;
       el.fill.style.width = `${pctAfter}%`;
       el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
 
-      // PILL now → after
+      // PILL now → after (with color on delta)
       setSurplusPill(el, proj.sNow, proj.sAfter);
 
-      // YELLOW OVERLAY — portion being eaten from visible bar
+      // YELLOW OVERLAY — shows the portion being eaten from the visible bar
       const barEl = el.fill.closest('.bar');
       const reclaimEl = barEl.querySelector('.bar-reclaim');
 
@@ -754,18 +471,22 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
         reclaimEl.style.width   = '0%';
       }
 
-      // Trend classes
+      // Trend classes (visual only)
       barEl.classList.remove("overspending","underspending");
       if (v.trend === "overspending")  barEl.classList.add("overspending");
       if (v.trend === "underspending") barEl.classList.add("underspending");
 
-      if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
-        sumCurrent += proj.rAfter;
-        sumMax     += cap;
-      }
+          // NEW: include only health/mana/stamina in totals
+    if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+      sumCurrent += proj.rAfter;
+      sumMax     += cap;
+    }
     }
 
-    setVitalsTotals(sumCurrent, sumMax);
+
+  // NEW: update totals display each frame
+  setVitalsTotals(sumCurrent, sumMax);
+
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
