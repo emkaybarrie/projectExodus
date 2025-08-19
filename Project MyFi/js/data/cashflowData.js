@@ -5,9 +5,12 @@ const db = getFirestore();
 const auth = getAuth();
 
 export async function updateIncome(amount, cadence) {
+  console.log("amount:", amount, cadence)
   const daily = toDaily(amount, cadence);
+  console.log("daily:", daily)
   const uid = getAuth().currentUser.uid;
   const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
+  console.log("ref:", ref)
   await setDoc(ref, { dIncome: daily }, { merge: true });
 }
 
