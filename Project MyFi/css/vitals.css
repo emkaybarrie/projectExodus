@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
-/* Keep app hidden until splash says go */
+/* ==========================================================================
+   App shell / Background
+   ========================================================================== */
+
 .app-root { visibility: hidden; }
 .app-root.app-show { visibility: visible; }
 
@@ -71,12 +74,15 @@ body {
   overflow: hidden; /* prevent the whole page from scrolling */
 }
 
-/* === Topbar with pinned actions === */
+/* ==========================================================================
+   Topbar / Title / Actions
+   ========================================================================== */
+
 .topbar { 
   position: relative; 
   display: flex; 
   align-items: center; 
-  justify-content: flex-start;   /* ← was center */ 
+  justify-content: flex-start;
   margin-bottom: 12px;
   min-height: 40px;
 }
@@ -89,14 +95,9 @@ body {
   gap: 10px;
 }
 .icon-circle {
-  width: 40px; 
-  height: 40px; 
-  border-radius: 999px; 
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center;
-  font-size: 1rem;
-  line-height: 1;
+  width: 40px; height: 40px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1rem; line-height: 1;
   background: rgba(30,30,45,.5);
   color: #f0e6d2;
   border: 1px solid rgba(255,255,255,.12);
@@ -119,19 +120,15 @@ body {
 
 h1 { text-align:center; font-family:'Cinzel',serif; font-size:2rem; margin-bottom:12px; color:#f0e6d2; }
 h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-weight:600; }
+.topbar h1{ margin:0; text-align:left; flex:0 0 auto; }
 
-/* Override the global h1 centering just for this header */
-.topbar h1{
-  margin: 0;
-  text-align: left;              /* ← override */
-  /* optional: prevent stretching */
-  flex: 0 0 auto;
-}
+/* ==========================================================================
+   Portrait & Level Pill
+   ========================================================================== */
 
 .top-section { display:flex; gap:16px; align-items:flex-start; }
 .portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
 
-/* Portrait wrapper stays the same */
 .portrait-wrapper {
   position: relative;
   width: 120px;
@@ -139,26 +136,16 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   flex-shrink: 0;
   cursor: pointer
 }
-
 .portrait-wrapper .portrait {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 15%;
-  border: 2px solid #ffffff1a;
-  border-radius: 4px;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center 15%;
+  border: 2px solid #ffffff1a; border-radius: 4px;
 }
-
-/* Level pill now bottom-right, centred on corner */
 .level-pill {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  transform: translate(50%, 50%); /* pushes it out diagonally from corner */
-  
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-weight: 800;
+  bottom: 0; right: 0;
+  transform: translate(50%, 50%);
+  padding: 4px 8px; font-size: 0.75rem; font-weight: 800;
   font-family: 'Cinzel', serif;
   color: #0a0a12;
   background: linear-gradient(to bottom, #f0dca4, #e6c980);
@@ -169,7 +156,9 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   z-index: 2;
 }
 
-
+/* ==========================================================================
+   Vitals bars (layout + layers)
+   ========================================================================== */
 
 .vitals-bars { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
 
@@ -184,16 +173,19 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 }
 .bar .bar-bg { position:absolute; inset:0; z-index:1; }
 
+/* Gridlines — sits ABOVE fill and surplus by default.
+   To place gridlines UNDER the active fill, change z-index back to 1 (or 0). */
 .bar .bar-grid {
   position: absolute; inset: 0;
-  z-index: 1; /* under fill, above background */
+  z-index: 3; /* was 1 */
   pointer-events: none;
 }
 .bar .bar-grid .grid-line {
   position: absolute; top: 0; bottom: 0; width: 1px;
-  background: rgba(255,255,255,0.08); /* subtle tick */
+  background: rgba(255,255,255,0.08);
 }
 
+/* Active fill */
 .bar-fill {
   position: absolute; inset:0 auto 0 0; left:0; width:0%; z-index:1;
   border-radius: 6px 0 0 6px; overflow:hidden; transition: width 240ms ease;
@@ -203,18 +195,13 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 0 6px rgba(255,255,255,0.1), inset 0 0 6px rgba(255,255,255,0.05);
 }
 
-/* Surplus pill (shows how many full bars of surplus remain after pending) */
+/* Surplus pill */
 .bar .bar-surplus {
   position: absolute;
-  right: -6px;
-  top: auto;
-  bottom: -10px;
+  right: -6px; bottom: -10px;
   transform: none;
   z-index: 4;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
   color: #0a0a12;
   background: linear-gradient(to bottom, #f0dca4, #e6c980);
   border: 1px solid rgba(255,255,255,0.25);
@@ -223,16 +210,23 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   pointer-events: none;
 }
 
+/* Labels & values */
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
+.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
 
-/* Make sure the value text and pill don’t overlap visually */
-.bar .bar-value {
-  right: 12px;
-  transform: translateY(-50%);
-}
-
+/* Reclaim overlay (yellow, adjustable opacity via --reclaim-opacity) */
 .bar .bar-reclaim {
   position:absolute; top:0; bottom:0; z-index:2;
-  background: linear-gradient(to bottom, #facc15, #eab308);
+
+  /* adjustable transparency here ↓ */
+  --reclaim-opacity: 0.6;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(250, 204, 21, var(--reclaim-opacity)),  /* #facc15 */
+    rgba(234, 179, 8,  var(--reclaim-opacity))   /* #eab308 */
+  );
+
   box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
   border-top-left-radius: 0; border-bottom-left-radius: 0;
   border-top-right-radius: inherit; border-bottom-right-radius: inherit;
@@ -241,14 +235,29 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar-reclaim.flash { animation: ghost-flash 0.4s ease-in-out; }
 @keyframes ghost-flash { 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
 
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
-.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
-
+/* Pool colours for the active fill */
 #vital-health  .bar-fill::before { background: linear-gradient(to bottom, #7f1d1d, #400000); }
 #vital-mana    .bar-fill::before { background: linear-gradient(to bottom, #164e63, #002244); }
 #vital-stamina .bar-fill::before { background: linear-gradient(to bottom, #14532d, #003300); }
 #vital-essence .bar-fill::before { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 #vital-stamina { margin-top: 10px; }
+
+/* Surplus backdrop: appears when bar has ×N > 0, sits BELOW gridlines */
+.bar.has-surplus::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 0;
+  opacity: .35; filter: saturate(120%);
+  transition: opacity .2s ease;
+  pointer-events: none;
+  border-radius: 6px;
+}
+#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .22), rgba(64, 0, 0, .12)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .22), rgba(0, 34, 68, .12)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .22), rgba(0, 51, 0, .12)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .22), rgba(255, 0, 255, .10)); }
+.bar.has-surplus:hover::before,
+.bar.has-surplus:focus-within::before { opacity: .45; }
 
 /* Trend states */
 .bar.underspending { border: 2px solid rgba(120,255,180,0.4); box-shadow: 0 0 8px rgba(120,255,180,0.2), 0 0 14px rgba(120,255,180,0.15); animation: borderPulseGlow 2.8s ease-in-out infinite; }
@@ -256,80 +265,63 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
 @keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
 
-/* Top row: engravings (left) + totals (right) */
-.vitals-toprow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:.75rem;
-  margin: 6px 0 0;
-}
+/* ==========================================================================
+   Mode engravings + Totals row
+   ========================================================================== */
 
-/* Totals pinned right; match bar value styling */
+.vitals-toprow{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.75rem; margin: 6px 0 0;
+}
 .vitals-total{
-  margin-left:auto;
-  font-variant-numeric: tabular-nums;
-  white-space:nowrap;
-  opacity:.95;
+  margin-left:auto; font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
 }
 .vitals-total .label{ opacity:.8; margin-right:.35rem; }
 .vitals-total .sep{ opacity:.5; margin:0 .25rem; }
 .vitals-total .vital-value{ font-weight:600; }
 .vitals-total .vital-max{ opacity:.8; }
 
-/* Belt row centered, tidy spacing */
 .mode-engrave{
   display: flex; justify-content: flex-start; align-items: center;
   gap: clamp(10px, 2.8vw, 18px);
-  margin: 6px 0 0px;   /* adjust vertical spacing as needed */
+  margin: 6px 0 0px;
 }
-
-/* Buttons as engraved labels (small, non-invasive) */
 .mode-btn{
   appearance: none; background: none; border: 0; cursor: pointer;
   padding: 4px 8px; line-height: 1;
   font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
-  font-size: clamp(11px, 1.8vw, 14px);
-  user-select: none;
-
-  /* Engraved/etched: outline + subtle bevel */
-  color: transparent;                           /* no fill */
+  font-size: clamp(11px, 1.8vw, 14px); user-select: none;
+  color: transparent;
   -webkit-text-stroke: 1px rgba(228,216,180,.45);
-  text-shadow:
-    0 1px 0 rgba(0,0,0,.75),                    /* faux inner bevel */
-    0 -1px 0 rgba(255,255,255,.05);
+  text-shadow: 0 1px 0 rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.05);
   opacity: .65;
   transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
 }
-
-/* Hover focus polish */
 .mode-btn:hover, .mode-btn:focus-visible{
   opacity: .9; outline: none;
   -webkit-text-stroke: 1px rgba(240,230,210,.7);
 }
-
-/* Active = “filled” with a gentle glow */
 .mode-btn.is-active{
-  color: #e4d8b4;               /* visible fill */
-  -webkit-text-stroke: 0;       /* no outline */
-  text-shadow:
-    0 0 10px rgba(192,163,255,.25),
-    0 1px 0 rgba(0,0,0,.55);
+  color: #e4d8b4; -webkit-text-stroke: 0;
+  text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
   opacity: 1;
 }
-
-/* Optional per-mode accents (very subtle) */
 .mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
 .mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 .mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 
+/* ==========================================================================
+   Skills
+   ========================================================================== */
 
-/* Skills (decorative) */
 .skills-row { align-items: center; margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
 .skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
 .locked { opacity: .3; }
 
-/* UPDATE LOG / RECENTLY LOCKED */
+/* ==========================================================================
+   Update Log / Recently Locked
+   ========================================================================== */
+
 .update-log-box {
   margin-top: 0;
   margin-bottom: 6px;
@@ -339,10 +331,10 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(6px);
 
-   flex: 1 1 auto;              /* take remaining space between header and footer */
-  min-height: 220px;           /* adjust to taste */
-  max-height: none;            /* flex will govern height */
-  overflow: auto;              /* scroll inside this panel */
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: none;
+  overflow: auto;
 }
 .update-log h2, .recently-locked h2 { margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9; }
 .update-log ul, .recently-locked ul { list-style:none; margin:0; padding:0; }
@@ -368,7 +360,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .ul-actions .tag-btn:hover  { background: rgba(255,255,255,0.10); }
 .ul-actions .tag-btn:active { transform: translateY(1px); }
 
-/* ACTIVE highlight: green for stamina, blue for mana */
+/* Active highlights */
 .ul-actions .tag-btn.active.stamina {
   background: rgba(16, 185, 129, 0.18);
   border-color: rgba(16, 185, 129, 0.6);
@@ -390,33 +382,6 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   .ul-main > strong { max-width: 56vw; }
 }
 
-/* Tiny badges (Recently Locked) */
-.badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:.75rem; border:1px solid #ffffff29; background: rgba(255,255,255,0.06); margin-left:6px; }
-.badge.stamina {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.25);
-  color: #eafff4;
-}
-.badge.mana {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(59, 130, 246, 0.5);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
-  color: #e9f3ff;
-}
-.badge.health {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: rgba(239, 68, 68, 0.5);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
-  color: #ffecec;
-}
-.badge.essence {
-  background: rgba(155, 93, 229, 0.18);
-  border-color: rgba(155, 93, 229, 0.55);
-  box-shadow: 0 0 8px rgba(155, 93, 229, 0.3);
-  color: #f6ecff;
-}
-
 /* Countdown & divider */
 .countdown { white-space:nowrap; font-variant-numeric: tabular-nums; }
 .section-divider { height:1px; background: rgba(255,255,255,0.08); margin:12px 0; }
@@ -429,7 +394,6 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .ul-editor .ul-edit-actions { display:flex; gap:.5rem; margin-top:.5rem;  }
 .ul-editor .btn-save, .ul-editor .btn-cancel { padding:.45rem .7rem; border-radius:.6rem; border:1px solid var(--line, #333); background: rgba(255,255,255,.06); ; color: white; }
 .ul-editor .btn-save { font-weight:600; }
-
 .ul-editor .btn-delete {
   margin-left:auto;
   border: 1px solid #a33;
@@ -438,40 +402,45 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 }
 .ul-editor .btn-delete:hover { background: rgba(255, 0, 0, 0.12); }
 
-/* Footer: always visible at the bottom */
+/* ==========================================================================
+   Footer / Bottom actions
+   ========================================================================== */
+
 .hud-footer {
   position: sticky;
   bottom: 0;
   z-index: 5;
   padding-top: 8px;
   padding-bottom: 8px;
-  /* background: linear-gradient(
-    to top,
-    rgba(10,10,20,0.85),
-    rgba(10,10,20,0.65),
-    rgba(10,10,20,0)
-  ); */
-   background: none !important;        /* removes the gradient */
+  /* original gradient intentionally disabled to prevent dark haze: */
+  background: none !important;
   background-color: transparent !important;
-  backdrop-filter: none;               /* remove frosted blur (causes a dark haze) */
+  backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  /* border-top: 1px solid rgba(255,255,255,0.08); */
-   border-top: none;                    /* optional: drop the divider line */
-  box-shadow: none;                    /* just in case */
+  border-top: none;
+  box-shadow: none;
 }
-
-/* small spacing tweak so essence bar doesn’t glue to footer edge */
 .hud-footer #vital-essence { margin-bottom: 8px; }
 
-/* optional: make the update log list itself a little roomier on short screens */
 @media (max-height: 700px) {
   .update-log-box { min-height: 160px; }
 }
 
-/* Action buttons */
 .actions { display:flex; justify-content:center; align-items:center; margin-top:20px; gap:40px; }
-.main-btn { width:72px; height:72px; border-radius:50%; border:none; background:linear-gradient(135deg, rgba(150,85,255,.4), rgba(255,0,255,.15)); backdrop-filter:blur(10px); box-shadow: inset 0 0 10px rgba(255,255,255,.05), 0 0 20px rgba(155,93,229,.4), 0 0 40px rgba(155,93,229,.2), 0 4px 6px rgba(0,0,0,.4); transition: transform .2s ease, box-shadow .3s ease; cursor:pointer; position:relative; animation: auraPulse 4s infinite ease-in-out; }
-.main-btn::before { content:""; position:absolute; inset:0; border-radius:50%; background: radial-gradient(circle, rgba(255,255,255,.15), transparent 70%); box-shadow: 0 0 12px rgba(255,255,255,.05); pointer-events:none; }
+.main-btn {
+  width:72px; height:72px; border-radius:50%; border:none;
+  background:linear-gradient(135deg, rgba(150,85,255,.4), rgba(255,0,255,.15));
+  backdrop-filter:blur(10px);
+  box-shadow: inset 0 0 10px rgba(255,255,255,.05), 0 0 20px rgba(155,93,229,.4), 0 0 40px rgba(155,93,229,.2), 0 4px 6px rgba(0,0,0,.4);
+  transition: transform .2s ease, box-shadow .3s ease;
+  cursor:pointer; position:relative; animation: auraPulse 4s infinite ease-in-out;
+}
+.main-btn::before {
+  content:""; position:absolute; inset:0; border-radius:50%;
+  background: radial-gradient(circle, rgba(255,255,255,.15), transparent 70%);
+  box-shadow: 0 0 12px rgba(255,255,255,.05);
+  pointer-events:none;
+}
 .main-btn:hover { transform: scale(1.05); box-shadow: inset 0 0 12px rgba(255,255,255,.08), 0 0 24px rgba(155,93,229,.6), 0 0 50px rgba(155,93,229,.3), 0 6px 8px rgba(0,0,0,.5); }
 .side-btn { width:64px; height:56px; border-radius:50%; background: rgba(30,30,45,.4); color:#f0e6d2; font-size:1.1rem; border:1px solid rgba(255,255,255,.1); box-shadow:0 0 6px rgba(255,255,255,.05); backdrop-filter: blur(6px); cursor:pointer; transition: background .3s ease, transform .2s ease; }
 .side-btn:hover { background: rgba(80,80,120,.6); transform: scale(1.1); }
