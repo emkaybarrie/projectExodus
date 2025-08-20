@@ -1,6 +1,8 @@
 // js/essenceMenu.js
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 (function () {
   const { el, open, setMenu } = window.MyFiModal;
@@ -138,14 +140,29 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
           const go = document.createElement('button');
           go.className = 'btn btn--accent';
           go.textContent = 'Continue with Stripe';
-          go.addEventListener('click', async () => {
+            go.addEventListener('click', async () => {
             const u = auth.currentUser; if (!u) return;
             const amount = Math.max(0, Number(input.value || 0));
             if (!amount) { alert('Enter amount'); return; }
-            // TODO: call Cloud Function to create CheckoutSession
-            console.log('[Stripe] create checkout session for', amount);
-            alert('Stripe checkout wiring is pending – manual bank transfer is available now.');
-          });
+
+            try {
+                const app = getApp(); // or your initialized app
+                const functions = getFunctions(app, 'europe-west2');   // 👈 match your deploy region
+                // If you run the Functions emulator locally, uncomment:
+                // connectFunctionsEmulator(functions, '127.0.0.1', 5001);
+                const fn = httpsCallable(functions, 'createContributionCheckout');
+                const returnUrl = window.location.href.split('#')[0] + '#vitals'; // e.g. .../dashboard.html#vitals
+                const { data } = await fn({ amountGBP: amount, returnUrl });
+                if (data?.url) {
+                window.location.href = data.url; // Redirect to Stripe Checkout
+                } else {
+                alert('Could not create checkout session.');
+                }
+            } catch (err) {
+                console.error('[Stripe] create session error', err);
+                alert(err?.message || 'Checkout error');
+            }
+            });
           wrap.append(go);
           return wrap;
         })();

@@ -28,6 +28,7 @@
 
     const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : Object.keys(menuConfig)[0];
     switchTo(key);
+    // focus the selected menu item for keyboard users
     setTimeout(()=> menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus(), 0);
   }
   function close(){
@@ -41,9 +42,18 @@
     const def = menuConfig[key]; if (!def) return;
     currentKey = key;
     titleEl.textContent = def.title || def.label;
-    contentEl.replaceChildren(...[].concat(def.render()));
+
+    // Render content + footer
+    const nodes = [].concat(def.render?.() || []);
+    contentEl.replaceChildren(...nodes);
     footerEl.replaceChildren(...(def.footer?.() || defaultFooter()));
+
+    // reset scroll to top on each view switch
+    contentEl.scrollTop = 0;
+
     highlightCurrent();
+
+    // focus first interactive element in the new content
     setTimeout(()=>{
       const first = contentEl.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
       first?.focus();
@@ -70,10 +80,11 @@
     btn.className='btn'; btn.type='button'; btn.dataset.action='close'; btn.textContent='Close';
     btn.addEventListener('click', close);
     return [btn];
-  }
+    }
 
-  // click outside
+  // click outside to close
   backdrop.addEventListener('click', (e)=>{ if (e.target===backdrop) close(); });
 
+  // expose API
   window.MyFiModal = { open, close, setMenu, switchTo, el:{backdrop, titleEl, contentEl, footerEl, menuEl} };
 })();

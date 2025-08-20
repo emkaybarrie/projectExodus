@@ -1,8 +1,10 @@
-const { onRequest } = require('firebase-functions/v2/https');
+const { onRequest, onCall } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const cors = require('cors');
+const Stripe = require('stripe');
+const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
 
 // Firebase + secrets
 admin.initializeApp();
@@ -197,13 +199,11 @@ exports.testPing = onRequest({ region: 'europe-west2' }, (req, res) => {
 // =============================================================================
 // Contributions settlement (Stripe webhook + Admin callable for manual bank)
 // =============================================================================
-const { onRequest, onCall } = require('firebase-functions/v2/https');
-const { defineSecret: defineSecret_ } = require('firebase-functions/params'); // alias only to be explicit
-const Stripe = require('stripe');
+
 
 // Secrets (keep consistent with your TrueLayer approach)
-const STRIPE_SECRET = defineSecret_('STRIPE_SECRET');
-const STRIPE_WEBHOOK_SECRET = defineSecret_('STRIPE_WEBHOOK_SECRET');
+const STRIPE_SECRET = defineSecret('STRIPE_SECRET');
+const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 
 // Helper: number coercion
 const toNum = (x, d = 0) => {
@@ -239,7 +239,7 @@ async function settleContributionTx(db, {
   providerRef = null
 }) {
   const contribRef   = db.doc(`players/${uid}/contributions/${contributionId}`);
-  const statsRef     = db.doc(`players/${uid}/stats`);
+  const statsRef     = db.doc(`players/${uid}`);
   const summaryRef   = db.doc(`players/${uid}/classifiedTransactions/summary`);
   const classifiedId = `contrib_${contributionId}`;
   const classifiedRef= db.doc(`players/${uid}/classifiedTransactions/${classifiedId}`);
@@ -249,7 +249,12 @@ async function settleContributionTx(db, {
   const now = Date.now();
 
   await db.runTransaction(async (trx) => {
-    const cSnap = await trx.get(contribRef);
+    // READS FIRST -------------------------------------------------------------
+    const [cSnap, sumSnap] = await Promise.all([
+      trx.get(contribRef),   // read contribution
+      trx.get(summaryRef),   // read summary
+    ]);
+
     if (!cSnap.exists) {
       throw new Error(`Contribution ${contributionId} not found for ${uid}`);
     }
@@ -264,6 +269,13 @@ async function settleContributionTx(db, {
     const finalAmount = docAmount == null ? toNum(amountGBP, 0) : toNum(docAmount, 0);
     if (!(finalAmount > 0)) throw new Error('Contribution amount must be > 0');
 
+    // Compute summary baseline from the read snapshot (no more reads later)
+    const historicUsage = (sumSnap.exists && sumSnap.data().historicUsage) || {
+      health: 0, mana: 0, stamina: 0, essence: 0
+    };
+    const now = Date.now();
+
+    // WRITES AFTER ALL READS ---------------------------------------------------
     // 1) Classified transaction (confirmed essence spend)
     const classified = {
       amount: -Math.abs(finalAmount),
@@ -286,10 +298,13 @@ async function settleContributionTx(db, {
     };
     trx.set(classifiedRef, classified, { merge: true });
 
-    // 2) Award altruism points
-    trx.set(statsRef, {
-      altruismPoints: admin.firestore.FieldValue.increment(awardPts)
-    }, { merge: true });
+    // 2) Award altruism points (write on the players/{uid} doc or stats/main doc per your choice)
+    trx.set(
+      /* statsRef points to players/{uid} if you applied previous fix */
+      statsRef,
+      { 'avatarData':{'altruismPoints': admin.firestore.FieldValue.increment(awardPts)} },
+      { merge: true }
+    );
 
     // 3) Mark contribution succeeded
     trx.set(contribRef, {
@@ -301,12 +316,11 @@ async function settleContributionTx(db, {
       awardedPoints: awardPts
     }, { merge: true });
 
-    // 4) Bump historicUsage.essence so HUD stays in sync
-    const sumSnap = await trx.get(summaryRef);
-    const historicUsage = (sumSnap.exists && sumSnap.data().historicUsage) || { health:0, mana:0, stamina:0, essence:0 };
+    // 4) Update summary using the pre-read snapshot
     historicUsage.essence = toNum(historicUsage.essence) + Math.abs(finalAmount);
     trx.set(summaryRef, { historicUsage, updatedAt: now }, { merge: true });
   });
+
 }
 
 // -----------------------------------------------------------------------------
@@ -372,4 +386,135 @@ exports.markManualContributionReceived = onCall({
 
   return { ok: true };
 });
+
+// -----------------------------------------------------------------------------
+// Create Stripe Checkout Session (callable)
+// - Auth required
+// - Clamps the amount server-side
+// - Creates a pending contribution doc
+// - Returns session.url for client redirect
+// -----------------------------------------------------------------------------
+async function readAvailableEssenceMonthly(db, uid) {
+  try {
+    const cur = await db.doc(`players/${uid}/cashflowData/current`).get();
+    const pools = cur.exists ? (cur.data()?.pools || {}) : {};
+    const e = pools.essence || {};
+    // MVP clamp: allow up to monthly cap (regenBaseline * 30); refine later if needed
+    const monthlyCap = Number(e.regenBaseline || 0) * 30;
+    return Math.max(0, monthlyCap);
+  } catch {
+    return 0;
+  }
+}
+
+exports.createContributionCheckout = onCall({
+  region: 'europe-west2',
+  secrets: [STRIPE_SECRET],
+}, async (req) => {
+  const ctx = req.auth;
+  if (!ctx || !ctx.uid) {
+    throw new Error('Not authenticated');
+  }
+  const uid = ctx.uid;
+
+  const rawAmount = Number(req.data?.amountGBP || 0);
+  if (!(rawAmount > 0)) {
+    throw new Error('Amount must be > 0');
+  }
+
+  // Clamp server-side
+  const available = await readAvailableEssenceMonthly(db, uid);
+  const amountGBP = Math.min(rawAmount, available);
+  if (amountGBP <= 0) {
+    throw new Error('Insufficient available Essence for contribution');
+  }
+
+  // Create pending contribution doc
+  const contributionId = `c_${Date.now()}`;
+  await db.doc(`players/${uid}/contributions/${contributionId}`).set({
+    amountGBP: amountGBP,
+    essenceCost: amountGBP,   // 1:1 for now
+    provider: 'stripe',
+    providerRef: null,
+    status: 'pending',
+    createdAtMs: Date.now(),
+  }, { merge: true });
+
+  // Create Checkout Session
+  const stripe = new Stripe(STRIPE_SECRET.value(), { apiVersion: '2024-06-20' });
+
+  // Prefer explicit returnUrl from client (must be same origin for safety)
+  let successUrl, cancelUrl;
+  const clientReturn = String(req.data?.returnUrl || '').trim();
+  if (clientReturn) {
+    const refHeader = req.rawRequest?.headers?.referer || clientReturn;
+    const ref = new URL(refHeader);
+    const ret = new URL(clientReturn, ref.origin);
+    // lock to same origin as referer to prevent open-redirects
+    if (ret.origin === ref.origin) {
+      successUrl = ret.toString();
+      cancelUrl  = ret.toString();
+    }
+  }
+  if (!successUrl) {
+    // Fallback to referer path if client didn’t provide one
+    const refHeader = req.rawRequest?.headers?.referer || 'https://your.app/dashboard.html';
+    const refUrl = new URL(refHeader);
+    const base = `${refUrl.origin}${refUrl.pathname}`;
+    successUrl = `${base}#vitals`;
+    cancelUrl  = `${base}#vitals`;
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card', 'link'], // Apple/Google Pay auto included when possible
+    line_items: [{
+      price_data: {
+        currency: 'gbp',
+        product_data: { name: 'MyFi Contribution' },
+        unit_amount: Math.round(amountGBP * 100), // pence
+      },
+      quantity: 1,
+    }],
+    metadata: { uid, contributionId },
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  });
+
+  return { url: session.url, contributionId };
+});
+
+// When ops confirm a manual-bank contribution (by setting opsConfirmedAtMs),
+// settle it (idempotent). Do NOT use settledAtMs as the trigger.
+exports.onManualContributionOpsConfirm = onDocumentUpdated({
+  region: 'europe-west2',
+  document: 'players/{uid}/contributions/{contributionId}',
+}, async (event) => {
+  const before = event.data?.before?.data();
+  const after  = event.data?.after?.data();
+  if (!after) return;
+
+  // Only manual-bank path
+  if ((after.provider || '') !== 'manual_bank') return;
+
+  // Fire once when opsConfirmedAtMs flips from falsy → truthy
+  const beforeConfirmed = !!(before && before.opsConfirmedAtMs);
+  const afterConfirmed  = !!after.opsConfirmedAtMs;
+  if (!afterConfirmed || beforeConfirmed) return;
+
+  const uid = event.params.uid;
+  const contributionId = event.params.contributionId;
+
+  const amountGBP   = typeof after.amountGBP === 'number' ? after.amountGBP : undefined;
+  const providerRef = after.providerRef || null;
+
+  await settleContributionTx(db, {
+    uid,
+    contributionId,
+    amountGBP,
+    provider: 'manual_bank',
+    providerRef
+  });
+});
+
 
