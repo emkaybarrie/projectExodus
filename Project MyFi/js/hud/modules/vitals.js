@@ -13,7 +13,7 @@
 
 import {
   getFirestore, doc, getDoc, setDoc, collection, query, where,
-  getDocs, orderBy, limit, onSnapshot, updateDoc, writeBatch, deleteDoc
+  getDocs, orderBy, limit, onSnapshot, updateDoc, writeBatch, deleteDoc, startAfter
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -163,6 +163,169 @@ function normalizeTxn(docSnap) {
 }
 function previewPool(tx) {
   return tx.provisionalTag?.pool ?? tx.suggestedPool ?? "stamina";
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   NEW: History Modal (single stream per mode)
+   ──────────────────────────────────────────────────────────────────────────── */
+function friendlySourceLabel(mode) {
+  return mode === 'true' ? 'True Mode (Bank)' : 'Manual Mode';
+}
+
+async function getHistorySourceFilter(uid) {
+  const mode = await getVitalsMode(uid);
+  const src = (mode === 'true') ? 'truelayer' : 'manual';
+  return { mode, src };
+}
+
+function renderTxRow(tx) {
+  const name = tx?.transactionData?.description || 'Transaction';
+  const amt = Number(tx.amount || 0);
+  const sign = amt >= 0 ? '+' : '−';
+  const abs = Math.abs(amt).toFixed(2);
+  const when = tx?.dateMs ? new Date(tx.dateMs).toLocaleString() : '';
+  const type = amt >= 0 ? 'income' : 'spend';
+  return `
+    <li class="tx-row ${type}">
+      <div class="ul-row">
+        <div class="ul-main">
+          <strong>${name}</strong>
+          <div class="ul-meta">${sign}£${abs} • ${when}</div>
+        </div>
+      </div>
+    </li>
+  `;
+}
+
+function historyMenuDef({ uid, sourceLabel, src }) {
+  return {
+    label: 'All Activity',
+    title: `All Activity — ${sourceLabel}`,
+    render() {
+      const wrap = document.createElement('div');
+
+      // Controls
+      const controls = document.createElement('div');
+      controls.style.display = 'grid';
+      controls.style.gridTemplateColumns = '1fr auto';
+      controls.style.gap = '8px';
+      controls.style.marginBottom = '8px';
+      controls.innerHTML = `
+        <input id="histSearch" class="input" placeholder="Search description…" />
+        <select id="histType" class="input">
+          <option value="">All types</option>
+          <option value="income">Income</option>
+          <option value="spend">Expenses</option>
+        </select>
+      `;
+
+      const list = document.createElement('ul');
+      list.id = 'histList';
+      list.style.listStyle = 'none';
+      list.style.padding = '0';
+      list.style.margin = '0';
+
+      const more = document.createElement('button');
+      more.className = 'btn';
+      more.textContent = 'Load more';
+      more.style.marginTop = '10px';
+
+      wrap.append(controls, list, more);
+
+      const db = getFirestore();
+      const col = collection(db, `players/${uid}/classifiedTransactions`);
+      let last = null;
+      let loading = false;
+      let done = false;
+      let cache = [];
+
+      async function fetchPage() {
+        if (loading || done) return;
+        loading = true;
+
+        let qy = query(
+          col,
+          where('source', '==', src),
+          orderBy('dateMs', 'desc'),
+          limit(50)
+        );
+        if (last) qy = query(qy, startAfter(last));
+
+        const snap = await getDocs(qy);
+        if (!snap.size) {
+          done = true;
+          more.disabled = true;
+          if (!cache.length) list.innerHTML = `<li class="ul-meta" style="opacity:.7">No transactions found.</li>`;
+          loading = false;
+          return;
+        }
+
+        const next = [];
+        snap.forEach(d => {
+          const x = d.data();
+          next.push({
+            id: d.id,
+            amount: Number(x.amount || 0),
+            dateMs: x.dateMs || 0,
+            transactionData: { description: x?.transactionData?.description || '' }
+          });
+        });
+
+        cache = cache.concat(next);
+        last = snap.docs[snap.docs.length - 1];
+        renderFiltered();
+        loading = false;
+      }
+
+      function renderFiltered() {
+        const term = (document.getElementById('histSearch').value || '').toLowerCase().trim();
+        const tsel = (document.getElementById('histType').value || '').toLowerCase();
+        const filtered = cache.filter(tx => {
+          const matchTerm = !term || tx.transactionData.description.toLowerCase().includes(term);
+          const matchType = !tsel || (tsel === 'income' ? tx.amount >= 0 : tx.amount < 0);
+          return matchTerm && matchType;
+        });
+        list.innerHTML = filtered.map(renderTxRow).join('');
+      }
+
+      wrap.addEventListener('input', (e) => { if (e.target.id === 'histSearch') renderFiltered(); });
+      wrap.addEventListener('change', (e) => { if (e.target.id === 'histType') renderFiltered(); });
+
+      fetchPage();
+      more.addEventListener('click', fetchPage);
+
+      return [wrap];
+    },
+    footer() {
+      const b = document.createElement('button');
+      b.className = 'btn'; b.textContent = 'Close';
+      b.addEventListener('click', () => window.MyFiModal.close());
+      return [b];
+    }
+  };
+}
+
+function openHistoryFor() {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) return;
+  const uid = user.uid;
+
+  (async () => {
+    const { mode, src } = await getHistorySourceFilter(uid);
+    const sourceLabel = friendlySourceLabel(mode);
+    const def = historyMenuDef({ uid, sourceLabel, src });
+    const menu = { history: def };
+    window.MyFiModal.setMenu(menu);
+    window.MyFiModal.open('history');
+  })();
+}
+
+export function autoInitHistoryButtons() {
+  const btn1 = document.getElementById('btn-expand-update');
+  const btn2 = document.getElementById('btn-expand-locked');
+  if (btn1) btn1.addEventListener('click', () => openHistoryFor());
+  if (btn2) btn2.addEventListener('click', () => openHistoryFor());
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -388,7 +551,6 @@ async function applyManualAdjustments(uid, accelSeed, startMs) {
     stamina: { current: S1, max: accelSeed.stamina.max },
   };
 }
-
 
 /* ────────────────────────────────────────────────────────────────────────────
    1) Snapshot writer (kept) — now uses real elapsed days
