@@ -32,6 +32,10 @@
   <!-- Main app logic -->
   <script type="module" src="js/dashboard.js" defer></script>
 
+  <!-- NEW: Essence → Contribute modal -->
+  <script type="module" src="js/essenceMenu.js" defer></script>
+
+
   <!-- Styles -->
   <link rel="stylesheet" href="css/splash.css" />
   <link rel="stylesheet" href="css/vitals.css" />
@@ -126,14 +130,14 @@
     <!-- Update Log + Recently Locked -->
     <div class="update-log-box">
       <div class="update-log">
-        <h2>UPDATE LOG</h2>
+        <h2>UPDATE LOG <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button></h2>
         <ul id="update-log-list"></ul>
       </div>
 
       <div class="section-divider"></div>
 
       <div class="recently-locked">
-        <h2>RECENTLY LOCKED</h2>
+        <h2>RECENTLY LOCKED <button class="hx-expand" id="btn-expand-locked" title="View all history" aria-label="View all history">↗︎</button></h2>
         <ul id="recently-locked-list"></ul>
       </div>
     </div>
@@ -178,10 +182,11 @@
 
 </div>
 
-<!-- Auto-wire Update Log (point to v16) -->
+<!-- Auto-wire Update Log + History buttons -->
 <script type="module">
-  import { autoInitUpdateLog } from './js/hud/modules/vitals.js';
+  import { autoInitUpdateLog, autoInitHistoryButtons } from './js/hud/modules/vitals.js';
   autoInitUpdateLog();
+  autoInitHistoryButtons();
 </script>
 
 </body>

@@ -193,3 +193,183 @@ exports.fetchStandingOrders = createPerAccountFunction('standing_orders', 'stand
 exports.testPing = onRequest({ region: 'europe-west2' }, (req, res) => {
   res.send('Backend running fine!');
 });
+
+// =============================================================================
+// Contributions settlement (Stripe webhook + Admin callable for manual bank)
+// =============================================================================
+const { onRequest, onCall } = require('firebase-functions/v2/https');
+const { defineSecret: defineSecret_ } = require('firebase-functions/params'); // alias only to be explicit
+const Stripe = require('stripe');
+
+// Secrets (keep consistent with your TrueLayer approach)
+const STRIPE_SECRET = defineSecret_('STRIPE_SECRET');
+const STRIPE_WEBHOOK_SECRET = defineSecret_('STRIPE_WEBHOOK_SECRET');
+
+// Helper: number coercion
+const toNum = (x, d = 0) => {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : d;
+};
+
+// Read altruism multiplier from Firestore (with env override)
+async function readAltruismMultiplier(db) {
+  const envOverride = process.env.ALTRUISM_MULTIPLIER;
+  if (envOverride && !Number.isNaN(Number(envOverride))) return Number(envOverride);
+  try {
+    const snap = await db.doc('appConfig/scoring').get();
+    const m = snap.exists ? snap.data().altruismMultiplier : null;
+    return typeof m === 'number' ? m : 1.0;
+  } catch {
+    return 1.0;
+  }
+}
+
+/**
+ * Idempotent settlement inside a Firestore transaction:
+ * - Writes a confirmed spend in classifiedTransactions (negative amount, pool: essence)
+ * - Increments players/{uid}/stats.altruismPoints by amount*multiplier
+ * - Sets players/{uid}/contributions/{contributionId} to status="succeeded"
+ * - Bumps players/{uid}/classifiedTransactions/summary.historicUsage.essence
+ */
+async function settleContributionTx(db, {
+  uid,
+  contributionId,   // document id in players/{uid}/contributions
+  amountGBP,        // number (major units)
+  provider,         // 'stripe' | 'manual_bank' | 'truelayer'
+  providerRef = null
+}) {
+  const contribRef   = db.doc(`players/${uid}/contributions/${contributionId}`);
+  const statsRef     = db.doc(`players/${uid}/stats`);
+  const summaryRef   = db.doc(`players/${uid}/classifiedTransactions/summary`);
+  const classifiedId = `contrib_${contributionId}`;
+  const classifiedRef= db.doc(`players/${uid}/classifiedTransactions/${classifiedId}`);
+
+  const multiplier   = await readAltruismMultiplier(db);
+  const awardPts     = Math.round(toNum(amountGBP, 0) * multiplier);
+  const now = Date.now();
+
+  await db.runTransaction(async (trx) => {
+    const cSnap = await trx.get(contribRef);
+    if (!cSnap.exists) {
+      throw new Error(`Contribution ${contributionId} not found for ${uid}`);
+    }
+    const c = cSnap.data() || {};
+    const status = c.status || 'pending';
+
+    // Idempotent
+    if (status === 'succeeded') return;
+
+    // Prefer amount stored on doc; fallback to provided
+    const docAmount = c.amountGBP != null ? Number(c.amountGBP) : null;
+    const finalAmount = docAmount == null ? toNum(amountGBP, 0) : toNum(docAmount, 0);
+    if (!(finalAmount > 0)) throw new Error('Contribution amount must be > 0');
+
+    // 1) Classified transaction (confirmed essence spend)
+    const classified = {
+      amount: -Math.abs(finalAmount),
+      dateMs: now,
+      source: provider,
+      status: 'confirmed',
+      addedMs: now,
+      ghostWindowMs: 0,
+      ghostExpiryMs: now,
+      autoLockReason: 'contribution',
+      tag: { pool: 'essence', setAtMs: now },
+      provisionalTag: { pool: 'essence', setAtMs: now },
+      appliedAllocation: { health: 0, mana: 0, stamina: 0, essence: Math.abs(finalAmount) },
+      rulesVersion: 'v1',
+      transactionData: {
+        description: `Contribution (${provider})`,
+        entryDate: admin.firestore.Timestamp.fromMillis(now),
+      },
+      providerRef: providerRef || null,
+    };
+    trx.set(classifiedRef, classified, { merge: true });
+
+    // 2) Award altruism points
+    trx.set(statsRef, {
+      altruismPoints: admin.firestore.FieldValue.increment(awardPts)
+    }, { merge: true });
+
+    // 3) Mark contribution succeeded
+    trx.set(contribRef, {
+      amountGBP: finalAmount,
+      provider,
+      providerRef: providerRef || null,
+      status: 'succeeded',
+      settledAtMs: now,
+      awardedPoints: awardPts
+    }, { merge: true });
+
+    // 4) Bump historicUsage.essence so HUD stays in sync
+    const sumSnap = await trx.get(summaryRef);
+    const historicUsage = (sumSnap.exists && sumSnap.data().historicUsage) || { health:0, mana:0, stamina:0, essence:0 };
+    historicUsage.essence = toNum(historicUsage.essence) + Math.abs(finalAmount);
+    trx.set(summaryRef, { historicUsage, updatedAt: now }, { merge: true });
+  });
+}
+
+// -----------------------------------------------------------------------------
+// Stripe Webhook (v2 onRequest) — set secrets in console/CLI.
+// NOTE: do NOT JSON.parse the body; use req.rawBody for signature verification.
+// -----------------------------------------------------------------------------
+exports.stripeWebhook = onRequest({
+  region: 'europe-west2',
+  secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET],
+  // No CORS needed; Stripe posts server→server. Leave body as-is for signature.
+}, async (req, res) => {
+  try {
+    const stripe = new Stripe(STRIPE_SECRET.value(), { apiVersion: '2024-06-20' });
+    const sig = req.headers['stripe-signature'];
+    const evt = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET.value());
+
+    if (evt.type === 'checkout.session.completed') {
+      const session = evt.data.object;
+
+      const uid = session.metadata?.uid;
+      const contributionId = session.metadata?.contributionId || session.id;
+      const providerRef = session.id;
+
+      // amount_total is in minor units
+      const amountGBP = session.amount_total ? Number(session.amount_total) / 100 : undefined;
+      if (!uid) throw new Error('Missing uid in session.metadata');
+
+      await settleContributionTx(db, {
+        uid, contributionId, amountGBP, provider: 'stripe', providerRef
+      });
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error('stripeWebhook error:', err);
+    res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+});
+
+// -----------------------------------------------------------------------------
+// Admin callable to settle MANUAL bank transfers.
+// Security: require auth with custom claim { admin: true }.
+// -----------------------------------------------------------------------------
+exports.markManualContributionReceived = onCall({
+  region: 'europe-west2',
+}, async (req) => {
+  const ctx = req.auth;
+  if (!ctx?.token?.admin) {
+    throw new Error('Permission denied: admin only.');
+  }
+  const { uid, contributionId, amountGBP, providerRef } = req.data || {};
+  if (!uid || !contributionId) {
+    throw new Error('uid and contributionId are required');
+  }
+
+  await settleContributionTx(db, {
+    uid,
+    contributionId,
+    amountGBP,                      // optional if already on doc
+    provider: 'manual_bank',
+    providerRef: providerRef || null
+  });
+
+  return { ok: true };
+});
+

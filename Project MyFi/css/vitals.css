@@ -252,10 +252,10 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   pointer-events: none;
   border-radius: 6px;
 }
-#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .22), rgba(64, 0, 0, .12)); }
-#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .22), rgba(0, 34, 68, .12)); }
-#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .22), rgba(0, 51, 0, .12)); }
-#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .22), rgba(255, 0, 255, .10)); }
+#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .32), rgba(64, 0, 0, .32)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .32), rgba(0, 34, 68, .32)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .32), rgba(0, 51, 0, .32)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .20)); }
 .bar.has-surplus:hover::before,
 .bar.has-surplus:focus-within::before { opacity: .45; }
 
@@ -318,7 +318,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
 .locked { opacity: .3; }
 
-/* ==========================================================================
+/* ========================================================================== 
    Update Log / Recently Locked
    ========================================================================== */
 
@@ -336,7 +336,10 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   max-height: none;
   overflow: auto;
 }
-.update-log h2, .recently-locked h2 { margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9; }
+.update-log h2, .recently-locked h2 {
+  margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9;
+  position: relative; padding-right: 28px; /* for expand button */
+}
 .update-log ul, .recently-locked ul { list-style:none; margin:0; padding:0; }
 .update-log li, .recently-locked li { padding:10px 12px; border-radius:12px; display:block; transition: background 120ms ease; }
 .update-log li + li, .recently-locked li + li { margin-top:8px; }
@@ -346,6 +349,18 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .ul-main  { min-width:0; }
 .ul-main > strong { display:block; font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ul-meta  { font-size:.85rem; opacity:.75; margin-top:2px; }
+
+/* Expand buttons */
+.update-log h2 .hx-expand,
+.recently-locked h2 .hx-expand{
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.06);
+  color: #f0e6d2; border-radius: 8px; padding: 2px 6px; line-height: 1;
+  font-size: 0.9rem; cursor: pointer;
+}
+.update-log h2 .hx-expand:hover,
+.recently-locked h2 .hx-expand:hover{ background: rgba(255,255,255,0.10); }
 
 .ul-actions { display:grid; grid-auto-flow:column; gap:6px; }
 .ul-actions .tag-btn {
