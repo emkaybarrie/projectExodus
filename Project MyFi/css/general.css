@@ -1,0 +1,17 @@
+/* Music toggle button (inherits your existing .btn styles) */
+.music-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  pointer-events: auto; /* ensure clickable in glass headers */
+}
+
+.music-btn.is-muted .music-btn__icon {
+  opacity: .6;
+  filter: grayscale(0.3);
+}
+
+/* If you use icon-only at small widths, you can hide the label */
+@media (max-width: 420px) {
+  .music-btn .music-btn__label { display: none; }
+}

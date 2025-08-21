@@ -11,9 +11,13 @@ import "./modal.js";
 import "./settingsMenu.js";
 import "./helpMenu.js";
 import "./financesMenu.js";
+import "./musicManager.js"
 
 const shouldShowSplash = sessionStorage.getItem('showSplashNext') === '1';
 if (shouldShowSplash) sessionStorage.removeItem('showSplashNext');
+
+// NEW: tell the music manager to defer playback until splash finishes
+window.__MYFI_DEFER_MUSIC = shouldShowSplash;
 
 function waitForEvent(name) {
   return new Promise((resolve) => window.addEventListener(name, () => resolve(), { once: true }));
@@ -320,10 +324,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shouldShowSplash) {
       createSplash({ minDuration: 2500, until: vitalsPromise, allowSkip: false });
       await vitalsPromise; await waitForEvent('splash:done');
+
     } else {
       document.querySelector('.app-root')?.classList.add('app-show');
       await vitalsPromise;
     }
+
+
 
     await showWelcomeThenMaybeSetup(uid);
 
@@ -475,6 +482,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       };
     })();
+
+      /* ---------- Music player ---------- */
+      // Header button click -> toggle mute (counts as a user gesture)
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest('[data-action="toggle-music"]');
+        if (!btn) return;
+        // Make sure audio exists and attempt (re)start on first gesture
+        if (window.MyFiMusic) {
+          // If currently muted, unmute will also start+fade up
+          window.MyFiMusic.toggleMuted();
+        }
+      });
 
   });
 });
