@@ -334,8 +334,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Map neighbors from Vitals
       const layout = {
-        down:  null,
-        up:    null,
+        down:  'screen-myana',
+        up:    'screen-products',
         left:  'screen-quests',
         right: 'screen-avatar',
       };
