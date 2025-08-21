@@ -124,7 +124,7 @@ import {
           <br>• <em>Health</em> — protected savings baseline.
           <br>• <em>Essence</em> — avatar growth, boosts, unlocks, and cosmetics.
           <br><br>
-          As transactions flow in, tag them to the right pool. Manage your energy carefully, and see how your spending will impact your avatar's reosurces before confirmation.
+          As transactions flow in, tag them to the right pool. Manage your energy carefully, and see how your spending will impact your avatar's resources before confirmation.
           From Vitals, everything else flows: quests, avatar growth, and deeper Badlands runs.
         `,
         media:{ type:'image', src:'assets/help/vitals-overview.png' }
@@ -179,7 +179,7 @@ import {
       {
         label:'Loadout',
         text: `
-          Equip skills and items that reflect your spending style and compliment your habits (e.g., consistent tagging, savings streaks).
+          Equip skills and items that reflect your spending style and complement your habits (e.g., consistent tagging, savings streaks).
           Use these to amplify your performance and see them reflected in your chosen hero during Badlands runs and events.
         `,
         media:{ type:'image', src:'assets/help/avatars-2.png' }
@@ -204,7 +204,7 @@ import {
     return [content, media];
   }
 
-  // --- Resources (updated: Products / Financial Guidance) ---
+  // --- Resources (Products / Financial Guidance) ---
   function resourcesRender(){
     const pages = [
       {
@@ -244,7 +244,7 @@ import {
     return [container];
   }
 
-  // --- FAQ (kept succinct) ---
+  // --- FAQ ---
   function faqRender(){
     const faqs = [
       ['getting-started','How do I get started?'],
@@ -254,7 +254,7 @@ import {
     ];
     const content = {
       'getting-started': {
-        text:`Set income & core expenses in Settings, then add a few transactions. Watch the HUD update live.`,
+        text:`Set income & core expenses, then add a few transactions. Watch the HUD update live.`,
         media:{type:'image', src:'assets/help/faq-start.png'}
       },
       'tagging': {
@@ -279,7 +279,7 @@ import {
     return [dd, body];
   }
 
-  // --- Report an Issue (saves to Firestore) ---
+  // --- Report an Issue ---
   function reportIssueRender(){
     const cat = select('Category (optional)','issueCategory',[
       ['bug-ui','UI bug'],
@@ -307,52 +307,74 @@ import {
     ];
   }
 
-  // --- Menu map ---
+  // --- Menu map (unified schema with previews; works for split or drill‑down) ---
   const HelpMenu = {
-    overview:  { label:'Overview', title:'Help • Overview', render: overviewRender },
-    vitals:    { label:'Vitals',   title:'Help • Vitals',   render: vitalsRender },
-    quests:    { label:'Quests',   title:'Help • Quests',   render: questsRender },
-    avatars:   { label:'Avatars',  title:'Help • Avatars',  render: avatarsRender },
-    badlands:  { label:'The Badlands', title:'Help • The Badlands', render: badlandsRender },
-    resources: { label:'Products / Guidance', title:'Help • Products & Guidance', render: resourcesRender },
-    faq:       { label:'FAQ',      title:'Help • FAQ',      render: faqRender },
-    report:    { label:'Report an Issue', title:'Help • Report an Issue', render: reportIssueRender, footer: reportFooter },
+    overview:  { 
+      label:'Overview', title:'Help • Overview',
+      preview:'Start here: what MyFi is, how the world works, and how to navigate.',
+      render: overviewRender
+    },
+    vitals:    { 
+      label:'Vitals',   title:'Help • Vitals',
+      preview:'Understand Stamina, Mana, Health, and Essence — and how they regen/spend.',
+      render: vitalsRender
+    },
+    quests:    { 
+      label:'Quests',   title:'Help • Quests',
+      preview:'Goals and challenges that build habits and unlock rewards.',
+      render: questsRender 
+    },
+    avatars:   { 
+      label:'Avatars',  title:'Help • Avatars',
+      preview:'Level up, customise, and equip perks that reflect your progress.',
+      render: avatarsRender 
+    },
+    badlands:  { 
+      label:'The Badlands', title:'Help • The Badlands',
+      preview:'Our rogue‑lite game mode: explore, fight, and push deeper as you grow.',
+      render: badlandsRender 
+    },
+    resources: { 
+      label:'Products / Guidance', title:'Help • Products & Guidance',
+      preview:'Insights, projections, and optional partner products tailored to you.',
+      render: resourcesRender 
+    },
+    faq:       { 
+      label:'FAQ',      title:'Help • FAQ',
+      preview:'Quick answers to common questions.',
+      render: faqRender 
+    },
+    report:    { 
+      label:'Report an Issue', title:'Help • Report an Issue',
+      preview:'Tell us about a bug or idea — it goes straight to the team.',
+      render: reportIssueRender, footer: reportFooter 
+    },
   };
 
-  // expose to app
+  // expose (optional)
   window.MyFiHelpMenu = HelpMenu;
 
-  // Open Help (defaults to Overview)
+  // Open Help → drill‑down (list + preview → detail)
   document.getElementById('help-btn')?.addEventListener('click', ()=>{
     setMenu(HelpMenu);
-    open('overview');
+    open('overview', { variant: 'drilldown', menuTitle: 'Help' });
   });
 
   // Save bug reports to Firestore
   window.addEventListener('help:report', async (e)=>{
-    console.log('[Help Report]', e.detail);
-
-    let alias = null;
     try {
-      const uid = auth.currentUser?.uid;
+      let alias = null;
+      const uid = auth.currentUser?.uid || null;
       if (uid) {
         const playerSnap = await getDoc(doc(db, 'players', uid));
-        if (playerSnap.exists()) {
-          alias = playerSnap.data().alias || null;
-        }
+        if (playerSnap.exists()) alias = playerSnap.data().alias || null;
       }
-    } catch (err) {
-      console.warn('[Help Report] Could not fetch alias:', err);
-    }
-
-    try {
       await addDoc(collection(db, 'bugReports'), {
         ...e.detail,
-        alias: alias,
+        alias,
         uid: auth.currentUser?.uid || null,
         createdAt: serverTimestamp()
       });
-      console.log('[Help Report] Saved to Firestore');
     } catch (err) {
       console.error('[Help Report] Failed to save', err);
       alert('Sorry, we could not submit your report. Please try again later.');

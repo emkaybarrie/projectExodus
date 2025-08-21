@@ -478,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const userRef = doc(db, 'players', user.uid);
       const docSnap = await getDoc(userRef);
       if (!docSnap.exists()) {
-        await setDoc(userRef, { startDate: serverTimestamp }, { merge: true });
+        await setDoc(userRef, { startDate: serverTimestamp() }, { merge: true });
       }
 
       const playerData = await playerDataManager.init(user.uid).then((player) => {

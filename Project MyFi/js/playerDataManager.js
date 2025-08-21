@@ -65,9 +65,10 @@ function millisToTimestamp(ms) {
 function normalizeForCache(player) {
   if (!player || typeof player !== "object") return player;
   const copy = { ...player };
-  if ("startDate" in copy) copy.startDate = tsToMillis(copy.startDate);
-  if ("createdAt" in copy) copy.createdAt = tsToMillis(copy.createdAt);
-  if ("updatedAt" in copy) copy.updatedAt = tsToMillis(copy.updatedAt);
+  if ("startDate" in copy)    copy.startDate    = tsToMillis(copy.startDate);
+  if ("createdAt" in copy)    copy.createdAt    = tsToMillis(copy.createdAt);
+  if ("updatedAt" in copy)    copy.updatedAt    = tsToMillis(copy.updatedAt);
+  if ("onboardedAt" in copy)  copy.onboardedAt  = tsToMillis(copy.onboardedAt);
   return copy;
 }
 
@@ -75,9 +76,10 @@ function normalizeForCache(player) {
 function normalizeFromCache(cached) {
   if (!cached || typeof cached !== "object") return cached;
   const copy = { ...cached };
-  if ("startDate" in copy) copy.startDate = millisToTimestamp(copy.startDate);
-  if ("createdAt" in copy) copy.createdAt = millisToTimestamp(copy.createdAt);
-  if ("updatedAt" in copy) copy.updatedAt = millisToTimestamp(copy.updatedAt);
+  if ("startDate" in copy)    copy.startDate    = millisToTimestamp(copy.startDate);
+  if ("createdAt" in copy)    copy.createdAt    = millisToTimestamp(copy.createdAt);
+  if ("updatedAt" in copy)    copy.updatedAt    = millisToTimestamp(copy.updatedAt);
+  if ("onboardedAt" in copy)  copy.onboardedAt  = millisToTimestamp(copy.onboardedAt);
   return copy;
 }
 
@@ -95,7 +97,7 @@ function createDefaultPlayer(id) {
     level: 1,
     lastUpdated: Date.now(),
     portraitKey: "default",
-    // NOTE: startDate is NOT set here; we set it via serverTimestamp() in a txn.
+    // NOTE: startDate/onboardedAt are set server-side only.
   };
 }
 
@@ -159,6 +161,28 @@ async function repairStartDateIfNeeded(uid) {
 }
 
 /* -----------------------------------------------------------
+   NEW: repair onboardedAt if it became a map
+----------------------------------------------------------- */
+async function repairOnboardedAtIfNeeded(uid) {
+  const ref = doc(firestore, "players", uid);
+  await runTransaction(firestore, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const ob = snap.data().onboardedAt;
+    if (!ob) return;
+
+    const isTs = typeof ob?.toMillis === "function";
+    const looksLikeMap =
+      ob && typeof ob === "object" && Number.isInteger(ob.seconds) && Number.isInteger(ob.nanoseconds);
+
+    if (looksLikeMap && !isTs) {
+      const ms = ob.seconds * 1000 + Math.floor(ob.nanoseconds / 1e6);
+      tx.update(ref, { onboardedAt: Timestamp.fromMillis(ms) });
+    }
+  });
+}
+
+/* -----------------------------------------------------------
    Player Data Manager (public API unchanged)
 ----------------------------------------------------------- */
 const playerDataManager = (() => {
@@ -183,9 +207,10 @@ const playerDataManager = (() => {
       if (!playerId) throw new Error("No player ID or authenticated user found.");
     }
 
-    // Always ensure/repair startDate in Firestore first (transaction-safe).
+    // Always ensure/repair startDate first, then heal onboardedAt if needed.
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
+    await repairOnboardedAtIfNeeded(playerId);
 
     // Try cache first
     const local = await db.playerData.get(playerId);
@@ -200,11 +225,10 @@ const playerDataManager = (() => {
         memoryStore.player = { ...live, id: playerId };
         await db.playerData.put({ ...normalizeForCache(memoryStore.player), id: playerId });
       } else {
-        // brand new — write minimal defaults (WITHOUT startDate) then cache
+        // brand new — write minimal defaults (WITHOUT startDate/onboardedAt) then cache
         const fresh = createDefaultPlayer(playerId);
         memoryStore.player = fresh;
         await db.playerData.put(normalizeForCache(fresh));
-        // merge defaults; startDate already handled by ensureStartDateOnce()
         await setDoc(ref, { ...fresh, updatedAt: serverTimestamp() }, { merge: true });
       }
     }
@@ -246,7 +270,7 @@ const playerDataManager = (() => {
   }
 
   // Save to Dexie and Firestore.
-  // IMPORTANT: Never write startDate/createdAt from cache (immutable).
+  // IMPORTANT: Never write startDate/createdAt/onboardedAt from cache (immutable).
   async function save(andLocalStorage = false) {
     if (!memoryStore.player) return;
     const id = memoryStore.player.id;
@@ -255,7 +279,14 @@ const playerDataManager = (() => {
     await db.playerData.put({ ...normalizeForCache(memoryStore.player), id });
 
     // 2) Cloud save — strip immutable fields and set updatedAt
-    const { startDate, createdAt, id: _dropId, ...rest } = memoryStore.player || {};
+    const {
+      startDate,
+      createdAt,
+      onboardedAt,
+      id: _dropId,
+      ...rest
+    } = memoryStore.player || {};
+
     const safePatch = { ...rest, updatedAt: serverTimestamp() };
 
     await setDoc(doc(firestore, "players", id), safePatch, { merge: true });
@@ -295,9 +326,10 @@ const playerDataManager = (() => {
       if (!playerId) throw new Error("No player ID or authenticated user found.");
     }
 
-    // Heal startDate if needed before reloading
+    // Heal immutables before reloading
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
+    await repairOnboardedAtIfNeeded(playerId);
 
     const ref = doc(firestore, "players", playerId);
     const snap = await getDoc(ref);
