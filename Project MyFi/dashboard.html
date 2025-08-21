@@ -95,8 +95,8 @@
     }
     .myfi-nav-btn[data-dir="left"]::before  { border-style: solid; border-width: 6px 9px 6px 0;  border-color: transparent rgba(255,255,255,.9) transparent transparent; }
     .myfi-nav-btn[data-dir="right"]::before { border-style: solid; border-width: 6px 0 6px 9px;  border-color: transparent transparent transparent rgba(255,255,255,.9); }
-    .myfi-nav-btn[data-dir="up"]::before    { border-style: solid; border-width: 9px 6px 0 6px;  border-color: rgba(255,255,255,.9) transparent transparent transparent; }
-    .myfi-nav-btn[data-dir="down"]::before  { border-style: solid; border-width: 0 6px 9px 6px;  border-color: transparent transparent rgba(255,255,255,.9) transparent; }
+    .myfi-nav-btn[data-dir="up"]::before  { border-style: solid; border-width: 0 6px 9px 6px;  border-color: transparent transparent rgba(255,255,255,.9) transparent; }
+    .myfi-nav-btn[data-dir="down"]::before    { border-style: solid; border-width: 9px 6px 0 6px;  border-color: rgba(255,255,255,.9) transparent transparent transparent; }
   </style>
 
   <!-- App scripts -->
@@ -223,7 +223,23 @@
       </div>
     </div>
 
-    <!-- Quests (placeholder satellite) -->
+    <!-- Products - Up (placeholder satellite) -->
+    <div id="screen-products" class="screen" data-screen="products" aria-hidden="true">
+      <div style="padding:16px">
+        <h1 style="margin:0 0 8px 0">Products</h1>
+        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
+        <p style="opacity:.8; margin:0 0 12px 0">
+          Products/Partners screen. Swipe up to return to the Vitals screen.
+        </p>
+        <ul style="opacity:.85; line-height:1.4">
+          <li>Financial Analysis (coming soon)</li>
+          <li> (coming soon)</li>
+          <li>Avatar Customisation (coming soon)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Quests - Left (placeholder satellite) -->
     <div id="screen-quests" class="screen" data-screen="quests" aria-hidden="true">
       <div style="padding:16px">
         <h1 style="margin:0 0 8px 0">Quests</h1>
@@ -239,18 +255,34 @@
       </div>
     </div>
 
-    <!-- Avatar (placeholder satellite) -->
+    <!-- Avatar - Right (placeholder satellite) -->
     <div id="screen-avatar" class="screen" data-screen="avatar" aria-hidden="true">
       <div style="padding:16px">
         <h1 style="margin:0 0 8px 0">Avatar</h1>
         <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
         <p style="opacity:.8; margin:0 0 12px 0">
-          Avatar screen. Swipe left to return to the Vitals screen.
+          Avatar screen. Swipe right to return to the Vitals screen.
         </p>
         <ul style="opacity:.85; line-height:1.4">
           <li>Avatar Stats (coming soon)</li>
           <li>Skill Tree & Artifacts (coming soon)</li>
           <li>Avatar Customisation (coming soon)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Myana / The Badlands (placeholder satellite) -->
+    <div id="screen-myana" class="screen" data-screen="myana" aria-hidden="true">
+      <div style="padding:16px">
+        <h1 style="margin:0 0 8px 0">Myana / The Badlands</h1>
+        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
+        <p style="opacity:.8; margin:0 0 12px 0">
+          Myana / The Badlands screen. Swipe down to return to the Vitals screen.
+        </p>
+        <ul style="opacity:.85; line-height:1.4">
+          <li>Explore the City of Myana (coming soon)</li>
+          <li>Brave the Badlands (coming soon)</li>
+          <li>Test your skills with friends and earn rewards (coming soon)</li>
         </ul>
       </div>
     </div>
