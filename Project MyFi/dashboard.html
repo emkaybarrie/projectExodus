@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Vitals HUD</title>
 
-  <!-- Scoped: disable native long-press callouts/highlight inside Vitals only -->
+  <!-- Embedded styles for slide router + nav arrows -->
   <style>
+    /* Disable native long‑press inside Vitals */
     #vitals-root.no-select-callout {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -14,27 +15,93 @@
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
-    #vitals-root.no-select-callout img {
-      -webkit-user-drag: none;
-      user-drag: none;
+    #vitals-root.no-select-callout img { -webkit-user-drag: none; user-drag: none; }
+    #vitals-root .allow-select, #vitals-root [data-allow-context],
+    #vitals-root .allow-select *, #vitals-root [data-allow-context] * {
+      -webkit-user-select: text !important; user-select: text !important; -webkit-touch-callout: default !important;
     }
-    /* Opt-in area where you DO want selection/context */
-    #vitals-root .allow-select,
-    #vitals-root [data-allow-context],
-    #vitals-root .allow-select *,
-    #vitals-root [data-allow-context] * {
-      -webkit-user-select: text !important;
-      user-select: text !important;
-      -webkit-touch-callout: default !important;
+
+    /* ---------- FULL‑SCREEN SLIDE ROUTER ---------- */
+    html, body, #app { height: 100%; }
+    body { overscroll-behavior: none; }          /* avoid browser rubber-band */
+    #screen-stage {                               /* holds all screens */
+      position: fixed; inset: 0; overflow: hidden; z-index: 1;
     }
+    .screen {                                     /* each screen is full-bleed */
+      position: absolute; inset: 0;
+      will-change: transform, opacity;
+      touch-action: pan-y pan-x;
+      pointer-events: none;       /* only active gets events */
+      opacity: 0;
+      transform: translate3d(0,0,0);
+      background: transparent;    /* your existing backgrounds still show */
+    }
+    .screen.screen--active {
+      pointer-events: auto;
+      opacity: 1;
+    }
+    .screen.animating {
+      transition: transform 300ms cubic-bezier(.22,.8,.22,1), opacity 300ms ease;
+    }
+    /* enter-from positions */
+    .screen.from-up    { transform: translate3d(0,-100%,0); opacity: 1; }
+    .screen.from-down  { transform: translate3d(0, 100%,0); opacity: 1; }
+    .screen.from-left  { transform: translate3d(-100%,0,0); opacity: 1; }
+    .screen.from-right { transform: translate3d( 100%,0,0); opacity: 1; }
+    /* exit-to positions */
+    .screen.to-up    { transform: translate3d(0,-100%,0); }
+    .screen.to-down  { transform: translate3d(0, 100%,0); }
+    .screen.to-left  { transform: translate3d(-100%,0,0); }
+    .screen.to-right { transform: translate3d( 100%,0,0); }
+
+    /* ---------- EDGE NAV (compact glass chevrons) ---------- */
+    .myfi-nav-mount { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+    .myfi-nav { pointer-events: none; }
+    .myfi-nav--edge { position: fixed; inset: 0; }
+
+    /* Layer visibility (auto-hide) */
+    .myfi-nav--edge.nav-hidden { opacity: 0; pointer-events: none; transition: opacity .18s ease; }
+    .myfi-nav--edge:not(.nav-hidden) { opacity: 1; transition: opacity .18s ease; }
+
+    /* Buttons: small, glassy, **no transform on hover** to avoid Y drift */
+    .myfi-nav-btn {
+      position: absolute;
+      width: 26px; height: 26px;
+      border-radius: 10px;
+      display: grid; place-items: center;
+      pointer-events: auto;
+      border: 1px solid rgba(220,230,255,.14);
+      background: linear-gradient(180deg, rgba(60,70,100,.35), rgba(30,35,60,.25));
+      backdrop-filter: blur(8px) saturate(120%);
+      box-shadow: 0 6px 18px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.06);
+      opacity: .55; color: #fff;
+      transition: opacity .12s ease, background .12s ease, box-shadow .12s ease;
+    }
+    .myfi-nav-btn:hover { opacity: .85; }
+    .myfi-nav-btn:active { opacity: 1; }
+
+    /* Placement — hug edges, centered; we do NOT animate transforms here */
+    .myfi-nav--edge .myfi-nav-btn[data-dir="up"]    { top: 8px;    left: 50%; transform: translate(-50%, 0); }
+    .myfi-nav--edge .myfi-nav-btn[data-dir="down"]  { bottom: 8px; left: 50%; transform: translate(-50%, 0); }
+    .myfi-nav--edge .myfi-nav-btn[data-dir="left"]  { left: 8px;   top: 50%;  transform: translate(0, -50%); }
+    .myfi-nav--edge .myfi-nav-btn[data-dir="right"] { right: 8px;  top: 50%;  transform: translate(0, -50%); }
+
+    .myfi-hidden { display: none !important; }
+
+    /* Draw short wedge chevrons via borders (fixed size => no layout shift) */
+    .myfi-nav-btn::before {
+      content: ""; display: block; width: 0; height: 0;
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+    }
+    .myfi-nav-btn[data-dir="left"]::before  { border-style: solid; border-width: 6px 9px 6px 0;  border-color: transparent rgba(255,255,255,.9) transparent transparent; }
+    .myfi-nav-btn[data-dir="right"]::before { border-style: solid; border-width: 6px 0 6px 9px;  border-color: transparent transparent transparent rgba(255,255,255,.9); }
+    .myfi-nav-btn[data-dir="up"]::before    { border-style: solid; border-width: 9px 6px 0 6px;  border-color: rgba(255,255,255,.9) transparent transparent transparent; }
+    .myfi-nav-btn[data-dir="down"]::before  { border-style: solid; border-width: 0 6px 9px 6px;  border-color: transparent transparent rgba(255,255,255,.9) transparent; }
   </style>
 
-  <!-- Main app logic -->
+  <!-- App scripts -->
   <script type="module" src="js/dashboard.js" defer></script>
-
-  <!-- NEW: Essence → Contribute modal -->
   <script type="module" src="js/essenceMenu.js" defer></script>
-
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/splash.css" />
@@ -42,7 +109,6 @@
   <link rel="stylesheet" href="css/modal.css" />
   <link rel="stylesheet" href="css/pwa.css" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
-
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -58,107 +124,141 @@
     </div>
   </div>
 
-  <!-- ADDED id + class below (scoped long-press suppression) -->
-  <div id="vitals-root" class="vitals-container no-select-callout">
-    <div id="background-layer"></div>
-    <div class="starfield-overlay"></div>
-    <div class="topbar" role="region" aria-label="Vitals header">
-      <h1 id="header-title">VITALS</h1>
+  <!-- ===== Slide Stage (wrap screens here) ===== -->
+  <div id="screen-stage" aria-live="polite">
 
-      <div class="topbar-actions">
-        <button class="icon-circle" id="help-btn" title="Help" aria-label="Help">?</button>
-        <button class="icon-circle" id="settings-btn" title="Settings" aria-label="Settings">⚙️</button>
-      </div>
-    </div>
+    <!-- Vitals (hub) -->
+    <div id="vitals-root" class="vitals-container screen screen--active no-select-callout" data-screen="vitals" aria-current="page">
+      <div id="background-layer"></div>
+      <div class="starfield-overlay"></div>
 
-    <div class="top-section">
-      <div class="portrait-wrapper">
-        <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" id="player-portrait" />
-
-        <!-- level pill top-left (hidden until we have a value) -->
-        <div class="level-pill" id="player-level" hidden>1</div>
-      </div>
-
-      <div class="vitals-bars">
-        <div id="vital-health">
-          <div class="bar health">
-            <span class="bar-label">Health</span>
-            <div class="bar-fill" style="width: 0%;"></div>
-            <span class="bar-value">0 / 0</span>
-            <span class="bar-surplus" aria-hidden="true"></span>
-          </div>
-        </div>
-        <div id="vital-mana">
-          <div class="bar mana">
-            <span class="bar-label">Mana</span>
-            <div class="bar-fill" style="width: 0%;"></div>
-            <span class="bar-value">0 / 0</span>
-            <span class="bar-surplus" aria-hidden="true"></span>
-          </div>
+      <div class="topbar" role="region" aria-label="Vitals header">
+        <h1 id="header-title">VITALS</h1>
+        <div class="topbar-actions">
+          <button class="icon-circle" id="help-btn" title="Help" aria-label="Help">?</button>
+          <button class="icon-circle" id="settings-btn" title="Settings" aria-label="Settings">⚙️</button>
         </div>
       </div>
-    </div>
 
-    <div id="vital-stamina">
-      <div class="bar stamina">
-        <span class="bar-label">Stamina</span>
-        <div class="bar-fill" style="width: 0%;"></div>
-        <span class="bar-value">0 / 0</span>
-        <span class="bar-surplus" aria-hidden="true"></span>
-      </div>
-    </div>
+      <div class="top-section">
+        <div class="portrait-wrapper">
+          <img src="./assets/portraits/default.png" alt="Avatar Portrait" class="portrait" id="player-portrait" />
+          <div class="level-pill" id="player-level" hidden>1</div>
+        </div>
 
-    <!-- Mode row + totals (left/right) -->
-    <div class="vitals-toprow">
-      <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
-        <button class="mode-btn" data-mode="daily"   role="tab" aria-selected="false">Daily</button>
-        <button class="mode-btn" data-mode="weekly"  role="tab" aria-selected="false">Weekly</button>
-        <button class="mode-btn" data-mode="monthly" role="tab" aria-selected="false">Monthly</button>
-      </div>
-
-      <!-- Totals pinned right; filled by JS -->
-      <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
-    </div>
-
-    <div class="skills-row">Skills
-      <div class="skill-slot">🔒</div>
-      <div class="skill-slot">🔒</div>
-      <div class="skill-slot locked">🔒</div>
-      <div class="skill-slot">🔒</div>
-    </div>
-
-    <!-- Update Log + Recently Locked -->
-    <div class="update-log-box">
-      <div class="update-log">
-        <h2>UPDATE LOG <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button></h2>
-        <ul id="update-log-list"></ul>
+        <div class="vitals-bars">
+          <div id="vital-health">
+            <div class="bar health">
+              <span class="bar-label">Health</span>
+              <div class="bar-fill" style="width: 0%;"></div>
+              <span class="bar-value">0 / 0</span>
+              <span class="bar-surplus" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div id="vital-mana">
+            <div class="bar mana">
+              <span class="bar-label">Mana</span>
+              <div class="bar-fill" style="width: 0%;"></div>
+              <span class="bar-value">0 / 0</span>
+              <span class="bar-surplus" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="section-divider"></div>
-
-      <div class="recently-locked">
-        <h2>RECENTLY LOCKED <button class="hx-expand" id="btn-expand-locked" title="View all history" aria-label="View all history">↗︎</button></h2>
-        <ul id="recently-locked-list"></ul>
-      </div>
-    </div>
-
-    <div class="hud-footer">
-      <div id="vital-essence">
-        <div class="bar essence">
-          <span class="bar-label">Essence</span>
+      <div id="vital-stamina">
+        <div class="bar stamina">
+          <span class="bar-label">Stamina</span>
           <div class="bar-fill" style="width: 0%;"></div>
           <span class="bar-value">0 / 0</span>
           <span class="bar-surplus" aria-hidden="true"></span>
         </div>
       </div>
 
-      <div class="actions">
-        <button class="side-btn" id="left-btn" title="Time Mode">🌀</button>
-        <button class="main-btn" id="essence-btn" title="Use Essence"></button>
-        <button class="side-btn" id="right-btn" title="Finances">📜</button>
+      <div class="vitals-toprow">
+        <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
+          <button class="mode-btn" data-mode="daily"   role="tab" aria-selected="false">Daily</button>
+          <button class="mode-btn" data-mode="weekly"  role="tab" aria-selected="false">Weekly</button>
+          <button class="mode-btn" data-mode="monthly" role="tab" aria-selected="false">Monthly</button>
+        </div>
+        <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
+      </div>
+
+      <div class="skills-row">Skills
+        <div class="skill-slot">🔒</div>
+        <div class="skill-slot">🔒</div>
+        <div class="skill-slot locked">🔒</div>
+        <div class="skill-slot">🔒</div>
+      </div>
+
+      <div class="update-log-box">
+        <div class="update-log">
+          <h2>UPDATE LOG <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button></h2>
+          <ul id="update-log-list"></ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="recently-locked">
+          <h2>RECENTLY LOCKED <button class="hx-expand" id="btn-expand-locked" title="View all history" aria-label="View all history">↗︎</button></h2>
+          <ul id="recently-locked-list"></ul>
+        </div>
+      </div>
+
+      <div class="hud-footer">
+        <div id="vital-essence">
+          <div class="bar essence">
+            <span class="bar-label">Essence</span>
+            <div class="bar-fill" style="width: 0%;"></div>
+            <span class="bar-value">0 / 0</span>
+            <span class="bar-surplus" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="side-btn" id="left-btn" title="Time Mode">🌀</button>
+          <button class="main-btn" id="essence-btn" title="Use Essence"></button>
+          <button class="side-btn" id="right-btn" title="Finances">📜</button>
+        </div>
       </div>
     </div>
-  </div>
+
+    <!-- Quests (placeholder satellite) -->
+    <div id="screen-quests" class="screen" data-screen="quests" aria-hidden="true">
+      <div style="padding:16px">
+        <h1 style="margin:0 0 8px 0">Quests</h1>
+        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
+        <p style="opacity:.8; margin:0 0 12px 0">
+          Quests screen. Swipe left to return to the Vitals screen.
+        </p>
+        <ul style="opacity:.85; line-height:1.4">
+          <li>Active Quests (coming soon)</li>
+          <li>Completed Quests (coming soon)</li>
+          <li>Goal progress (coming soon)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Avatar (placeholder satellite) -->
+    <div id="screen-avatar" class="screen" data-screen="avatar" aria-hidden="true">
+      <div style="padding:16px">
+        <h1 style="margin:0 0 8px 0">Avatar</h1>
+        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
+        <p style="opacity:.8; margin:0 0 12px 0">
+          Avatar screen. Swipe left to return to the Vitals screen.
+        </p>
+        <ul style="opacity:.85; line-height:1.4">
+          <li>Avatar Stats (coming soon)</li>
+          <li>Skill Tree & Artifacts (coming soon)</li>
+          <li>Avatar Customisation (coming soon)</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- /#screen-stage -->
+
+  <!-- Nav arrows mount -->
+  <div id="myfiNavMount" class="myfi-nav-mount" aria-hidden="true"></div>
 
   <!-- Modal (kept) -->
   <div class="modal-backdrop" id="appModalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
@@ -180,9 +280,9 @@
     </div>
   </div>
 
-</div>
+</div><!-- /#app -->
 
-<!-- Auto-wire Update Log + History buttons -->
+<!-- Auto-wire Update Log + History buttons (unchanged) -->
 <script type="module">
   import { autoInitUpdateLog, autoInitHistoryButtons } from './js/hud/modules/vitals.js';
   autoInitUpdateLog();
