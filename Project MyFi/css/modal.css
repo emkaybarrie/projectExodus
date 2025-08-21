@@ -149,3 +149,23 @@
 .subnav .btn { padding:8px 12px; }
 .subnav .seg--current { outline: 2px solid rgba(110,231,255,.35); }
 .help-body { display:grid; gap:10px; }
+
+/* ── Drill‑down state: hide sidebar during detail, show Back button ── */
+#appModalBackdrop.is-detail .modal__menu { display: none; }
+#appModalBackdrop.is-detail .modal { grid-template-columns: 1fr; }
+#appModalBackdrop.is-detail .modal__header .modal__back { display: inline-flex; }
+
+/* ── Preview pane (list screen) ── */
+.modal__preview { padding: 0.75rem 1.5rem; box-sizing: border-box; min-width: 0; cursor: pointer; }
+.modal__previewTitle { font: 700 15px system-ui, sans-serif; margin: 0 0 .25rem 0; color: var(--modal-text); }
+.modal__previewBody { color: var(--modal-muted); font: 13px system-ui, sans-serif; line-height: 1.45; margin-bottom: .5rem; }
+.modal__previewCTA { width: 100%; margin-top: .25rem; }
+
+/* Reduce accidental taps opening list screen by giving CTA a stronger target */
+@media (hover: hover) {
+  .modal__preview { cursor: default; }
+}
+
+
+
+

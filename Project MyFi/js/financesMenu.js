@@ -22,14 +22,6 @@ import {
 
   // ───────────────────────── helpers ─────────────────────────
   const fmtGBP = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(n) || 0);
-  const toDaily = (amount, cadence) => {
-    const a = Number(amount) || 0;
-    switch ((cadence || 'monthly').toLowerCase()) {
-      case 'daily': return a;
-      case 'weekly': return a / 7;
-      default: return a / 30; // monthly
-    }
-  };
   const fromDaily = (daily, cadence) => {
     const d = Number(daily) || 0;
     switch ((cadence || 'monthly').toLowerCase()) {
@@ -75,7 +67,6 @@ import {
     if (node) node.textContent = fmtGBP((Number(dailyValue) || 0) * n);
   }
 
-  // Auth guard (avoid calling Firestore before a user exists)
   async function ensureAuthReady() {
     const auth = getAuth();
     if (auth.currentUser) return auth.currentUser;
@@ -84,7 +75,6 @@ import {
     });
   }
 
-  // Player & month helpers (for Add Transaction date clamping)
   async function getPlayerCore() {
     const user = (getAuth()).currentUser;
     if (!user) return { uid: null, mode: 'safe', startMs: Date.now() };
@@ -148,17 +138,12 @@ import {
   // ───────────────────────── Unified view builder ─────────────────────────
   function buildUnified(kind) {
     const isIncome = (kind === 'income');
-
     const root = document.createElement('div');
 
-    // Top: current value (from dailyAverages)
     const current = currentRow(isIncome ? 'Current Income' : 'Current Core Expenses', `${kind}-current`);
-
-    // Cadence + Total input
     const cadence = select('Cadence', `${kind}-cadence`, [['monthly','Monthly'], ['weekly','Weekly'], ['daily','Daily']]);
     const total   = field(isIncome ? 'Total Amount' : 'Total Amount', 'number', `${kind}-total`, { min: 0, step: '0.01', placeholder: isIncome ? 'e.g. 3200.00' : 'e.g. 1800.00' });
 
-    // Itemise toggle
     const itemiseWrap = document.createElement('div');
     itemiseWrap.className = 'field';
     itemiseWrap.innerHTML = `
@@ -169,13 +154,10 @@ import {
       <div class="helper">Itemise to break down by category. In itemised mode, the total is the sum of categories.</div>
     `;
 
-    // Collapsible itemised section
     const itemisedSection = document.createElement('div');
     itemisedSection.style.display = 'none';
 
-    // const runTotal = currentRow('Running total (per selected cadence)', `${kind}-itemised-total`);
     const cats = isIncome ? DEFAULT_INCOME_CATS : DEFAULT_EXPENSE_CATS;
-
     const categoriesWrap = document.createElement('div');
     categoriesWrap.className = 'field';
     categoriesWrap.innerHTML = `<label>Categories</label>`;
@@ -194,14 +176,10 @@ import {
       list.append(lab, inp);
     });
     categoriesWrap.appendChild(list);
-
-    // itemisedSection.append(runTotal, categoriesWrap);
     itemisedSection.append(categoriesWrap);
 
-    // Compose UI
     root.append(current, cadence, total, itemiseWrap, itemisedSection);
 
-    // Prefill current line from daily averages (monthly view)
     (async () => {
       await ensureAuthReady();
       const daily = isIncome ? await getDailyIncome() : await getDailyCoreExpenses();
@@ -212,21 +190,15 @@ import {
       if (t) t.value = fromDaily(daily, 'monthly').toFixed(2);
     })();
 
-    // Sum helper
     const recomputeItemisedSum = () => {
       let sum = 0;
       catInputs.forEach(inp => { sum += Math.max(0, parseFloat(inp.value) || 0); });
-      const cad = root.querySelector(`#${kind}-cadence`)?.value || 'monthly';
-      // const totalEl = root.querySelector(`#${kind}-itemised-total`);
-      // if (totalEl) totalEl.textContent = `${fmtGBP(sum)} (${cad})`;
-      // reflect into total input if itemised mode is ON
       const on = root.querySelector(`#${kind}-itemise-toggle`)?.checked;
       const totalInput = root.querySelector(`#${kind}-total`);
       if (on && totalInput) totalInput.value = String(sum.toFixed(2));
       return sum;
     };
 
-    // Draft persistence (localStorage)
     function wireDraftPersistence() {
       const uid = getAuth().currentUser?.uid; if (!uid) return;
       const key = storeKey(uid, kind);
@@ -242,7 +214,6 @@ import {
         localStorage.setItem(key, JSON.stringify(data));
         recomputeItemisedSum();
       };
-      // listeners
       root.querySelector(`#${kind}-itemise-toggle`)?.addEventListener('change', saveDraft);
       root.querySelector(`#${kind}-cadence`)?.addEventListener('change', saveDraft);
       root.querySelectorAll(`#${kind}-total`).forEach(i => i.addEventListener('input', saveDraft));
@@ -252,7 +223,6 @@ import {
       });
     }
 
-    // Load order: Firestore → overlay with draft (if any)
     async function applySavedAndDraft() {
       await ensureAuthReady();
       const uid = getAuth().currentUser?.uid; if (!uid) return;
@@ -262,8 +232,6 @@ import {
       try { draft = JSON.parse(localStorage.getItem(storeKey(uid, kind)) || 'null'); } catch (_) {}
 
       const data = { mode: 'totals', cadence: 'monthly', totalAmount: 0, categories: {}, ...(saved || {}), ...(draft || {}) };
-
-      // set UI
       const toggle = root.querySelector(`#${kind}-itemise-toggle`);
       const cEl = root.querySelector(`#${kind}-cadence`);
       const tEl = root.querySelector(`#${kind}-total`);
@@ -280,7 +248,6 @@ import {
       recomputeItemisedSum();
     }
 
-    // Toggle UI behaviour between modes
     function reflectItemiseMode() {
       const on = root.querySelector(`#${kind}-itemise-toggle`)?.checked;
       itemisedSection.style.display = on ? '' : 'none';
@@ -292,12 +259,10 @@ import {
       if (on) recomputeItemisedSum();
     }
 
-    // Wire interactions
     root.querySelector(`#${kind}-itemise-toggle`)?.addEventListener('change', reflectItemiseMode);
     root.querySelector(`#${kind}-cadence`)?.addEventListener('change', recomputeItemisedSum);
     catInputs.forEach(inp => inp.addEventListener('input', recomputeItemisedSum));
 
-    // Init
     (async () => {
       await applySavedAndDraft();
       wireDraftPersistence();
@@ -325,28 +290,26 @@ import {
 
         await writeUnified(uid, kind, { mode, cadence, totalAmount, categories });
 
-        // update daily baselines + HUD
         if (isIncome) await updateIncome(totalAmount, cadence);
         else          await updateCoreExpenses(totalAmount, cadence);
 
         await initHUD();
 
-        // refresh current line (show monthly by default)
         const daily = isIncome ? await getDailyIncome() : await getDailyCoreExpenses();
         setCurrentDisplay(root, `${kind}-current`, daily, 'monthly');
 
-        // clear draft now that we saved
         localStorage.removeItem(storeKey(uid, kind));
       }
     };
   }
 
-  // ───────────────────────── Menu entries (lazy build) ─────────────────────────
-  function makeUnifiedEntry(kind, label, title) {
+  function makeUnifiedEntry(kind, label, title, previewText) {
     return {
       label, title,
+      preview: previewText, // used by drill‑down list screen
+      ctaLabel: 'Open',
       render() {
-        if (!this._view) this._view = buildUnified(kind); // build when first rendered
+        if (!this._view) this._view = buildUnified(kind);
         return this._view.nodes;
       },
       footer() {
@@ -355,16 +318,14 @@ import {
     };
   }
 
-  // Optional “Manual (Pre-start) Summary”
   function makeManualOpeningEntry() {
     return {
       label: 'Manual (Pre-start) Summary',
       title: 'Pre-start spend this month',
+      preview: 'One-off total of what you had already spent this calendar month before joining. Optional split between Stamina & Mana.',
       render() {
         const info = helper('Optional: enter a single total of what you had already spent <em>this month</em> before you joined. Defaults use your pool allocations. You can also backfill itemised via “Add Transaction → Backfill”.');
         const total = field('Total pre-start spend (£)', 'number', 'prestartTotal', { min: 0, step: '0.01', placeholder: 'e.g. 350.00' });
-
-        // simple split inputs (stamina/mana), default 60/40
         const wrap = document.createElement('div'); wrap.className = 'field';
         wrap.innerHTML = `
           <label>Split (optional)</label>
@@ -388,12 +349,12 @@ import {
   }
 
   const FinancesMenu = {
-    income:   makeUnifiedEntry('income',   'Income',        'Income'),
-    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses'),
-
+    income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and cadence. Use totals or itemised sources.'),
+    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses', 'Define essential costs. Itemise by category or provide a single total.'),
     addTransaction: {
       label: 'Add Transaction',
       title: 'Add Transaction',
+      preview: 'Log a one-off spend/income. Supports backfilling (Manual mode) and pool assignment.',
       render() {
         const root = document.createElement('div');
         const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
@@ -462,10 +423,10 @@ import {
         ];
       }
     },
-
     connectBank: {
       label: 'Connect Bank',
       title: 'Connect a Bank',
+      preview: 'Link your bank to pull transactions automatically (paid feature via TrueLayer).',
       render() {
         const info = helper('Link your bank to pull transactions automatically (paid feature).');
         const b = document.createElement('button');
@@ -484,7 +445,7 @@ import {
     },
   };
 
-  // ───────────────────────── Open menu wiring ─────────────────────────
+  // Open menu in DRILL‑DOWN mode
   document.getElementById('right-btn')?.addEventListener('click', async () => {
     await ensureAuthReady();
     const { mode } = await getPlayerCore();
@@ -494,7 +455,7 @@ import {
       if (FinancesMenu.manualOpening) delete FinancesMenu.manualOpening;
     }
     setMenu(FinancesMenu);
-    open('income'); // default
+    open('income', { variant: 'drilldown', menuTitle: 'Actions' });
   });
 
   // ───────────────────────── Event handlers ─────────────────────────

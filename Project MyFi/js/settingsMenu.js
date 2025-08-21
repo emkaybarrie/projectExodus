@@ -81,7 +81,7 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
     }
   };
 
-  // helpers (unchanged style)
+  // helpers
   function helper(html){ const d=document.createElement('div'); d.className='helper'; d.innerHTML=html; return d; }
   const cancel =(l='Close')=>btn(l,'',()=>window.MyFiModal.close());
   const primary=(l='Save',fn)=>btn(l,'btn-primary',fn);
@@ -96,7 +96,7 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
     window.dispatchEvent(new CustomEvent(type,{detail:values}));
   }
 
-  // Open Settings (default still opens to logout to avoid regressions)
+  // Open Settings (split view)
   document.getElementById('settings-btn')?.addEventListener('click', ()=>{
     setMenu(SettingsMenu);
     open('logout');
@@ -110,7 +110,6 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
 
     try {
       await updateDoc(doc(db, "players", uid), { vitalsMode: mode });
-      // You can optionally toast here if you have a global toast system
     } catch (e) {
       console.warn('Failed to save vitalsMode:', e);
     } finally {
@@ -120,7 +119,6 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
 
   // Logout
   window.addEventListener('auth:logout', ()=>{
-    console.log('Logout');
     window.MyFiModal.close();
     logoutUser();
   });
