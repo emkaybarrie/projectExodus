@@ -166,6 +166,15 @@
   .modal__preview { cursor: default; }
 }
 
+/* ── Single-view state: no sidebar, one column ── */
+#appModalBackdrop.is-single .modal__menu { display: none; }
+#appModalBackdrop.is-single .modal { grid-template-columns: 1fr; }
+#appModalBackdrop.is-single .modal__header .modal__back { display: none; } /* back irrelevant in single view */
 
-
-
+/* ── Inline form errors (added) ── */
+.form-error {
+  color: #e5484d;
+  font-size: 12px;
+  min-height: 1.2em; /* prevent layout jump */
+  margin: 4px 0 2px;
+}

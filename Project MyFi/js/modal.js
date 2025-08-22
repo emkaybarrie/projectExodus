@@ -8,7 +8,7 @@
   const backBtn   = document.querySelector('.modal__back');
 
   let lastFocused=null, currentKey=null, menuConfig={};
-  let currentVariant = 'split'; // 'split' | 'drilldown'
+  let currentVariant = 'split'; // 'split' | 'drilldown' | 'single'
   let menuTitleOverride = null;
   let lastSelectedKey = null;
 
@@ -31,28 +31,55 @@
     }
   }
 
-  function open(defaultKey=null, opts={}){
-    currentVariant = (opts && opts.variant === 'drilldown') ? 'drilldown' : 'split';
-    menuTitleOverride = opts && typeof opts.menuTitle === 'string' ? opts.menuTitle : null;
+  function open(defaultKey = null, opts = {}) {
+    // Decide variant
+    const v = (opts && opts.variant) || 'split';
+    currentVariant = (v === 'drilldown' || v === 'single') ? v : 'split';
+    menuTitleOverride = (opts && typeof opts.menuTitle === 'string') ? opts.menuTitle : null;
 
+    // Reset state & stale classes
+    lastSelectedKey = null;
+    backdrop.classList.remove('is-detail');
+    backdrop.classList.remove('is-single');
+
+    // Show modal
     lastFocused = document.activeElement;
     backdrop.dataset.open = "true";
     backdrop.removeAttribute('aria-hidden');
     document.addEventListener('keydown', onKey);
     backdrop.addEventListener('keydown', trap);
 
-    const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : Object.keys(menuConfig)[0] || null;
+    // Initial key
+    const firstKey = Object.keys(menuConfig)[0] || null;
+    const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : firstKey;
+
+    // Always render the menu fresh (sidebar will be empty for 'single' due to your Step B)
+    renderMenu();
 
     if (currentVariant === 'drilldown') {
-      renderMenu();
       setTitleForList();
       renderPreviewFor(key);
       highlightCurrent(null);
       backdrop.classList.remove('is-detail');
-      setTimeout(()=> menuEl?.querySelector('.menu__btn')?.focus(), 0);
+      setTimeout(() => menuEl?.querySelector('.menu__btn')?.focus(), 0);
+    } else if (currentVariant === 'single') {
+      // No sidebar; render content directly
+      backdrop.classList.add('is-single');
+      if (key) {
+        switchTo(key); // this already sets the title
+      } else {
+        contentEl.textContent = '';
+        titleEl.textContent = menuTitleOverride || 'Menu';
+      }
+      // Focus first focusable in content
+      setTimeout(() => {
+        const first = contentEl?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        first?.focus();
+      }, 0);
     } else {
+      // Standard split
       switchTo(key);
-      setTimeout(()=> menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus(), 0);
+      setTimeout(() => menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus(), 0);
     }
   }
 
@@ -62,8 +89,10 @@
     document.removeEventListener('keydown', onKey);
     backdrop.removeEventListener('keydown', trap);
     backdrop.classList.remove('is-detail');
+    backdrop.classList.remove('is-single'); // <-- add this
     if (lastFocused?.focus) lastFocused.focus();
   }
+
 
   function switchTo(key){
     const def = menuConfig[key]; if (!def) return;
@@ -87,6 +116,12 @@
 
   function renderMenu(){
     menuEl.innerHTML = '';
+
+    // ⬇️ New: if single, skip building the sidebar entirely
+    if (currentVariant === 'single') {
+      return;
+    }
+
     Object.entries(menuConfig).forEach(([key, def])=>{
       const b = document.createElement('button');
       b.className='menu__btn'; b.type='button';
