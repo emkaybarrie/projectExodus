@@ -105,8 +105,8 @@ import {
     ['salary', 'Salary/Wages'], ['bonus', 'Bonus'], ['side', 'Side Income'], ['other', 'Other']
   ];
   const DEFAULT_EXPENSE_CATS = [
-    ['rent', 'Rent/Mortgage'], ['utilities', 'Utilities'], ['groceries', 'Groceries'],
-    ['transport', 'Transport'], ['subscriptions', 'Subscriptions'], ['leisure', 'Leisure'], ['other', 'Other']
+    ['shelter', 'Rent/Mortgage'], ['bills', 'Bills'], ['groceries', 'Groceries'],
+    ['transport', 'Transport'], ['debt', 'Debts'], ['other', 'Other']
   ];
 
   function storeKey(uid, kind)   { return `myfi:unified:${uid}:${kind}`; }
@@ -455,7 +455,7 @@ import {
       if (FinancesMenu.manualOpening) delete FinancesMenu.manualOpening;
     }
     setMenu(FinancesMenu);
-    open('income', { variant: 'drilldown', menuTitle: 'Actions' });
+    open('addTransaction', { variant: 'drilldown', menuTitle: 'Actions' });
   });
 
   // ───────────────────────── Event handlers ─────────────────────────

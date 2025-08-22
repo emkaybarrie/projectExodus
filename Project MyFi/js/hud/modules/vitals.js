@@ -1,13 +1,12 @@
 /**
- * vitals_v10.js (remainder-first preview, value shows predicted remainder)
+ * vitals_v10.js
  * ---------------------------------------------------------------------------
- * Truth T = regenCurrent * elapsedDays - spentToDate
- * Mode lens: cap = baseline * factor; T = s*cap + r, where s=floor(T/cap), r=T%cap
- * Pending spend L is applied remainder-first:
- *   1) eat current remainder r
- *   2) if needed, drop whole surplus units (each drop refills the bar once)
- *   3) eat from that refilled bar; final bar remainder = rAfter
- * Value label & fill use rAfter; pill shows sNow → sAfter; yellow overlay is wrap-aware.
+ * Truth T = regenCurrent * daysSince(calculationStartDate)
+ *           − (spentToDate + seedCarryIfApplicable)
+ * - calculationStartDate = 1st day of the month the player registered.
+ * - seedCarry = assumed spend between calculationStartDate and startDate.
+ *   (Permanent handover in manual/safe/accelerated; ignored in true mode.)
+ * - Remainder-first projection for pending spend (wrap-aware).
  * ---------------------------------------------------------------------------
  */
 
@@ -30,24 +29,19 @@ export async function startAliasListener(uid) {
   if (unsubPlayer) { unsubPlayer(); unsubPlayer = null; }
   const ref = doc(db, "players", uid);
 
-  // Live updates (preferred so name changes reflect immediately)
   unsubPlayer = onSnapshot(ref, (snap) => {
     const alias =
       snap.exists() && typeof snap.data().alias === "string"
         ? snap.data().alias.trim()
         : "";
     titleEl.textContent = alias || DEFAULT_TITLE;
-
   }, (err) => {
     console.warn("Alias listener error:", err);
     titleEl.textContent = DEFAULT_TITLE;
   });
 }
 
-// DOM target for the level pill
 const levelEl = document.getElementById("player-level");
-
-// separate unsubscribe for level
 let unsubPlayerLevel = null;
 
 export async function startLevelListener(uid) {
@@ -58,15 +52,13 @@ export async function startLevelListener(uid) {
     let lvl;
     if (snap.exists()) {
       const d = snap.data();
-      // try common property names; adjust if yours differs
       lvl = Number(d.level ?? d.playerLevel ?? d.stats?.level);
     }
-
     if (Number.isFinite(lvl)) {
       levelEl.textContent = String(lvl);
-      levelEl.hidden = false;      // show pill
+      levelEl.hidden = false;
     } else {
-      levelEl.hidden = true;       // hide if no level
+      levelEl.hidden = true;
     }
   }, (err) => {
     console.warn("Level listener error:", err);
@@ -98,37 +90,77 @@ export function cycleViewMode() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Time + math (uses players/{uid}.startDate from Firestore)
+   Time + math
    ──────────────────────────────────────────────────────────────────────────── */
 const MS_PER_DAY  = 86_400_000;
 const SEC_PER_DAY = 86_400;
 
-// Cached signup start time in ms for this page session
+// Cached startDate ms (confirmed only)
 let START_MS = null;
+let START_CONFIRMED = false;
 
 async function ensureStartMs(uid) {
-  if (START_MS !== null) return START_MS;
-  try {
-    const pSnap = await getDoc(doc(db, "players", uid));
-    if (pSnap.exists()) {
-      const raw = pSnap.data()?.startDate;
-      if (raw?.toMillis) {
-        START_MS = raw.toMillis();           // Firestore Timestamp
-      } else if (raw instanceof Date) {
-        START_MS = raw.getTime();
-      } else if (typeof raw === "number") {
-        START_MS = raw;
+  if (START_CONFIRMED && START_MS !== null) return START_MS;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const pSnap = await getDoc(doc(db, "players", uid));
+      if (pSnap.exists()) {
+        const raw = pSnap.data()?.startDate;
+        if (raw?.toMillis) {
+          START_MS = raw.toMillis(); START_CONFIRMED = true; return START_MS;
+        } else if (raw instanceof Date) {
+          START_MS = raw.getTime(); START_CONFIRMED = true; return START_MS;
+        } else if (typeof raw === "number") {
+          START_MS = raw; START_CONFIRMED = true; return START_MS;
+        }
       }
+    } catch (e) {
+      console.warn("ensureStartMs read failed:", e);
     }
-  } catch (e) {
-    console.warn("Failed to read startDate; defaulting to now.", e);
+    await new Promise(r => setTimeout(r, 120));
   }
-  if (!START_MS) START_MS = Date.now();     // safe fallback if missing
-  return START_MS;
+  return Date.now(); // non-cached fallback; we’ll retry later
 }
 
-function elapsedDaysFrom(startMs) {
-  return Math.max(0, (Date.now() - startMs) / MS_PER_DAY);
+// calculationStartDate = 1st day of the player’s start month
+function calcStartMsFromStartDate(startMs) {
+  const d = new Date(startMs);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
+async function elapsedDaysFromCalcStart(uid) {
+  const startMs = await ensureStartMs(uid);
+  const calcStart = calcStartMsFromStartDate(startMs);
+  return Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
+}
+async function daysTrackedFromCalcStart(uid) {
+  const startMs = await ensureStartMs(uid);
+  const calcStart = calcStartMsFromStartDate(startMs);
+  return Math.max(1, Math.floor((Date.now() - calcStart) / MS_PER_DAY));
+}
+
+// Helpers for seeding floors
+function sameYMD(aMs, bMs) {
+  const a = new Date(aMs), b = new Date(bMs);
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function fractionOfDay(ms) {
+  const d = new Date(ms);
+  const sod = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.max(0, Math.min(1, (ms - sod) / MS_PER_DAY));
+}
+function monthProgressNow() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const nextStart  = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+
+  const n = Math.round((nextStart - monthStart) / MS_PER_DAY);  // days in month
+  const elapsed = Math.max(0, Math.min(n, (Date.now() - monthStart) / MS_PER_DAY)); // fractional days since month start
+  const f = elapsed / n;                                        // 0..1 including partial day
+  const d = Math.floor(elapsed) + 1;                            // human day-of-month (1..n)
+
+  return { n, d, f };
 }
 
 function modCap(x, cap) {
@@ -157,7 +189,6 @@ function normalizeTxn(docSnap) {
       description: d?.transactionData?.description ?? "",
       entryDateMs: d?.transactionData?.entryDate?.toMillis?.() ?? null,
     },
-    // 🔧 REQUIRED for overflow badges:
     appliedAllocation: d?.appliedAllocation ?? null,
   };
 }
@@ -166,18 +197,16 @@ function previewPool(tx) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   NEW: History Modal (single stream per mode)
+   History modal (unchanged)
    ──────────────────────────────────────────────────────────────────────────── */
 function friendlySourceLabel(mode) {
-  return mode === 'true' ? 'True Mode (Bank)' : 'Manual Mode';
+  return mode === 'true' ? 'Verified' : 'Manual Entry';
 }
-
 async function getHistorySourceFilter(uid) {
   const mode = await getVitalsMode(uid);
   const src = (mode === 'true') ? 'truelayer' : 'manual';
   return { mode, src };
 }
-
 function renderTxRow(tx) {
   const name = tx?.transactionData?.description || 'Transaction';
   const amt = Number(tx.amount || 0);
@@ -196,7 +225,6 @@ function renderTxRow(tx) {
     </li>
   `;
 }
-
 function historyMenuDef({ uid, sourceLabel, src }) {
   return {
     label: 'All Activity',
@@ -204,7 +232,6 @@ function historyMenuDef({ uid, sourceLabel, src }) {
     render() {
       const wrap = document.createElement('div');
 
-      // Controls
       const controls = document.createElement('div');
       controls.style.display = 'grid';
       controls.style.gridTemplateColumns = '1fr auto';
@@ -304,7 +331,6 @@ function historyMenuDef({ uid, sourceLabel, src }) {
     }
   };
 }
-
 function openHistoryFor() {
   const auth = getAuth();
   const user = auth.currentUser;
@@ -317,10 +343,9 @@ function openHistoryFor() {
     const def = historyMenuDef({ uid, sourceLabel, src });
     const menu = { history: def };
     window.MyFiModal.setMenu(menu);
-    window.MyFiModal.open('history');
+    window.MyFiModal.open('history', { variant: 'single', menuTitle: 'Activity Log' });
   })();
 }
-
 export function autoInitHistoryButtons() {
   const btn1 = document.getElementById('btn-expand-update');
   const btn2 = document.getElementById('btn-expand-locked');
@@ -329,10 +354,8 @@ export function autoInitHistoryButtons() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   [SEED] Helpers for Safe/Accelerated modes (based on startMonth)
+   Seeding helpers
    ──────────────────────────────────────────────────────────────────────────── */
-
-// Read vitals mode once (defaults to 'safe' if unset/unknown)
 async function getVitalsMode(uid) {
   try {
     const p = await getDoc(doc(db, "players", uid));
@@ -343,45 +366,25 @@ async function getVitalsMode(uid) {
   } catch (_) {}
   return 'safe';
 }
-
-// Calendar values from a specific timestamp (startDate)
-function monthFromTimestamp(ms) {
-  const dt = new Date(ms);
-  const n  = new Date(dt.getFullYear(), dt.getMonth()+1, 0).getDate();
-  const d  = dt.getDate();
-  const f  = d / n;
-  // fractional part of Day 1 (0..1) measured from midnight of startDate's day
-  const startOfDay = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
-  const fracDay1 = Math.max(0, Math.min(1, (ms - startOfDay) / MS_PER_DAY));
-  return { d, n, f, fracDay1 };
-}
-
-// Should we apply the seed? (only before any confirmed usage exists)
 function shouldApplySeed(pools) {
   const z = (x)=>!x || Math.abs(Number(x)) < 0.000001;
-  return z(pools?.health?.spentToDate) && z(pools?.mana?.spentToDate) && z(pools?.stamina?.spentToDate);
+  return z(pools?.health?.spentToDate) &&
+         z(pools?.mana?.spentToDate) &&
+         z(pools?.stamina?.spentToDate) &&
+         z(pools?.essence?.spentToDate);
 }
-
-// Read pool allocation shares from Firestore (fallback to baselines if missing)
 async function getPoolShares(uid, pools) {
   try {
     const snap = await getDoc(doc(getFirestore(), `players/${uid}/cashflowData/poolAllocations`));
     if (snap.exists()) {
       const d = snap.data() || {};
-      // Use only discretionary shares (exclude health from remainder split)
-      const mana = Number(d.manaAllocation ?? 0);
-      console.log(mana)
+      const mana    = Number(d.manaAllocation    ?? 0);
       const stamina = Number(d.staminaAllocation ?? 0);
       const essence = Number(d.essenceAllocation ?? 0);
       const sum = mana + stamina + essence;
-      if (sum > 0) return {
-        mana: mana / sum,
-        stamina: stamina / sum,
-        essence: essence / sum,
-      };
+      if (sum > 0) return { mana: mana/sum, stamina: stamina/sum, essence: essence/sum };
     }
   } catch (_) {}
-  // Fallback: infer shares from regen baselines (proportional)
   const m1 = Number(pools?.mana?.regenBaseline    || 0);
   const s1 = Number(pools?.stamina?.regenBaseline || 0);
   const e1 = Number(pools?.essence?.regenBaseline || 0);
@@ -389,9 +392,15 @@ async function getPoolShares(uid, pools) {
   return sum > 0 ? { mana: m1/sum, stamina: s1/sum, essence: e1/sum } : { mana: 0, stamina: 0, essence: 0 };
 }
 
-// Compute Safe/Accelerated seed currents using startMonth + Day‑1 fractional rule
+// Seed currents: month progress = NOW; day-1 fractional from startDate
 async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) {
-  const { d, n, f, fracDay1 } = monthFromTimestamp(startMs);
+  // fractional days since calculationStartDate (first of the start month)
+  const calcStart = calcStartMsFromStartDate(startMs);
+  const daysAccrued = Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
+
+  // day-1 fractional (for floors that depend on the *signup* day)
+  const fracDay1 = fractionOfDay(startMs);
+  const isDay1   = sameYMD(startMs, Date.now());
 
   // daily baselines
   const h1 = Number(pools?.health?.regenBaseline   || 0);
@@ -399,22 +408,19 @@ async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) 
   const s1 = Number(pools?.stamina?.regenBaseline  || 0);
   const e1 = Number(pools?.essence?.regenBaseline  || 0);
 
-  // accrued maxima to date
-  const Hmax = h1 * n * f;
-  const Mmax = m1 * n * f;
-  const Smax = s1 * n * f;
-  const Emax = e1 * n * f;
+  // accrued maxima up to now (calc-start anchored, includes partial day)
+  const Hmax = h1 * daysAccrued;
+  const Mmax = m1 * daysAccrued;
+  const Smax = s1 * daysAccrued;
+  const Emax = e1 * daysAccrued;
 
-  const isDay1 = d === 1;
-
-  // ── SAFE floor ────────────────────────────────────────────────────────────
-  // Mana/Stamina/Essence: Day1 = fractional only; Day>1 = 1 day + fractional
-  const fracOnly = (x1) => x1 * fracDay1;
+  // ── SAFE floors (unchanged semantics) ─────────────────────────────────────
+  const fracOnly    = (x1) => x1 * fracDay1;
   const onePlusFrac = (x1) => x1 * (1 + fracDay1);
 
-  const manaSafe    = isDay1 ? fracOnly(m1)    : onePlusFrac(m1);
-  const staminaSafe = isDay1 ? fracOnly(s1)    : onePlusFrac(s1);
-  const essenceSafe = isDay1 ? fracOnly(e1)    : onePlusFrac(e1);
+  const manaSafe     = isDay1 ? fracOnly(m1)    : onePlusFrac(m1);
+  const staminaSafe  = isDay1 ? fracOnly(s1)    : onePlusFrac(s1);
+  const essenceSafe  = isDay1 ? fracOnly(e1)    : onePlusFrac(e1);
 
   if (mode !== 'accelerated') {
     return {
@@ -425,20 +431,18 @@ async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) 
     };
   }
 
-  // ── ACCELERATED ──────────────────────────────────────────────────────────
-  // Floor: Day1 = fractional only; Day>1 = 0 (no extra full day)
+  // ── ACCELERATED ───────────────────────────────────────────────────────────
   const manaFloorAccel    = isDay1 ? fracOnly(m1) : 0;
   const staminaFloorAccel = isDay1 ? fracOnly(s1) : 0;
   const essenceFloorAccel = isDay1 ? fracOnly(e1) : 0;
 
-  // Accrued discretionary so far (exclude Health):
+  // total discretionary accrued so far (calc-start anchored)
   const Dsum = m1 + s1 + e1;
-  const A    = Dsum * n * f;
+  const A    = Dsum * daysAccrued;
 
-  // Remaining within accrued using proportion p (e.g., 0.6 spent → 0.4 remaining)
+  // remaining (1-p) to split
   const R = Math.max(0, A * (1 - Math.max(0, Math.min(1, p))));
 
-  // Split R using Firestore allocation shares (fallback to baselines)
   const shares = await getPoolShares(uid, pools);
   const addM = R * (shares.mana    || 0);
   const addS = R * (shares.stamina || 0);
@@ -449,26 +453,21 @@ async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) 
   const essenceCur = Math.min(Emax, essenceFloorAccel + addE);
 
   return {
-    health:  { current: Hmax,     max: Hmax },
-    mana:    { current: manaCur,  max: Mmax },
+    health:  { current: Hmax,       max: Hmax },
+    mana:    { current: manaCur,    max: Mmax },
     stamina: { current: staminaCur, max: Smax },
     essence: { current: essenceCur, max: Emax },
   };
 }
 
-
 /* ────────────────────────────────────────────────────────────────────────────
-   [SEED] Helpers for MANUAL mode (based on startMonth)
+   Manual-mode helpers
    ──────────────────────────────────────────────────────────────────────────── */
-
-// Returns { startMonthStartMs, startDateMs }
 function manualWindowFromStart(startMs) {
   const d = new Date(startMs);
   const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   return { startMonthStartMs, startDateMs: startMs };
 }
-
-// Check if any confirmed spend exists on/after startDate (to disable seeding)
 async function hasPostStartSpend(uid, startMs) {
   const db = getFirestore();
   const col = collection(db, `players/${uid}/classifiedTransactions`);
@@ -482,8 +481,6 @@ async function hasPostStartSpend(uid, startMs) {
   const snap = await getDocs(qy);
   return !!snap.size;
 }
-
-// Read manual opening summary (optional)
 async function readManualOpeningSummary(uid) {
   const db = getFirestore();
   const sumSnap = await getDoc(doc(db, `players/${uid}/manualSeed/openingSummary`));
@@ -495,8 +492,6 @@ async function readManualOpeningSummary(uid) {
     staminaPct: Number(d.split?.staminaPct ?? 0.6),
   };
 }
-
-// Sum itemised pre‑start transactions (flagged isPrestart: true within window)
 async function sumManualItemised(uid, windowStart, windowEnd) {
   const db = getFirestore();
   const col = collection(db, `players/${uid}/classifiedTransactions`);
@@ -511,15 +506,13 @@ async function sumManualItemised(uid, windowStart, windowEnd) {
   snap.forEach(d => {
     const tx = d.data() || {};
     const amt = Number(tx.amount || 0);
-    if (amt >= 0) return; // only expenses
+    if (amt >= 0) return;
     const spend = Math.abs(amt);
     const pool  = tx?.provisionalTag?.pool ?? tx?.tag?.pool ?? 'stamina';
     if (pool === 'mana') Pmana += spend; else Pstamina += spend;
   });
   return { Pmana, Pstamina };
 }
-
-// Apply manual adjustments (Accelerated seed − pre‑start spend, remainder‑first S→M)
 async function applyManualAdjustments(uid, accelSeed, startMs) {
   const { startMonthStartMs, startDateMs } = manualWindowFromStart(startMs);
 
@@ -531,12 +524,10 @@ async function applyManualAdjustments(uid, accelSeed, startMs) {
     Pstamina += summary.total * (summary.staminaPct || 0);
   }
 
-  // If the app supports itemised backfill, include it; harmless if none exist.
   const itemised = await sumManualItemised(uid, startMonthStartMs, startDateMs);
   Pmana    += itemised.Pmana;
   Pstamina += itemised.Pstamina;
 
-  // Remainder‑first remove from discretionary seed
   const H0 = accelSeed.health.current;
   const M0 = accelSeed.mana.current;
   const S0 = accelSeed.stamina.current;
@@ -553,11 +544,49 @@ async function applyManualAdjustments(uid, accelSeed, startMs) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   1) Snapshot writer (kept) — now uses real elapsed days
+   Seed → Truth carry (calc-start anchored)
+   ──────────────────────────────────────────────────────────────────────────── */
+async function ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap) {
+  const existing = (snap.data()?.seedCarry) || null;
+  if (existing && Object.keys(existing).length) return existing;
+
+  if (mode === 'true') return {}; // ignore seeding/carry in true mode
+
+  // Build seed-as-of-now
+  let seed = null;
+  if (mode === 'manual') {
+    const anyPostStart = await hasPostStartSpend(uid, startMs);
+    if (!anyPostStart) {
+      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
+      seed = await applyManualAdjustments(uid, accel, startMs);
+    }
+  } else if (mode === 'safe' || mode === 'accelerated') {
+    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+  }
+  if (!seed) return {};
+
+  const days = await elapsedDaysFromCalcStart(uid); // from calculationStartDate
+  const out = {};
+  for (const k of Object.keys(pools)) {
+    const accrued = (pools[k]?.regenCurrent || 0) * days;
+    const seedCur = Math.max(0, seed?.[k]?.current || 0);
+    out[k] = Math.max(0, accrued - seedCur);
+  }
+
+  await setDoc(doc(db, `players/${uid}/cashflowData/current`), { seedCarry: out }, { merge: true });
+  return out;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   1) Snapshot writer — calc-start anchored
    ──────────────────────────────────────────────────────────────────────────── */
 export async function updateVitalsPools(uid) {
   const db = getFirestore();
   try {
+    const currentRef  = doc(db, `players/${uid}/cashflowData/current`);
+    const currentSnap = await getDoc(currentRef);
+    let existingCarry = (currentSnap.exists && currentSnap.data()?.seedCarry) || {};
+
     const dailyAveragesSnap = await getDoc(doc(db, `players/${uid}/cashflowData/dailyAverages`));
     const poolAllocationsSnap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
     if (!dailyAveragesSnap.exists() || !poolAllocationsSnap.exists()) return;
@@ -590,10 +619,8 @@ export async function updateVitalsPools(uid) {
       return [baseline, "on target"];
     };
 
-    // ⬇️ use Firestore startDate
-    const startMs    = await ensureStartMs(uid);
-    const daysTracked= Math.max(1, Math.floor((Date.now() - startMs) / MS_PER_DAY));
-    const elapsedDays= elapsedDaysFrom(startMs);
+    const daysTracked = await daysTrackedFromCalcStart(uid);
+    const elapsedDays = await elapsedDaysFromCalcStart(uid);
 
     const pools = {};
     for (const pool of ["health","mana","stamina","essence"]) {
@@ -608,12 +635,44 @@ export async function updateVitalsPools(uid) {
       };
     }
 
-    await setDoc(doc(db, `players/${uid}/cashflowData/current`), {
+    // If we’ve flipped to truth and carry is still missing, compute once
+    let seedCarry = existingCarry;
+    if (!seedCarry || Object.keys(seedCarry).length === 0) {
+      const startMs = await ensureStartMs(uid);
+      const mode    = await getVitalsMode(uid);
+      let seeding = false;
+      if (mode === 'safe' || mode === 'accelerated') {
+        seeding = shouldApplySeed(pools);
+      } else if (mode === 'manual') {
+        seeding = !(await hasPostStartSpend(uid, startMs));
+      }
+      if (!seeding && mode !== 'true') {
+        let seedNow = null;
+        if (mode === 'manual') {
+          const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
+          seedNow = await applyManualAdjustments(uid, accel, startMs);
+        } else {
+          seedNow = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+        }
+        if (seedNow) {
+          const days = await elapsedDaysFromCalcStart(uid);
+          seedCarry = {};
+          for (const k of Object.keys(pools)) {
+            const accrued = (pools[k].regenCurrent || 0) * days;
+            const seedCur = Math.max(0, seedNow?.[k]?.current || 0);
+            seedCarry[k] = Math.max(0, accrued - seedCur);
+          }
+        }
+      }
+    }
+
+    await setDoc(currentRef, {
       pools,
       dailyAverages: { dailyDisposable: Number(dailyDisposable.toFixed(2)) },
       daysTracked,
       elapsedDays,
       lastSync: new Date().toISOString(),
+      ...(seedCarry && Object.keys(seedCarry).length ? { seedCarry } : {}),
     }, { merge: true });
   } catch (e) {
     console.error("updateVitalsPools:", e);
@@ -621,7 +680,7 @@ export async function updateVitalsPools(uid) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   2) Static snap — uses real elapsed days + [SEED] override before first spend
+   2) Static HUD paint — seed before first spend; truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
 export async function loadVitalsToHUD(uid) {
   const db = getFirestore();
@@ -633,33 +692,27 @@ export async function loadVitalsToHUD(uid) {
   const factor = VIEW_FACTORS[getViewMode()];
 
   const startMs = await ensureStartMs(uid);
-  const days    = elapsedDaysFrom(startMs);
+  const days    = await elapsedDaysFromCalcStart(uid);
 
-  // [SEED] apply Safe/Accelerated only before first spend is confirmed
-  let seed = null;
   const mode = await getVitalsMode(uid);
+  let seed = null;
 
-  // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
-  if (mode === 'safe' || mode === 'accelerated') {
-    if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-    }
-  }
-
-  // Manual: use seed only while there is NO confirmed post‑start spend
-  if (mode === 'manual') {
+  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
+    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+  } else if (mode === 'manual') {
     const anyPostStart = await hasPostStartSpend(uid, startMs);
     if (!anyPostStart) {
-      // Default behaviour: Accelerated until user provides pre‑start backfill
       const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-
-      // If they’ve provided manual backfill (summary and/or itemised), subtract it
       seed = await applyManualAdjustments(uid, accel, startMs);
     }
   }
 
+  let seedCarry = (snap.data()?.seedCarry) || {};
+  if (!seed && Object.keys(seedCarry).length === 0 && mode !== 'true') {
+    seedCarry = await ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap);
+  }
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
 
-  // Totals (H/M/S only)
   let sumCurrent = 0;
   let sumMax = 0;
 
@@ -670,11 +723,10 @@ export async function loadVitalsToHUD(uid) {
     let rNow, sNow;
 
     if (seed && seed[pool]) {
-      // Use seeded remainder for the initial HUD paint
       rNow = Math.max(0, seed[pool].current);
       sNow = 0;
     } else {
-      const T = Math.max(0, (v.regenCurrent ?? 0) * days - (v.spentToDate ?? 0));
+      const T = Math.max(0, (v.regenCurrent ?? 0) * days - ((v.spentToDate ?? 0) + carryFor(pool)));
       rNow  = cap > 0 ? modCap(T, cap) : 0;
       sNow  = cap > 0 ? Math.floor(T / cap) : 0;
     }
@@ -695,7 +747,7 @@ export async function loadVitalsToHUD(uid) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   3) Ghost allocation helpers (kept overflow routing)
+   3) Ghost allocation helpers
    ──────────────────────────────────────────────────────────────────────────── */
 const MANA_OVERFLOW_MODE = 'health'; // or 'stamina_then_health'
 
@@ -726,7 +778,6 @@ function allocateSpendAcrossPools(spend, intent, availTruth) {
   if (toHealth > 0) out.health += toHealth;
   return out;
 }
-
 function sumPools(a, b) {
   return {
     health:  (a.health  || 0) + (b.health  || 0),
@@ -737,7 +788,7 @@ function sumPools(a, b) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   3.5) Remainder-first projection on a single pool
+   3.5) Remainder-first projection
    ──────────────────────────────────────────────────────────────────────────── */
 function applyRemainderFirst(T, cap, L) {
   if (cap <= 0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
@@ -761,7 +812,6 @@ function applyRemainderFirst(T, cap, L) {
     };
   }
 
-  // wrap
   let Lleft = L - rNow;
   let s     = sNow;
   let r     = 0;
@@ -780,7 +830,6 @@ function applyRemainderFirst(T, cap, L) {
   }
 
   const rAfter = Math.max(0, r - Lleft);
-
   const ghostLeftPct  = (rAfter / cap) * 100;
   const ghostWidthPct = ((r - rAfter) / cap) * 100;
 
@@ -788,7 +837,7 @@ function applyRemainderFirst(T, cap, L) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   4) Animated HUD (remainder-first) — uses [SEED] start if no spend yet
+   4) Animated HUD — truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
@@ -801,31 +850,26 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   ensureReclaimLayers(elements);
 
   const startMs = await ensureStartMs(uid);
-  const days0   = elapsedDaysFrom(startMs);
+  const days0   = await elapsedDaysFromCalcStart(uid);
 
-  // [SEED] start truth from seed remainder if no spend yet
-  let seed = null;
   const mode = await getVitalsMode(uid);
+  let seed = null;
 
-  // Safe / Accelerated: keep old guard (no confirmed spend yet overall)
-  if (mode === 'safe' || mode === 'accelerated') {
-    if (shouldApplySeed(pools)) {
-      seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-    }
-  }
-
-  // Manual: use seed only while there is NO confirmed post‑start spend
-  if (mode === 'manual') {
+  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
+    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+  } else if (mode === 'manual') {
     const anyPostStart = await hasPostStartSpend(uid, startMs);
     if (!anyPostStart) {
-      // Default behaviour: Accelerated until user provides pre‑start backfill
       const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-
-      // If they’ve provided manual backfill (summary and/or itemised), subtract it
       seed = await applyManualAdjustments(uid, accel, startMs);
     }
   }
 
+  let seedCarry = (snap.data()?.seedCarry) || {};
+  if (!seed && Object.keys(seedCarry).length === 0 && mode !== 'true') {
+    seedCarry = await ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap);
+  }
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
 
   const truth = {};
   const regenPerSec = {};
@@ -834,7 +878,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     if (seed && seed[pool]) {
       truth[pool] = Math.max(0, seed[pool].current);
     } else {
-      truth[pool] = Math.max(0, (v.regenCurrent ?? 0) * days0 - (v.spentToDate ?? 0));
+      truth[pool] = Math.max(0, (v.regenCurrent ?? 0) * days0 - ((v.spentToDate ?? 0) + carryFor(pool)));
     }
     regenPerSec[pool] = (v.regenCurrent ?? 0) * (timeMultiplier / SEC_PER_DAY);
   }
@@ -860,12 +904,10 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     if (last === null) last = ts;
     const dt = (ts - last) / 1000; last = ts;
 
-    // 1) regen truth
     for (const p of Object.keys(truth)) {
       truth[p] = Math.max(0, truth[p] + regenPerSec[p] * dt);
     }
 
-    // 2) build pool-wise pending totals
     const availTruth = { ...truth };
     let pendingTotals = { health:0, mana:0, stamina:0, essence:0 };
     const now = Date.now();
@@ -878,10 +920,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       pendingTotals = sumPools(pendingTotals, split);
     }
 
-    // 3) render per pool (remainder-first)
     const factor = VIEW_FACTORS[viewMode];
-
-    // Totals per frame
     let sumCurrent = 0;
     let sumMax = 0;
 
@@ -895,15 +934,12 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 
       const proj = applyRemainderFirst(T, cap, L);
 
-      // GREEN FILL & VALUE — use predicted remainder AFTER pending
       const pctAfter = cap > 0 ? (proj.rAfter / cap) * 100 : 0;
       el.fill.style.width = `${pctAfter}%`;
       el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
 
-      // PILL now → after
       setSurplusPill(el, proj.sNow, proj.sAfter);
 
-      // YELLOW OVERLAY — portion being eaten from visible bar
       const barEl = el.fill.closest('.bar');
       const reclaimEl = barEl.querySelector('.bar-reclaim');
 
@@ -916,7 +952,6 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
         reclaimEl.style.width   = '0%';
       }
 
-      // Trend classes
       barEl.classList.remove("overspending","underspending");
       if (v.trend === "overspending")  barEl.classList.add("overspending");
       if (v.trend === "underspending") barEl.classList.add("underspending");
@@ -940,7 +975,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   5) Lock + summary (kept) — now uses real elapsed days
+   5) Lock + summary — calc-start + seedCarry in availTruth
    ──────────────────────────────────────────────────────────────────────────── */
 function roundPools(p){ return {
   health:Number((p.health||0).toFixed(2)),
@@ -989,15 +1024,18 @@ export async function lockExpiredOrOverflow(uid,queueCap=50){
   const currentSnap=await getDoc(doc(db,`players/${uid}/cashflowData/current`));
   if(!currentSnap.exists()) return;
   const pools=currentSnap.data().pools||{};
+  const seedCarry = (currentSnap.data()?.seedCarry) || {};
 
-  const startMs = await ensureStartMs(uid);
-  const days    = elapsedDaysFrom(startMs);
+  const mode = await getVitalsMode(uid);
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
+
+  const days = await elapsedDaysFromCalcStart(uid);
 
   const availTruth={
-    health: Math.max(0,(pools.health?.regenCurrent ||0)*days - (pools.health?.spentToDate ||0)),
-    mana:   Math.max(0,(pools.mana?.regenCurrent   ||0)*days - (pools.mana?.spentToDate   ||0)),
-    stamina:Math.max(0,(pools.stamina?.regenCurrent||0)*days - (pools.stamina?.spentToDate||0)),
-    essence:Math.max(0,(pools.essence?.regenCurrent||0)*days - (pools.essence?.spentToDate||0)),
+    health: Math.max(0,(pools.health?.regenCurrent ||0)*days - ((pools.health?.spentToDate ||0) + carryFor('health'))),
+    mana:   Math.max(0,(pools.mana?.regenCurrent   ||0)*days - ((pools.mana?.spentToDate   ||0) + carryFor('mana'))),
+    stamina:Math.max(0,(pools.stamina?.regenCurrent||0)*days - ((pools.stamina?.spentToDate||0) + carryFor('stamina'))),
+    essence:Math.max(0,(pools.essence?.regenCurrent||0)*days - ((pools.essence?.spentToDate||0) + carryFor('essence'))),
   };
 
   toConfirm.sort((a,b)=>(a.data()?.addedMs??0)-(b.data()?.addedMs??0));
@@ -1036,7 +1074,7 @@ export async function lockExpiredOrOverflow(uid,queueCap=50){
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   6) Update Log + Recently Locked (kept) + Long‑press inline edit
+   Update Log + Recently Locked + Inline edit (unchanged)
    ──────────────────────────────────────────────────────────────────────────── */
 export function listenUpdateLogPending(uid, cb) {
   const db = getFirestore();
@@ -1074,7 +1112,7 @@ export function listenRecentlyConfirmed(uid, lookbackMs = 24 * 60 * 60 * 1000, c
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Long‑press helper + Inline editor (NEW)
+   Long-press helper + Inline editor (unchanged)
    ──────────────────────────────────────────────────────────────────────────── */
 const LONG_PRESS_MS = 550;
 
@@ -1091,30 +1129,24 @@ function onLongPress(targetEl, startCb) {
   };
   const clear = () => { if (timer) clearTimeout(timer); timer = null; };
 
-  // mouse
   targetEl.addEventListener('mousedown', start);
   targetEl.addEventListener('mouseup', clear);
   targetEl.addEventListener('mouseleave', clear);
 
-  // touch
   targetEl.addEventListener('touchstart', start, { passive: true });
   targetEl.addEventListener('touchend', clear);
   targetEl.addEventListener('touchcancel', clear);
 
-  // Prevent accidental click after a long‑press
   targetEl.addEventListener('click', (e) => { if (hasFired) { e.preventDefault(); e.stopPropagation(); } }, true);
 }
 
-/* Inline editor for a pending tx row */
 function mountTxInlineEditor(li, tx, { uid, onDone }) {
-  // Guard: only editable while pending
   if (tx.status !== "pending") return;
 
   const main = li.querySelector('.ul-main');
   const actions = li.querySelector('.ul-actions');
   if (!main) return;
 
-  // Freeze current layout
   li.classList.add('is-editing');
   if (actions) actions.style.display = 'none';
 
@@ -1163,7 +1195,6 @@ function mountTxInlineEditor(li, tx, { uid, onDone }) {
     let nextAmt = Number(amtInput.value);
     if (!Number.isFinite(nextAmt)) nextAmt = amt;
 
-    // Preserve your sign convention (spend = negative)
     const wasSpend = amt < 0;
     if (wasSpend && nextAmt > 0) nextAmt = -Math.abs(nextAmt);
     if (!wasSpend && nextAmt < 0) nextAmt = Math.abs(nextAmt);
@@ -1186,7 +1217,6 @@ function mountTxInlineEditor(li, tx, { uid, onDone }) {
   });
 
   btnDelete.addEventListener('click', async () => {
-    // ultra‑simple safety check
     if (!confirm('Delete this entry? This cannot be undone.')) return;
     try {
       const db = getFirestore();
@@ -1199,9 +1229,9 @@ function mountTxInlineEditor(li, tx, { uid, onDone }) {
   });
 }
 
-/* ──────────────────────────────────────────────────────────────────────────────
-   7) Auto-wire Update Log (unchanged except long‑press hook)
-   ────────────────────────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────────────────────
+   Update Log wiring
+   ──────────────────────────────────────────────────────────────────────────── */
 export function autoInitUpdateLog() {
   const listEl   = document.querySelector("#update-log-list");
   const recentEl = document.querySelector("#recently-locked-list");
@@ -1263,7 +1293,6 @@ export function autoInitUpdateLog() {
             });
           });
 
-          // NEW: long‑press to edit inline
           const mainEl = li.querySelector('.ul-main');
           if (mainEl) {
             onLongPress(mainEl, () => {
@@ -1287,21 +1316,16 @@ export function autoInitUpdateLog() {
         }
         items.forEach(tx => {
           const li = document.createElement("li");
-          const intentPool = tx.tag?.pool ?? "stamina"; // chosen/intent at lock time
+          const intentPool = tx.tag?.pool ?? "stamina";
           const name = tx.transactionData?.description || "Transaction";
           const amt  = Number(tx.amount).toFixed(2);
           const when = tx.tag?.setAtMs ? new Date(tx.tag.setAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-          // Build badges:
-          // - For spends with appliedAllocation, show split (intent first, then by amount desc).
-          // - Otherwise show a single intent badge.
           const alloc = tx.appliedAllocation || null;
           let badgesHtml = "";
 
           if (alloc && typeof tx.amount === "number" && tx.amount < 0) {
-            const entries = Object.entries(alloc)
-              .filter(([_, v]) => Number(v) > 0);
-
+            const entries = Object.entries(alloc).filter(([_, v]) => Number(v) > 0);
             const poolOrder = ["stamina","mana","health","essence"];
             entries.sort((a, b) => {
               const [pa, va] = a, [pb, vb] = b;
@@ -1310,7 +1334,6 @@ export function autoInitUpdateLog() {
               if (vb !== va) return Number(vb) - Number(va);
               return poolOrder.indexOf(pa) - poolOrder.indexOf(pb);
             });
-
             badgesHtml = entries.map(([p, v]) => {
               const n = Number(v).toFixed(2);
               return `<span class="badge ${p}" title="${p}: £${n}">${p}</span>`;
@@ -1337,7 +1360,7 @@ export function autoInitUpdateLog() {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   7) DOM helpers
+   DOM helpers
    ──────────────────────────────────────────────────────────────────────────── */
 function getVitalsElements() {
   const pools = ["health","mana","stamina","essence"];
@@ -1356,16 +1379,11 @@ function getVitalsElements() {
 function setSurplusPill(el, countNow, countAfter) {
   const pill = el.pill; if (!pill) return;
 
-  // NEW: toggle stored-bars background if there’s at least 1 full bar saved
   const barEl = pill.closest('.bar');
   if (barEl) {
-    // Activate below to do surplus fill based on pre-Pending state
-    // barEl.classList.toggle('has-surplus', (countNow || 0) > 0);
-    // Activate below to do surplus fill based on post-Pending state
-    barEl.classList.toggle('has-surplus', (countAfter || 0) > 0);  
+    barEl.classList.toggle('has-surplus', (countAfter || 0) > 0);
   }
 
-  // show if either side non-zero so "0 → 1" is visible
   const shouldShow = (countNow || 0) > 0 || (countAfter || 0) > 0;
   if (!shouldShow) {
     pill.style.display = "none";
@@ -1376,7 +1394,6 @@ function setSurplusPill(el, countNow, countAfter) {
 
   pill.style.display = "inline-flex";
 
-  // color the second number based on delta
   pill.classList.remove("pill-up","pill-down");
   if (typeof countAfter === "number" && typeof countNow === "number" && countAfter !== countNow) {
     if (countAfter > countNow) pill.classList.add("pill-up");
@@ -1388,7 +1405,6 @@ function setSurplusPill(el, countNow, countAfter) {
     pill.classList.remove("with-next");
   }
 }
-
 
 function ensureReclaimLayers(elements) {
   for (const p of Object.keys(elements)) {
@@ -1435,7 +1451,6 @@ function refreshBarGrids() {
     paintBarGrid(grid, VIEW_FACTORS[getViewMode()]);
   }
 }
-
 function updateModeEngrave(mode = getViewMode()){
   const row = document.getElementById('mode-engrave'); if (!row) return;
   const key = String(mode).toLowerCase();
@@ -1445,9 +1460,7 @@ function updateModeEngrave(mode = getViewMode()){
     btn.setAttribute('aria-selected', is ? 'true' : 'false');
   });
 }
-
 function formatNum(n){ return (Math.round(n)||0).toLocaleString('en-GB'); }
-
 function setVitalsTotals(currentTotal, maxTotal){
   const el = document.getElementById('vitals-total');
   if (!el) return;
@@ -1459,30 +1472,79 @@ function setVitalsTotals(currentTotal, maxTotal){
   `;
 }
 
+// Single source of truth for the menu
+export async function getEssenceAvailableMonthlyFromHUD(uid) {
+  const db = getFirestore();
+  const curSnap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!curSnap.exists()) return 0;
+  const cur   = curSnap.data() || {};
+  const pools = cur.pools || {};
+  const ePool = pools.essence || {};
+
+  const regenBaseline = Number(ePool.regenBaseline || 0);
+  const regenCurrent  = Number(ePool.regenCurrent  || regenBaseline);
+  const spentToDate   = Number(ePool.spentToDate   || 0);
+  const elapsedDays   = Number(cur.elapsedDays || 0);
+  const seedCarry     = Number(cur.seedCarry?.essence || 0);
+
+  const capMonthly = regenBaseline * 30;
+
+  // mode + startDate to decide if we’re still in seed
+  let mode = 'safe', startMs = Date.now();
+  try {
+    const p = await getDoc(doc(db, `players/${uid}`));
+    if (p.exists()) {
+      const d = p.data() || {};
+      const raw = d.startDate;
+      if (raw?.toMillis) startMs = raw.toMillis();
+      else if (raw instanceof Date) startMs = raw.getTime();
+      else if (typeof raw === 'number') startMs = raw;
+
+      const m = String(d.vitalsMode || '').toLowerCase();
+      if (['safe','accelerated','manual','true'].includes(m)) mode = m;
+    }
+  } catch {}
+
+  // If we’re in a seeding state, call the same seed function the HUD uses
+  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
+    const seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
+    return Math.max(0, Math.min(capMonthly, Number(seed?.essence?.current || 0)));
+  } else if (mode === 'manual') {
+    const anyPostStart = await hasPostStartSpend(uid, startMs);
+    if (!anyPostStart) {
+      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
+      const manual = await applyManualAdjustments(uid, accel, startMs);
+      return Math.max(0, Math.min(capMonthly, Number(manual?.essence?.current || 0)));
+    }
+  }
+
+  // Otherwise, truth path (note: carry is ignored in true mode)
+  const carry = (mode === 'true') ? 0 : seedCarry;
+  const T = Math.max(0, regenCurrent * elapsedDays - (spentToDate + carry));
+  const r = capMonthly > 0 ? ((T % capMonthly) + capMonthly) % capMonthly : 0;
+  return Math.max(0, r);
+}
+
+
 /* ────────────────────────────────────────────────────────────────────────────
-   8) Wire view button
+   Mode UI wiring
    ──────────────────────────────────────────────────────────────────────────── */
 (function () {
   const run = () => {
-    // Left button: keep cycle behaviour
     const btn = document.getElementById("left-btn");
     if (btn) {
       btn.title = `View: ${getViewMode()}`;
       btn.addEventListener("click", cycleViewMode);
     }
 
-    // NEW: tap/click engravings to set mode directly
     const engrave = document.getElementById("mode-engrave");
     if (engrave) {
-      // Click/tap
       engrave.addEventListener("click", (ev) => {
         const b = ev.target.closest(".mode-btn");
         if (!b || !engrave.contains(b)) return;
         const mode = b.dataset.mode;
-        if (mode) setViewMode(mode); // updates UI + grids via existing logic
+        if (mode) setViewMode(mode);
       });
-
-      // Keyboard (Enter/Space) for accessibility
       engrave.addEventListener("keydown", (ev) => {
         if (ev.key !== "Enter" && ev.key !== " ") return;
         const b = ev.target.closest(".mode-btn");
@@ -1493,7 +1555,6 @@ function setVitalsTotals(currentTotal, maxTotal){
       });
     }
 
-    // Paint initial state
     refreshBarGrids();
     updateModeEngrave(getViewMode());
   };
@@ -1504,4 +1565,3 @@ function setVitalsTotals(currentTotal, maxTotal){
     run();
   }
 })();
-

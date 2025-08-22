@@ -1,8 +1,9 @@
 // js/essenceMenu.js
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFunctions, httpsCallable, connectFunctionsEmulator } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { getFunctions, httpsCallable/*, connectFunctionsEmulator*/ } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
 
 (function () {
   const { open, setMenu, el } = window.MyFiModal;
@@ -29,7 +30,7 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
     b.textContent = 'Copy';
     b.addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(text); b.textContent = 'Copied!'; setTimeout(()=>b.textContent='Copy', 1200); }
-      catch { alert('Copy failed'); }
+      catch { /* keep silent: UX*/ }
     });
     return b;
   }
@@ -40,7 +41,7 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
     const l = document.createElement('label'); l.textContent = label;
     const v = document.createElement('div'); v.className = 'current-value'; v.textContent = value;
     v.style.flex = '1';
-    row.append(l, v, copyable ? copyBtn(value) : null);
+    if (copyable) row.append(l, v, copyBtn(value)); else row.append(l, v);
     wrap.appendChild(row);
     return wrap;
   }
@@ -53,37 +54,11 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
     } catch { return null; }
   }
 
-  // Show monthly “available Essence” approximation based on current regen/spend
+  // Show monthly “available Essence” approximation, aligned with HUD seeding
   async function getEssenceAvailableMonthly(uid) {
-    try {
-      const curSnap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
-      if (!curSnap.exists()) return 0;
-
-      const pools = curSnap.data()?.pools || {};
-      const e = pools.essence || {};
-      const regenBaseline = Number(e.regenBaseline || 0);
-      const regenCurrent  = Number(e.regenCurrent  || regenBaseline);
-      const spentToDate   = Number(e.spentToDate   || 0);
-
-      let startMs = Date.now();
-      const pSnap = await getDoc(doc(db, `players/${uid}`));
-      if (pSnap.exists()) {
-        const raw = pSnap.data()?.startDate;
-        if (raw?.toMillis) startMs = raw.toMillis();
-        else if (raw instanceof Date) startMs = raw.getTime();
-        else if (typeof raw === 'number') startMs = raw;
-      }
-      const MS_PER_DAY = 86400000;
-      const days = Math.max(0, (Date.now() - startMs) / MS_PER_DAY);
-
-      const capMonthly = regenBaseline * 30;
-      const T = Math.max(0, regenCurrent * days - spentToDate);
-      const r = capMonthly > 0 ? ((T % capMonthly) + capMonthly) % capMonthly : 0;
-      return Math.max(0, r);
-    } catch {
-      return 0;
-    }
+    return await getEssenceAvailableMonthlyFromHUD(uid);
   }
+
 
   /* ------------------------------ Contribute (MenuItem) ------------------------------ */
   function ContributeMenu() {
@@ -105,12 +80,13 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
           </div>
         `;
 
-        // Amount
+        // Amount + inline error
         const amountWrap = document.createElement('div');
         amountWrap.className = 'field';
         const lab = document.createElement('label'); lab.textContent = 'Amount (£ / Essence)';
         const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.step = '1'; input.id = 'contribAmount'; input.className = 'input';
-        amountWrap.append(lab, input);
+        const errorP = document.createElement('p'); errorP.id = 'contribError'; errorP.className = 'form-error'; errorP.setAttribute('role','alert'); errorP.setAttribute('aria-live','polite');
+        amountWrap.append(lab, input, errorP);
 
         // Tabs
         const tabs = document.createElement('div');
@@ -122,29 +98,55 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
 
         const body = document.createElement('div'); body.style.display = 'grid'; body.style.gap = '10px';
 
+        // shared validation state
+        let available = 0;
+        function setError(msg) {
+          errorP.textContent = msg || '';
+          const invalid = Boolean(msg);
+          if (invalid) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+          // disable CTA in whichever tab is showing
+          const currentCta = body.querySelector('button[data-role="primary-cta"]');
+          if (currentCta) {
+            currentCta.disabled = invalid;
+            currentCta.setAttribute('aria-disabled', invalid ? 'true' : 'false');
+          }
+        }
+        function validate() {
+          const raw = (input.value || '').trim();
+          if (raw === '') { setError(''); return { ok: false }; }
+          const n = Number(raw);
+          if (!Number.isFinite(n)) { setError('Enter a valid number.'); return { ok: false }; }
+          if (n <= 0) { setError('Amount must be greater than £0.'); return { ok: false }; }
+          if (n > available) { setError(`You only have £${available.toFixed(2)} Essence available.`); return { ok: false }; }
+          setError('');
+          return { ok: true, value: n };
+        }
+        input.addEventListener('input', validate);
+
         // Stripe view
         const stripeView = (() => {
           const wrap = document.createElement('div');
           const d = document.createElement('div'); d.className='helper'; d.innerHTML = `Fast checkout via card / Apple Pay / Google Pay.`;
           const go = document.createElement('button');
           go.className = 'btn btn--accent';
+          go.dataset.role = 'primary-cta';
           go.textContent = 'Continue with Stripe';
+          go.disabled = true; go.setAttribute('aria-disabled','true');
           go.addEventListener('click', async () => {
             const u = auth.currentUser; if (!u) return;
-            const amount = Math.max(0, Number(input.value || 0));
-            if (!amount) { alert('Enter amount'); return; }
+            const v = validate(); if (!v.ok) return;
+
             try {
               const app = getApp();
               const functions = getFunctions(app, 'europe-west2');
               // connectFunctionsEmulator(functions, '127.0.0.1', 5001);
               const fn = httpsCallable(functions, 'createContributionCheckout');
               const returnUrl = window.location.href.split('#')[0] + '#vitals';
-              const { data } = await fn({ amountGBP: amount, returnUrl });
+              const { data } = await fn({ amountGBP: v.value, returnUrl });
               if (data?.url) window.location.href = data.url;
-              else alert('Could not create checkout session.');
+              else setError('Could not create checkout session.');
             } catch (err) {
-              console.error('[Stripe] create session error', err);
-              alert(err?.message || 'Checkout error');
+              setError(err?.message || 'Checkout error. Please try again.');
             }
           });
           wrap.append(d, go);
@@ -185,28 +187,28 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
 
           const confirm = document.createElement('button');
           confirm.className = 'btn btn--accent';
+          confirm.dataset.role = 'primary-cta';
           confirm.textContent = 'I’ve sent the transfer';
+          confirm.disabled = true; confirm.setAttribute('aria-disabled','true');
+
           confirm.addEventListener('click', async () => {
+            const v = validate(); if (!v.ok) return;
             const user = await ensureUser(); if (!user) return;
             const uid = user.uid;
-
-            const amount = Math.max(0, Number(document.getElementById('contribAmount')?.value || 0));
-            if (!amount) { alert('Enter amount'); return; }
 
             const ref = bankView.querySelector('[data-reference]')?.dataset?.reference
                      || `MYFI-${shortUid(uid)}-${Date.now()}`;
 
             const id = `contrib_${Date.now()}`;
             await setDoc(doc(db, `players/${uid}/contributions/${id}`), {
-              amountGBP: amount,
-              essenceCost: amount,
+              amountGBP: v.value,
+              essenceCost: v.value,
               provider: 'manual_bank',
               providerRef: ref,
               status: 'awaiting_settlement',
               createdAt: serverTimestamp(),
             }, { merge: true });
 
-            alert('Thanks! We’ll credit Altruism once the transfer lands.');
             window.MyFiModal.close();
           });
 
@@ -232,6 +234,8 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
             tab === btnBank   ? bankView   :
                                 pbbView
           );
+          // re-evaluate current CTA enabled state against current input value
+          validate();
         }
 
         btnStripe.addEventListener('click', ()=> show(btnStripe));
@@ -243,10 +247,10 @@ import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.j
         // init
         (async () => {
           const user = await ensureUser(); if (!user) return;
-          const avail = await getEssenceAvailableMonthly(user.uid);
+          available = await getEssenceAvailableMonthly(user.uid);
           const elVal = root.querySelector('#ess-available');
-          if (elVal) elVal.textContent = fmtGBP(avail);
-          show(btnBank); // default to Bank Transfer
+          if (elVal) elVal.textContent = fmtGBP(available);
+          show(btnStripe); // default to Bank Transfer
         })();
 
         return [root];

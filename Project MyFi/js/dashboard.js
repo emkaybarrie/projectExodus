@@ -82,14 +82,14 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const title = document.createElement('h1'); title.textContent = 'Quick Setup'; title.style.marginTop = '0';
-      const sub = helper('Set these once to seed your Vitals. You can edit them later in Finances/Settings.');
+      const sub = helper('Fill in the below to bring your Avatar to life. You can edit them later in Finances/Settings menus.');
 
       const incomeAmt = input('Income Amount (£)', 'number', 'qsIncomeAmt', { min:'0', step:'0.01', placeholder:'e.g. 3200.00' });
       const incomeCad = select('Income Cadence', 'qsIncomeCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
       const expAmt    = input('Core Expenses Amount (£)', 'number', 'qsExpAmt', { min:'0', step:'0.01', placeholder:'e.g. 1800.00' });
       const expCad    = select('Core Expenses Cadence', 'qsExpCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
-      const modeSel   = select('Vitals Mode', 'qsVitalsMode', [
-        ['safe','Safe (Standard)'], ['accelerated','Accelerated'], ['manual','Manual'],
+      const modeSel   = select('Start Mode', 'qsVitalsMode', [
+        ['safe','Cautious'], ['accelerated','Standard'], ['manual','Manual'],
       ]);
 
       const manualWrap = document.createElement('div'); manualWrap.style.display = 'none';
@@ -153,8 +153,8 @@ document.addEventListener("DOMContentLoaded", () => {
           if (incomeAmount <= 0) { showErr('Income must be greater than 0.'); btnSave.disabled=false; incomeAmt.querySelector('input').focus(); return; }
           if (expAmount >= incomeAmount) { showErr('Core expenses must be less than income.'); btnSave.disabled=false; expAmt.querySelector('input').focus(); return; }
 
-          await updateIncome({ amount: incomeAmount, cadence: incomeCadence });
-          await updateCoreExpenses({ amount: expAmount, cadence: expCadence });
+          await updateIncome(incomeAmount, incomeCadence);
+          await updateCoreExpenses(expAmount, expCadence);
           await updateDoc(userRef, { vitalsMode });
 
           if (vitalsMode === 'manual') {
@@ -214,22 +214,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const INTRO_HTML = `
         <h1>Welcome to Project MyFi</h1>
-        <p class="lead">Thanks for joining us early—your journey to financial independence starts here, and we look forward to your feedback as the app continues to grow! 😊</p>
+        <p class="lead">Thanks for joining us in our goal to turn managing your finances into an enjoyable experience — we look forward to your feedback as the game continues to grow! 😊</p>
         <p class="lead">
-          Project MyFi is a living world where your real-life spending habits power your in-game journey.<br><br>
-          Reimagine budgeting and spending as game-like <strong>Vitals</strong> resources, turn savings goals into <strong>Quests</strong>, and strengthen your <strong>Avatar</strong>
-          to push deeper into <strong>The Badlands</strong> and earn rewards.<br><br> 
+          <strong>Project MyFi</strong> is a ever-evolving world, where your real-life spending habits power your in-game journey.<br><br>
+          Reimagine budgeting and spending, seeing the impact of your day-to-day choices through the eyes of your <em>Avatar</em>:<br><br>
+          • <strong>Progress</strong> - by rising to the challenge of <em>Quests</em> that promote saving.<br>
+          • <strong>Customise</strong> - based on your own habits, goals and style.<br>
+          • <strong>Empower</strong> -  and push deeper into <em>The Badlands</em>, earning rewards with real-world impact.<br><br> 
           Spend wisely, plan intentionally, and grow stronger over time, all whilst having fun with your friends.
         </p>
       `;
       const QUICKSTART_HTML = `
         <h1>Quick Start</h1>
-        <p class="lead">Four fast steps to get rolling. You can switch back to the overview anytime.</p>
+        <p class="lead">Five key steps to get started.</p>
         <ol class="steps">
-          <li>📜 Open <strong>Finances</strong> to set your income and core expenses.</li>
-          <li>🌀 Manage <strong>Vitals</strong>: Stamina, Mana, Health, and Essence.</li>
-          <li>📜 Log transactions in <strong>Finances</strong>—review before they lock after 1 hour.</li>
+          <li>📜 Set your income and core (must-pay) expenses in the <strong>Finances</strong> menu.</li>
+          <li>📜 Log transactions in the <strong>Finances</strong>—adjust them with a long-press, before they lock after 1 hour.</li>
+          <li>🌀 Manage <strong>Vitals</strong>: Stamina, Mana, Health, and Essence from a Daily, Weekly or Monthly view</li>
           <li>⚔️ Keep your avatar healthy for <strong>The Badlands</strong> (coming soon).</li>
+          <li>❔ Check out the Help menu to learn more.</li>
         </ol>
       `;
 

@@ -10,7 +10,6 @@ const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
 admin.initializeApp();
 const db = admin.firestore();
 
-// 🔒 Secure secrets stored via Firebase CLI (.env)
 const TRUELAYER_CLIENT_ID = defineSecret('TRUELAYER_CLIENT_ID');
 const TRUELAYER_CLIENT_SECRET = defineSecret('TRUELAYER_CLIENT_SECRET');
 
@@ -42,7 +41,7 @@ exports.exchangeToken = onRequest({
       params.append('grant_type', 'authorization_code');
       params.append('client_id', TRUELAYER_CLIENT_ID.value());
       params.append('client_secret', TRUELAYER_CLIENT_SECRET.value());
-      params.append('redirect_uri', redirect_uri); // must exactly match authorize
+      params.append('redirect_uri', redirect_uri);
       params.append('code', code);
 
       const response = await axios.post(
@@ -200,8 +199,7 @@ exports.testPing = onRequest({ region: 'europe-west2' }, (req, res) => {
 // Contributions settlement (Stripe webhook + Admin callable for manual bank)
 // =============================================================================
 
-
-// Secrets (keep consistent with your TrueLayer approach)
+// Secrets
 const STRIPE_SECRET = defineSecret('STRIPE_SECRET');
 const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 
@@ -273,7 +271,6 @@ async function settleContributionTx(db, {
     const historicUsage = (sumSnap.exists && sumSnap.data().historicUsage) || {
       health: 0, mana: 0, stamina: 0, essence: 0
     };
-    const now = Date.now();
 
     // WRITES AFTER ALL READS ---------------------------------------------------
     // 1) Classified transaction (confirmed essence spend)
@@ -298,9 +295,8 @@ async function settleContributionTx(db, {
     };
     trx.set(classifiedRef, classified, { merge: true });
 
-    // 2) Award altruism points (write on the players/{uid} doc or stats/main doc per your choice)
+    // 2) Award altruism points
     trx.set(
-      /* statsRef points to players/{uid} if you applied previous fix */
       statsRef,
       { 'avatarData':{'altruismPoints': admin.firestore.FieldValue.increment(awardPts)} },
       { merge: true }
@@ -324,13 +320,11 @@ async function settleContributionTx(db, {
 }
 
 // -----------------------------------------------------------------------------
-// Stripe Webhook (v2 onRequest) — set secrets in console/CLI.
-// NOTE: do NOT JSON.parse the body; use req.rawBody for signature verification.
+// Stripe Webhook
 // -----------------------------------------------------------------------------
 exports.stripeWebhook = onRequest({
   region: 'europe-west2',
   secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECRET],
-  // No CORS needed; Stripe posts server→server. Leave body as-is for signature.
 }, async (req, res) => {
   try {
     const stripe = new Stripe(STRIPE_SECRET.value(), { apiVersion: '2024-06-20' });
@@ -362,7 +356,6 @@ exports.stripeWebhook = onRequest({
 
 // -----------------------------------------------------------------------------
 // Admin callable to settle MANUAL bank transfers.
-// Security: require auth with custom claim { admin: true }.
 // -----------------------------------------------------------------------------
 exports.markManualContributionReceived = onCall({
   region: 'europe-west2',
@@ -387,22 +380,162 @@ exports.markManualContributionReceived = onCall({
   return { ok: true };
 });
 
+// =============================================================================
+// Parity helpers with vitals.js — calc-start + seedCarry (server-side)
+// =============================================================================
+const MS_PER_DAY = 86_400_000;
+
+function calcStartMsFromStartDate(startMs) {
+  const d = new Date(startMs);
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+function sameYMD(aMs, bMs) {
+  const a = new Date(aMs), b = new Date(bMs);
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function fractionOfDay(ms) {
+  const d = new Date(ms);
+  const sod = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  return Math.max(0, Math.min(1, (ms - sod) / MS_PER_DAY));
+}
+async function ensureStartMsServer(db, uid) {
+  try {
+    const prof = await db.doc(`players/${uid}`).get();
+    if (prof.exists) {
+      const raw = prof.data().startDate;
+      if (raw && typeof raw.toMillis === 'function') return raw.toMillis();
+      if (raw instanceof Date) return raw.getTime();
+      if (typeof raw === 'number') return raw;
+    }
+  } catch {}
+  return Date.now();
+}
+async function elapsedDaysFromCalcStartServer(db, uid) {
+  const startMs   = await ensureStartMsServer(db, uid);
+  const calcStart = calcStartMsFromStartDate(startMs);
+  return Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
+}
+function shouldApplySeedServer(pools) {
+  const z = (x) => !x || Math.abs(Number(x)) < 0.000001;
+  return z(pools?.health?.spentToDate) &&
+         z(pools?.mana?.spentToDate) &&
+         z(pools?.stamina?.spentToDate) &&
+         z(pools?.essence?.spentToDate);
+}
+async function hasPostStartSpendServer(db, uid, startMs) {
+  try {
+    const snap = await db.collection(`players/${uid}/classifiedTransactions`)
+      .where('status','==','confirmed')
+      .where('amount','<',0)
+      .where('dateMs','>=',startMs)
+      .limit(1)
+      .get();
+    return !!snap.size;
+  } catch {
+    return false;
+  }
+}
+async function getPoolSharesServer(db, uid, pools) {
+  try {
+    const snap = await db.doc(`players/${uid}/cashflowData/poolAllocations`).get();
+    if (snap.exists) {
+      const d = snap.data() || {};
+      const mana = Number(d.manaAllocation ?? 0);
+      const stamina = Number(d.staminaAllocation ?? 0);
+      const essence = Number(d.essenceAllocation ?? 0);
+      const sum = mana + stamina + essence;
+      if (sum > 0) return { mana: mana/sum, stamina: stamina/sum, essence: essence/sum };
+    }
+  } catch {}
+  const m1 = Number(pools?.mana?.regenBaseline || 0);
+  const s1 = Number(pools?.stamina?.regenBaseline || 0);
+  const e1 = Number(pools?.essence?.regenBaseline || 0);
+  const sum = m1 + s1 + e1;
+  return sum > 0 ? { mana: m1/sum, stamina: s1/sum, essence: e1/sum } : { mana:0, stamina:0, essence:0 };
+}
+async function computeSeedCurrentsServer(db, uid, pools, mode, startMs, { p = 0.6 } = {}) {
+  const calcStart   = calcStartMsFromStartDate(startMs);
+  const daysAccrued = Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
+
+  const fracDay1 = fractionOfDay(startMs);
+  const isDay1   = sameYMD(startMs, Date.now());
+
+  const m1 = Number(pools?.mana?.regenBaseline    || 0);
+  const s1 = Number(pools?.stamina?.regenBaseline || 0);
+  const e1 = Number(pools?.essence?.regenBaseline || 0);
+
+  const Emax = e1 * daysAccrued;
+
+  if (mode !== 'accelerated') {
+    const essenceSafe = isDay1 ? (e1 * fracDay1) : (e1 * (1 + fracDay1));
+    return { essence: { current: Math.min(Emax, essenceSafe), max: Emax } };
+  }
+
+  const essenceFloor = isDay1 ? (e1 * fracDay1) : 0;
+  const A  = (m1 + s1 + e1) * daysAccrued;                       // accrued discretionary since calc-start
+  const R  = Math.max(0, A * (1 - Math.max(0, Math.min(1, p)))); // remaining to split
+  const sh = await getPoolSharesServer(db, uid, pools);
+  const addE = R * (sh.essence || 0);
+
+  const essenceCur = Math.min(Emax, essenceFloor + addE);
+  return { essence: { current: Math.max(0, essenceCur), max: Emax } };
+}
+
 // -----------------------------------------------------------------------------
 // Create Stripe Checkout Session (callable)
-// - Auth required
-// - Clamps the amount server-side
-// - Creates a pending contribution doc
-// - Returns session.url for client redirect
+//   * Server-side guard mirrors client: blocks > available (not just cap)
 // -----------------------------------------------------------------------------
 async function readAvailableEssenceMonthly(db, uid) {
   try {
-    const cur = await db.doc(`players/${uid}/cashflowData/current`).get();
-    const pools = cur.exists ? (cur.data()?.pools || {}) : {};
-    const e = pools.essence || {};
-    // MVP clamp: allow up to monthly cap (regenBaseline * 30); refine later if needed
-    const monthlyCap = Number(e.regenBaseline || 0) * 30;
-    return Math.max(0, monthlyCap);
-  } catch {
+    // current pools (regen/spent + calculated carry)
+    const curSnap = await db.doc(`players/${uid}/cashflowData/current`).get();
+    const cur   = curSnap.exists ? (curSnap.data() || {}) : {};
+    const pools = cur.pools || {};
+    const ePool = pools.essence || {};
+
+    const regenBaseline = Number(ePool.regenBaseline || 0);
+    const regenCurrent  = Number(ePool.regenCurrent  || regenBaseline);
+    const spentToDate   = Number(ePool.spentToDate   || 0);
+    const seedCarry     = Number((cur.seedCarry || {}).essence || 0);
+    const capMonthly    = regenBaseline * 30;
+
+    // player mode + startDate
+    const prof = await db.doc(`players/${uid}`).get();
+    let startMs = Date.now();
+    let mode    = 'safe';
+    if (prof.exists) {
+      const d = prof.data() || {};
+      const raw = d.startDate;
+      if (raw && typeof raw.toMillis === 'function') startMs = raw.toMillis();
+      else if (raw instanceof Date) startMs = raw.getTime();
+      else if (typeof raw === 'number') startMs = raw;
+
+      const m = String(d.vitalsMode || '').toLowerCase();
+      if (['safe','accelerated','manual','true'].includes(m)) mode = m;
+    }
+
+    // seeding parity (safe/accelerated), or manual with no confirmed post-start spend
+    if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeedServer(pools)) {
+      const seed = await computeSeedCurrentsServer(db, uid, pools, mode, startMs, { p: 0.6 });
+      return Math.max(0, Math.min(capMonthly, Number(seed?.essence?.current || 0)));
+    } else if (mode === 'manual') {
+      const anyPostStart = await hasPostStartSpendServer(db, uid, startMs);
+      if (!anyPostStart) {
+        const seed = await computeSeedCurrentsServer(db, uid, pools, 'accelerated', startMs, { p: 0.6 });
+        return Math.max(0, Math.min(capMonthly, Number(seed?.essence?.current || 0)));
+      }
+    }
+
+    // truth path = regenCurrent * elapsedDaysFromCalcStart − (spentToDate + carry)
+    const days  = await elapsedDaysFromCalcStartServer(db, uid);
+    const carry = (mode === 'true') ? 0 : seedCarry;
+    const T = Math.max(0, regenCurrent * days - (spentToDate + carry));
+
+    // monthly wrap remainder (non-negative)
+    const r = capMonthly > 0 ? ((T % capMonthly) + capMonthly) % capMonthly : 0;
+    return Math.max(0, r);
+  } catch (e) {
+    console.error('readAvailableEssenceMonthly error:', e);
     return 0;
   }
 }
@@ -422,7 +555,7 @@ exports.createContributionCheckout = onCall({
     throw new Error('Amount must be > 0');
   }
 
-  // Clamp server-side
+  // Clamp server-side to *available* (mirrors client logic)
   const available = await readAvailableEssenceMonthly(db, uid);
   const amountGBP = Math.min(rawAmount, available);
   if (amountGBP <= 0) {
@@ -467,7 +600,7 @@ exports.createContributionCheckout = onCall({
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
-    payment_method_types: ['card', 'link'], // Apple/Google Pay auto included when possible
+    payment_method_types: ['card', 'link'],
     line_items: [{
       price_data: {
         currency: 'gbp',
@@ -516,5 +649,3 @@ exports.onManualContributionOpsConfirm = onDocumentUpdated({
     providerRef
   });
 });
-
-
