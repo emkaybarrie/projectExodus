@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
           const incomeCadence = String(incomeCad.querySelector('select').value || 'monthly');
           const expAmount     = Math.max(0, Number(expAmt.querySelector('input').value || 0));
           const expCadence    = String(expCad.querySelector('select').value || 'monthly');
-          const vitalsMode    = String(modeSel.querySelector('select').value || 'safe');
+          const vitalsMode    = String(modeSel.querySelector('select').value || 'accelerated');
 
           clearErr();
           if (incomeAmount <= 0) { showErr('Income must be greater than 0.'); btnSave.disabled=false; incomeAmt.querySelector('input').focus(); return; }
@@ -229,9 +229,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <p class="lead">Five key steps to get started.</p>
         <ol class="steps">
           <li>📜 Set your income and core (must-pay) expenses in the <strong>Finances</strong> menu.</li>
-          <li>📜 Log transactions in the <strong>Finances</strong>—adjust them with a long-press, before they lock after 1 hour.</li>
+          <li>📜 Log transactions in the <strong>Finances</strong> menu—long-press to edit, before they lock after 1 hour.</li>
           <li>🌀 Manage <strong>Vitals</strong>: Stamina, Mana, Health, and Essence from a Daily, Weekly or Monthly view</li>
-          <li>⚔️ Keep your avatar healthy for <strong>The Badlands</strong> (coming soon).</li>
+          <li>⚔️ Keep your avatar healthy and empowered for <strong>The Badlands</strong> (coming soon).</li>
           <li>❔ Check out the Help menu to learn more.</li>
         </ol>
       `;

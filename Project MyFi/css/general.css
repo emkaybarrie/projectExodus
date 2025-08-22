@@ -1,3 +1,24 @@
+/* App-wide: disable long-press callout & selection by default */
+.app-no-context,
+.app-no-context *:not([data-allow-context]) {
+  -webkit-touch-callout: none;   /* iOS long-press menu */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Opt-outs (allowed zones): forms, editors, and any element you mark */
+.app-no-context input,
+.app-no-context textarea,
+.app-no-context select,
+.app-no-context [contenteditable="true"],
+.app-no-context .allow-select,
+.app-no-context [data-allow-context] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+
 /* Music toggle button (inherits your existing .btn styles) */
 .music-btn {
   display: inline-flex;

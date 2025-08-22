@@ -23,32 +23,27 @@
 
     /* ---------- FULL‑SCREEN SLIDE ROUTER ---------- */
     html, body, #app { height: 100%; }
-    body { overscroll-behavior: none; }          /* avoid browser rubber-band */
-    #screen-stage {                               /* holds all screens */
+    body { overscroll-behavior: none; }
+    #screen-stage {
       position: fixed; inset: 0; overflow: hidden; z-index: 1;
     }
-    .screen {                                     /* each screen is full-bleed */
+    .screen {
       position: absolute; inset: 0;
       will-change: transform, opacity;
       touch-action: pan-y pan-x;
-      pointer-events: none;       /* only active gets events */
+      pointer-events: none;
       opacity: 0;
       transform: translate3d(0,0,0);
-      background: transparent;    /* your existing backgrounds still show */
+      background: transparent;
     }
-    .screen.screen--active {
-      pointer-events: auto;
-      opacity: 1;
-    }
+    .screen.screen--active { pointer-events: auto; opacity: 1; }
     .screen.animating {
       transition: transform 300ms cubic-bezier(.22,.8,.22,1), opacity 300ms ease;
     }
-    /* enter-from positions */
     .screen.from-up    { transform: translate3d(0,-100%,0); opacity: 1; }
     .screen.from-down  { transform: translate3d(0, 100%,0); opacity: 1; }
     .screen.from-left  { transform: translate3d(-100%,0,0); opacity: 1; }
     .screen.from-right { transform: translate3d( 100%,0,0); opacity: 1; }
-    /* exit-to positions */
     .screen.to-up    { transform: translate3d(0,-100%,0); }
     .screen.to-down  { transform: translate3d(0, 100%,0); }
     .screen.to-left  { transform: translate3d(-100%,0,0); }
@@ -59,11 +54,9 @@
     .myfi-nav { pointer-events: none; }
     .myfi-nav--edge { position: fixed; inset: 0; }
 
-    /* Layer visibility (auto-hide) */
     .myfi-nav--edge.nav-hidden { opacity: 0; pointer-events: none; transition: opacity .18s ease; }
     .myfi-nav--edge:not(.nav-hidden) { opacity: 1; transition: opacity .18s ease; }
 
-    /* Buttons: small, glassy, **no transform on hover** to avoid Y drift */
     .myfi-nav-btn {
       position: absolute;
       width: 26px; height: 26px;
@@ -80,7 +73,6 @@
     .myfi-nav-btn:hover { opacity: .85; }
     .myfi-nav-btn:active { opacity: 1; }
 
-    /* Placement — hug edges, centered; we do NOT animate transforms here */
     .myfi-nav--edge .myfi-nav-btn[data-dir="up"]    { top: 8px;    left: 50%; transform: translate(-50%, 0); }
     .myfi-nav--edge .myfi-nav-btn[data-dir="down"]  { bottom: 8px; left: 50%; transform: translate(-50%, 0); }
     .myfi-nav--edge .myfi-nav-btn[data-dir="left"]  { left: 8px;   top: 50%;  transform: translate(0, -50%); }
@@ -88,20 +80,24 @@
 
     .myfi-hidden { display: none !important; }
 
-    /* Draw short wedge chevrons via borders (fixed size => no layout shift) */
     .myfi-nav-btn::before {
       content: ""; display: block; width: 0; height: 0;
       filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
     }
     .myfi-nav-btn[data-dir="left"]::before  { border-style: solid; border-width: 6px 9px 6px 0;  border-color: transparent rgba(255,255,255,.9) transparent transparent; }
     .myfi-nav-btn[data-dir="right"]::before { border-style: solid; border-width: 6px 0 6px 9px;  border-color: transparent transparent transparent rgba(255,255,255,.9); }
-    .myfi-nav-btn[data-dir="up"]::before  { border-style: solid; border-width: 0 6px 9px 6px;  border-color: transparent transparent rgba(255,255,255,.9) transparent; }
-    .myfi-nav-btn[data-dir="down"]::before    { border-style: solid; border-width: 9px 6px 0 6px;  border-color: rgba(255,255,255,.9) transparent transparent transparent; }
+    .myfi-nav-btn[data-dir="up"]::before    { border-style: solid; border-width: 0 6px 9px 6px;  border-color: transparent transparent rgba(255,255,255,.9) transparent; }
+    .myfi-nav-btn[data-dir="down"]::before  { border-style: solid; border-width: 9px 6px 0 6px;  border-color: rgba(255,255,255,.9) transparent transparent transparent; }
   </style>
 
   <!-- App scripts -->
   <script type="module" src="js/dashboard.js" defer></script>
   <script type="module" src="js/essenceMenu.js" defer></script>
+
+  <script type="module">
+  import { installInteractionGuards } from './js/interactionGuards.js';
+  installInteractionGuards(document);
+</script>
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/splash.css" />
@@ -114,7 +110,7 @@
 </head>
 <body>
 
-<div id="app" class="app-root">
+<div id="app" class="app-root app-no-context">
 
   <!-- Install Banner -->
   <div id="installBanner" class="install-banner" style="display: none;">
