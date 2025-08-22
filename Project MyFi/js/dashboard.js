@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const expAmt    = input('Core Expenses Amount (£)', 'number', 'qsExpAmt', { min:'0', step:'0.01', placeholder:'e.g. 1800.00' });
       const expCad    = select('Core Expenses Cadence', 'qsExpCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
       const modeSel   = select('Start Mode', 'qsVitalsMode', [
-        ['safe','Cautious'], ['accelerated','Standard'], ['manual','Manual'],
+        ['accelerated','Standard'], ['safe','Cautious'], ['manual','Manual'],
       ]);
 
       const manualWrap = document.createElement('div'); manualWrap.style.display = 'none';
