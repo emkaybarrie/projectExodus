@@ -53,7 +53,7 @@
     const firstKey = Object.keys(menuConfig)[0] || null;
     const key = (defaultKey && menuConfig[defaultKey]) ? defaultKey : firstKey;
 
-    // Always render the menu fresh (sidebar will be empty for 'single' due to your Step B)
+    // Always render the menu fresh
     renderMenu();
 
     if (currentVariant === 'drilldown') {
@@ -63,21 +63,18 @@
       backdrop.classList.remove('is-detail');
       setTimeout(() => menuEl?.querySelector('.menu__btn')?.focus(), 0);
     } else if (currentVariant === 'single') {
-      // No sidebar; render content directly
       backdrop.classList.add('is-single');
       if (key) {
-        switchTo(key); // this already sets the title
+        switchTo(key);
       } else {
         contentEl.textContent = '';
         titleEl.textContent = menuTitleOverride || 'Menu';
       }
-      // Focus first focusable in content
       setTimeout(() => {
         const first = contentEl?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         first?.focus();
       }, 0);
     } else {
-      // Standard split
       switchTo(key);
       setTimeout(() => menuEl?.querySelector('.menu__btn[aria-current="true"]')?.focus(), 0);
     }
@@ -89,10 +86,9 @@
     document.removeEventListener('keydown', onKey);
     backdrop.removeEventListener('keydown', trap);
     backdrop.classList.remove('is-detail');
-    backdrop.classList.remove('is-single'); // <-- add this
+    backdrop.classList.remove('is-single');
     if (lastFocused?.focus) lastFocused.focus();
   }
-
 
   function switchTo(key){
     const def = menuConfig[key]; if (!def) return;
@@ -117,7 +113,6 @@
   function renderMenu(){
     menuEl.innerHTML = '';
 
-    // ⬇️ New: if single, skip building the sidebar entirely
     if (currentVariant === 'single') {
       return;
     }
@@ -179,7 +174,6 @@
     const p = document.createElement('div');
     p.className = 'modal__previewBody';
 
-    // preview can be string, Node, or function returning Node/array
     let previewContent = null;
     if (def?.preview instanceof Node) previewContent = def.preview;
     else if (typeof def?.preview === 'function') {
@@ -196,16 +190,13 @@
 
     p.replaceChildren(...(Array.isArray(previewContent) ? previewContent : [previewContent]));
 
-    // Tap‑friendly CTA
     const cta = document.createElement('button');
     cta.className = 'btn btn--accent modal__previewCTA';
     cta.type = 'button';
     cta.textContent = (def?.ctaLabel || 'Open');
     cta.addEventListener('click', () => openDetailFromList(key));
 
-    // Also let the whole preview area open on tap (mobile friendly)
     wrap.addEventListener('click', (e) => {
-      // avoid double-trigger if user actually tapped the CTA
       if (e.target === cta) return;
       if (def) openDetailFromList(key);
     });

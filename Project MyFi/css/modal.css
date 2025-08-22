@@ -1,140 +1,151 @@
-  /* ---- Theme tokens ---- */
-  :root{
-    --modal-backdrop: rgba(10,12,16,.55);
-    --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
-    --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
+/* ---- Theme tokens ---- */
+:root{
+  --modal-backdrop: rgba(10,12,16,.55);
+  --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
+  --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
 
-    --sidebar-min-mobile: 125px;  /* minimum sidebar width on mobile */
-    --sidebar-max-mobile: 25%;    /* max percentage sidebar can take on mobile */
-
-    /* Presets you can try */
-    /* Narrow sidebar */
-    /* --sidebar-min-mobile: 160px; --sidebar-max-mobile: 40%; */
-    /* Wide sidebar */
-    /* --sidebar-min-mobile: 200px; --sidebar-max-mobile: 52%; */
-  }
-
-  /* ---- Backdrop, shell ---- */
-  .modal-backdrop{position:fixed;inset:0;background:var(--modal-backdrop);display:none;align-items:center;justify-content:center;z-index:1000;}
-  .modal-backdrop[data-open="true"]{display:flex;}
-  .modal{
-    width:min(720px,92vw);
-    max-height:86svh; /* mobile toolbar friendly */
-    background:linear-gradient(145deg,var(--modal-card),var(--modal-bg));
-    color:var(--modal-text);
-    border:1px solid var(--border); border-radius:var(--radius);
-    box-shadow:0 10px 40px rgba(0,0,0,.45);
-
-    /* KEY: keep sidebar visible on all sizes.
-       Left column flexible with min (so it doesn't vanish),
-       right column can shrink all the way down. */
-    display:grid;
-    grid-template-columns: minmax(140px, 35%) minmax(0, 1fr);
-    overflow:hidden;
-
-    transform:translateY(8px); opacity:0; transition:opacity .15s ease, transform .15s ease;
-  }
-  .modal-backdrop[data-open="true"] .modal{opacity:1; transform:translateY(0);}
-
-  /* ---- Sidebar (always visible) ---- */
-  .modal__menu{
-    background:rgba(255,255,255,.02);
-    border-right:1px solid var(--border);
-    padding:10px;
-    overflow:auto;
-  }
-  .modal__menu h3{
-    font:600 13px/1.1 system-ui,sans-serif;
-    letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted);
-    padding:8px 10px; margin:2px 0 6px;
-  }
-  .menu__btn{
-    width:100%; text-align:left; padding:12px;
-    border-radius:10px; border:1px solid transparent;
-    background:transparent; color:var(--modal-text); cursor:pointer;
-    font:500 14px/1.25 system-ui;
-  }
-  .menu__btn:hover,
-  .menu__btn[aria-current="true"]{
-    background:rgba(110,231,255,.08);
-    border-color:rgba(110,231,255,.3);
-  }
-
-  /* ---- Body layout (header + content + footer) ---- */
-  .modal__body{
-    display:grid;
-    grid-template-rows: auto minmax(0, 1fr) auto; /* content scrolls only */
-    min-width:0; /* CRITICAL for shrinking on small screens */
-    min-height:360px;
-  }
-  .modal__header{
-    padding:12px 12px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; gap:8px;
-  }
-  .modal__title{ font:700 16px system-ui,sans-serif; }
-  .modal__back{ display:none; } /* back not needed with constant sidebar */
-
-  .modal__content{
-    padding: 0.75rem 1.5rem;  /* top/bottom, left/right */
-    box-sizing: border-box; /* keep padding inside the width */
-    overflow:auto; 
-    min-width:0; /* allow inputs to shrink */
-  }
-
-  .modal__content form {
-    padding-bottom: 1rem;
-  }
-  .modal__footer{
-    padding:10px 12px; border-top:1px solid var(--border);
-    display:flex; gap:8px; justify-content:flex-end;
-  }
-
-  /* ---- Inputs & buttons ---- */
-  .btn{appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text);
-       padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;}
-  .btn--accent{border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12);}
-
-  .field{display:grid; gap:6px; margin-bottom:12px; min-width:0;}
-  .field label{font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em;}
-  .input,.select{
-    width:100%; max-width:100%; /* prevent overflow */
-    border:1px solid var(--border); background:#0b0d12; color:var(--modal-text);
-    border-radius:10px; padding:10px 12px; font:14px system-ui; min-width:0;
-  }
-  .helper{color:var(--modal-muted); font-size:12px; margin-top:-6px; margin-bottom:12px;}
-
-  /* Make everything inside the content area stack with a consistent gap */
-.modal__content > * + * { margin-top: 10px; }
-
-/* Remove the negative top margin on helper text */
-.helper {
-  margin-top: 0.5rem;     /* was negative earlier */
-  margin-bottom: 10px;
-  line-height: 1.35;
+  --sidebar-min-mobile: 125px;  /* minimum sidebar width on mobile */
+  --sidebar-max-mobile: 25%;    /* max percentage sidebar can take on mobile */
 }
 
-/* Optional: give primary buttons a touch more breathing room */
+/* ---- Backdrop, shell ---- */
+.modal-backdrop{
+  position:fixed; inset:0; background:var(--modal-backdrop);
+  display:none; align-items:center; justify-content:center; z-index:1000;
+}
+.modal-backdrop[data-open="true"]{ display:flex; }
+
+.modal{
+  width:min(720px,92vw);
+  /* KEY: give the container a concrete height so inner row can scroll */
+  height: min(86svh, 100svh);
+  max-height:86svh;
+
+  background:linear-gradient(145deg,var(--modal-card),var(--modal-bg));
+  color:var(--modal-text);
+  border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:0 10px 40px rgba(0,0,0,.45);
+
+  /* Two columns: sidebar + body */
+  display:grid;
+  grid-template-columns: minmax(140px, 35%) minmax(0, 1fr);
+  overflow:hidden;
+
+  transform:translateY(8px); opacity:0; transition:opacity .15s ease, transform .15s ease;
+}
+.modal-backdrop[data-open="true"] .modal{ opacity:1; transform:translateY(0); }
+
+/* ---- Sidebar (always visible) ---- */
+.modal__menu{
+  background:rgba(255,255,255,.02);
+  border-right:1px solid var(--border);
+  padding:10px;
+  overflow:auto;
+  -webkit-overflow-scrolling: touch; /* smooth momentum */
+}
+.modal__menu h3{
+  font:600 13px/1.1 system-ui,sans-serif;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted);
+  padding:8px 10px; margin:2px 0 6px;
+}
+.menu__btn{
+  width:100%; text-align:left; padding:12px;
+  border-radius:10px; border:1px solid transparent;
+  background:transparent; color:var(--modal-text); cursor:pointer;
+  font:500 14px/1.25 system-ui;
+}
+.menu__btn:hover,
+.menu__btn[aria-current="true"]{
+  background:rgba(110,231,255,.08);
+  border-color:rgba(110,231,255,.3);
+}
+
+/* ---- Body layout (header + content + footer) ---- */
+.modal__body{
+  display:grid;
+  grid-template-rows: auto minmax(0, 1fr) auto; /* middle row is the scroll area */
+  min-width:0;
+  /* KEY: allow the grid item to shrink so its child can scroll */
+  min-height:0;
+}
+.modal__header{
+  padding:12px 12px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:8px;
+}
+.modal__title{ font:700 16px system-ui,sans-serif; }
+.modal__back{ display:none; } /* back hidden in split view */
+
+/* ===== Scrollable content area ===== */
+.modal__content{
+  padding: 0.75rem 1.5rem;
+  box-sizing: border-box;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;  /* momentum on iOS */
+  overscroll-behavior: contain;       /* stop chain-scrolling to page */
+  min-width: 0;                       /* allow inputs to shrink */
+  scrollbar-gutter: stable;           /* avoid layout shift */
+}
+
+/* Subtle scrollbar to match Update Log */
+.modal__content::-webkit-scrollbar { width: 8px; }
+.modal__content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.22);
+  border-radius: 6px;
+}
+.modal__content::-webkit-scrollbar-track { background: transparent; }
+/* Firefox */
+.modal__content { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.22) transparent; }
+
+.modal__content form { padding-bottom: 1rem; }
+
+.modal__footer{
+  padding:10px 12px; border-top:1px solid var(--border);
+  display:flex; gap:8px; justify-content:flex-end;
+}
+
+/* ---- Inputs & buttons ---- */
+.btn{
+  appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text);
+  padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;
+}
+.btn--accent{ border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12); }
+
+.field{ display:grid; gap:6px; margin-bottom:12px; min-width:0; }
+.field label{ font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em; }
+.input,.select{
+  width:100%; max-width:100%;
+  border:1px solid var(--border); background:#0b0d12; color:var(--modal-text);
+  border-radius:10px; padding:10px 12px; font:14px system-ui; min-width:0;
+}
+
+/* stack spacing inside content */
+.modal__content > * + * { margin-top: 10px; }
+
+/* helper text spacing */
+.helper { color:var(--modal-muted); font-size:12px; margin-top: 0.5rem; margin-bottom:10px; line-height:1.35; }
+
+/* a touch more space for buttons in content */
 .modal__content .btn { margin-top: 2px; }
 
-  /* ---- Mobile tweaks: give sidebar a bit more room, tighten paddings ---- */
-  @media (max-width:640px){
-    .modal{
-      grid-template-columns: minmax(var(--sidebar-min-mobile), var(--sidebar-max-mobile)) minmax(0, calc(100% - var(--sidebar-max-mobile)));
-      width: 96vw; /* a touch wider on tiny screens */
-    }
-    .menu__btn{ padding:10px; font-size:13px; }
-    .modal__header{ padding:10px 10px; }
-    .modal__content{ 
-      padding-top: 0.75rem;
-      padding-bottom: 0.75rem;
-      padding-left: 1rem;
-      padding-right: 2rem; /* extra space on the right */
-      box-sizing: border-box;
-    }
-    .btn{ padding:9px 12px; font-size:13px; }
+/* ---- Mobile tweaks ---- */
+@media (max-width:640px){
+  .modal{
+    grid-template-columns: minmax(var(--sidebar-min-mobile), var(--sidebar-max-mobile)) minmax(0, calc(100% - var(--sidebar-max-mobile)));
+    width: 96vw;
   }
+  .menu__btn{ padding:10px; font-size:13px; }
+  .modal__header{ padding:10px 10px; }
+  .modal__content{
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    padding-left: 1rem;
+    padding-right: 2rem; /* space so scrollbar doesn't hug text */
+    box-sizing: border-box;
+  }
+  .btn{ padding:9px 12px; font-size:13px; }
+}
 
-  /* in your modal css */
+/* in your modal css */
 .current-row { display:flex; justify-content:space-between; align-items:center; }
 .current-row > label { opacity:.8; }
 .current-value { padding:.5rem .75rem; border:1px solid var(--border-color, #2a2f3a); border-radius:.6rem; background:rgba(255,255,255,0.02); }
@@ -161,7 +172,6 @@
 .modal__previewBody { color: var(--modal-muted); font: 13px system-ui, sans-serif; line-height: 1.45; margin-bottom: .5rem; }
 .modal__previewCTA { width: 100%; margin-top: .25rem; }
 
-/* Reduce accidental taps opening list screen by giving CTA a stronger target */
 @media (hover: hover) {
   .modal__preview { cursor: default; }
 }

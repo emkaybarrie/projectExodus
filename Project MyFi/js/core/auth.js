@@ -67,7 +67,7 @@ export async function signupUser(data) {
       firstName: data.firstName || "",
       lastName: data.lastName || "",
       level: Number(1),
-      vitalsMode: 'safe'
+      vitalsMode: 'accelerated'
     });
 
     await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
