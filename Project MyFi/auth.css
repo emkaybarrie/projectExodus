@@ -2,7 +2,7 @@
 
 :root {
   /* Background image (set by auth.html script) */
-  --auth-bg: url("./assets/img/auth-bg1.png");
+  --auth-bg: url("./assets/img/symbol.png");
 
   /* === Easy sizing & positioning for the auth card(s) === */
   --auth-card-max-width: 420px;     /* cap card width */
