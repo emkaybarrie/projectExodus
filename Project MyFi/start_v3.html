@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project MyFi – Start</title>
+
+  <!-- Lottie -->
+  <script src="https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js"></script>
+
+  <style>
+    html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; font-family:system-ui,sans-serif; }
+    .start { position:relative; inset:0; width:100vw; height:100vh; background:#000; }
+    .layer { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+    /* Fade-ins */
+    .still, .lottie, .cta, .pulse { opacity:0; transition:opacity .6s ease; }
+
+    /* CTA */
+    .cta {
+      position:absolute; left:50%; bottom:7vh; transform:translateX(-50%);
+      padding:.8rem 1.2rem; border-radius:14px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(20,24,44,.35); color:#fff; font-size:1.05rem; letter-spacing:.4px;
+      backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+      cursor:pointer;
+    }
+
+    /* States */
+    .start--ready .still { opacity:1; }           /* final still visible */
+    .start--ready .pulse { opacity:.8; }          /* painterly pulse video overlay */
+    .start--ready .lottie { opacity:.85; }        /* embers */
+    .start--cta   .cta   { opacity:1; }           /* show CTA */
+    .start--fadeout { transition:opacity .6s ease; opacity:0; pointer-events:none; }
+
+    /* Optional: help the pulse blend with the painting */
+    .pulse { mix-blend-mode:screen; }             /* black becomes transparent-ish glow */
+
+    .embers { 
+      opacity: 0;
+      transition: opacity .6s ease;
+      mix-blend-mode: screen;   /* black -> transparent, lights add */
+    }
+
+    .start--ready .embers { opacity: .85; } /* tweak .65–1.0 */
+  </style>
+</head>
+<body>
+  <div id="start-root" class="start">
+    <!-- Flashy intro (optional); you can remove if not needed yet -->
+    <video id="introVid" class="layer" playsinline muted preload="auto">
+      <source src="./assets/intro.webm" type="video/webm" />
+      <source src="./assets/intro.mp4" type="video/mp4" />
+    </video>
+
+    <!-- Final still (exact frame you want to rest on) -->
+    <img id="startStill" class="layer still" src="./assets/start/start_still.png" alt="" aria-hidden="true"/>
+
+    <!-- Painterly pulse overlay (this is the new video you asked for) -->
+    <video id="pulseLoop" class="layer pulse" playsinline muted loop preload="auto">
+      <source src="./assets/start/pulse-animation.webm" type="video/webm"/>
+      <!-- Optional MP4 fallback:
+      <source src="./assets/pulse_loop.mp4" type="video/mp4"/>
+      -->
+    </video>
+
+    <!-- NEW: Painterly embers overlay -->
+    <video id="embersOverlay" class="layer embers" playsinline muted loop preload="auto">
+    <source src="./assets/start/embers-animation.webm" type="video/webm"/>
+    </video>
+
+    <!-- Lottie overlay (embers only recommended; swap JSON if you prefer the glow+embers file) -->
+    <div id="loopAnim" class="layer lottie" aria-hidden="true"></div>
+
+    <!-- Tap to Start -->
+    <button id="tapToStart" class="cta" type="button">Tap to Start</button>
+  </div>
+
+  <script>
+    (function () {
+      const root  = document.getElementById('start-root');
+      const intro = document.getElementById('introVid');
+      const pulse = document.getElementById('pulseLoop');
+      const embers = document.getElementById('embersOverlay');
+      const cta   = document.getElementById('tapToStart');
+      const loopContainer = document.getElementById('loopAnim');
+
+      // Use embers-only JSON to avoid double-pulsing (video handles pulse)
+      const LOTTIE_PATH = './assets/start/embers2.json'; // or your preferred embers JSON
+
+      const loopAnim = lottie.loadAnimation({
+        container: loopContainer,
+        renderer: 'svg',
+        loop: true,
+        autoplay: false,
+        path: LOTTIE_PATH
+      });
+
+      // Autoplay intro if present; reveal immediately if missing
+      const startIntro = () => intro.play().catch(()=>{});
+      const reveal = () => {
+        root.classList.add('start--ready');
+        pulse.play().catch(()=>{});
+        embers.play().catch(()=>{});
+        // loopAnim.goToAndPlay(0, true);
+        root.classList.add('start--cta');
+      };
+
+      // If the intro has no src or errors, just reveal
+      intro.addEventListener('ended', reveal);
+      intro.addEventListener('error', reveal);
+
+      if (intro.querySelector('source')?.getAttribute('src')) {
+        if (document.visibilityState === 'visible') startIntro();
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && intro.currentTime === 0) startIntro();
+        });
+      } else {
+        // No intro provided
+        reveal();
+      }
+
+      // Safety: if user taps before intro ends, reveal immediately
+      root.addEventListener('click', () => {
+        if (!root.classList.contains('start--ready')) {
+          intro.pause();
+          reveal();
+        }
+      }, { once: true });
+
+      // CTA → fade out → route to auth.html
+      cta.addEventListener('click', (e) => {
+        e.stopPropagation();
+        root.classList.add('start--fadeout');
+        setTimeout(() => { window.location.href = "auth.html"; }, 600);
+      });
+    })();
+  </script>
+</body>
+</html>

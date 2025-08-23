@@ -18,7 +18,7 @@
 
   /* Configurable background + blur (paths are RELATIVE TO THIS CSS FILE) */
   --mockup-url: url('./assets/mockups/placeholder.png'); /* fallback */
-  --bg-blur: 1px;                 /* 👈 tone this up/down to change blur */
+  --bg-blur: 0.5px;                 /* 👈 tone this up/down to change blur */
   --bg-brightness: 0.65;           /* 0.5 darker … 0.85 lighter */
 }
 
