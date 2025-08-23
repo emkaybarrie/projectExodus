@@ -67,6 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (alreadyOnboarded) return;
 
       const shell = document.createElement('div');
+      shell.id = 'welcomeOverlay';
       Object.assign(shell.style, {
         position: 'fixed', inset: '0', display: 'grid', placeItems: 'center',
         padding: '16px', background: 'rgba(10,10,14,.65)', backdropFilter: 'blur(6px)',
