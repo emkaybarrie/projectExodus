@@ -11,7 +11,7 @@
     const picks = [
       "./assets/img/symbol.png",
     ];
-    const chosen = picks[Math.floor(Math.random() * picks.length)];
+    const chosen = picks[Math.floor(Math.random() * Math.random() * picks.length)];
     const img = new Image();
     img.onload = () => document.documentElement.style.setProperty('--auth-bg', `url("${chosen}")`);
     img.src = chosen;
@@ -20,7 +20,37 @@
 
   <link rel="stylesheet" href="auth.css" />
 </head>
-<body>
+<body class="ready">
+
+  <!-- === Cinematic overlay stack (mirrors start_v5.html) === -->
+  <div class="stage">
+    <img id="still" class="layer still" src="./assets/start/start_still.png" alt="">
+
+    <video id="fire"  class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/fire.webm" type="video/webm" />
+    </video>
+    <video id="smoke" class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/smoke.webm" type="video/webm" />
+    </video>
+    <video id="rays"  class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/rays.webm" type="video/webm" />
+    </video>
+    <video id="pulse" class="layer pulse"  playsinline muted loop preload="auto">
+      <source src="./assets/start/pulse.webm" type="video/webm" />
+    </video>
+  </div>
+
+  <script>
+    // Keep overlays running behind the forms (especially after navigation / on iOS)
+    ['fire','smoke','rays','pulse'].forEach(id=>{
+      const v = document.getElementById(id);
+      if(!v) return;
+      v.currentTime = 0;
+      const play = ()=> v.play().catch(()=>{});
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) play(); }, { passive:true });
+      play();
+    });
+  </script>
 
   <!-- Tabs -->
   <div class="tab-toggle">

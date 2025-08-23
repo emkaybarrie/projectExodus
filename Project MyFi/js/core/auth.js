@@ -133,7 +133,7 @@ export async function signupUser(data) {
 export async function logoutUser() {
   try {
     await signOut(auth);
-    window.location.href = "auth.html";
+    window.location.href = "start.html";
   } catch (error) {
     console.error("Logout error:", error.message);
   }

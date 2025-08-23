@@ -3,7 +3,7 @@ const CACHE_NAME = "myfi-cache-v1";
 const FILES_TO_CACHE = [
   './',                        // root
   './manifest.json',
-  './start_v5.html',
+  './start.html',
   './auth.html',
   './dashboard_v4.html',
   './vitals_v11.css',
