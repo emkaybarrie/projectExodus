@@ -97,7 +97,7 @@ function generateInitialExpensesByCategory() {
 export async function logoutUser() {
     try {
         await signOut(auth);
-        window.location.href = "login.html";
+        window.location.href = "start_v5.html";
     } catch (error) {
         console.error("Logout error:", error.message);
     }

@@ -25,7 +25,7 @@ function waitForEvent(name) {
 
 document.addEventListener("DOMContentLoaded", () => {
   auth.onAuthStateChanged(async (user) => {
-    if (!user) { window.location.href = 'auth.html'; return; }
+    if (!user) { window.location.href = 'start_v5.html'; return; }
 
     /* ---------- Quick Setup (unchanged core logic) ---------- */
     function input(label, type, id, attrs = {}) {
