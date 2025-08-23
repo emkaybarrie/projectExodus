@@ -1,12 +1,9 @@
-/**
+/** 
  * vitals_v10.js
  * ---------------------------------------------------------------------------
  * Truth T = regenCurrent * daysSince(calculationStartDate)
  *           − (spentToDate + seedCarryIfApplicable)
- * - calculationStartDate = 1st day of the month the player registered.
- * - seedCarry = assumed spend between calculationStartDate and startDate.
- *   (Permanent handover in manual/safe/accelerated; ignored in true mode.)
- * - Remainder-first projection for pending spend (wrap-aware).
+ * ...
  * ---------------------------------------------------------------------------
  */
 
@@ -22,23 +19,88 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 const db = getFirestore();
 
 const titleEl = document.getElementById("header-title");
+const actionsEl = document.getElementById("headerActions");
+const moreBtn = document.getElementById("btnMore");
+const moreMenu = document.getElementById("moreMenu");
+
 const DEFAULT_TITLE = "VITALS";
+const MAX_ALIAS_LEN = 16;          // UI + storage cap
+const COLLAPSE_LEN_HINT = 14;      // hint to bias collapse on tiny screens
+
 let unsubPlayer = null;
+
+function collapseActionsIfNeeded() {
+  if (!titleEl || !actionsEl) return;
+  // start expanded
+  actionsEl.classList.remove('is-collapsed');
+  // measure overflow
+  const overflows = titleEl.scrollWidth > titleEl.clientWidth;
+  const tinyScreen = window.innerWidth < 420;
+  const nameLen = (titleEl.textContent || '').length;
+  const shouldCollapse = overflows || (tinyScreen && nameLen >= COLLAPSE_LEN_HINT);
+  actionsEl.classList.toggle('is-collapsed', shouldCollapse);
+  // reflect sandwich presence
+  if (moreBtn) moreBtn.style.display = actionsEl.classList.contains('is-collapsed') ? 'inline-flex' : 'none';
+}
+
+function wireMoreMenu() {
+  if (!moreBtn || !moreMenu) return;
+  if (!moreBtn.__wired) {
+    moreBtn.__wired = true;
+    moreBtn.addEventListener('click', () => {
+      const isOpen = moreMenu.hidden === false;
+      moreMenu.hidden = isOpen;
+      moreBtn.setAttribute('aria-expanded', String(!isOpen));
+    });
+    // proxy clicks back to the original buttons (no regression)
+    moreMenu.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-proxy]');
+      if (!btn) return;
+      const sel = btn.getAttribute('data-proxy');
+      const target = document.querySelector(sel);
+      if (target) target.click();
+      moreMenu.hidden = true;
+      moreBtn.setAttribute('aria-expanded', 'false');
+    });
+    // close on outside click
+    document.addEventListener('click', (e) => {
+      if (!moreMenu.hidden && !moreMenu.contains(e.target) && e.target !== moreBtn) {
+        moreMenu.hidden = true;
+        moreBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+}
 
 export async function startAliasListener(uid) {
   if (unsubPlayer) { unsubPlayer(); unsubPlayer = null; }
   const ref = doc(db, "players", uid);
 
+  wireMoreMenu();
+
   unsubPlayer = onSnapshot(ref, (snap) => {
-    const alias =
-      snap.exists() && typeof snap.data().alias === "string"
-        ? snap.data().alias.trim()
-        : "";
-    titleEl.textContent = alias || DEFAULT_TITLE;
+    const raw = (snap.exists() && typeof snap.data().alias === "string")
+      ? snap.data().alias.trim()
+      : "";
+    // UI cap to avoid absurdly long names; full value still shown in title tooltip
+    const capped = raw.length > MAX_ALIAS_LEN ? raw.slice(0, MAX_ALIAS_LEN) : raw;
+    titleEl.textContent = capped || DEFAULT_TITLE;
+    titleEl.title = raw || DEFAULT_TITLE;
+
+    // length-based step downs
+    titleEl.classList.toggle('is-gt10', (capped.length > 10));
+    titleEl.classList.toggle('is-gt12', (capped.length > 12));
+
+    // collapse if needed after paint
+    requestAnimationFrame(collapseActionsIfNeeded);
   }, (err) => {
     console.warn("Alias listener error:", err);
     titleEl.textContent = DEFAULT_TITLE;
+    requestAnimationFrame(collapseActionsIfNeeded);
   });
+
+  // re-evaluate on resize
+  window.addEventListener('resize', () => requestAnimationFrame(collapseActionsIfNeeded));
 }
 
 const levelEl = document.getElementById("player-level");

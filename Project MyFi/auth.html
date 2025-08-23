@@ -75,10 +75,11 @@
       </div>
 
       <div class="field">
-        <input type="text" id="alias" placeholder="Alias" required />
+        <!-- Truncate while typing via maxlength -->
+        <input type="text" id="alias" placeholder="Alias" required maxlength="16" />
         <button type="button" class="info-btn" aria-label="Alias help" aria-expanded="false">i</button>
         <div class="tooltip" role="tooltip">
-          <strong>Avatar name</strong>. Shown to others and used to identify you.
+          <strong>Avatar name</strong>. Shown to others and used to identify you. 16 character limit.
         </div>
       </div>
 

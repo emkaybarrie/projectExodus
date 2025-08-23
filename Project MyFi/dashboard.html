@@ -103,6 +103,7 @@
   <link rel="stylesheet" href="css/splash.css" />
   <link rel="stylesheet" href="css/general.css" />
   <link rel="stylesheet" href="css/vitals.css" />
+  <link rel="stylesheet" href="screenPlaceholders.css" />
   <link rel="stylesheet" href="css/modal.css" />
   <link rel="stylesheet" href="css/pwa.css" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
@@ -130,8 +131,8 @@
       <div class="starfield-overlay"></div>
 
       <div class="topbar" role="region" aria-label="Vitals header">
-        <h1 id="header-title">VITALS</h1>
-        <div class="topbar-actions">
+        <h1 id="header-title" class="alias" title="VITALS">VITALS</h1>
+        <div class="topbar-actions" id="headerActions">
           <button class="btn btn-icon music-btn" type="button"
                   data-action="toggle-music"
                   aria-label="Mute music"
@@ -142,6 +143,14 @@
           </button>
           <button class="icon-circle" id="help-btn" title="Help" aria-label="Help">?</button>
           <button class="icon-circle" id="settings-btn" title="Settings" aria-label="Settings">⚙️</button>
+
+          <!-- New: sandwich button + popover (hidden unless collapsed) -->
+          <button class="icon-circle more" id="btnMore" title="More" aria-haspopup="menu" aria-expanded="false" style="display:none;">☰</button>
+          <div id="moreMenu" class="more-menu" role="menu" hidden>
+            <button role="menuitem" data-proxy=".music-btn">🎵 Music</button>
+            <button role="menuitem" data-proxy="#help-btn">? Help</button>
+            <button role="menuitem" data-proxy="#settings-btn">⚙️ Settings</button>
+          </div>
         </div>
       </div>
 
@@ -228,67 +237,67 @@
       </div>
     </div>
 
-    <!-- Products - Up (placeholder satellite) -->
+    <!-- Products / Resources - Up -->
     <div id="screen-products" class="screen" data-screen="products" aria-hidden="true">
-      <div style="padding:16px">
-        <h1 style="margin:0 0 8px 0">Products</h1>
-        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
-        <p style="opacity:.8; margin:0 0 12px 0">
-          Products/Partners screen. Swipe up to return to the Vitals screen.
-        </p>
-        <ul style="opacity:.85; line-height:1.4">
-          <li>Personalised Financial Report</li>
-          <li>Budgeting & Spending Tips</li>
-          <li>Access to Financial Products & Services from our Partners</li>
-        </ul>
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/resources.png')">
+        <div class="placeholder-content">
+          <h1>Resources</h1>
+          <h2>(Coming Soon)</h2>
+          <p>Gain financial insight and connect to partner products/services.</p>
+          <ul>
+            <li>Personalised Financial Report</li>
+            <li>Budget & Spending Insights</li>
+            <li>Partner Products & Services</li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <!-- Quests - Left (placeholder satellite) -->
+    <!-- Quests - Left -->
     <div id="screen-quests" class="screen" data-screen="quests" aria-hidden="true">
-      <div style="padding:16px">
-        <h1 style="margin:0 0 8px 0">Quests</h1>
-        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
-        <p style="opacity:.8; margin:0 0 12px 0">
-          Quests screen. Swipe left to return to the Vitals screen.
-        </p>
-        <ul style="opacity:.85; line-height:1.4">
-          <li>Active Quests</li>
-          <li>Completed Quests</li>
-          <li>Goal progress</li>
-        </ul>
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/quests.png')">
+        <div class="placeholder-content">
+          <h1>Quests</h1>
+          <h2>(Coming Soon)</h2>
+          <p>Goals and challenges that build habits.</p>
+          <ul>
+            <li>Active & Completed Quests</li>
+            <li>Goal Progress Tracking</li>
+            <li>Streaks & Rewards</li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <!-- Avatar - Right (placeholder satellite) -->
+    <!-- Avatar - Right -->
     <div id="screen-avatar" class="screen" data-screen="avatar" aria-hidden="true">
-      <div style="padding:16px">
-        <h1 style="margin:0 0 8px 0">Avatar</h1>
-        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
-        <p style="opacity:.8; margin:0 0 12px 0">
-          Avatar screen. Swipe right to return to the Vitals screen.
-        </p>
-        <ul style="opacity:.85; line-height:1.4">
-          <li>Avatar Stats</li>
-          <li>Skill Tree & Artifacts</li>
-          <li>Avatar Customisation</li>
-        </ul>
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/avatar.png')">
+        <div class="placeholder-content">
+          <h1>Avatar</h1>
+          <h2>(Coming Soon)</h2>
+          <p>Customise, level up, and equip perks.</p>
+          <ul>
+            <li>Stats & Level Progress</li>
+            <li>Perks, Gear & Cosmetics</li>
+            <li>Skill Tree & Artifacts</li>
+          </ul>
+        </div>
       </div>
     </div>
 
-    <!-- Myana / The Badlands (placeholder satellite) -->
+    <!-- The Badlands - Down -->
     <div id="screen-myana" class="screen" data-screen="myana" aria-hidden="true">
-      <div style="padding:16px">
-        <h1 style="margin:0 0 8px 0">Myana / The Badlands</h1>
-        <h1 style="margin:0 0 8px 0">(Coming Soon)</h1>
-        <p style="opacity:.8; margin:0 0 12px 0">
-          Myana / The Badlands screen. Swipe down to return to the Vitals screen.
-        </p>
-        <ul style="opacity:.85; line-height:1.4">
-          <li>Explore the City of Myana</li>
-          <li>Brave the Badlands</li>
-          <li>Test your skills with friends and earn rewards</li>
-        </ul>
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/badlands.png')">
+        <div class="placeholder-content">
+          <h1>The Badlands</h1>
+          <h2>(Coming Soon)</h2>
+          <p>The 2D rogue-lite where your prep is tested and rewarded.</p>
+          <ul>
+            <li>Explore the City of Myana</li>
+            <li>Brave the Badlands</li>
+            <li>Compete & Earn Rewards</li>
+          </ul>
+        </div>
       </div>
     </div>
 

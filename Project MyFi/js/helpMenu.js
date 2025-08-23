@@ -94,6 +94,7 @@ import {
           • <em>Vitals</em> — your financial health as game-like resources.<br>
           • <em>Quests</em> — goals/challenges that build habits.<br>
           • <em>Avatar</em> — customise, level up, and equip perks.<br>
+          • <em>Resources</em> — gain financial insight and connects our partner products/services.<br>
           • <em>The Badlands</em> — the 2D rogue-lite where your prep is tested and rewarded.<br><br>
           Tip: Use the 🌀 toggle on Vitals to switch Daily/Weekly/Monthly context.
         `,
