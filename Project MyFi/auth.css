@@ -62,8 +62,8 @@ body::before {
   filter: saturate(1.05) contrast(1.05) brightness(0.98);
 }
 
-/* Lift UI above overlay */
-h1, .tab-toggle, #login-form, #signup-form { position: relative; z-index: 1; }
+/* Lift UI above overlays (raised to sit over .motion/.pulse) */
+h1, .tab-toggle, #login-form, #signup-form, .auth-card { position: relative; z-index: 5; }
 
 /* Heading */
 h1 {
@@ -233,6 +233,17 @@ input:focus { border-color: #8ab4f8; outline: none; }
     0 0 25px rgba(167, 139, 250, 0.8),
     inset 0 0 6px rgba(255, 255, 255, 0.15);
 }
+
+/* ---------- Cinematic layers (mirrored from start_v5.html) ---------- */
+.stage{position:fixed;inset:0}
+.layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* still sits above body::before */
+.still{z-index:1;filter:none}
+/* overlays sit above still */
+.motion{z-index:3;mix-blend-mode:screen;opacity:0;transition:opacity .6s ease}
+.ready .motion{opacity:.95} /* tweak .85–1.0 */
+.pulse{z-index:4; mix-blend-mode:screen;}
+.ready .pulse{opacity:.95}
 
 /* Responsive */
 @media (max-width: 480px) {
