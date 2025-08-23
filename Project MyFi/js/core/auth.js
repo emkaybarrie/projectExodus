@@ -17,6 +17,26 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// === Alias policy (keep this in sync with vitals.js) ===
+const MAX_ALIAS_LEN = 16;
+
+// Optional helper: show inline info/warning if form has a helper element
+function showAliasNotice(msg, type = "warn") {
+  // Try common helper selectors; tweak if you have a specific element in your form.
+  const el = document.querySelector('#aliasHelp, [data-alias-help], .alias-help');
+  if (el) {
+    el.textContent = msg;
+    el.style.display = "block";
+    el.style.color = type === "warn" ? "#ffb4b4" : "#cde8a2";
+    // auto-clear after a few seconds so it’s non-blocking
+    clearTimeout(el.__timer);
+    el.__timer = setTimeout(() => { el.textContent = ""; el.style.display = "none"; }, 4500);
+  } else {
+    // Fallback so user still sees something
+    alert(msg);
+  }
+}
+
 // Helper
 const getUserDataFromFirestore = async (uid) => {
   const userDocRef = doc(db, "players", uid);
@@ -29,7 +49,7 @@ const getUserDataFromFirestore = async (uid) => {
   }
 };
 
-// Login
+// Login (unchanged)
 export async function loginUser(email, password) {
   console.log('User Attempting to Log In');
   try {
@@ -38,6 +58,7 @@ export async function loginUser(email, password) {
 
     const playerData = await getUserDataFromFirestore(user.uid);
     if (playerData) {
+      await setDoc(doc(db, "players", user.uid), { lastLoginAt: serverTimestamp() }, { merge: true });
       localStorage.setItem("playerData", JSON.stringify(playerData));
       sessionStorage.setItem('showSplashNext', '1');
       window.location.href = "dashboard.html";
@@ -48,28 +69,41 @@ export async function loginUser(email, password) {
   }
 }
 
-// Signup
+// Signup (auto-truncate + warning)
 export async function signupUser(data) {
   try {
+    // Validate presence
+    const rawAlias = (data.alias ?? "").toString().trim();
+    if (!rawAlias) {
+      showAliasNotice("Alias is required.", "warn");
+      return; // block submission until provided
+    }
+
+    // Auto-truncate and show a non-blocking warning if too long
+    let aliasSafe = rawAlias;
+    if (rawAlias.length > MAX_ALIAS_LEN) {
+      aliasSafe = rawAlias.slice(0, MAX_ALIAS_LEN);
+      showAliasNotice(`Alias was shortened to ${MAX_ALIAS_LEN} characters.`, "warn");
+      // Note: we do not block; we proceed with the truncated value
+    }
+
+    // Create auth user
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
     const user = userCredential.user;
 
-    // Get current date/time in local timezone
-    const now = new Date();
-
-    // Reset time to 00:00:00.000
-    now.setHours(0, 0, 0, 0);
-
+    // Create player doc
     await setDoc(doc(db, "players", user.uid), {
       startDate: serverTimestamp(),
-      alias: data.alias || "No Alias",
+      alias: aliasSafe,
       email: data.email,
       firstName: data.firstName || "",
       lastName: data.lastName || "",
       level: Number(1),
-      vitalsMode: 'accelerated'
+      vitalsMode: 'accelerated',
+      lastLoginAt: serverTimestamp()
     });
 
+    // Seed auxiliary docs (unchanged)
     await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
       dCoreExpenses: Number(0),
       dIncome: Number(0)
@@ -95,7 +129,7 @@ export async function signupUser(data) {
   }
 }
 
-// Logout
+// Logout (unchanged)
 export async function logoutUser() {
   try {
     await signOut(auth);

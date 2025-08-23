@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
-/* ==========================================================================
-   App shell / Background
-   ========================================================================== */
+/* ========================================================================== */
+   /* App shell / Background */
+/* ========================================================================== */
 
 .app-root { visibility: hidden; }
 .app-root.app-show { visibility: visible; }
@@ -74,9 +74,9 @@ body {
   overflow: hidden; /* prevent the whole page from scrolling */
 }
 
-/* ==========================================================================
-   Topbar / Title / Actions
-   ========================================================================== */
+/* ========================================================================== */
+   /* Topbar / Title / Actions */
+/* ========================================================================== */
 
 .topbar { 
   position: relative; 
@@ -85,6 +85,7 @@ body {
   justify-content: flex-start;
   margin-bottom: 12px;
   min-height: 40px;
+  z-index: 4;
 }
 .topbar-actions {
   position: absolute; 
@@ -122,9 +123,53 @@ h1 { text-align:center; font-family:'Cinzel',serif; font-size:2rem; margin-botto
 h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-weight:600; }
 .topbar h1{ margin:0; text-align:left; flex:0 0 auto; }
 
-/* ==========================================================================
-   Portrait & Level Pill
-   ========================================================================== */
+/* Alias fits & step-downs */
+.alias {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  font-size: clamp(32px, 4.2vw, 44px);
+}
+.alias.is-gt10 { font-size: clamp(28px, 3.6vw, 38px); }
+.alias.is-gt12 { font-size: clamp(26px, 3.2vw, 34px); }
+
+/* Collapsed actions (shows ☰ button) */
+#headerActions.is-collapsed .icon-circle,
+#headerActions.is-collapsed .btn.btn-icon { display: none; }
+#headerActions.is-collapsed #btnMore { display: inline-flex !important; }
+
+/* Popover menu */
+.more-menu[hidden] { display: none; }
+.more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: linear-gradient(180deg, rgba(22,24,40,.92), rgba(16,18,30,.92));
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+  display: grid;
+  gap: 4px;
+  z-index: 50;
+}
+.more-menu button {
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,.03);
+  color: #f0e6d2;
+  cursor: pointer;
+}
+.more-menu button:active { transform: translateY(1px); }
+
+/* ========================================================================== */
+   /* Portrait & Level Pill */
+/* ========================================================================== */
 
 .top-section { display:flex; gap:16px; align-items:flex-start; }
 .portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
@@ -156,9 +201,9 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   z-index: 2;
 }
 
-/* ==========================================================================
-   Vitals bars (layout + layers)
-   ========================================================================== */
+/* ========================================================================== */
+   /* Vitals bars (layout + layers) */
+/* ========================================================================== */
 
 .vitals-bars { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
 
@@ -173,11 +218,10 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 }
 .bar .bar-bg { position:absolute; inset:0; z-index:1; }
 
-/* Gridlines — sits ABOVE fill and surplus by default.
-   To place gridlines UNDER the active fill, change z-index back to 1 (or 0). */
+/* Gridlines — sits ABOVE fill and surplus by default. */
 .bar .bar-grid {
   position: absolute; inset: 0;
-  z-index: 3; /* was 1 */
+  z-index: 3;
   pointer-events: none;
 }
 .bar .bar-grid .grid-line {
@@ -214,19 +258,15 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
 .bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
 
-/* Reclaim overlay (yellow, adjustable opacity via --reclaim-opacity) */
+/* Reclaim overlay */
 .bar .bar-reclaim {
   position:absolute; top:0; bottom:0; z-index:2;
-
-  /* adjustable transparency here ↓ */
   --reclaim-opacity: 0.6;
-
   background: linear-gradient(
     to bottom,
-    rgba(250, 204, 21, var(--reclaim-opacity)),  /* #facc15 */
-    rgba(234, 179, 8,  var(--reclaim-opacity))   /* #eab308 */
+    rgba(250, 204, 21, var(--reclaim-opacity)),
+    rgba(234, 179, 8,  var(--reclaim-opacity))
   );
-
   box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
   border-top-left-radius: 0; border-bottom-left-radius: 0;
   border-top-right-radius: inherit; border-bottom-right-radius: inherit;
@@ -235,14 +275,14 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar-reclaim.flash { animation: ghost-flash 0.4s ease-in-out; }
 @keyframes ghost-flash { 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
 
-/* Pool colours for the active fill */
+/* Pool colours */
 #vital-health  .bar-fill::before { background: linear-gradient(to bottom, #7f1d1d, #400000); }
 #vital-mana    .bar-fill::before { background: linear-gradient(to bottom, #164e63, #002244); }
 #vital-stamina .bar-fill::before { background: linear-gradient(to bottom, #14532d, #003300); }
 #vital-essence .bar-fill::before { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 #vital-stamina { margin-top: 10px; }
 
-/* Surplus backdrop: appears when bar has ×N > 0, sits BELOW gridlines */
+/* Surplus backdrop */
 .bar.has-surplus::before {
   content: "";
   position: absolute; inset: 0;
@@ -265,9 +305,9 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
 @keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
 
-/* ==========================================================================
-   Mode engravings + Totals row
-   ========================================================================== */
+/* ========================================================================== */
+   /* Mode engravings + Totals row */
+/* ========================================================================== */
 
 .vitals-toprow{
   display:flex; align-items:center; justify-content:space-between;
@@ -310,9 +350,9 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 .mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 
-/* ==========================================================================
-   Skills
-   ========================================================================== */
+/* ========================================================================== */
+   /* Skills */
+/* ========================================================================== */
 
 .skills-row { align-items: center; margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
 .skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
@@ -417,9 +457,9 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 }
 .ul-editor .btn-delete:hover { background: rgba(255, 0, 0, 0.12); }
 
-/* ==========================================================================
-   Footer / Bottom actions
-   ========================================================================== */
+/* ========================================================================== */
+   /* Footer / Bottom actions */
+/* ========================================================================== */
 
 .hud-footer {
   position: sticky;
@@ -427,7 +467,6 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   z-index: 5;
   padding-top: 8px;
   padding-bottom: 8px;
-  /* original gradient intentionally disabled to prevent dark haze: */
   background: none !important;
   background-color: transparent !important;
   backdrop-filter: none;
