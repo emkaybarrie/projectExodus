@@ -13,6 +13,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+import { maybeStartVitalsTour} from "./vitalsTour.js";
+
 /* ────────────────────────────────────────────────────────────────────────────
    Alias & Level helpers
    ──────────────────────────────────────────────────────────────────────────── */
@@ -1034,6 +1036,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     viewMode = VIEW_MODES.includes(next) ? next : "daily";
     refreshBarGrids();
   });
+
+  // Vitals Tour
+  maybeStartVitalsTour(uid);  // runs only once per device for Vitals
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
