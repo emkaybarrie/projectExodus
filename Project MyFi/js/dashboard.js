@@ -403,16 +403,67 @@ document.addEventListener("DOMContentLoaded", () => {
       // Gestures (touch + mouse for devtools)
       (function setupGestures(){
         let startX=0, startY=0, tracking=false;
+        let lastX=0, lastY=0;
+        let scrollEl = null;            // closest .scrollable for the gesture
+        let startedInScrollable = false;
+
         const MIN = 40;
-        const onStart = (x,y)=>{ startX=x; startY=y; tracking=true; };
+
+        function canScrollVert(el, dy) {
+          if (!el) return false;
+          const { scrollTop, scrollHeight, clientHeight } = el;
+          if (scrollHeight <= clientHeight) return false; // no scrollable overflow
+          if (dy < 0) {
+            // upward finger movement → content should scroll down → we need to be not at bottom
+            const atBottom = (scrollTop + clientHeight) >= (scrollHeight - 1);
+            return !atBottom;
+          } else if (dy > 0) {
+            // downward finger movement → content should scroll up → we need to be not at top
+            const atTop = scrollTop <= 0;
+            return !atTop;
+          }
+          return false;
+        }
+
+        const onStart = (x,y, target)=>{
+          startX=x; startY=y; lastX=x; lastY=y;
+          tracking=true;
+          scrollEl = target.closest('.scrollable');
+          startedInScrollable = !!scrollEl;
+        };
+
+        const onMove = (x,y)=>{
+          if (!tracking) return;
+          const dx = x - lastX;
+          const dy = y - lastY;
+          lastX = x; lastY = y;
+
+          // If we started inside a scrollable and this move is predominantly vertical,
+          // and the scrollable can keep scrolling in that direction, cancel nav tracking.
+          if (startedInScrollable) {
+            const ax = Math.abs(dx), ay = Math.abs(dy);
+            if (ay > ax && canScrollVert(scrollEl, dy)) {
+              tracking = false; // let the scroll happen; do not navigate on end
+            }
+          }
+        };
+
         const onEnd = (x,y)=>{
-          if (!tracking) return; tracking=false;
-          const dx=x-startX, dy=y-startY; const ax=Math.abs(dx), ay=Math.abs(dy);
+          if (!tracking) return;
+          tracking=false;
+
+          const dx=x-startX, dy=y-startY; 
+          const ax=Math.abs(dx), ay=Math.abs(dy);
           if (ax<MIN && ay<MIN) return;
+
+          // If the gesture began in a scrollable and was mostly vertical, we suppress nav.
+          if (startedInScrollable && ay > ax) return;
+
           // Direct manipulation mapping: drag up => go to down neighbor, drag left => go to right neighbor
           const dir = ax > ay
             ? (dx < 0 ? 'right' : 'left')   // swipe left -> right neighbor, swipe right -> left neighbor
             : (dy < 0 ? 'down'  : 'up');    // swipe up   -> down neighbor,  swipe down  -> up neighbor
+
           slideTo(dir);
         };
 
@@ -423,12 +474,33 @@ document.addEventListener("DOMContentLoaded", () => {
           if (x<EDGE || x>w-EDGE || y<EDGE || y>h-EDGE) showIndicators();
         };
 
-        STAGE.addEventListener('touchstart',(e)=>{ const t=e.changedTouches[0]; maybeShowOnEdge(t.clientX,t.clientY); onStart(t.clientX,t.clientY); },{passive:true});
-        STAGE.addEventListener('touchend',  (e)=>{ const t=e.changedTouches[0]; onEnd(t.clientX,t.clientY); },{passive:true});
+        // Touch
+        STAGE.addEventListener('touchstart',(e)=>{
+          const t=e.changedTouches[0];
+          maybeShowOnEdge(t.clientX,t.clientY);
+          onStart(t.clientX,t.clientY, e.target);
+        },{passive:true});
 
-        STAGE.addEventListener('mousedown',(e)=> { maybeShowOnEdge(e.clientX,e.clientY); onStart(e.clientX,e.clientY); });
+        STAGE.addEventListener('touchmove',(e)=>{
+          const t=e.changedTouches[0];
+          onMove(t.clientX, t.clientY);
+          // We don’t call preventDefault; we just cancel our own nav tracking if needed.
+        },{passive:true});
+
+        STAGE.addEventListener('touchend',(e)=>{
+          const t=e.changedTouches[0];
+          onEnd(t.clientX,t.clientY);
+        },{passive:true});
+
+        // Mouse (for devtools)
+        STAGE.addEventListener('mousedown',(e)=> {
+          maybeShowOnEdge(e.clientX,e.clientY);
+          onStart(e.clientX,e.clientY, e.target);
+        });
+        window.addEventListener('mousemove',(e)=> onMove(e.clientX,e.clientY));
         window.addEventListener('mouseup',  (e)=> onEnd(e.clientX,e.clientY));
       })();
+
 
       // Keyboard
       (function setupKeys(){
