@@ -1,5 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
+:root { --hud-footer-h: 168px; }
+
 /* ========================================================================== */
    /* App shell / Background */
 /* ========================================================================== */
@@ -71,6 +73,7 @@ body {
   height: 100svh;  /* small viewport */
   height: 100dvh;  /* dynamic, modern browsers */
   height: var(--app-vh); /* JS shim overrides everything when set */
+  padding-bottom: calc(var(--hud-footer-h) + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   background-color: rgba(20,20,35,0.35);
   backdrop-filter: blur(16px) saturate(120%);
@@ -381,6 +384,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   min-height: 220px;
   max-height: none;
   overflow: auto;
+  scroll-padding-bottom: 12px;
 }
 .update-log h2, .recently-locked h2 {
   margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9;
