@@ -68,7 +68,11 @@ function normalizeForCache(player) {
   if ("startDate" in copy)    copy.startDate    = tsToMillis(copy.startDate);
   if ("createdAt" in copy)    copy.createdAt    = tsToMillis(copy.createdAt);
   if ("updatedAt" in copy)    copy.updatedAt    = tsToMillis(copy.updatedAt);
-  if ("onboardedAt" in copy)  copy.onboardedAt  = tsToMillis(copy.onboardedAt);
+  if (copy.onboarding && typeof copy.onboarding === "object") {
+    if ("welcomeDoneAt" in copy.onboarding) {
+      copy.onboarding = { ...copy.onboarding, welcomeDoneAt: tsToMillis(copy.onboarding.welcomeDoneAt) };
+    }
+  }
   return copy;
 }
 
@@ -79,7 +83,11 @@ function normalizeFromCache(cached) {
   if ("startDate" in copy)    copy.startDate    = millisToTimestamp(copy.startDate);
   if ("createdAt" in copy)    copy.createdAt    = millisToTimestamp(copy.createdAt);
   if ("updatedAt" in copy)    copy.updatedAt    = millisToTimestamp(copy.updatedAt);
-  if ("onboardedAt" in copy)  copy.onboardedAt  = millisToTimestamp(copy.onboardedAt);
+  if (copy.onboarding && typeof copy.onboarding === "object") {
+    if ("welcomeDoneAt" in copy.onboarding) {
+      copy.onboarding = { ...copy.onboarding, welcomeDoneAt: tsToMillis(copy.onboarding.welcomeDoneAt) };
+    }
+  }
   return copy;
 }
 
@@ -160,27 +168,7 @@ async function repairStartDateIfNeeded(uid) {
   });
 }
 
-/* -----------------------------------------------------------
-   NEW: repair onboardedAt if it became a map
------------------------------------------------------------ */
-async function repairOnboardedAtIfNeeded(uid) {
-  const ref = doc(firestore, "players", uid);
-  await runTransaction(firestore, async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists()) return;
-    const ob = snap.data().onboardedAt;
-    if (!ob) return;
 
-    const isTs = typeof ob?.toMillis === "function";
-    const looksLikeMap =
-      ob && typeof ob === "object" && Number.isInteger(ob.seconds) && Number.isInteger(ob.nanoseconds);
-
-    if (looksLikeMap && !isTs) {
-      const ms = ob.seconds * 1000 + Math.floor(ob.nanoseconds / 1e6);
-      tx.update(ref, { onboardedAt: Timestamp.fromMillis(ms) });
-    }
-  });
-}
 
 /* -----------------------------------------------------------
    Player Data Manager (public API unchanged)
@@ -210,7 +198,6 @@ const playerDataManager = (() => {
     // Always ensure/repair startDate first, then heal onboardedAt if needed.
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
-    await repairOnboardedAtIfNeeded(playerId);
 
     // Try cache first
     const local = await db.playerData.get(playerId);
@@ -329,7 +316,7 @@ const playerDataManager = (() => {
     // Heal immutables before reloading
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
-    await repairOnboardedAtIfNeeded(playerId);
+
 
     const ref = doc(firestore, "players", playerId);
     const snap = await getDoc(ref);
