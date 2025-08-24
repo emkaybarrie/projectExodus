@@ -125,16 +125,25 @@
     root.style.setProperty('--app-vh', h + 'px');
   }
 
-  setVH();
+  function setFooterSpace() {
+    const footer = document.querySelector('.hud-footer');
+    if (!footer) return;
+    // Measure visible height of sticky footer
+    const h = Math.ceil(footer.getBoundingClientRect().height);
+    root.style.setProperty('--hud-footer-h', h + 'px');
+  }
 
+  function recalcAll() { setVH(); setFooterSpace(); }
+
+  recalcAll();
   // Update on every likely viewport change
-  window.addEventListener('resize', setVH, { passive: true });
-  window.addEventListener('orientationchange', setVH, { passive: true });
-  document.addEventListener('visibilitychange', () => !document.hidden && setVH(), { passive: true });
+  window.addEventListener('resize', recalcAll, { passive: true });
+  window.addEventListener('orientationchange', recalcAll, { passive: true });
+  document.addEventListener('visibilitychange', () => !document.hidden && recalcAll(), { passive: true });
 
   if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', setVH, { passive: true });
-    window.visualViewport.addEventListener('scroll', setVH, { passive: true }); // Android URL bar slide
+    window.visualViewport.addEventListener('resize', recalcAll, { passive: true });
+    window.visualViewport.addEventListener('scroll', recalcAll, { passive: true });
   }
 })();
 </script>
