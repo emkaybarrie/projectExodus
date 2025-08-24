@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <!-- updated -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Vitals HUD</title>
 
   <!-- Embedded styles for slide router + nav arrows -->
   <style>
-    /* Disable native long‑press inside Vitals */
+    /* Disable native long-press inside Vitals */
     #vitals-root.no-select-callout {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -21,7 +22,7 @@
       -webkit-user-select: text !important; user-select: text !important; -webkit-touch-callout: default !important;
     }
 
-    /* ---------- FULL‑SCREEN SLIDE ROUTER ---------- */
+    /* ---------- FULL-SCREEN SLIDE ROUTER ---------- */
     html, body, #app { height: 100%; }
     body { overscroll-behavior: none; }
     #screen-stage {
@@ -110,45 +111,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
   <link rel="manifest" href="manifest.json">
 </head>
-
-<script>
-/**
- * Viewport height shim for older/quirky mobile browsers.
- * Sets --app-vh to the *visible* height in px and updates it as the URL bar
- * shows/hides, on rotate, etc.
- */
-(function () {
-  const root = document.documentElement;
-
-  function setVH() {
-    const h = (window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight);
-    root.style.setProperty('--app-vh', h + 'px');
-  }
-
-  function setFooterSpace() {
-    const footer = document.querySelector('.hud-footer');
-    if (!footer) return;
-    // Measure visible height of sticky footer
-    const h = Math.ceil(footer.getBoundingClientRect().height);
-    root.style.setProperty('--hud-footer-h', h + 'px');
-  }
-
-  function recalcAll() { setVH(); setFooterSpace(); }
-
-  recalcAll();
-  // Update on every likely viewport change
-  window.addEventListener('resize', recalcAll, { passive: true });
-  window.addEventListener('orientationchange', recalcAll, { passive: true });
-  document.addEventListener('visibilitychange', () => !document.hidden && recalcAll(), { passive: true });
-
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', recalcAll, { passive: true });
-    window.visualViewport.addEventListener('scroll', recalcAll, { passive: true });
-  }
-})();
-</script>
-
-
 <body>
 
 <div id="app" class="app-root app-no-context">
@@ -373,6 +335,36 @@
   import { autoInitUpdateLog, autoInitHistoryButtons } from './js/hud/modules/vitals.js';
   autoInitUpdateLog();
   autoInitHistoryButtons();
+</script>
+
+<!-- Viewport + footer height shims (added) -->
+<script>
+(function () {
+  const root = document.documentElement;
+
+  function setVH() {
+    const h = (window.visualViewport ? Math.round(window.visualViewport.height) : window.innerHeight);
+    root.style.setProperty('--app-vh', h + 'px');
+  }
+
+  function setFooterSpace() {
+    const footer = document.querySelector('.hud-footer');
+    if (!footer) return;
+    const h = Math.ceil(footer.getBoundingClientRect().height);
+    root.style.setProperty('--hud-footer-h', h + 'px');
+  }
+
+  function recalc() { setVH(); setFooterSpace(); }
+  recalc();
+
+  window.addEventListener('resize', recalc, { passive: true });
+  window.addEventListener('orientationchange', recalc, { passive: true });
+  document.addEventListener('visibilitychange', () => !document.hidden && recalc(), { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', recalc, { passive: true });
+    window.visualViewport.addEventListener('scroll', recalc, { passive: true });
+  }
+})();
 </script>
 
 </body>

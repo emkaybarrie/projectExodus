@@ -1,5 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
+/* Fallback; JS will overwrite with the exact value */
+:root { --hud-footer-h: 160px; }
+
 /* ========================================================================== */
    /* App shell / Background */
 /* ========================================================================== */
@@ -65,12 +68,17 @@ body {
 .vitals-container {
   position: relative; z-index: 1;
   max-width: 480px; margin: auto; padding: 16px;
-  display: flex; flex-direction: column; 
-  /* Height fallbacks from oldest → newest → JS override */
-  height: 100vh;   /* legacy */
-  height: 100svh;  /* small viewport */
-  height: 100dvh;  /* dynamic, modern browsers */
-  height: var(--app-vh); /* JS shim overrides everything when set */
+  display: flex; flex-direction: column;
+
+  /* Height: legacy → modern → JS override */
+  height: 100vh;        /* legacy */
+  height: 100svh;       /* small visual viewport */
+  height: 100dvh;       /* dynamic visual viewport */
+  height: var(--app-vh);/* JS shim for older browsers */
+
+  /* reserve space for sticky footer so content above can scroll, not hide */
+  padding-bottom: calc(var(--hud-footer-h) + env(safe-area-inset-bottom, 0px));
+
   box-sizing: border-box;
   background-color: rgba(20,20,35,0.35);
   backdrop-filter: blur(16px) saturate(120%);
@@ -377,6 +385,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(6px);
 
+  /* allow to be the flexible area that shrinks before the footer overlaps */
   flex: 1 1 220px;
   min-height: 0;
   max-height: none;
@@ -483,7 +492,7 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .hud-footer #vital-essence { margin-bottom: 8px; }
 
 @media (max-height: 700px) {
-  .update-log-box { min-height: 160px; }
+  .update-log-box { /* still okay to hint smaller */ }
 }
 
 .actions { display:flex; justify-content:center; align-items:center; margin-top:20px; gap:40px; }
