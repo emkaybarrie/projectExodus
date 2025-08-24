@@ -400,75 +400,40 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // Gestures (touch + mouse for devtools)
+      // Gestures (touch + mouse for devtools) — SIMPLE GUARD:
+      // If the gesture started inside a .scrollable element, never navigate.
       (function setupGestures(){
-        let startX=0, startY=0, tracking=false;
-        let lastX=0, lastY=0;
-        let scrollEl = null;            // closest .scrollable for the gesture
+        const MIN = 40; // same threshold you had
+        let startX = 0, startY = 0, tracking = false;
         let startedInScrollable = false;
 
-        const MIN = 40;
-
-        function canScrollVert(el, dy) {
-          if (!el) return false;
-          const { scrollTop, scrollHeight, clientHeight } = el;
-          if (scrollHeight <= clientHeight) return false; // no scrollable overflow
-          if (dy < 0) {
-            // upward finger movement → content should scroll down → we need to be not at bottom
-            const atBottom = (scrollTop + clientHeight) >= (scrollHeight - 1);
-            return !atBottom;
-          } else if (dy > 0) {
-            // downward finger movement → content should scroll up → we need to be not at top
-            const atTop = scrollTop <= 0;
-            return !atTop;
-          }
-          return false;
-        }
-
-        const onStart = (x,y, target)=>{
-          startX=x; startY=y; lastX=x; lastY=y;
-          tracking=true;
-          scrollEl = target.closest('.scrollable');
-          startedInScrollable = !!scrollEl;
+        const onStart = (x, y, target) => {
+          startX = x; startY = y; tracking = true;
+          // hard stop: if we began in a scrollable region, this gesture will never navigate
+          startedInScrollable = !!(target && target.closest('.scrollable'));
         };
 
-        const onMove = (x,y)=>{
+        const onEnd = (x, y) => {
           if (!tracking) return;
-          const dx = x - lastX;
-          const dy = y - lastY;
-          lastX = x; lastY = y;
+          tracking = false;
 
-          // If we started inside a scrollable and this move is predominantly vertical,
-          // and the scrollable can keep scrolling in that direction, cancel nav tracking.
-          if (startedInScrollable) {
-            const ax = Math.abs(dx), ay = Math.abs(dy);
-            if (ay > ax && canScrollVert(scrollEl, dy)) {
-              tracking = false; // let the scroll happen; do not navigate on end
-            }
-          }
-        };
+          // If the gesture started in a scrollable area, swallow it.
+          if (startedInScrollable) { startedInScrollable = false; return; }
 
-        const onEnd = (x,y)=>{
-          if (!tracking) return;
-          tracking=false;
+          const dx = x - startX, dy = y - startY;
+          const ax = Math.abs(dx), ay = Math.abs(dy);
+          if (ax < MIN && ay < MIN) return;
 
-          const dx=x-startX, dy=y-startY; 
-          const ax=Math.abs(dx), ay=Math.abs(dy);
-          if (ax<MIN && ay<MIN) return;
-
-          // If the gesture began in a scrollable and was mostly vertical, we suppress nav.
-          if (startedInScrollable && ay > ax) return;
-
-          // Direct manipulation mapping: drag up => go to down neighbor, drag left => go to right neighbor
+          // Direct mapping: swipe up => go "down", swipe left => go "right"
           const dir = ax > ay
-            ? (dx < 0 ? 'right' : 'left')   // swipe left -> right neighbor, swipe right -> left neighbor
-            : (dy < 0 ? 'down'  : 'up');    // swipe up   -> down neighbor,  swipe down  -> up neighbor
+            ? (dx < 0 ? 'right' : 'left')
+            : (dy < 0 ? 'down'  : 'up');
 
           slideTo(dir);
         };
 
-        // Edge-intent reveal: if the user starts near edges, show arrows briefly
-        const EDGE = 36; // px zone
+        // Edge-intent reveal (unchanged)
+        const EDGE = 36;
         const maybeShowOnEdge = (x,y)=>{
           const w=window.innerWidth, h=window.innerHeight;
           if (x<EDGE || x>w-EDGE || y<EDGE || y>h-EDGE) showIndicators();
@@ -476,30 +441,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Touch
         STAGE.addEventListener('touchstart',(e)=>{
-          const t=e.changedTouches[0];
-          maybeShowOnEdge(t.clientX,t.clientY);
-          onStart(t.clientX,t.clientY, e.target);
-        },{passive:true});
-
-        STAGE.addEventListener('touchmove',(e)=>{
-          const t=e.changedTouches[0];
-          onMove(t.clientX, t.clientY);
-          // We don’t call preventDefault; we just cancel our own nav tracking if needed.
-        },{passive:true});
+          const t = e.changedTouches[0];
+          maybeShowOnEdge(t.clientX, t.clientY);
+          onStart(t.clientX, t.clientY, e.target);
+        }, { passive: true });
 
         STAGE.addEventListener('touchend',(e)=>{
-          const t=e.changedTouches[0];
-          onEnd(t.clientX,t.clientY);
-        },{passive:true});
+          const t = e.changedTouches[0];
+          onEnd(t.clientX, t.clientY);
+        }, { passive: true });
 
-        // Mouse (for devtools)
-        STAGE.addEventListener('mousedown',(e)=> {
-          maybeShowOnEdge(e.clientX,e.clientY);
-          onStart(e.clientX,e.clientY, e.target);
+        // Mouse (devtools)
+        STAGE.addEventListener('mousedown',(e)=>{
+          maybeShowOnEdge(e.clientX, e.clientY);
+          onStart(e.clientX, e.clientY, e.target);
         });
-        window.addEventListener('mousemove',(e)=> onMove(e.clientX,e.clientY));
-        window.addEventListener('mouseup',  (e)=> onEnd(e.clientX,e.clientY));
+        window.addEventListener('mouseup',(e)=> onEnd(e.clientX, e.clientY));
       })();
+
 
 
       // Keyboard
