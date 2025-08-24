@@ -3,26 +3,184 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project Exodus</title>
+  <title>Project Exodus — Suite</title>
   <link rel="stylesheet" href="index.css" />
+  <meta name="theme-color" content="#0b0f1a">
 </head>
 <body>
-  <div class="hub-container">
-    <h1>Project Exodus</h1>
-    <p>Choose your service</p>
-    <button class="hub-button" onclick="location.href='Project MyFi/start.html'">Project MyFi</button>
-    <button disabled class="hub-button" onclick="location.href='Project Badlands/index.html'">Project Badlands (Coming Soon)</button>
-  </div>
-</body>
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"></div>
+      <span class="brand-name">Project Exodus</span>
+    </div>
+    <nav class="nav">
+      <button class="nav-link active" data-target="products">Products</button>
+      <button class="nav-link" data-target="about">About</button>
+      <button class="nav-link" data-target="contact">Contact</button>
+    </nav>
+  </header>
 
-    <script>
-    // Disable all context menus and long press interactions
-    window.addEventListener("DOMContentLoaded", () => {
-      document.addEventListener("contextmenu", e => e.preventDefault());
-      document.addEventListener("touchstart", e => {
-        if (e.touches.length > 1) e.preventDefault();
-      }, { passive: false });
-      document.addEventListener("gesturestart", e => e.preventDefault());
+  <main class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Build better habits. Power brighter worlds.</h1>
+      <p class="hero-subtitle">
+        A growing suite of empowering connected experiences — finance as a game, worlds that respond
+        to your progress, and tools that respect your time and data.
+      </p>
+      <div class="hero-cta">
+        <a href="#products" class="pill-btn" data-target="products">Explore Suite</a>
+      </div>
+    </div>
+  </main>
+
+  <section id="products" class="section visible">
+    <div class="section-head">
+      <h2>Products</h2>
+      <p>Turn everyday choices into power — for your finances, your avatar, and your world.</p>
+    </div>
+
+    <div class="cards">
+      <!-- MyFi -->
+      <article class="card">
+        <div class="card-art aura aura-blue" aria-hidden="true">
+          <img src="projectMyFi-preview.png" alt="Project MyFi preview" class="card-img" />
+        </div>
+        <div class="card-body">
+          <h3>Project MyFi</h3>
+          <p>
+            Finance, reimagined. Track real spend, grow your avatar’s vitals,
+            and convert progress into in‑world power. Start your journey to financial independence, the playful way.
+          </p>
+          <div class="card-actions">
+            <button class="hub-button" onclick="location.href='Project MyFi/start.html'">
+              Open MyFi
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <!-- Badlands (placeholder) -->
+      <article class="card">
+        <div class="card-art aura aura-violet" aria-hidden="true">
+          <img src="projectBadlands-preview.png" alt="Project MyFi preview" class="card-img" />
+        </div>
+        <div class="card-body">
+          <h3>Project Badlands</h3>
+          <p>
+            A stylized action roguelite connected to your real‑world progress.
+            Survive, scavenge, and shape the frontier. <em>Coming soon.</em>
+          </p>
+          <div class="card-actions">
+            <button class="hub-button disabled" disabled title="Coming soon">
+              Coming Soon
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="about" class="section">
+    <div class="section-head">
+      <h2>About</h2>
+      <p>Short and sweet. This will expand into the full company page later.</p>
+    </div>
+    <div class="about-grid glass">
+      <div>
+        <h4>Our Approach</h4>
+        <p>
+          We merge playful design with practical utility. Systems that feel good to use,
+          reward good habits, and never compromise your data.
+        </p>
+      </div>
+      <div>
+        <h4>Design DNA</h4>
+        <p>
+          Liquid‑glass surfaces, bold gradients, and arcane‑meets‑modern accents —
+          all tuned for mobile‑first clarity and performance.
+        </p>
+      </div>
+      <div>
+        <h4>Roadmap</h4>
+        <p>
+          MyFi HUD &amp; banking integrations → Quests &amp; Essence/Credits →
+          Avatar &amp; cosmetics → Products &amp; partner perks.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="section">
+    <div class="section-head">
+      <h2>Contact</h2>
+      <p>Keep it minimal for now — swap in forms later.</p>
+    </div>
+    <div class="contact glass">
+      <div class="contact-row">
+        <span class="label">Email</span>
+        <a class="value" href="mailto:hello@project-exodus.example">hello@project-exodus.example</a>
+      </div>
+      <div class="contact-row">
+        <span class="label">X / Twitter</span>
+        <span class="value">@ProjectExodus</span>
+      </div>
+      <div class="contact-row">
+        <span class="label">Location</span>
+        <span class="value">London, UK</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span>© <span id="year"></span> Project Exodus</span>
+      <span class="dot">•</span>
+      <a href="#about" data-target="about">About</a>
+      <span class="dot">•</span>
+      <a href="#contact" data-target="contact">Contact</a>
+    </div>
+  </footer>
+
+  <script>
+    // Simple tab/section routing
+    function showSection(id) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
+      const target = document.getElementById(id);
+      if (target) target.classList.add('visible');
+
+      document.querySelectorAll('.nav .nav-link').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.target === id);
+      });
+
+      // scroll into view with gentle offset
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Hook up nav + in-page links
+    document.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-target]');
+      if (!t) return;
+      const id = t.getAttribute('data-target');
+      if (document.getElementById(id)) {
+        e.preventDefault();
+        showSection(id);
+        history.replaceState(null, '', '#' + id);
+      }
     });
-    </script>
+
+    // Deep link on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const hash = (location.hash || '#products').replace('#', '');
+      showSection(hash);
+      document.getElementById('year').textContent = new Date().getFullYear();
+    });
+
+    // Disable context menus and multi-touch gestures (keep single touch)
+    document.addEventListener("contextmenu", e => e.preventDefault());
+    document.addEventListener("touchstart", e => {
+      if (e.touches?.length > 1) e.preventDefault();
+    }, { passive: false });
+    document.addEventListener("gesturestart", e => e.preventDefault());
+  </script>
+</body>
 </html>
