@@ -28,39 +28,6 @@ document.addEventListener("DOMContentLoaded", () => {
   auth.onAuthStateChanged(async (user) => {
     if (!user) { window.location.href = 'start.html'; return; }
 
-    /* ---------- Quick Setup (unchanged core logic) ---------- */
-    function input(label, type, id, attrs = {}) {
-      const wrap = document.createElement('div');
-      wrap.className = 'field';
-      const lab = document.createElement('label');
-      lab.htmlFor = id; lab.textContent = label;
-      const inp = document.createElement('input');
-      inp.id = id; inp.type = type; inp.className = 'input';
-      Object.entries(attrs).forEach(([k,v]) => inp.setAttribute(k, v));
-      wrap.append(lab, inp);
-      return wrap;
-    }
-    function select(label, id, opts) {
-      const wrap = document.createElement('div');
-      wrap.className = 'field';
-      const lab = document.createElement('label');
-      lab.htmlFor = id; lab.textContent = label;
-      const sel = document.createElement('select');
-      sel.id = id; sel.className = 'input';
-      opts.forEach(([val, txt]) => {
-        const o = document.createElement('option');
-        o.value = val; o.textContent = txt; sel.appendChild(o);
-      });
-      wrap.append(lab, sel);
-      return wrap;
-    }
-    function helper(html) {
-      const d = document.createElement('div');
-      d.className = 'helper';
-      d.innerHTML = html;
-      return d;
-    }
-
     
     /* ---------- Load player + HUD ---------- */
     const uid = user.uid;

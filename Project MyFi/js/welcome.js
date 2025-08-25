@@ -75,7 +75,7 @@ async function showFirstRunSetup(uid) {
   const expAmt    = makeInput('Core Expenses Amount (£)', 'number', 'qsExpAmt', { min:'0', step:'0.01', placeholder:'e.g. 1800.00' });
   const expCad    = makeSelect('Core Expenses Cadence', 'qsExpCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
   const modeSel   = makeSelect('Start Mode', 'qsVitalsMode', [
-    ['accelerated','Standard'], ['safe','Cautious'], ['manual','Manual'],
+    ['safe','Cautious'], ['accelerated','Standard'], ['manual','Manual'],
   ]);
 
   const manualWrap = document.createElement('div'); manualWrap.style.display = 'none';
@@ -118,7 +118,7 @@ async function showFirstRunSetup(uid) {
 
   incomeCad.querySelector('select').value = 'monthly';
   expCad.querySelector('select').value = 'monthly';
-  modeSel.querySelector('select').value = 'safe';
+  modeSel.querySelector('select').value = 'accelerated';
   modeSel.querySelector('select').addEventListener('change', (e) => {
     manualWrap.style.display = (String(e.target.value||'safe') === 'manual') ? '' : 'none';
   });
@@ -215,12 +215,12 @@ export async function showWelcomeThenMaybeSetup(uid) {
 
   const INTRO_HTML = `
     <h1>Welcome to Project MyFi</h1>
-    <p class="lead">Thanks for joining us in our goal to turn managing your finances into an enjoyable experience — we look forward to your feedback as the game continues to grow! 😊</p>
+    <p class="lead"><strong>Thanks for joining us in our goal to make managing your finances a more enjoyable experience — we look forward to your feedback as the game continues to grow!</strong> 😊</p>
     <p class="lead">
-      <strong>Project MyFi</strong> is an ever‑evolving world, where your real-life spending habits power your in‑game journey.<br><br>
-      • <strong>Progress</strong> via Quests that promote saving.<br>
-      • <strong>Customise</strong> around your habits, goals and style.<br>
-      • <strong>Empower</strong> your Avatar for <em>The Badlands</em> (coming soon).<br><br>
+      <strong>Project MyFi</strong> is an ever‑evolving world, where your real-life spending habits power your in‑game journey.  Reimagine your finances, and see the impact of your day-to-day choices through the eyes of your <em>Avatar</em>:<br><br>
+      • <strong>Progress</strong> - and rise to the challenge of <em>Quests</em> that promote saving.<br>
+      • <strong>Customise</strong> - around your habits, goals and style.<br>
+      • <strong>Empower</strong> - and push deeper into <em>The Badlands</em> for greater rewards.<br><br>
       Spend wisely, plan intentionally, and grow stronger over time.
     </p>
   `;
@@ -228,11 +228,11 @@ export async function showWelcomeThenMaybeSetup(uid) {
     <h1>Quick Start</h1>
     <p class="lead">Five key steps to get started.</p>
     <ol class="steps">
-      <li>📜 Set income & core expenses in <strong>Finances</strong>.</li>
-      <li>📜 Log transactions in <strong>Finances</strong> (long‑press to edit before lock).</li>
-      <li>🌀 Manage <strong>Vitals</strong> views (Daily/Weekly/Monthly).</li>
-      <li>⚔️ Prep your avatar for <strong>The Badlands</strong>.</li>
-      <li>❔ See <strong>Help</strong> for details.</li>
+      <li>📜 Set income & core expenses in <strong>Finances</strong> to provide your avatar with energy.</li>
+      <li>📜 Log transactions in <strong>Finances</strong> (long‑press to edit whilst in the Update Log).</li>
+      <li>🌀 Manage your Health, Mana, Stamina, and Essence from a Daily/Weekly/Monthly view.</li>
+      <li>⚔️ Empower your avatar and prepare them for <strong>The Badlands</strong>.</li>
+      <li>❔ See <strong>Help</strong> to learn more.</li>
     </ol>
   `;
 
