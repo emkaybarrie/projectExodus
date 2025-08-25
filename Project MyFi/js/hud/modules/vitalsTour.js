@@ -11,15 +11,93 @@ const LS_KEY = 'myfi.tour.vitals.v1.done';
 
 function getVitalsTourSteps() {
   return [
-    { target: '#vital-health',  title: 'Health',  content: 'Your safety net. Used when other pools run out.' },
-    { target: '#vital-mana',    title: 'Mana',    content: 'Represents intentional / power spending.' },
-    { target: '#vital-stamina', title: 'Stamina', content: 'Represents day-to-day, general spending.' },
-    { target: '#vital-essence', title: 'Essence', content: 'Discretionary energy. Can be used to grow and empower your avatar.' },
-    { target: '.update-log',    title: 'Update Log', content: 'Recent pending entries. Long-press to edit before they lock.' },
-    { target: '#mode-engrave',  title: 'Daily / Weekly / Monthly', content: 'Swap views — bars rescale; regen rate doesn’t.' },
-    { target: '#essence-btn',   title: 'Essence Action', content: 'Trigger essence actions; convert to Credits (coming soon).' },
+    {
+      target: '#vital-health',
+      title: 'Health',
+      content:
+        'Represents your core vitality — the last line of defense. If other resources run dry, your Health will be sacrificed. Protect it above all else.'
+    },
+    {
+      target: '#vital-mana',
+      title: 'Mana',
+      content:
+        'Represents your intentional, focused energy. Linked to planned or power spending — high-impact actions you choose deliberately.'
+    },
+    {
+      target: '#vital-stamina',
+      title: 'Stamina',
+      content:
+        'Represents your everyday energy. Linked to routine, flexible spending that regenerates steadily over time. Balance it wisely to avoid draining more vital reserves.'
+    },
+    {
+      target: '.bar-surplus',
+      title: 'Stored Energy',
+      content:
+        'Shows the number of reserve bars available in this context (e.g. x1). When a bar is emptied, reserves are automatically tapped to refill it.'
+    },
+    {
+      target: '#mode-engrave',
+      title: 'Context Mode',
+      content:
+        'Switches the lens on your vitals — Daily, Weekly, or Monthly — so you can see your energy flows in the timeframe that matters most.'
+    },
+    {
+      target: '#vitals-total',
+      title: 'Total Energy',
+      content:
+        'Shows your combined available and maximum energy across all pools in the current context.'
+    },
+    {
+      target: '.skills-row',
+      title: 'Skills',
+      content:
+        'Your avatar’s active and passive abilities. Some skills automate tagging of actions, others provide bonuses or effects — both in-game and in the real world.'
+    },
+    {
+      target: '.update-log',
+      title: 'Action Log',
+      content:
+        'Tracks pending actions that will soon affect your avatar. Tap, or long-press to edit before they lock in. Once confirmed, they become part of your story.'
+    },
+    {
+      target: '.recently-locked',
+      title: 'Recent Actions',
+      content:
+        'Confirmed actions that have shaped your avatar. Once here, the consequences are permanent — adapt and press forward.'
+    },
+    {
+      target: '#vital-essence',
+      title: 'Essence',
+      content:
+        'Represents your long-term growth energy. Used to customise and empower your avatar, unlock cosmetics, or invest in progression.'
+    },
+    {
+      target: '#essence-btn',
+      title: 'Essence Menu',
+      content:
+        'Spend Essence to unlock bonuses, special resources, and [Credits] — all fueling your avatar’s growth and influence.'
+    },
+    {
+      target: '#left-btn',
+      title: 'Cycle Context',
+      content:
+        'Tap 🌀 to shift through different timeframes — Daily, Weekly, Monthly — to see how your energy stacks up.'
+    },
+    {
+      target: '#right-btn',
+      title: 'Finance Menu',
+      content:
+        'Tap 📜 to log spending, set income and expenses, or connect your bank for automation. This powers your vitals and unlocks the full game experience.'
+    },
+    {
+      target: '.myfi-nav-btn',
+      title: 'Navigation',
+      content:
+        'From the central hub, swipe or tap the screen edges to explore. Head left to track Quests, right to manage your Avatar, up to access tools and partners, or down to venture into The Badlands.'
+    }
   ];
 }
+
 
 /* ---------- Visibility guards ---------- */
 const OVERLAY_SELECTORS = [
