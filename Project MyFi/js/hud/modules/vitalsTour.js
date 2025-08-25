@@ -12,9 +12,9 @@ const LS_KEY = 'myfi.tour.vitals.v1.done';
 function getVitalsTourSteps() {
   return [
     { target: '#vital-health',  title: 'Health',  content: 'Your safety net. Used when other pools run out.' },
-    { target: '#vital-mana',    title: 'Mana',    content: 'Intentional / fixed spending. Can be amplified with credit.' },
-    { target: '#vital-stamina', title: 'Stamina', content: 'Day-to-day flexible spending. Regenerates regularly.' },
-    { target: '#vital-essence', title: 'Essence', content: 'Discretionary energy. Soon convertible into Credits.' },
+    { target: '#vital-mana',    title: 'Mana',    content: 'Represents intentional / power spending.' },
+    { target: '#vital-stamina', title: 'Stamina', content: 'Represents day-to-day, general spending.' },
+    { target: '#vital-essence', title: 'Essence', content: 'Discretionary energy. Can be used to grow and empower your avatar.' },
     { target: '.update-log',    title: 'Update Log', content: 'Recent pending entries. Long-press to edit before they lock.' },
     { target: '#mode-engrave',  title: 'Daily / Weekly / Monthly', content: 'Swap views — bars rescale; regen rate doesn’t.' },
     { target: '#essence-btn',   title: 'Essence Action', content: 'Trigger essence actions; convert to Credits (coming soon).' },
