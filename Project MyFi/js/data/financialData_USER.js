@@ -69,7 +69,7 @@ export async function addTransaction(data) {
   // 4) USER-FACING STORE (keep shape/path to avoid regressions)
   //    NOTE: This writes a single document named "transactions" (your current pattern).
   //    If/when you migrate to a collection, we can switch to addDoc().
-  const userFacingRef = doc(db, "players", user.uid, targetCollection, "transactions");
+  const userFacingRef = doc(db, "players", user.uid, targetCollection, txnID);
   const transactionData = {
     description: data.txDesc || "No description provided",
     amount: Number(amount),

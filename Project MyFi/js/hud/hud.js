@@ -8,10 +8,11 @@ import { auth } from "../core/auth.js";
 
 // Import updated HUD vitals APIs
 import {
-  updateVitalsPools,
+  refreshVitals,
   initVitalsHUD,
   startAliasListener,
-  startLevelListener
+  startLevelListener,
+  
 } from "./modules/vitals.js";
 
 export async function initHUD() {
@@ -20,8 +21,8 @@ export async function initHUD() {
   startAliasListener(userId)
   startLevelListener(userId);
 
-  // Ensure vitals snapshot exists and is fresh
-  await updateVitalsPools(userId);
+  // Ensure vitals snapshot exists and is fresh (server-authoritative)
+  await refreshVitals(); // writes/returns server snapshot immediately
 
   // Start the animated HUD (includes live ghost + mode handling)
   initVitalsHUD(userId, 1); 

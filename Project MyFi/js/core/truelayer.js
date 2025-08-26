@@ -48,3 +48,18 @@ export async function triggerTrueLayerFetch(type) {
     console.error(`Error fetching ${type}:`, err);
   }
 }
+
+// truelayer.js
+export async function syncTrueLayerAll() {
+  await triggerTrueLayerFetch('Accounts');        // creates accounts/items/*
+  await triggerTrueLayerFetch('Cards');           // creates cards/items/*
+  await triggerTrueLayerFetch('Transactions');    // writes per-account transactions
+  await triggerTrueLayerFetch('DirectDebits');    // writes per-account DDs
+  await triggerTrueLayerFetch('StandingOrders');  // writes per-account SOs
+}
+
+// Optional: expose for manual triggering from the console
+if (typeof window !== 'undefined') {
+  window.syncTrueLayerAll = syncTrueLayerAll;     // <-- this line goes here
+}
+

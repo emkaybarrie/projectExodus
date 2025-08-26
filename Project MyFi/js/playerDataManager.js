@@ -85,7 +85,7 @@ function normalizeFromCache(cached) {
   if ("updatedAt" in copy)    copy.updatedAt    = millisToTimestamp(copy.updatedAt);
   if (copy.onboarding && typeof copy.onboarding === "object") {
     if ("welcomeDoneAt" in copy.onboarding) {
-      copy.onboarding = { ...copy.onboarding, welcomeDoneAt: tsToMillis(copy.onboarding.welcomeDoneAt) };
+      copy.onboarding = { ...copy.onboarding, welcomeDoneAt: millisToTimestamp(copy.onboarding.welcomeDoneAt) };
     }
   }
   return copy;
