@@ -14,12 +14,12 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
 
         // helper text
         wrap.appendChild(helper(`
-          <p>Select how your avatar’s vitals are seeded when (re)initializing:</p>
+          <p>Select how your avatar’s vitals are calculated:</p>
           <ul>
-            <li><strong>Safe</strong> – 1 day’s worth (conservative)</li>
-            <li><strong>Accelerated</strong> – 1 day + % of accrued discretionary</li>
-            <li><strong>Manual</strong> – quick self-calibration input</li>
-            <li><strong>True</strong> – bank-connected (paid)</li>
+            <li><strong>Safe</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily.</li>
+            <li><strong>Standard</strong> — Seeded automatically based on when in the month you begin.</li>
+            <li><strong>Precise</strong> — Enter a quick self-calibration to set more accurate starting pools.</li>
+            <li><strong>True</strong> — Connect your bank (paid) for a live, fully automated start.</li>
           </ul>
         `));
 
@@ -34,9 +34,9 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
         select.className = 'input';
 
         [
-          { value: 'safe',        text: 'Safe (1 day)' },
-          { value: 'accelerated', text: 'Accelerated (1 day + % accrual)' },
-          { value: 'manual',      text: 'Manual (quick tweak)' },
+          { value: 'safe',        text: 'Safe' },
+          { value: 'accelerated', text: 'Standard' },
+          { value: 'manual',      text: 'Precise' },
           { value: 'true',        text: 'True (bank sync)' },
         ].forEach(opt => {
           const o = document.createElement('option');

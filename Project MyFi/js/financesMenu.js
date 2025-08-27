@@ -322,16 +322,16 @@ import {
     return {
       label: 'Manual (Pre-start) Summary',
       title: 'Pre-start spend this month',
-      preview: 'One-off total of what you had already spent this calendar month before joining. Optional split between Stamina & Mana.',
+      preview: 'Log what you’d already spent earlier in the month before joining. Optional split between Stamina & Mana.',
       render() {
-        const info = helper('Optional: enter a single total of what you had already spent <em>this month</em> before you joined. Defaults use your pool allocations. You can also backfill itemised via “Add Transaction → Backfill”.');
+        const info = helper('Optional: record a one-off total of what you had already spent <em>in the month</em>, before your start date. Defaults use your pool allocations. You can also backfill itemised transactions later via “Add Transaction → Backfill.”.');
         const total = field('Total pre-start spend (£)', 'number', 'prestartTotal', { min: 0, step: '0.01', placeholder: 'e.g. 350.00' });
         const wrap = document.createElement('div'); wrap.className = 'field';
         wrap.innerHTML = `
           <label>Split (optional)</label>
           <div class="row"><input id="prestartStaminaPct" type="number" class="input" min="0" max="100" step="1" value="60" /><span class="helper">Stamina %</span></div>
           <div class="row" style="margin-top:.5rem;"><input id="prestartManaPct" type="number" class="input" min="0" max="100" step="1" value="40" /><span class="helper">Mana %</span></div>
-          <div class="helper">We ignore Health here; this split is just between Stamina and Mana.</div>
+          <div class="helper">Health is ignored here — this split just covers Stamina and Mana.</div>
         `;
         return [info, total, wrap];
       },
@@ -349,12 +349,12 @@ import {
   }
 
   const FinancesMenu = {
-    income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and cadence. Use totals or itemised sources.'),
-    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses', 'Define essential costs. Itemise by category or provide a single total.'),
+    income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and frequency. Input as a total or break it down by source.'),
+    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses', 'Define your essential costs (things you must pay every month). Itemise by category or keep it simple with one total'),
     addTransaction: {
       label: 'Add Transaction',
       title: 'Add Transaction',
-      preview: 'Log a one-off spend/income. Supports backfilling (Manual mode) and pool assignment.',
+      preview: 'Log a one-off income or spending. Separate from your core expenses, with support for pool assignment and backfilling in Manual mode.',
       render() {
         const root = document.createElement('div');
         const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
@@ -369,12 +369,12 @@ import {
               <input type="checkbox" id="txBackfill" />
               <span>Backfill (pre-start)</span>
             </label>
-            <div class="helper">Manual mode only. When on, you can date this between the 1st of your start month and the day before your start date.</div>
+            <div class="helper">Manual mode only. Lets you log spend from earlier in the month, before your official start date..</div>
           `;
           return wrap;
         })();
         const pool = select('Pool (optional)', 'txPool', [['', 'Unassigned'], ['stamina', 'Stamina'], ['mana', 'Mana']]);
-        const note = helper('If unassigned, fallback routes it: Stamina first, overflow to Health.');
+        const note = helper('If left unassigned, the transaction is automatically tagged based on your avatar.  Default: Stamina.');
 
         (async () => {
           await ensureAuthReady();
@@ -426,9 +426,9 @@ import {
     connectBank: {
       label: 'Connect Bank',
       title: 'Connect a Bank',
-      preview: 'Link your bank to pull transactions automatically (paid feature via TrueLayer).',
+      preview: 'Link your bank for automatic transaction sync (via TrueLayer). Unlocks full automation.',
       render() {
-        const info = helper('Link your bank to pull transactions automatically (paid feature).');
+        const info = helper('Linking your bank lets the app fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.');
         const b = document.createElement('button');
         b.className = 'btn btn--accent';
         b.textContent = 'Connect with TrueLayer';
