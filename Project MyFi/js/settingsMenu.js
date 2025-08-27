@@ -1,6 +1,7 @@
 // js/settingsMenu.js
 import { auth, db, logoutUser } from './core/auth.js';
 import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { initHUD } from './hud/hud.js';
 
 (function(){
   const { open, setMenu } = window.MyFiModal;
@@ -114,6 +115,7 @@ import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.
       console.warn('Failed to save vitalsMode:', e);
     } finally {
       window.MyFiModal.close();
+      await initHUD();
     }
   });
 

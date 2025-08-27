@@ -252,8 +252,11 @@ function friendlySourceLabel(mode) {
 }
 async function getHistorySourceFilter(uid) {
   const mode = await getVitalsMode(uid);
-  const src = (mode === 'true') ? 'truelayer' : 'manual';
-  return { mode, src };
+  // Base source by mode (stream-aware)
+  const base = (mode === 'true') ? 'truelayer' : 'manual';
+  // Always include contributions (mode-agnostic)
+  const sources = [base, 'stripe', 'manual_bank'];
+  return { mode, sources };
 }
 function renderTxRow(tx) {
   const name = tx?.transactionData?.description || 'Transaction';
@@ -273,7 +276,7 @@ function renderTxRow(tx) {
     </li>
   `;
 }
-function historyMenuDef({ uid, sourceLabel, src }) {
+function historyMenuDef({ uid, sourceLabel, sources  }) {
   return {
     label: 'All Activity',
     title: `All Activity — ${sourceLabel}`,
@@ -320,7 +323,7 @@ function historyMenuDef({ uid, sourceLabel, src }) {
 
         let qy = query(
           col,
-          where('source', '==', src),
+          where('source', 'in', sources ),
           orderBy('dateMs', 'desc'),
           limit(50)
         );
@@ -386,9 +389,9 @@ function openHistoryFor() {
   const uid = user.uid;
 
   (async () => {
-    const { mode, src } = await getHistorySourceFilter(uid);
+    const { mode, sources } = await getHistorySourceFilter(uid);
     const sourceLabel = friendlySourceLabel(mode);
-    const def = historyMenuDef({ uid, sourceLabel, src });
+    const def = historyMenuDef({ uid, sourceLabel, sources });
     const menu = { history: def };
     window.MyFiModal.setMenu(menu);
     window.MyFiModal.open('history', { variant: 'single', menuTitle: 'Activity Log' });
@@ -1015,7 +1018,8 @@ export function listenUpdateLogPending(uid, cb) {
     limit(5)
   );
   return onSnapshot(qy, (snap) => {
-    const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
+    // const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
+    const items = snap.docs.map(normalizeTxn);
     cb(items);
   });
 }
@@ -1036,7 +1040,8 @@ export function listenRecentlyConfirmed(uid, lookbackMs = 24 * 60 * 60 * 1000, c
     limit(5)
   );
   return onSnapshot(qy, (snap) => {
-    const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
+    // const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
+    const items = snap.docs.map(normalizeTxn);
     cb(items);
   });
 }
@@ -1187,9 +1192,10 @@ export function autoInitUpdateLog() {
 
     if (listEl) {
       listenUpdateLogPending(uid, (items) => {
-        // BEGIN stream filter
-        const filtered = items.filter(x => x.source === desiredSource);
-        // END stream filter
+        // Allow active stream AND contributions from any provider
+        const allowed = new Set([desiredSource, "stripe", "manual_bank"]);
+        const filtered = items.filter(x => allowed.has(x.source));
+
         listEl.innerHTML = "";
         if (!filtered.length) {
           const li = document.createElement("li");
@@ -1197,46 +1203,69 @@ export function autoInitUpdateLog() {
           listEl.appendChild(li);
           return;
         }
+
         filtered.forEach(tx => {
           const li = document.createElement("li");
           li.setAttribute('data-tx', tx.id);
-          const tag = tx.provisionalTag?.pool ?? "stamina";
-          const secsLeft = Math.max(0, Math.floor((tx.ghostExpiryMs - Date.now()) / 1000));
+
+          // STEP 2: treat contributions as read-only (Essence-only)
+          const isContribution = (tx.source === "stripe" || tx.source === "manual_bank");
+
+          // STEP 3: guard countdown when no ghostExpiryMs present
+          const nowMs    = Date.now();
+          const hasTTL   = Number.isFinite(Number(tx.ghostExpiryMs));
+          const secsLeft = hasTTL ? Math.max(0, Math.floor((Number(tx.ghostExpiryMs) - nowMs) / 1000)) : 0;
           const minLeft  = Math.floor(secsLeft / 60);
           const secLeft  = secsLeft % 60;
 
           const name = tx.transactionData?.description || "Transaction";
           const amt  = Number(tx.amount).toFixed(2);
 
+          // For non-contribution pendings, show tag buttons as before
+          const tag = tx.provisionalTag?.pool ?? "stamina";
+          const actionsHtml = isContribution
+            ? `
+              <div class="ul-actions one">
+                <span class="badge essence" title="Essence">Essence</span>
+              </div>
+            `
+            : `
+              <div class="ul-actions two">
+                <button class="tag-btn" data-pool="stamina">Stamina</button>
+                <button class="tag-btn" data-pool="mana">Mana</button>
+              </div>
+            `;
+
+          // Keep countdown span (even for contributions) so tick handler is robust
           li.innerHTML = `
             <div class="ul-row">
               <div class="ul-main">
                 <strong>${name}</strong>
                 <div class="ul-meta">
-                  £${amt} • <span class="countdown">${minLeft}m ${secLeft}s</span> • ${tag}
+                  £${amt} • <span class="countdown">${minLeft}m ${secLeft}s</span> • ${isContribution ? "essence" : tag}
                 </div>
               </div>
-              <div class="ul-actions two">
-                <button class="tag-btn" data-pool="stamina">Stamina</button>
-                <button class="tag-btn" data-pool="mana">Mana</button>
-              </div>
+              ${actionsHtml}
             </div>
           `;
-          setActiveButtons(li, tag);
 
-          li.querySelectorAll(".tag-btn").forEach(btn => {
-            btn.addEventListener("click", async () => {
-              const pool = btn.getAttribute("data-pool");
-              setActiveButtons(li, pool);
-              await setProvisionalTag(uid, tx.id, pool);
+          // Only wire tag buttons for NON-contribution pending items
+          if (!isContribution) {
+            setActiveButtons(li, tag);
+            li.querySelectorAll(".tag-btn").forEach(btn => {
+              btn.addEventListener("click", async () => {
+                const pool = btn.getAttribute("data-pool");
+                setActiveButtons(li, pool);
+                await setProvisionalTag(uid, tx.id, pool);
+              });
             });
-          });
 
-          const mainEl = li.querySelector('.ul-main');
-          if (mainEl) {
-            onLongPress(mainEl, () => {
-              mountTxInlineEditor(li, tx, { uid, onDone: () => {} });
-            });
+            const mainEl = li.querySelector('.ul-main');
+            if (mainEl) {
+              onLongPress(mainEl, () => {
+                mountTxInlineEditor(li, tx, { uid, onDone: () => {} });
+              });
+            }
           }
 
           listEl.appendChild(li);
@@ -1251,7 +1280,7 @@ export function autoInitUpdateLog() {
           if (!row) continue;
           const span = row.querySelector(".countdown");
           if (!span) continue;
-          const s = Math.max(0, seconds | 0);
+          const s = Math.max(0, (Number(seconds) || 0));
           const m = Math.floor(s / 60);
           const r = s % 60;
           span.textContent = `${m}m ${r}s`;
@@ -1261,9 +1290,10 @@ export function autoInitUpdateLog() {
 
     if (recentEl) {
       listenRecentlyConfirmed(uid, 24 * 60 * 60 * 1000, (items) => {
-        // BEGIN stream filter
-        const filtered = items.filter(x => x.source === desiredSource);
-        // END stream filter
+        // Allow active stream AND contributions from any provider
+        const allowed = new Set([desiredSource, 'stripe', 'manual_bank']);
+        const filtered = items.filter(x => allowed.has(x.source));
+
         recentEl.innerHTML = "";
         if (!filtered.length) {
           const li = document.createElement("li");
@@ -1271,6 +1301,7 @@ export function autoInitUpdateLog() {
           recentEl.appendChild(li);
           return;
         }
+
         filtered.forEach(tx => {
           const li = document.createElement("li");
           const intentPool = tx.tag?.pool ?? "stamina";
@@ -1315,6 +1346,7 @@ export function autoInitUpdateLog() {
     setInterval(() => lockExpiredOrOverflow(uid, 50), 20_000);
   });
 }
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    DOM helpers
