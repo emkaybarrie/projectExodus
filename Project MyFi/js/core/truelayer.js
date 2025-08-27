@@ -48,3 +48,39 @@ export async function triggerTrueLayerFetch(type) {
     console.error(`Error fetching ${type}:`, err);
   }
 }
+
+// truelayer.js
+export async function syncTrueLayerAll() {
+  await triggerTrueLayerFetch('Accounts');        // creates accounts/items/*
+  await triggerTrueLayerFetch('Cards');           // creates cards/items/*
+  await triggerTrueLayerFetch('Transactions');    // writes per-account transactions
+  await triggerTrueLayerFetch('DirectDebits');    // writes per-account DDs
+  await triggerTrueLayerFetch('StandingOrders');  // writes per-account SOs
+}
+
+// Optional: expose for manual triggering from the console
+if (typeof window !== 'undefined') {
+  window.syncTrueLayerAll = syncTrueLayerAll;     // <-- this line goes here
+}
+
+// Optional helper to nudge server backfill (incremental; safe to re-run)
+export async function triggerIngestBackfill(sinceMs) {
+  const user = auth.currentUser;
+  if (!user) return alert("Not signed in");
+  const base = 'https://europe-west2-myfi-app-7fa78.cloudfunctions.net';
+  const qs = new URLSearchParams({ uid: user.uid });
+  if (sinceMs) qs.set('sinceMs', String(sinceMs));
+  const url = `${base}/ingestTrueLayerBackfill?${qs.toString()}`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+  console.log('Backfill result:', json);
+  if (!res.ok || json?.error) alert('Backfill failed (see console).');
+}
+
+// optional global for debugging
+if (typeof window !== 'undefined') {
+  window.triggerIngestBackfill = triggerIngestBackfill;
+}
+
+

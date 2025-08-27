@@ -2,9 +2,203 @@
 <html>
 <head>
   <title>Linking...</title>
+  <meta charset="utf-8" />
+  <style>
+    /* Minimal full-screen overlay */
+    #syncOverlay {
+      position: fixed; inset: 0;
+      background: #0b0b0f; color: #fff;
+      display: none; /* shown after token exchange succeeds */
+      align-items: center; justify-content: center;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      z-index: 9999;
+    }
+    .box {
+      width: min(520px, 90vw);
+      border: 1px solid #1f2937;
+      border-radius: 16px;
+      padding: 20px 22px;
+      background: #11131a;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    p  { margin: 0 0 16px; opacity: .8; font-size: 14px; }
+    ul { list-style: none; padding: 0; margin: 12px 0 0; }
+    li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #1f2937; }
+    li:first-child { border-top: none; }
+    .badge { width: 10px; height: 10px; border-radius: 50%; background: #4b5563; }
+    .pending  .badge { background: #4b5563; }   /* gray */
+    .running  .badge { background: #f59e0b; }   /* amber */
+    .done     .badge { background: #10b981; }   /* green */
+    .fail     .badge { background: #ef4444; }   /* red */
+    .label { flex: 1; font-size: 14px; }
+    .hint  { opacity: .7; font-size: 12px; }
+    .bar {
+      height: 6px; background: #1f2937; border-radius: 999px; margin-top: 14px; overflow: hidden;
+    }
+    .bar > div {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg,#22c55e,#06b6d4);
+      transition: width .2s ease;
+    }
+    .actions { margin-top: 14px; display: flex; gap: 10px; }
+    button {
+      appearance: none; background: #1f2937; color: #fff; border: 1px solid #374151;
+      padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 14px;
+    }
+    button.primary { background: #10b981; border-color: #10b981; color: #0b0b0f; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+  </style>
 </head>
 <body>
+
+<div id="syncOverlay">
+  <div class="box">
+    <h1>Linking your bank…</h1>
+    <p id="syncStatus">Getting everything ready.</p>
+
+    <div class="bar"><div id="progressFill"></div></div>
+
+    <ul id="stepsList">
+      <!-- Steps will be injected -->
+    </ul>
+
+    <div class="actions">
+      <button id="retryBtn" style="display:none">Retry failed step</button>
+      <button id="continueBtn" class="primary" style="display:none">Continue</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
+  // ✅ Keep prior behavior; we just import the pieces we need.
+  import { auth } from './js/core/auth.js';
+  import { triggerTrueLayerFetch, /* optional */ syncTrueLayerAll } from './js/core/truelayer.js';
+
+  // --- tiny auth hydration (prevents “Not signed in”) ---
+  async function waitForAuthUser(timeoutMs = 8000) {
+    if (auth.currentUser) return auth.currentUser;
+    return new Promise((resolve) => {
+      let settled = false;
+      const t = setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, timeoutMs);
+      const unsub = auth.onAuthStateChanged
+        ? auth.onAuthStateChanged((u) => { if (u && !settled) { settled = true; clearTimeout(t); unsub(); resolve(u); } })
+        : () => resolve(null);
+    });
+  }
+
+  // --- minimal progress UI wiring ---
+  const overlay = document.getElementById('syncOverlay');
+  const stepsList = document.getElementById('stepsList');
+  const statusEl = document.getElementById('syncStatus');
+  const fill = document.getElementById('progressFill');
+  const retryBtn = document.getElementById('retryBtn');
+  const continueBtn = document.getElementById('continueBtn');
+
+  const steps = [
+    { key: 'Accounts',       label: 'Accounts' },
+    { key: 'Cards',          label: 'Cards' },
+    { key: 'Transactions',   label: 'Transactions' },
+    { key: 'DirectDebits',   label: 'Direct Debits' },
+    { key: 'StandingOrders', label: 'Standing Orders' },
+  ];
+  let currentIndex = -1;
+
+  function renderSteps() {
+    stepsList.innerHTML = '';
+    steps.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.id = `step-${i}`;
+      li.className = 'pending';
+      li.innerHTML = `
+        <span class="badge"></span>
+        <span class="label">${s.label}</span>
+        <span class="hint" id="hint-${i}">Queued</span>
+      `;
+      stepsList.appendChild(li);
+    });
+  }
+
+  function setStepState(i, state, hint) {
+    const li = document.getElementById(`step-${i}`);
+    const hintEl = document.getElementById(`hint-${i}`);
+    if (!li) return;
+    li.className = state; // pending | running | done | fail
+    if (hintEl) hintEl.textContent = hint || (
+      state === 'running' ? 'Fetching…' :
+      state === 'done'    ? 'Done' :
+      state === 'fail'    ? 'Failed' : 'Queued'
+    );
+
+    // progress fill (completed steps / total)
+    const completed = steps.filter((_, idx) => idx <= i && ['done','fail'].includes(document.getElementById(`step-${idx}`).className)).length;
+    const pct = Math.max(0, Math.min(100, Math.round((completed / steps.length) * 100)));
+    fill.style.width = pct + '%';
+  }
+
+  async function runSyncWithProgress() {
+    overlay.style.display = 'flex';
+    renderSteps();
+    statusEl.textContent = 'Syncing your bank data…';
+
+    let firstFailureIndex = -1;
+
+    for (let i = 0; i < steps.length; i++) {
+      currentIndex = i;
+      const s = steps[i];
+      setStepState(i, 'running');
+      try {
+        await triggerTrueLayerFetch(s.key);
+        setStepState(i, 'done');
+      } catch (err) {
+        console.error(`Step ${s.key} failed`, err);
+        setStepState(i, 'fail', 'Failed');
+        statusEl.textContent = `Something failed on "${s.label}".`;
+        if (firstFailureIndex === -1) firstFailureIndex = i;
+        break; // stop on first error for simplicity
+      }
+    }
+
+    if (firstFailureIndex === -1) {
+      statusEl.textContent = 'All done! Redirecting…';
+      continueBtn.style.display = 'none';
+      retryBtn.style.display = 'none';
+      // small pause so the user sees “done”
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+    } else {
+      // show retry + continue
+      retryBtn.style.display = '';
+      continueBtn.style.display = '';
+      retryBtn.onclick = async () => {
+        retryBtn.disabled = true;
+        statusEl.textContent = `Retrying "${steps[firstFailureIndex].label}"…`;
+        setStepState(firstFailureIndex, 'running');
+        try {
+          await triggerTrueLayerFetch(steps[firstFailureIndex].key);
+          setStepState(firstFailureIndex, 'done');
+          statusEl.textContent = 'Recovered. Continuing…';
+          // continue with remaining steps
+          for (let i = firstFailureIndex + 1; i < steps.length; i++) {
+            setStepState(i, 'running');
+            await triggerTrueLayerFetch(steps[i].key);
+            setStepState(i, 'done');
+          }
+          statusEl.textContent = 'All done! Redirecting…';
+          continueBtn.style.display = 'none';
+          retryBtn.style.display = 'none';
+          setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+        } catch (e) {
+          console.error('Retry failed', e);
+          setStepState(firstFailureIndex, 'fail', 'Failed again');
+          statusEl.textContent = 'Still failing—You can continue and sync later.';
+          retryBtn.disabled = false;
+        }
+      };
+      continueBtn.onclick = () => { window.location.href = 'dashboard.html'; };
+    }
+  }
+
+  // ---------------- Main (unchanged flow + progress overlay) ----------------
   const p = new URLSearchParams(location.search);
   const code = p.get('code');
   const uid  = p.get('state');
@@ -28,13 +222,22 @@
       console.error('Token exchange failed:', data);
       alert('Token exchange failed. Check console for details.');
     } else {
-      window.location.href = "dashboard.html";
+      // Ensure auth is hydrated before hitting your fetchers
+      const user = await waitForAuthUser();
+      if (!user) {
+        console.warn('Not signed in; skipping auto-sync. You can sync from the dashboard.');
+        window.location.href = "dashboard.html";
+      } else if (user.uid !== uid) {
+        console.warn('UID mismatch between state and signed-in user', { stateUid: uid, authUid: user.uid });
+        // still proceed — your functions use auth.currentUser.uid internally
+        await runSyncWithProgress();
+      } else {
+        await runSyncWithProgress();
+      }
     }
   } else {
     console.error("Missing code or state in redirect URL.");
   }
 </script>
-
-
 </body>
 </html>

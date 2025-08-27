@@ -8,7 +8,7 @@ export async function updateIncome(amount, cadence) {
   console.log("amount:", amount, cadence)
   const daily = toDaily(amount, cadence);
   console.log("daily:", daily)
-  const uid = getAuth().currentUser.uid;
+  const uid = auth.currentUser.uid;
   const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
   console.log("ref:", ref)
   await setDoc(ref, { dIncome: daily }, { merge: true });
@@ -16,14 +16,14 @@ export async function updateIncome(amount, cadence) {
 
 export async function updateCoreExpenses(amount, cadence) {
   const daily = toDaily(amount, cadence);
-  const uid = getAuth().currentUser.uid;
+  const uid = auth.currentUser.uid;
   const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
   await setDoc(ref, { dCoreExpenses: daily }, { merge: true });
 }
 
 // NEW: getters used by the menu
 export async function getDailyIncome() {
-  const uid = getAuth().currentUser.uid;
+  const uid = auth.currentUser.uid;
   const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
   const snap = await getDoc(ref);
   const v = snap.exists() ? snap.data().dIncome : null;
@@ -31,7 +31,7 @@ export async function getDailyIncome() {
 }
 
 export async function getDailyCoreExpenses() {
-  const uid = getAuth().currentUser.uid;
+  const uid = auth.currentUser.uid;
   const ref = doc(db, 'players', uid, 'cashflowData', 'dailyAverages');
   const snap = await getDoc(ref);
   const v = snap.exists() ? snap.data().dCoreExpenses : null;

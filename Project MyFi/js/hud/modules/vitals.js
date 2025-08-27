@@ -1,5 +1,5 @@
 /** 
- * vitals_v10.js
+ * vitals_v11.js
  * ---------------------------------------------------------------------------
  * Truth T = regenCurrent * daysSince(calculationStartDate)
  *           − (spentToDate + seedCarryIfApplicable)
@@ -14,6 +14,59 @@ import {
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 import { maybeStartVitalsTour} from "./vitalsTour.js";
+
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+// match your deployed region for callables
+const functions = getFunctions(undefined, "europe-west2");
+
+export async function refreshVitals() {
+  const fn = httpsCallable(functions, "vitals_getSnapshot");
+  const res = await fn();
+  return res.data || {};
+}
+
+// Note: keep signature so dashboard's setInterval keeps working
+export async function lockExpiredOrOverflow(uid, queueCap = 50) {
+  try {
+    const fn = httpsCallable(functions, "vitals_lockPending");
+    const res = await fn({ queueCap });
+    // let the HUD animation react via 'vitals:locked' (as before)
+    const payload = res.data || {};
+    if (payload.appliedTotals) {
+      window.dispatchEvent(new CustomEvent("vitals:locked", { detail: { appliedTotals: payload.appliedTotals }}));
+    }
+    return payload;
+  } catch (e) {
+    console.warn("Server lock failed:", e);
+    return { locked: 0 };
+  }
+}
+
+// Optional (safer) server source of truth for Essence monthly
+export async function getEssenceAvailableMonthlyFromHUD(uid) {
+  try {
+    const fn = httpsCallable(functions, "vitals_getEssenceAvailableMonthly");
+    const res = await fn();
+    return Number(res?.data?.available || 0);
+  } catch {
+    // fallback to previous local logic if the callable isn't deployed yet
+    // (leaving your existing local implementation in place below is fine)
+    return 0;
+  }
+}
+
+// ── Debounced "lock on expiry" trigger + refresh snapshot ───────────────────
+function debounce(fn, wait = 300) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), wait);
+  };
+}
+
+// uid is available later; we bind it inside initVitalsHUD
+let __triggerLockSoon = null;
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    Alias & Level helpers
@@ -163,75 +216,7 @@ const SEC_PER_DAY = 86_400;
 let START_MS = null;
 let START_CONFIRMED = false;
 
-async function ensureStartMs(uid) {
-  if (START_CONFIRMED && START_MS !== null) return START_MS;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const pSnap = await getDoc(doc(db, "players", uid));
-      if (pSnap.exists()) {
-        const raw = pSnap.data()?.startDate;
-        if (raw?.toMillis) {
-          START_MS = raw.toMillis(); START_CONFIRMED = true; return START_MS;
-        } else if (raw instanceof Date) {
-          START_MS = raw.getTime(); START_CONFIRMED = true; return START_MS;
-        } else if (typeof raw === "number") {
-          START_MS = raw; START_CONFIRMED = true; return START_MS;
-        }
-      }
-    } catch (e) {
-      console.warn("ensureStartMs read failed:", e);
-    }
-    await new Promise(r => setTimeout(r, 120));
-  }
-  return Date.now(); // non-cached fallback; we’ll retry later
-}
-
-// calculationStartDate = 1st day of the player’s start month
-function calcStartMsFromStartDate(startMs) {
-  const d = new Date(startMs);
-  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-}
-
-async function elapsedDaysFromCalcStart(uid) {
-  const startMs = await ensureStartMs(uid);
-  const calcStart = calcStartMsFromStartDate(startMs);
-  return Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
-}
-async function daysTrackedFromCalcStart(uid) {
-  const startMs = await ensureStartMs(uid);
-  const calcStart = calcStartMsFromStartDate(startMs);
-  return Math.max(1, Math.floor((Date.now() - calcStart) / MS_PER_DAY));
-}
-
-// Helpers for seeding floors
-function sameYMD(aMs, bMs) {
-  const a = new Date(aMs), b = new Date(bMs);
-  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
-}
-function fractionOfDay(ms) {
-  const d = new Date(ms);
-  const sod = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  return Math.max(0, Math.min(1, (ms - sod) / MS_PER_DAY));
-}
-function monthProgressNow() {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-  const nextStart  = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
-
-  const n = Math.round((nextStart - monthStart) / MS_PER_DAY);  // days in month
-  const elapsed = Math.max(0, Math.min(n, (Date.now() - monthStart) / MS_PER_DAY)); // fractional days since month start
-  const f = elapsed / n;                                        // 0..1 including partial day
-  const d = Math.floor(elapsed) + 1;                            // human day-of-month (1..n)
-
-  return { n, d, f };
-}
-
-function modCap(x, cap) {
-  if (cap <= 0) return 0;
-  const m = x % cap;
-  return m < 0 ? m + cap : m;
-}
 
 /* ────────────────────────────────────────────────────────────────────────────
    Firestore normalizers
@@ -243,6 +228,7 @@ function normalizeTxn(docSnap) {
     amount: Number(d?.amount ?? 0), // negative = spend; positive = income
     dateMs: d?.dateMs ?? Date.now(),
     status: d?.status || "pending",
+    source: d?.source ?? null,   // <-- ADDED: expose source for filtering
     ghostExpiryMs: d?.ghostExpiryMs ?? 0,
     addedMs: d?.addedMs ?? d?.dateMs ?? Date.now(),
     provisionalTag: { pool: d?.provisionalTag?.pool ?? null, setAtMs: d?.provisionalTag?.setAtMs ?? null },
@@ -256,9 +242,7 @@ function normalizeTxn(docSnap) {
     appliedAllocation: d?.appliedAllocation ?? null,
   };
 }
-function previewPool(tx) {
-  return tx.provisionalTag?.pool ?? tx.suggestedPool ?? "stamina";
-}
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    History modal (unchanged)
@@ -430,318 +414,7 @@ async function getVitalsMode(uid) {
   } catch (_) {}
   return 'safe';
 }
-function shouldApplySeed(pools) {
-  const z = (x)=>!x || Math.abs(Number(x)) < 0.000001;
-  return z(pools?.health?.spentToDate) &&
-         z(pools?.mana?.spentToDate) &&
-         z(pools?.stamina?.spentToDate) &&
-         z(pools?.essence?.spentToDate);
-}
-async function getPoolShares(uid, pools) {
-  try {
-    const snap = await getDoc(doc(getFirestore(), `players/${uid}/cashflowData/poolAllocations`));
-    if (snap.exists()) {
-      const d = snap.data() || {};
-      const mana    = Number(d.manaAllocation    ?? 0);
-      const stamina = Number(d.staminaAllocation ?? 0);
-      const essence = Number(d.essenceAllocation ?? 0);
-      const sum = mana + stamina + essence;
-      if (sum > 0) return { mana: mana/sum, stamina: stamina/sum, essence: essence/sum };
-    }
-  } catch (_) {}
-  const m1 = Number(pools?.mana?.regenBaseline    || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline || 0);
-  const e1 = Number(pools?.essence?.regenBaseline || 0);
-  const sum = m1 + s1 + e1;
-  return sum > 0 ? { mana: m1/sum, stamina: s1/sum, essence: e1/sum } : { mana: 0, stamina: 0, essence: 0 };
-}
 
-// Seed currents: month progress = NOW; day-1 fractional from startDate
-async function computeSeedCurrents(uid, pools, mode, startMs, { p = 0.6 } = {}) {
-  // fractional days since calculationStartDate (first of the start month)
-  const calcStart = calcStartMsFromStartDate(startMs);
-  const daysAccrued = Math.max(0, (Date.now() - calcStart) / MS_PER_DAY);
-
-  // day-1 fractional (for floors that depend on the *signup* day)
-  const fracDay1 = fractionOfDay(startMs);
-  const isDay1   = sameYMD(startMs, Date.now());
-
-  // daily baselines
-  const h1 = Number(pools?.health?.regenBaseline   || 0);
-  const m1 = Number(pools?.mana?.regenBaseline     || 0);
-  const s1 = Number(pools?.stamina?.regenBaseline  || 0);
-  const e1 = Number(pools?.essence?.regenBaseline  || 0);
-
-  // accrued maxima up to now (calc-start anchored, includes partial day)
-  const Hmax = h1 * daysAccrued;
-  const Mmax = m1 * daysAccrued;
-  const Smax = s1 * daysAccrued;
-  const Emax = e1 * daysAccrued;
-
-  // ── SAFE floors (unchanged semantics) ─────────────────────────────────────
-  const fracOnly    = (x1) => x1 * fracDay1;
-  const onePlusFrac = (x1) => x1 * (1 + fracDay1);
-
-  const manaSafe     = isDay1 ? fracOnly(m1)    : onePlusFrac(m1);
-  const staminaSafe  = isDay1 ? fracOnly(s1)    : onePlusFrac(s1);
-  const essenceSafe  = isDay1 ? fracOnly(e1)    : onePlusFrac(e1);
-
-  if (mode !== 'accelerated') {
-    return {
-      health:  { current: Hmax,                         max: Hmax },
-      mana:    { current: Math.min(Mmax, manaSafe),     max: Mmax },
-      stamina: { current: Math.min(Smax, staminaSafe),  max: Smax },
-      essence: { current: Math.min(Emax, essenceSafe),  max: Emax },
-    };
-  }
-
-  // ── ACCELERATED ───────────────────────────────────────────────────────────
-  const manaFloorAccel    = isDay1 ? fracOnly(m1) : 0;
-  const staminaFloorAccel = isDay1 ? fracOnly(s1) : 0;
-  const essenceFloorAccel = isDay1 ? fracOnly(e1) : 0;
-
-  // total discretionary accrued so far (calc-start anchored)
-  const Dsum = m1 + s1 + e1;
-  const A    = Dsum * daysAccrued;
-
-  // remaining (1-p) to split
-  const R = Math.max(0, A * (1 - Math.max(0, Math.min(1, p))));
-
-  const shares = await getPoolShares(uid, pools);
-  const addM = R * (shares.mana    || 0);
-  const addS = R * (shares.stamina || 0);
-  const addE = R * (shares.essence || 0);
-
-  const manaCur    = Math.min(Mmax, manaFloorAccel    + addM);
-  const staminaCur = Math.min(Smax, staminaFloorAccel + addS);
-  const essenceCur = Math.min(Emax, essenceFloorAccel + addE);
-
-  return {
-    health:  { current: Hmax,       max: Hmax },
-    mana:    { current: manaCur,    max: Mmax },
-    stamina: { current: staminaCur, max: Smax },
-    essence: { current: essenceCur, max: Emax },
-  };
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
-   Manual-mode helpers
-   ──────────────────────────────────────────────────────────────────────────── */
-function manualWindowFromStart(startMs) {
-  const d = new Date(startMs);
-  const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-  return { startMonthStartMs, startDateMs: startMs };
-}
-async function hasPostStartSpend(uid, startMs) {
-  const db = getFirestore();
-  const col = collection(db, `players/${uid}/classifiedTransactions`);
-  const qy  = query(
-    col,
-    where('status','==','confirmed'),
-    where('amount','<', 0),
-    where('dateMs','>=', startMs),
-    limit(1)
-  );
-  const snap = await getDocs(qy);
-  return !!snap.size;
-}
-async function readManualOpeningSummary(uid) {
-  const db = getFirestore();
-  const sumSnap = await getDoc(doc(db, `players/${uid}/manualSeed/openingSummary`));
-  if (!sumSnap.exists()) return null;
-  const d = sumSnap.data() || {};
-  return {
-    total: Number(d.totalPrestartDiscretionary || 0),
-    manaPct: Number(d.split?.manaPct ?? 0.4),
-    staminaPct: Number(d.split?.staminaPct ?? 0.6),
-  };
-}
-async function sumManualItemised(uid, windowStart, windowEnd) {
-  const db = getFirestore();
-  const col = collection(db, `players/${uid}/classifiedTransactions`);
-  const qy  = query(
-    col,
-    where('isPrestart','==',true),
-    where('dateMs','>=', windowStart),
-    where('dateMs','<',  windowEnd)
-  );
-  const snap = await getDocs(qy);
-  let Pmana = 0, Pstamina = 0;
-  snap.forEach(d => {
-    const tx = d.data() || {};
-    const amt = Number(tx.amount || 0);
-    if (amt >= 0) return;
-    const spend = Math.abs(amt);
-    const pool  = tx?.provisionalTag?.pool ?? tx?.tag?.pool ?? 'stamina';
-    if (pool === 'mana') Pmana += spend; else Pstamina += spend;
-  });
-  return { Pmana, Pstamina };
-}
-async function applyManualAdjustments(uid, accelSeed, startMs) {
-  const { startMonthStartMs, startDateMs } = manualWindowFromStart(startMs);
-
-  const summary = await readManualOpeningSummary(uid);
-  let Pmana = 0, Pstamina = 0;
-
-  if (summary && summary.total > 0) {
-    Pmana    += summary.total * (summary.manaPct || 0);
-    Pstamina += summary.total * (summary.staminaPct || 0);
-  }
-
-  const itemised = await sumManualItemised(uid, startMonthStartMs, startDateMs);
-  Pmana    += itemised.Pmana;
-  Pstamina += itemised.Pstamina;
-
-  const H0 = accelSeed.health.current;
-  const M0 = accelSeed.mana.current;
-  const S0 = accelSeed.stamina.current;
-
-  const S1    = Math.max(0, S0 - Pstamina);
-  const spill = Math.max(0, Pstamina - S0);
-  const M1    = Math.max(0, M0 - (Pmana + spill));
-
-  return {
-    health:  { current: H0, max: accelSeed.health.max },
-    mana:    { current: M1, max: accelSeed.mana.max },
-    stamina: { current: S1, max: accelSeed.stamina.max },
-  };
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
-   Seed → Truth carry (calc-start anchored)
-   ──────────────────────────────────────────────────────────────────────────── */
-async function ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap) {
-  const existing = (snap.data()?.seedCarry) || null;
-  if (existing && Object.keys(existing).length) return existing;
-
-  if (mode === 'true') return {}; // ignore seeding/carry in true mode
-
-  // Build seed-as-of-now
-  let seed = null;
-  if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-      seed = await applyManualAdjustments(uid, accel, startMs);
-    }
-  } else if (mode === 'safe' || mode === 'accelerated') {
-    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-  }
-  if (!seed) return {};
-
-  const days = await elapsedDaysFromCalcStart(uid); // from calculationStartDate
-  const out = {};
-  for (const k of Object.keys(pools)) {
-    const accrued = (pools[k]?.regenCurrent || 0) * days;
-    const seedCur = Math.max(0, seed?.[k]?.current || 0);
-    out[k] = Math.max(0, accrued - seedCur);
-  }
-
-  await setDoc(doc(db, `players/${uid}/cashflowData/current`), { seedCarry: out }, { merge: true });
-  return out;
-}
-
-/* ────────────────────────────────────────────────────────────────────────────
-   1) Snapshot writer — calc-start anchored
-   ──────────────────────────────────────────────────────────────────────────── */
-export async function updateVitalsPools(uid) {
-  const db = getFirestore();
-  try {
-    const currentRef  = doc(db, `players/${uid}/cashflowData/current`);
-    const currentSnap = await getDoc(currentRef);
-    let existingCarry = (currentSnap.exists && currentSnap.data()?.seedCarry) || {};
-
-    const dailyAveragesSnap = await getDoc(doc(db, `players/${uid}/cashflowData/dailyAverages`));
-    const poolAllocationsSnap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
-    if (!dailyAveragesSnap.exists() || !poolAllocationsSnap.exists()) return;
-
-    const { dIncome, dCoreExpenses } = dailyAveragesSnap.data();
-    const { healthAllocation, manaAllocation, staminaAllocation, essenceAllocation } = poolAllocationsSnap.data();
-    const dailyDisposable = dIncome - dCoreExpenses;
-
-    const regenBaseline = {
-      health:  dailyDisposable * healthAllocation,
-      mana:    dailyDisposable * manaAllocation,
-      stamina: dailyDisposable * staminaAllocation,
-      essence: dailyDisposable * essenceAllocation,
-    };
-
-    const txnsSnap = await getDoc(doc(db, `players/${uid}/classifiedTransactions/summary`));
-    const usage7Day    = { health:0, mana:0, stamina:0, essence:0 };
-    const usageAllTime = { health:0, mana:0, stamina:0, essence:0 };
-    if (txnsSnap.exists()) {
-      const { recentUsage = {}, historicUsage = {} } = txnsSnap.data();
-      for (const p of ["health","mana","stamina","essence"]) {
-        usage7Day[p]    = recentUsage[p]  || 0;
-        usageAllTime[p] = historicUsage[p]|| 0;
-      }
-    }
-
-    const calcRegen = (baseline, usage) => {
-      if (usage > baseline * 1.15) return [baseline * 0.95, "overspending"];
-      if (usage < baseline * 0.8 ) return [baseline * 1.05, "underspending"];
-      return [baseline, "on target"];
-    };
-
-    const daysTracked = await daysTrackedFromCalcStart(uid);
-    const elapsedDays = await elapsedDaysFromCalcStart(uid);
-
-    const pools = {};
-    for (const pool of ["health","mana","stamina","essence"]) {
-      const [regenCurrent, trend] = calcRegen(regenBaseline[pool], usage7Day[pool]);
-      const spent = usageAllTime[pool];
-      pools[pool] = {
-        regenBaseline: Number(regenBaseline[pool].toFixed(2)),
-        regenCurrent:  Number(regenCurrent.toFixed(2)),
-        usage7Day:     Number(usage7Day[pool].toFixed(2)),
-        trend,
-        spentToDate:   Number(spent.toFixed(2)),
-      };
-    }
-
-    // If we’ve flipped to truth and carry is still missing, compute once
-    let seedCarry = existingCarry;
-    if (!seedCarry || Object.keys(seedCarry).length === 0) {
-      const startMs = await ensureStartMs(uid);
-      const mode    = await getVitalsMode(uid);
-      let seeding = false;
-      if (mode === 'safe' || mode === 'accelerated') {
-        seeding = shouldApplySeed(pools);
-      } else if (mode === 'manual') {
-        seeding = !(await hasPostStartSpend(uid, startMs));
-      }
-      if (!seeding && mode !== 'true') {
-        let seedNow = null;
-        if (mode === 'manual') {
-          const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-          seedNow = await applyManualAdjustments(uid, accel, startMs);
-        } else {
-          seedNow = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-        }
-        if (seedNow) {
-          const days = await elapsedDaysFromCalcStart(uid);
-          seedCarry = {};
-          for (const k of Object.keys(pools)) {
-            const accrued = (pools[k].regenCurrent || 0) * days;
-            const seedCur = Math.max(0, seedNow?.[k]?.current || 0);
-            seedCarry[k] = Math.max(0, accrued - seedCur);
-          }
-        }
-      }
-    }
-
-    await setDoc(currentRef, {
-      pools,
-      dailyAverages: { dailyDisposable: Number(dailyDisposable.toFixed(2)) },
-      daysTracked,
-      elapsedDays,
-      lastSync: new Date().toISOString(),
-      ...(seedCarry && Object.keys(seedCarry).length ? { seedCarry } : {}),
-    }, { merge: true });
-  } catch (e) {
-    console.error("updateVitalsPools:", e);
-  }
-}
 
 /* ────────────────────────────────────────────────────────────────────────────
    2) Static HUD paint — seed before first spend; truth uses calc-start + carry
@@ -751,48 +424,37 @@ export async function loadVitalsToHUD(uid) {
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
 
-  const pools = snap.data().pools;
+  const cur = snap.data() || {};
+  const pools = cur.pools || {};
   const elements = getVitalsElements();
   const factor = VIEW_FACTORS[getViewMode()];
 
-  const startMs = await ensureStartMs(uid);
-  const days    = await elapsedDaysFromCalcStart(uid);
+  // Use server-provided timing + mode/carry/seed
+  const days    = Number(cur.elapsedDays || 0);
+  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const seed    = cur.seed || null;             // optional — present while in seeding state
+  const seedCarry = cur.seedCarry || {};        // present after flip to truth (non-true modes)
 
-  const mode = await getVitalsMode(uid);
-  let seed = null;
-
-  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
-    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-  } else if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-      seed = await applyManualAdjustments(uid, accel, startMs);
-    }
-  }
-
-  let seedCarry = (snap.data()?.seedCarry) || {};
-  if (!seed && Object.keys(seedCarry).length === 0 && mode !== 'true') {
-    seedCarry = await ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap);
-  }
-  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
 
   let sumCurrent = 0;
   let sumMax = 0;
 
   for (const [pool, v] of Object.entries(pools)) {
     const el = elements[pool]; if (!el) continue;
-    const cap   = (v.regenBaseline ?? 0) * factor;
+    const cap = (Number(v.regenBaseline || 0)) * factor;
 
     let rNow, sNow;
 
     if (seed && seed[pool]) {
-      rNow = Math.max(0, seed[pool].current);
+      // During seeding: render the seed currents straight
+      rNow = Math.max(0, Number(seed[pool].current || 0));
       sNow = 0;
     } else {
-      const T = Math.max(0, (v.regenCurrent ?? 0) * days - ((v.spentToDate ?? 0) + carryFor(pool)));
-      rNow  = cap > 0 ? modCap(T, cap) : 0;
-      sNow  = cap > 0 ? Math.floor(T / cap) : 0;
+      // Truth after flip (server is the source of truth for elapsedDays and seedCarry)
+      const T = Math.max(0, (Number(v.regenCurrent || 0) * days) - ((Number(v.spentToDate || 0)) + carryFor(pool)));
+      rNow = cap > 0 ? ((T % cap) + cap) % cap : 0;
+      sNow = cap > 0 ? Math.floor(T / cap) : 0;
     }
 
     const pct = cap > 0 ? (rNow / cap) * 100 : 0;
@@ -804,185 +466,213 @@ export async function loadVitalsToHUD(uid) {
       sumCurrent += rNow;
       sumMax     += cap;
     }
+
+    const barEl = el.fill.closest('.bar');
+    barEl?.classList.remove("overspending","underspending");
+    if (v.trend === "overspending")  barEl?.classList.add("overspending");
+    if (v.trend === "underspending") barEl?.classList.add("underspending");
   }
 
   setVitalsTotals(sumCurrent, sumMax);
   refreshBarGrids();
 }
 
+
 /* ────────────────────────────────────────────────────────────────────────────
    3) Ghost allocation helpers
    ──────────────────────────────────────────────────────────────────────────── */
 const MANA_OVERFLOW_MODE = 'health'; // or 'stamina_then_health'
 
-function allocateSpendAcrossPools(spend, intent, availTruth) {
-  const out = { health:0, mana:0, stamina:0, essence:0 };
-  if (spend <= 0) return out;
-
-  if (intent === "mana") {
-    const toMana = Math.min(spend, Math.max(0, availTruth.mana));
-    if (toMana > 0) { out.mana += toMana; availTruth.mana -= toMana; }
-    const leftover = spend - toMana;
-    if (leftover > 0) {
-      if (MANA_OVERFLOW_MODE === "stamina_then_health") {
-        const toStamina = Math.min(leftover, Math.max(0, availTruth.stamina));
-        if (toStamina > 0) { out.stamina += toStamina; availTruth.stamina -= toStamina; }
-        const toHealth = leftover - toStamina;
-        if (toHealth > 0) out.health += toHealth;
-      } else {
-        out.health += leftover;
-      }
-    }
-    return out;
-  }
-
-  const toStamina = Math.min(spend, Math.max(0, availTruth.stamina));
-  if (toStamina > 0) { out.stamina += toStamina; availTruth.stamina -= toStamina; }
-  const toHealth = spend - toStamina;
-  if (toHealth > 0) out.health += toHealth;
-  return out;
-}
-function sumPools(a, b) {
-  return {
-    health:  (a.health  || 0) + (b.health  || 0),
-    mana:    (a.mana    || 0) + (b.mana    || 0),
-    stamina: (a.stamina || 0) + (b.stamina || 0),
-    essence: (a.essence || 0) + (b.essence || 0),
-  };
-}
 
 /* ────────────────────────────────────────────────────────────────────────────
    3.5) Remainder-first projection
    ──────────────────────────────────────────────────────────────────────────── */
-function applyRemainderFirst(T, cap, L) {
-  if (cap <= 0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
 
-  const sNow = Math.floor(T / cap);
-  const rNow = T - sNow * cap;
-
-  if (L <= 0.000001) {
-    return {
-      rNow, sNow, rAfter: rNow, sAfter: sNow,
-      ghostLeftPct: 0, ghostWidthPct: 0
-    };
-  }
-
-  if (L <= rNow) {
-    const rAfter = rNow - L;
-    return {
-      rNow, sNow, rAfter, sAfter: sNow,
-      ghostLeftPct: (rAfter / cap) * 100,
-      ghostWidthPct: (L / cap) * 100,
-    };
-  }
-
-  let Lleft = L - rNow;
-  let s     = sNow;
-  let r     = 0;
-
-  if (s > 0) {
-    const whole = Math.min(s, Math.floor(Lleft / cap));
-    if (whole > 0) {
-      s -= whole;
-      Lleft -= whole * cap;
-    }
-  }
-
-  if (Lleft > 0 && s > 0) {
-    s -= 1;     // consume one unit to refill
-    r  = cap;   // full bar
-  }
-
-  const rAfter = Math.max(0, r - Lleft);
-  const ghostLeftPct  = (rAfter / cap) * 100;
-  const ghostWidthPct = ((r - rAfter) / cap) * 100;
-
-  return { rNow, sNow, rAfter, sAfter: s, ghostLeftPct, ghostWidthPct };
-}
 
 /* ────────────────────────────────────────────────────────────────────────────
    4) Animated HUD — truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
-export async function initVitalsHUD(uid, timeMultiplier = 1) {
+export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
   const db = getFirestore();
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
 
-  const pools = snap.data().pools;
+  const cur = snap.data() || {};
+  const pools = cur.pools || {};
   const elements = getVitalsElements();
   ensureGridLayers(elements);
   ensureReclaimLayers(elements);
 
-  const startMs = await ensureStartMs(uid);
-  const days0   = await elapsedDaysFromCalcStart(uid);
+  const days0   = Number(cur.elapsedDays || 0);
+  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const seed    = cur.seed || null;
+  const seedCarry = cur.seedCarry || {};
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
 
-  const mode = await getVitalsMode(uid);
-  let seed = null;
-
-  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
-    seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-  } else if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-      seed = await applyManualAdjustments(uid, accel, startMs);
-    }
-  }
-
-  let seedCarry = (snap.data()?.seedCarry) || {};
-  if (!seed && Object.keys(seedCarry).length === 0 && mode !== 'true') {
-    seedCarry = await ensureSeedCarryOnFlip(uid, pools, mode, startMs, snap);
-  }
-  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
-
+  // Authoritative truth T at t0; animation is client-side smoothing only.
   const truth = {};
   const regenPerSec = {};
   for (const pool of Object.keys(pools)) {
     const v = pools[pool];
+
     if (seed && seed[pool]) {
-      truth[pool] = Math.max(0, seed[pool].current);
+      truth[pool] = Math.max(0, Number(seed[pool].current || 0));
     } else {
-      truth[pool] = Math.max(0, (v.regenCurrent ?? 0) * days0 - ((v.spentToDate ?? 0) + carryFor(pool)));
+      truth[pool] = Math.max(
+        0,
+        (Number(v.regenCurrent || 0) * days0) - ((Number(v.spentToDate || 0)) + carryFor(pool))
+      );
     }
-    regenPerSec[pool] = (v.regenCurrent ?? 0) * (timeMultiplier / SEC_PER_DAY);
+    regenPerSec[pool] = Number(v.regenCurrent || 0) * (timeMultiplier / 86_400); // per-sec from daily
   }
 
+  // Bind the debounced locker to this user
+  __triggerLockSoon = debounce(async () => {
+    try {
+      await lockExpiredOrOverflow(uid, 50); // server confirms due + overflow
+      await refreshVitals();                // pull fresh snapshot for HUD + logs
+    } catch (e) {
+      console.warn("lock/refresh failed:", e);
+    }
+  }, 200);
+
+  // Live ghosts (pending)
   let pendingTx = [];
   const pendingQ = query(collection(db, `players/${uid}/classifiedTransactions`), where("status", "==", "pending"));
   onSnapshot(pendingQ, (shot) => {
     const now = Date.now();
-    pendingTx = shot.docs.map(normalizeTxn).filter(tx => now < tx.ghostExpiryMs);
+    pendingTx = shot.docs.map(d => {
+      const x = d.data() || {};
+      return {
+        id: d.id,
+        amount: Number(x.amount || 0),
+        dateMs: x.dateMs || 0,
+        ghostExpiryMs: x.ghostExpiryMs || 0,
+        provisionalTag: x.provisionalTag || null,
+        suggestedPool: x.suggestedPool || null,
+        transactionData: { description: x?.transactionData?.description || '' },
+      };
+    })//.filter(tx => now < tx.ghostExpiryMs);
   });
 
   window.addEventListener("vitals:locked", (e) => {
     const applied = e?.detail?.appliedTotals; if (!applied) return;
     for (const p of Object.keys(truth)) {
-      truth[p] = Math.max(0, truth[p] - (applied[p] || 0));
+      truth[p] = Math.max(0, truth[p] - (Number(applied[p] || 0)));
     }
   });
 
   let viewMode = getViewMode();
 
+  function allocateSpendAcrossPools(spend, intent, availTruth) {
+    const out = { health:0, mana:0, stamina:0, essence:0 };
+    if (spend <= 0) return out;
+
+    if (intent === "mana") {
+      const toMana = Math.min(spend, Math.max(0, availTruth.mana));
+      if (toMana > 0) { out.mana += toMana; availTruth.mana -= toMana; }
+      const leftover = spend - toMana;
+      if (leftover > 0) out.health += leftover; // overflow→health (parity)
+      return out;
+    }
+    const toStamina = Math.min(spend, Math.max(0, availTruth.stamina));
+    if (toStamina > 0) { out.stamina += toStamina; availTruth.stamina -= toStamina; }
+    const toHealth = spend - toStamina;
+    if (toHealth > 0) out.health += toHealth;
+    return out;
+  }
+
+  function applyRemainderFirst(T, cap, L) {
+    if (cap <= 0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
+    const sNow = Math.floor(T / cap);
+    const rNow = T - sNow * cap;
+
+    if (L <= 0.000001) {
+      return { rNow, sNow, rAfter: rNow, sAfter: sNow, ghostLeftPct:0, ghostWidthPct:0 };
+    }
+    if (L <= rNow) {
+      const rAfter = rNow - L;
+      return {
+        rNow, sNow, rAfter, sAfter: sNow,
+        ghostLeftPct: (rAfter / cap) * 100,
+        ghostWidthPct: (L / cap) * 100,
+      };
+    }
+
+    let Lleft = L - rNow;
+    let s     = sNow;
+    let r     = 0;
+
+    if (s > 0) {
+      const whole = Math.min(s, Math.floor(Lleft / cap));
+      if (whole > 0) { s -= whole; Lleft -= whole * cap; }
+    }
+    if (Lleft > 0 && s > 0) { s -= 1; r = cap; }
+    const rAfter = Math.max(0, r - Lleft);
+    const ghostLeftPct  = (rAfter / cap) * 100;
+    const ghostWidthPct = ((r - rAfter) / cap) * 100;
+    return { rNow, sNow, rAfter, sAfter: s, ghostLeftPct, ghostWidthPct };
+  }
+
   let last = null;
+
+  // Delay ghost overlay until base bars have painted once
+  let allowGhostOverlay = false;
+  // flip on after first paint (or just a short beat)
+  function enableGhostOverlaySoon() {
+    if (!allowGhostOverlay) setTimeout(() => (allowGhostOverlay = true), 60);
+  }
+
   function frame(ts) {
     if (last === null) last = ts;
     const dt = (ts - last) / 1000; last = ts;
 
+    // Animate truth by regen
     for (const p of Object.keys(truth)) {
       truth[p] = Math.max(0, truth[p] + regenPerSec[p] * dt);
     }
 
+    // Ghost preview application
     const availTruth = { ...truth };
     let pendingTotals = { health:0, mana:0, stamina:0, essence:0 };
     const now = Date.now();
     const ordered = [...pendingTx].sort((a,b)=>a.dateMs - b.dateMs);
+
+    // (A) live countdown tick (emit once per second)
+    window.__myfi_lastTickSec ??= 0;
+    const sec = Math.floor(now / 1000);
+    if (sec !== window.__myfi_lastTickSec) {
+      window.__myfi_lastTickSec = sec;
+      const ticks = ordered.map(tx => ({
+        id: tx.id,
+        seconds: Math.max(0, Math.ceil((tx.ghostExpiryMs - now) / 1000))
+      }));
+      window.dispatchEvent(new CustomEvent("tx:expiry-tick", { detail: { ticks } }));
+    } 
+
+
+    // (B) compute preview + detect expiry
+    let hasLocalExpiry = false;
     for (const tx of ordered) {
-      if (now >= tx.ghostExpiryMs || tx.amount >= 0) continue;
+      const ttl = (tx.ghostExpiryMs - now);
+      if (ttl <= 0) {
+        hasLocalExpiry = true; // crossed 0: ask server to confirm asap
+        continue;              // exclude from preview immediately
+      }
+      if (tx.amount >= 0) continue; // only spending affects ghosts
       const spend  = Math.abs(tx.amount);
-      const intent = previewPool(tx);
+      const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
       const split  = allocateSpendAcrossPools(spend, intent, availTruth);
-      pendingTotals = sumPools(pendingTotals, split);
+      pendingTotals = {
+        health:  pendingTotals.health  + (split.health  || 0),
+        mana:    pendingTotals.mana    + (split.mana    || 0),
+        stamina: pendingTotals.stamina + (split.stamina || 0),
+        essence: pendingTotals.essence + (split.essence || 0),
+      };
     }
+
+    // (C) trigger server lock + refresh if any expired just now
+    if (hasLocalExpiry && __triggerLockSoon) __triggerLockSoon();
 
     const factor = VIEW_FACTORS[viewMode];
     let sumCurrent = 0;
@@ -991,23 +681,34 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     for (const pool of Object.keys(pools)) {
       const el = elements[pool]; if (!el) continue;
       const v  = pools[pool];
-      const cap = (v.regenBaseline ?? 0) * factor || 0;
+      const cap = (Number(v.regenBaseline || 0)) * factor || 0;
 
       const T = truth[pool];
       const L = pendingTotals[pool] || 0;
 
       const proj = applyRemainderFirst(T, cap, L);
 
-      const pctAfter = cap > 0 ? (proj.rAfter / cap) * 100 : 0;
-      el.fill.style.width = `${pctAfter}%`;
+      // const pctBase = cap > 0 ? (proj.rNow / cap) * 100 : 0;
+      // el.fill.style.width = `${pctBase}%`;
+
+      // decide whether to show projected (post-ghost) or current (pre-ghost)
+      const useProjected = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+
+      const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
+      el.fill.style.width = `${pct}%`;
+
       el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      // after we’ve painted at least once, allow overlay next frames
+      enableGhostOverlaySoon();
 
       setSurplusPill(el, proj.sNow, proj.sAfter);
 
       const barEl = el.fill.closest('.bar');
       const reclaimEl = barEl.querySelector('.bar-reclaim');
 
-      if (cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01) {
+      const showGhost = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+
+      if (showGhost) {
         reclaimEl.style.left    = `${Math.max(0, Math.min(100, proj.ghostLeftPct)).toFixed(2)}%`;
         reclaimEl.style.width   = `${Math.max(0, Math.min(100, proj.ghostWidthPct)).toFixed(2)}%`;
         reclaimEl.style.opacity = '1';
@@ -1021,7 +722,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       if (v.trend === "underspending") barEl.classList.add("underspending");
 
       if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
-        sumCurrent += proj.rAfter;
+        // sumCurrent += proj.rAfter;
+        sumCurrent += useProjected ? proj.rAfter : proj.rNow;
         sumMax     += cap;
       }
     }
@@ -1034,111 +736,272 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   window.addEventListener("vitals:viewmode", (e) => {
     const next = e?.detail?.mode || "daily";
     viewMode = VIEW_MODES.includes(next) ? next : "daily";
+    allowGhostOverlay = false;          // re-gate overlay for new caps
+    enableGhostOverlaySoon();
     refreshBarGrids();
   });
 
-  // Vitals Tour
-  maybeStartVitalsTour(uid);  // runs only once per device for Vitals
+  // Vitals Tour remains unchanged
+  maybeStartVitalsTour(uid);
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
-   5) Lock + summary — calc-start + seedCarry in availTruth
-   ──────────────────────────────────────────────────────────────────────────── */
-function roundPools(p){ return {
-  health:Number((p.health||0).toFixed(2)),
-  mana:Number((p.mana||0).toFixed(2)),
-  stamina:Number((p.stamina||0).toFixed(2)),
-  essence:Number((p.essence||0).toFixed(2)),
-};}
+export async function initVitalsHUD(uid, timeMultiplier = 1) {
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!snap.exists()) return;
 
-async function recomputeSummary(uid){
-  const db=getFirestore();
-  const col=collection(db,`players/${uid}/classifiedTransactions`);
-  const confirmedQ=query(col,where("status","==","confirmed"));
-  const snap=await getDocs(confirmedQ);
+  const cur = snap.data() || {};
+  const pools = cur.pools || {};
+  const elements = getVitalsElements();
+  ensureGridLayers(elements);
+  ensureReclaimLayers(elements);
 
-  const all={health:0,mana:0,stamina:0,essence:0};
-  const recent7={health:0,mana:0,stamina:0,essence:0};
-  const since7=Date.now()-7*MS_PER_DAY;
+  const days0   = Number(cur.elapsedDays || 0);
+  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const seed    = cur.seed || null;
+  const seedCarry = cur.seedCarry || {};
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
 
-  snap.forEach(d=>{
-    const tx=d.data(); const alloc=tx.appliedAllocation||{};
-    for(const k of Object.keys(all)) all[k]+=Number(alloc[k]||0);
-    const when=tx?.lockedAtMs||tx?.tag?.setAtMs||0;
-    if(when>=since7){ for(const k of Object.keys(recent7)) recent7[k]+=Number(alloc[k]||0); }
-  });
+  // STREAM-AWARE: only track pending tx from the active stream
+  const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
 
-  await setDoc(doc(db,`players/${uid}/classifiedTransactions/summary`),{
-    historicUsage:roundPools(all),
-    recentUsage:roundPools(recent7),
-    updatedAt:Date.now(),
-  },{merge:true});
-}
+  // Authoritative truth T at t0; animation is client-side smoothing only.
+  const truth = {};
+  const regenPerSec = {};
+  for (const pool of Object.keys(pools)) {
+    const v = pools[pool];
 
-export async function lockExpiredOrOverflow(uid,queueCap=50){
-  const db=getFirestore();
-  const col=collection(db,`players/${uid}/classifiedTransactions`);
-  const now=Date.now();
-
-  const dueSnap=await getDocs(query(col,where("status","==","pending"),where("ghostExpiryMs","<=",now)));
-  const pendAsc=await getDocs(query(col,where("status","==","pending"),orderBy("addedMs","asc")));
-  const overflow=Math.max(0,pendAsc.size-queueCap);
-
-  const toConfirm=[]; dueSnap.forEach(d=>toConfirm.push(d));
-  if(overflow>0){ let i=0; pendAsc.forEach(d=>{ if(i++<overflow) toConfirm.push(d); }); }
-  if(!toConfirm.length) return;
-
-  const currentSnap=await getDoc(doc(db,`players/${uid}/cashflowData/current`));
-  if(!currentSnap.exists()) return;
-  const pools=currentSnap.data().pools||{};
-  const seedCarry = (currentSnap.data()?.seedCarry) || {};
-
-  const mode = await getVitalsMode(uid);
-  const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry?.[pool] || 0)));
-
-  const days = await elapsedDaysFromCalcStart(uid);
-
-  const availTruth={
-    health: Math.max(0,(pools.health?.regenCurrent ||0)*days - ((pools.health?.spentToDate ||0) + carryFor('health'))),
-    mana:   Math.max(0,(pools.mana?.regenCurrent   ||0)*days - ((pools.mana?.spentToDate   ||0) + carryFor('mana'))),
-    stamina:Math.max(0,(pools.stamina?.regenCurrent||0)*days - ((pools.stamina?.spentToDate||0) + carryFor('stamina'))),
-    essence:Math.max(0,(pools.essence?.regenCurrent||0)*days - ((pools.essence?.spentToDate||0) + carryFor('essence'))),
-  };
-
-  toConfirm.sort((a,b)=>(a.data()?.addedMs??0)-(b.data()?.addedMs??0));
-
-  const batch=writeBatch(db);
-  const appliedTotals={health:0,mana:0,stamina:0,essence:0};
-
-  for(const d of toConfirm){
-    const tx=normalizeTxn(d);
-    const reason=tx.ghostExpiryMs<=now?"expiry":"queue_cap";
-    const chosen=tx?.provisionalTag?.pool ?? previewPool(tx) ?? "stamina";
-
-    if(tx.amount>=0){
-      batch.update(d.ref,{ status:"confirmed", tag:{pool:chosen,setAtMs:now}, autoLockReason:reason, lockedAtMs:now });
-      continue;
+    if (seed && seed[pool]) {
+      truth[pool] = Math.max(0, Number(seed[pool].current || 0));
+    } else {
+      truth[pool] = Math.max(
+        0,
+        (Number(v.regenCurrent || 0) * days0) - ((Number(v.spentToDate || 0)) + carryFor(pool))
+      );
     }
-
-    const spend=Math.abs(tx.amount);
-    const split=allocateSpendAcrossPools(spend,chosen,availTruth);
-    for(const k of Object.keys(appliedTotals)) appliedTotals[k]+=(split[k]||0);
-
-    batch.update(d.ref,{
-      status:"confirmed",
-      tag:{pool:chosen,setAtMs:now},
-      autoLockReason:reason,
-      lockedAtMs:now,
-      appliedAllocation:roundPools(split),
-    });
+    // per-sec from daily
+    regenPerSec[pool] = Number(v.regenCurrent || 0) * (timeMultiplier / 86_400);
   }
 
-  await batch.commit();
-  await recomputeSummary(uid);
-  await updateVitalsPools(uid);
+  // Bind the debounced locker to this user
+  __triggerLockSoon = debounce(async () => {
+    try {
+      await lockExpiredOrOverflow(uid, 50); // server confirms due + overflow
+      await refreshVitals();                // pull fresh snapshot for HUD + logs
+    } catch (e) {
+      console.warn("lock/refresh failed:", e);
+    }
+  }, 200);
 
-  window.dispatchEvent(new CustomEvent("vitals:locked",{ detail:{ appliedTotals:roundPools(appliedTotals) } }));
+  // Live ghosts (pending) — STREAM-AWARE QUERY
+  let pendingTx = [];
+  const pendingQ = query(
+    collection(db, `players/${uid}/classifiedTransactions`),
+    where("status", "==", "pending"),
+    where("source", "==", desiredSource) // <— only active stream
+  );
+  onSnapshot(pendingQ, (shot) => {
+    const now = Date.now();
+    pendingTx = shot.docs.map(d => {
+      const x = d.data() || {};
+      return {
+        id: d.id,
+        amount: Number(x.amount || 0),
+        dateMs: x.dateMs || 0,
+        ghostExpiryMs: x.ghostExpiryMs || 0,
+        provisionalTag: x.provisionalTag || null,
+        suggestedPool: x.suggestedPool || null,
+        transactionData: { description: x?.transactionData?.description || '' },
+      };
+    });
+    // If you want to hide already-expired ghosts locally, add:
+    // .filter(tx => now < tx.ghostExpiryMs);
+  });
+
+  window.addEventListener("vitals:locked", (e) => {
+    const applied = e?.detail?.appliedTotals; if (!applied) return;
+    for (const p of Object.keys(truth)) {
+      truth[p] = Math.max(0, truth[p] - (Number(applied[p] || 0)));
+    }
+  });
+
+  let viewMode = getViewMode();
+
+  function allocateSpendAcrossPools(spend, intent, availTruth) {
+    const out = { health:0, mana:0, stamina:0, essence:0 };
+    if (spend <= 0) return out;
+
+    if (intent === "mana") {
+      const toMana = Math.min(spend, Math.max(0, availTruth.mana));
+      if (toMana > 0) { out.mana += toMana; availTruth.mana -= toMana; }
+      const leftover = spend - toMana;
+      if (leftover > 0) out.health += leftover; // overflow→health (parity)
+      return out;
+    }
+    const toStamina = Math.min(spend, Math.max(0, availTruth.stamina));
+    if (toStamina > 0) { out.stamina += toStamina; availTruth.stamina -= toStamina; }
+    const toHealth = spend - toStamina;
+    if (toHealth > 0) out.health += toHealth;
+    return out;
+  }
+
+  function applyRemainderFirst(T, cap, L) {
+    if (cap <= 0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
+    const sNow = Math.floor(T / cap);
+    const rNow = T - sNow * cap;
+
+    if (L <= 0.000001) {
+      return { rNow, sNow, rAfter: rNow, sAfter: sNow, ghostLeftPct:0, ghostWidthPct:0 };
+    }
+    if (L <= rNow) {
+      const rAfter = rNow - L;
+      return {
+        rNow, sNow, rAfter, sAfter: sNow,
+        ghostLeftPct: (rAfter / cap) * 100,
+        ghostWidthPct: (L / cap) * 100,
+      };
+    }
+
+    let Lleft = L - rNow;
+    let s     = sNow;
+    let r     = 0;
+
+    if (s > 0) {
+      const whole = Math.min(s, Math.floor(Lleft / cap));
+      if (whole > 0) { s -= whole; Lleft -= whole * cap; }
+    }
+    if (Lleft > 0 && s > 0) { s -= 1; r = cap; }
+    const rAfter = Math.max(0, r - Lleft);
+    const ghostLeftPct  = (rAfter / cap) * 100;
+    const ghostWidthPct = ((r - rAfter) / cap) * 100;
+    return { rNow, sNow, rAfter, sAfter: s, ghostLeftPct, ghostWidthPct };
+  }
+
+  let last = null;
+
+  // Delay ghost overlay until base bars have painted once
+  let allowGhostOverlay = false;
+  function enableGhostOverlaySoon() {
+    if (!allowGhostOverlay) setTimeout(() => (allowGhostOverlay = true), 60);
+  }
+
+  function frame(ts) {
+    if (last === null) last = ts;
+    const dt = (ts - last) / 1000; last = ts;
+
+    // Animate truth by regen
+    for (const p of Object.keys(truth)) {
+      truth[p] = Math.max(0, truth[p] + regenPerSec[p] * dt);
+    }
+
+    // Ghost preview application
+    const availTruth = { ...truth };
+    let pendingTotals = { health:0, mana:0, stamina:0, essence:0 };
+    const now = Date.now();
+    const ordered = [...pendingTx].sort((a,b)=>a.dateMs - b.dateMs);
+
+    // (A) live countdown tick (emit once per second)
+    window.__myfi_lastTickSec ??= 0;
+    const sec = Math.floor(now / 1000);
+    if (sec !== window.__myfi_lastTickSec) {
+      window.__myfi_lastTickSec = sec;
+      const ticks = ordered.map(tx => ({
+        id: tx.id,
+        seconds: Math.max(0, Math.ceil((tx.ghostExpiryMs - now) / 1000))
+      }));
+      window.dispatchEvent(new CustomEvent("tx:expiry-tick", { detail: { ticks } }));
+    }
+
+    // (B) compute preview + detect expiry
+    let hasLocalExpiry = false;
+    for (const tx of ordered) {
+      const ttl = (tx.ghostExpiryMs - now);
+      if (ttl <= 0) {
+        hasLocalExpiry = true; // crossed 0: ask server to confirm asap
+        continue;              // exclude from preview immediately
+      }
+      if (tx.amount >= 0) continue; // only spending affects ghosts
+      const spend  = Math.abs(tx.amount);
+      const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
+      const split  = allocateSpendAcrossPools(spend, intent, availTruth);
+      pendingTotals = {
+        health:  pendingTotals.health  + (split.health  || 0),
+        mana:    pendingTotals.mana    + (split.mana    || 0),
+        stamina: pendingTotals.stamina + (split.stamina || 0),
+        essence: pendingTotals.essence + (split.essence || 0),
+      };
+    }
+
+    // (C) trigger server lock + refresh if any expired just now
+    if (hasLocalExpiry && __triggerLockSoon) __triggerLockSoon();
+
+    const factor = VIEW_FACTORS[viewMode];
+    let sumCurrent = 0;
+    let sumMax = 0;
+
+    for (const pool of Object.keys(pools)) {
+      const el = elements[pool]; if (!el) continue;
+      const v  = pools[pool];
+      const cap = (Number(v.regenBaseline || 0)) * factor || 0;
+
+      const T = truth[pool];
+      const L = pendingTotals[pool] || 0;
+
+      const proj = applyRemainderFirst(T, cap, L);
+
+      const useProjected = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+      const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
+      el.fill.style.width = `${pct}%`;
+
+      el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      enableGhostOverlaySoon();
+
+      setSurplusPill(el, proj.sNow, proj.sAfter);
+
+      const barEl = el.fill.closest('.bar');
+      const reclaimEl = barEl.querySelector('.bar-reclaim');
+
+      const showGhost = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+
+      if (showGhost) {
+        reclaimEl.style.left    = `${Math.max(0, Math.min(100, proj.ghostLeftPct)).toFixed(2)}%`;
+        reclaimEl.style.width   = `${Math.max(0, Math.min(100, proj.ghostWidthPct)).toFixed(2)}%`;
+        reclaimEl.style.opacity = '1';
+      } else {
+        reclaimEl.style.opacity = '0';
+        reclaimEl.style.width   = '0%';
+      }
+
+      barEl.classList.remove("overspending","underspending");
+      if (v.trend === "overspending")  barEl.classList.add("overspending");
+      if (v.trend === "underspending") barEl.classList.add("underspending");
+
+      if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+        sumCurrent += useProjected ? proj.rAfter : proj.rNow;
+        sumMax     += cap;
+      }
+    }
+
+    setVitalsTotals(sumCurrent, sumMax);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.addEventListener("vitals:viewmode", (e) => {
+    const next = e?.detail?.mode || "daily";
+    viewMode = VIEW_MODES.includes(next) ? next : "daily";
+    allowGhostOverlay = false;          // re-gate overlay for new caps
+    enableGhostOverlaySoon();
+    refreshBarGrids();
+  });
+
+  // Vitals Tour remains unchanged
+  maybeStartVitalsTour(uid);
 }
+
+
+
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    Update Log + Recently Locked + Inline edit (unchanged)
@@ -1305,9 +1168,14 @@ export function autoInitUpdateLog() {
   if (!listEl && !recentEl) return;
 
   const auth = getAuth();
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     const uid = user.uid;
+
+    // BEGIN stream filter: choose list source by vitals mode
+    const mode = await getVitalsMode(uid); // safe|accelerated|manual|true
+    const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
+    // END stream filter
 
     function setActiveButtons(li, pool) {
       const buttons = li.querySelectorAll(".tag-btn");
@@ -1319,15 +1187,19 @@ export function autoInitUpdateLog() {
 
     if (listEl) {
       listenUpdateLogPending(uid, (items) => {
+        // BEGIN stream filter
+        const filtered = items.filter(x => x.source === desiredSource);
+        // END stream filter
         listEl.innerHTML = "";
-        if (!items.length) {
+        if (!filtered.length) {
           const li = document.createElement("li");
           li.textContent = "Nothing pending — nice!";
           listEl.appendChild(li);
           return;
         }
-        items.forEach(tx => {
+        filtered.forEach(tx => {
           const li = document.createElement("li");
+          li.setAttribute('data-tx', tx.id);
           const tag = tx.provisionalTag?.pool ?? "stamina";
           const secsLeft = Math.max(0, Math.floor((tx.ghostExpiryMs - Date.now()) / 1000));
           const minLeft  = Math.floor(secsLeft / 60);
@@ -1370,18 +1242,36 @@ export function autoInitUpdateLog() {
           listEl.appendChild(li);
         });
       });
+
+      // Live countdown updates for pending rows
+      window.addEventListener("tx:expiry-tick", (e) => {
+        const ticks = e?.detail?.ticks || [];
+        for (const { id, seconds } of ticks) {
+          const row = listEl?.querySelector(`li[data-tx="${id}"]`);
+          if (!row) continue;
+          const span = row.querySelector(".countdown");
+          if (!span) continue;
+          const s = Math.max(0, seconds | 0);
+          const m = Math.floor(s / 60);
+          const r = s % 60;
+          span.textContent = `${m}m ${r}s`;
+        }
+      });
     }
 
     if (recentEl) {
       listenRecentlyConfirmed(uid, 24 * 60 * 60 * 1000, (items) => {
+        // BEGIN stream filter
+        const filtered = items.filter(x => x.source === desiredSource);
+        // END stream filter
         recentEl.innerHTML = "";
-        if (!items.length) {
+        if (!filtered.length) {
           const li = document.createElement("li");
           li.textContent = "No recent locks.";
           recentEl.appendChild(li);
           return;
         }
-        items.forEach(tx => {
+        filtered.forEach(tx => {
           const li = document.createElement("li");
           const intentPool = tx.tag?.pool ?? "stamina";
           const name = tx.transactionData?.description || "Transaction";
@@ -1539,58 +1429,7 @@ function setVitalsTotals(currentTotal, maxTotal){
   `;
 }
 
-// Single source of truth for the menu
-export async function getEssenceAvailableMonthlyFromHUD(uid) {
-  const db = getFirestore();
-  const curSnap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
-  if (!curSnap.exists()) return 0;
-  const cur   = curSnap.data() || {};
-  const pools = cur.pools || {};
-  const ePool = pools.essence || {};
 
-  const regenBaseline = Number(ePool.regenBaseline || 0);
-  const regenCurrent  = Number(ePool.regenCurrent  || regenBaseline);
-  const spentToDate   = Number(ePool.spentToDate   || 0);
-  const elapsedDays   = Number(cur.elapsedDays || 0);
-  const seedCarry     = Number(cur.seedCarry?.essence || 0);
-
-  const capMonthly = regenBaseline * 30;
-
-  // mode + startDate to decide if we’re still in seed
-  let mode = 'safe', startMs = Date.now();
-  try {
-    const p = await getDoc(doc(db, `players/${uid}`));
-    if (p.exists()) {
-      const d = p.data() || {};
-      const raw = d.startDate;
-      if (raw?.toMillis) startMs = raw.toMillis();
-      else if (raw instanceof Date) startMs = raw.getTime();
-      else if (typeof raw === 'number') startMs = raw;
-
-      const m = String(d.vitalsMode || '').toLowerCase();
-      if (['safe','accelerated','manual','true'].includes(m)) mode = m;
-    }
-  } catch {}
-
-  // If we’re in a seeding state, call the same seed function the HUD uses
-  if ((mode === 'safe' || mode === 'accelerated') && shouldApplySeed(pools)) {
-    const seed = await computeSeedCurrents(uid, pools, mode, startMs, { p: 0.6 });
-    return Math.max(0, Math.min(capMonthly, Number(seed?.essence?.current || 0)));
-  } else if (mode === 'manual') {
-    const anyPostStart = await hasPostStartSpend(uid, startMs);
-    if (!anyPostStart) {
-      const accel = await computeSeedCurrents(uid, pools, 'accelerated', startMs, { p: 0.6 });
-      const manual = await applyManualAdjustments(uid, accel, startMs);
-      return Math.max(0, Math.min(capMonthly, Number(manual?.essence?.current || 0)));
-    }
-  }
-
-  // Otherwise, truth path (note: carry is ignored in true mode)
-  const carry = (mode === 'true') ? 0 : seedCarry;
-  const T = Math.max(0, regenCurrent * elapsedDays - (spentToDate + carry));
-  const r = capMonthly > 0 ? ((T % capMonthly) + capMonthly) % capMonthly : 0;
-  return Math.max(0, r);
-}
 
 
 /* ────────────────────────────────────────────────────────────────────────────

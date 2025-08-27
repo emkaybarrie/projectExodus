@@ -367,5 +367,69 @@
 })();
 </script>
 
+<!-- TEMP: Backfill TrueLayer (last 30 days) -->
+<!-- <button id="tlBackfillBtn" style="position:fixed;right:12px;bottom:12px;z-index:9999">
+  Backfill TL (30d)
+</button>
+
+<script type="module">
+  import { triggerIngestBackfill } from './js/core/truelayer.js';
+
+  const btn = document.getElementById('tlBackfillBtn');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const sinceMs = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 30 days
+    try {
+      await triggerIngestBackfill(sinceMs);
+      alert('Backfill kicked off.\nCheck console for details.');
+    } catch (e) {
+      console.error(e);
+      alert('Backfill failed (see console).');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script> -->
+
+<!-- TEMP: Recompute per-stream usage + refresh vitals -->
+<!-- <button id="recomputeVitalsBtn"
+        style="position:fixed;right:12px;bottom:56px;z-index:9999">
+  Recompute Vitals
+</button>
+
+<script type="module">
+  import { auth } from './js/core/auth.js';
+
+  // Update to your project id/region if different
+  const FUNCTIONS_BASE = 'https://europe-west2-myfi-app-7fa78.cloudfunctions.net';
+
+  async function callRecomputeVitals() {
+    const user = auth.currentUser;
+    if (!user) { alert('Not signed in'); return; }
+    const qs = new URLSearchParams({ uid: user.uid });
+    const url = `${FUNCTIONS_BASE}/maintenanceRecomputeUsageAndVitals?${qs.toString()}`;
+
+    const btn = document.getElementById('recomputeVitalsBtn');
+    btn.disabled = true;
+    try {
+      const res = await fetch(url);
+      const json = await res.json().catch(() => ({}));
+      console.log('Recompute result:', json);
+      if (!res.ok || json?.error) throw new Error(json?.error || 'recompute_failed');
+      alert('Vitals recomputed. Bars should now reflect the active mode.');
+    } catch (e) {
+      console.error(e);
+      alert('Recompute failed (see console).');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('recomputeVitalsBtn')
+    .addEventListener('click', callRecomputeVitals);
+</script> -->
+
+
+
 </body>
 </html>
