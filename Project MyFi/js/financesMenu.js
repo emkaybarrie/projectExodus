@@ -425,7 +425,7 @@ import {
     },
     connectBank: {
       label: 'Connect Bank',
-      title: 'Connect a Bank',
+      title: 'Connect a Bank (COMING SOON - TEST MODE ONLY)',
       preview: 'Link your bank for automatic transaction sync (via TrueLayer). Unlocks full automation.',
       render() {
         const info = helper('Linking your bank lets the app fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.');

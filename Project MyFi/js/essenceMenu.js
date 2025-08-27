@@ -1,9 +1,13 @@
 // js/essenceMenu.js
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+  getFirestore, doc, getDoc, setDoc, serverTimestamp,
+  collection, query, where, onSnapshot, getDocs
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable/*, connectFunctionsEmulator*/ } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
+import { showToast } from './core/toast.js'; // your new toast helper
 
 (function () {
   const { open, setMenu, el } = window.MyFiModal;
@@ -54,6 +58,68 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
     } catch { return null; }
   }
 
+  // --- Toast on successful contributions (Stripe or Bank) ---//
+  function startContributionSuccessToasts() {
+    const lsKey = (uid) => `myfi:toasted:contributions:${uid}`;
+    const loadSeen = (uid) => {
+      try { return new Set(JSON.parse(localStorage.getItem(lsKey(uid)) || '[]')); } catch { return new Set(); }
+    };
+    const saveSeen = (uid, set) => {
+      try { localStorage.setItem(lsKey(uid), JSON.stringify(Array.from(set))); } catch {}
+    };
+
+    (async () => {
+      const u = await ensureUser(); if (!u) return;
+      const uid = u.uid;
+      const seen = loadSeen(uid);
+
+      // expected IDs (saved right before Stripe redirect or manual-bank click)
+      let expect = [];
+      try { expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]').filter(Boolean); } catch {}
+
+      const col = collection(db, `players/${uid}/contributions`);
+      const q   = query(col, where('status', '==', 'succeeded'));
+
+      // Warm-up: mark existing successes as seen, EXCEPT the expected ones
+      try {
+        const warm = await getDocs(q);
+        warm.forEach(d => { if (!expect.includes(d.id)) seen.add(d.id); });
+        saveSeen(uid, seen);
+      } catch {}
+
+      // If expected IDs already succeeded (webhook beat us), toast them now
+      for (const id of expect) {
+        try {
+          const snap = await getDoc(doc(db, `players/${uid}/contributions/${id}`));
+          if (snap.exists() && snap.data()?.status === 'succeeded' && !seen.has(id)) {
+            const amt = typeof snap.data().amountGBP === 'number' ? snap.data().amountGBP : null;
+            showToast(amt != null ? `Alturium has been increased by £${amt.toFixed(2)}.` : `Alturium has been increased.`);
+            seen.add(id);
+          }
+        } catch {}
+      }
+      saveSeen(uid, seen);
+      try { sessionStorage.removeItem('myfi:expectContrib'); } catch {}
+
+      // Live updates
+      onSnapshot(q, (snap) => {
+        snap.docChanges().forEach((chg) => {
+          if (chg.type !== 'added' && chg.type !== 'modified') return;
+          const id = chg.doc.id;
+          if (seen.has(id)) return;
+
+          const d = chg.doc.data() || {};
+          const amt = typeof d.amountGBP === 'number' ? d.amountGBP : null;
+          showToast(amt != null ? `Alturium has been increased by £${amt.toFixed(2)}.` : `Alturium has been increased.`);
+          seen.add(id);
+          saveSeen(uid, seen);
+        });
+      });
+    })();
+  }
+
+
+
   // Show monthly “available Essence” approximation, aligned with HUD seeding
   async function getEssenceAvailableMonthly(uid) {
     return await getEssenceAvailableMonthlyFromHUD(uid);
@@ -65,7 +131,7 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
     return {
       label: 'Contribute',
       title: 'Contribute Essence',
-      preview: 'Turn Essence into Credits to support development. Choose Stripe (card/wallet) or no‑fee bank transfer.',
+      preview: 'Contribute your Essence to support development. Choose Stripe (card/wallet) or no-fee bank transfer.',
       ctaLabel: 'Open',
       render() {
         const root = document.createElement('div');
@@ -84,7 +150,7 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
         const amountWrap = document.createElement('div');
         amountWrap.className = 'field';
         const lab = document.createElement('label'); lab.textContent = 'Amount (£ / Essence)';
-        const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.step = '1'; input.id = 'contribAmount'; input.className = 'input';
+        const input = document.createElement('input'); input.type = 'number'; input.min = '2'; input.step = '1'; input.id = 'contribAmount'; input.className = 'input';
         const errorP = document.createElement('p'); errorP.id = 'contribError'; errorP.className = 'form-error'; errorP.setAttribute('role','alert'); errorP.setAttribute('aria-live','polite');
         amountWrap.append(lab, input, errorP);
 
@@ -114,13 +180,28 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
         function validate() {
           const raw = (input.value || '').trim();
           if (raw === '') { setError(''); return { ok: false }; }
+
           const n = Number(raw);
           if (!Number.isFinite(n)) { setError('Enter a valid number.'); return { ok: false }; }
-          if (n <= 2) { setError('Amount must be greater than £2.'); return { ok: false }; }
-          if (n > available) { setError(`You only have £${available.toFixed(2)} Essence available.`); return { ok: false }; }
+
+          // Stripe needs ≥ £2 (fees), Bank can be ≥ £1
+          const usingStripe = tabs.querySelector('.seg--current') === btnStripe;
+          const min = usingStripe ? 2 : 1;
+
+          if (n < min) {
+            setError(`Minimum is £${min}${usingStripe ? ' for card checkout.' : '.'}`);
+            return { ok: false };
+          }
+
+          if (n > available) {
+            setError(`You only have £${available.toFixed(2)} Essence available.`);
+            return { ok: false };
+          }
+
           setError('');
           return { ok: true, value: n };
         }
+
         input.addEventListener('input', validate);
 
         // Stripe view
@@ -143,7 +224,14 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
               const fn = httpsCallable(functions, 'createContributionCheckout');
               const returnUrl = window.location.href.split('#')[0] + '#vitals';
               const { data } = await fn({ amountGBP: v.value, returnUrl });
-              if (data?.url) window.location.href = data.url;
+              if (data?.url) {
+               try {
+                 const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
+                 expect.push(String(data.contributionId || ''));
+                 sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
+               } catch {}
+               window.location.href = data.url;
+             }
               else setError('Could not create checkout session.');
             } catch (err) {
               setError(err?.message || 'Checkout error. Please try again.');
@@ -159,7 +247,7 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
 
           const hint = document.createElement('div');
           hint.className = 'helper';
-          hint.innerHTML = `Send a bank transfer from your Monzo/other bank. Use the reference shown so we can match it.`;
+          hint.innerHTML = `Send a transfer from your bank. Use the reference shown so we can match it.`;
 
           const bankBlock = document.createElement('div');
           bankBlock.append(hint);
@@ -208,6 +296,11 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
               status: 'awaiting_settlement',
               createdAt: serverTimestamp(),
             }, { merge: true });
+            try {
+             const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
+             expect.push(id);
+             sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
+            } catch {}
 
             window.MyFiModal.close();
           });
@@ -249,13 +342,26 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
           const user = await ensureUser(); if (!user) return;
           available = await getEssenceAvailableMonthly(user.uid);
           const elVal = root.querySelector('#ess-available');
+
           if (elVal) elVal.textContent = fmtGBP(available);
-          show(btnStripe); // default to Bank Transfer
+
+          // If not enough Essence for Stripe fees, steer to Bank and disable Stripe CTA
+          if (available < 2) {
+            // Default to Bank tab
+            show(btnBank);
+
+            // If user switches to Stripe, keep CTA disabled with a clear message
+            btnStripe.addEventListener('click', () => {
+              setError('You need at least £2 Essence to use card checkout. Try Bank Transfer (no fees).');
+            });
+          } else {
+            show(btnStripe);
+          }
         })();
 
         return [root];
       },
-      footer() { 
+      footer() {
         const close = document.createElement('button');
         close.className = 'btn'; close.type = 'button'; close.textContent = 'Close';
         close.addEventListener('click', ()=> window.MyFiModal.close());
@@ -268,10 +374,13 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
     contribute: ContributeMenu(),
   };
 
-  // Main Essence button → drill‑down (list + preview → detail)
+  // Main Essence button → drill-down (list + preview → detail)
   document.getElementById('essence-btn')?.addEventListener('click', async () => {
     await ensureUser();
     setMenu(EssenceMenu);
     open('contribute', { variant: 'drilldown', menuTitle: 'Actions' });
   });
+
+  // 🔔 begin listening for successful contributions → show toast (Stripe & Bank)
+  startContributionSuccessToasts();
 })();
