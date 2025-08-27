@@ -116,7 +116,7 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
           if (raw === '') { setError(''); return { ok: false }; }
           const n = Number(raw);
           if (!Number.isFinite(n)) { setError('Enter a valid number.'); return { ok: false }; }
-          if (n <= 0) { setError('Amount must be greater than £0.'); return { ok: false }; }
+          if (n <= 2) { setError('Amount must be greater than £2.'); return { ok: false }; }
           if (n > available) { setError(`You only have £${available.toFixed(2)} Essence available.`); return { ok: false }; }
           setError('');
           return { ok: true, value: n };

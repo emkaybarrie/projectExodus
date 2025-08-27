@@ -78,9 +78,9 @@ import {
       {
         label:'Introduction',
         text: `
-          Welcome to <strong>Project MyFi</strong> — a living world where your real-life money habits power your in-game journey.
-          The app blends financial tracking with RPG adventure to help you spend wisely, plan intentionally, and grow stronger over time.
-          Every choice shapes your avatar, progress, and ability to face The Badlands ahead.
+          Welcome to <strong>Project MyFi</strong> — a living world where your real-world money habits fuel your in-game destiny.
+          Every transaction costs energy, every decision shapes your avatar, and every step prepares you for the challenges of The Badlands.
+          Spend wisely, plan intentionally, and watch both your finances and your hero grow stronger.
         `,
         media:{ type:'image', src:'assets/help/overview-1.png' }
       },
@@ -88,15 +88,15 @@ import {
         label:'The Basics',
         text: `
           <strong>Navigation</strong><br>
-          • Swipe between panels to explore your hub.<br>
-          • Tap icons to open details; long-press where noted for extra options.<br><br>
+          • Swipe from the hub to explore — left for Quests, right for Avatar, up for Insights & Partners, down for The Badlands.<br>
+          • Tap icons to open details; long-press where noted for hidden options.<br><br>
           <strong>Main Screens</strong><br>
-          • <em>Vitals</em> — your financial health as game-like resources.<br>
-          • <em>Quests</em> — goals/challenges that build habits.<br>
-          • <em>Avatar</em> — customise, level up, and equip perks.<br>
-          • <em>Resources</em> — gain financial insight and connects our partner products/services.<br>
-          • <em>The Badlands</em> — the 2D rogue-lite where your prep is tested and rewarded.<br><br>
-          Tip: Use the 🌀 toggle on Vitals to switch Daily/Weekly/Monthly context.
+          • <em>Vitals</em> — your energy pools (Health, Mana, Stamina, Essence).<br>
+          • <em>Quests</em> — challenges that turn goals into progress.<br>
+          • <em>Avatar</em> — customise, level up, and unlock perks.<br>
+          • <em>Resources</em> — financial insights and partner tools.<br>
+          • <em>The Badlands</em> — a rogue-lite adventure to test your avatar and earn rewards.<br><br>
+          Tip: Use the 🌀 toggle on Vitals to swap Daily/Weekly/Monthly views.
         `,
         media:{ type:'image', src:'assets/help/basics-nav.png' }
       }
@@ -119,23 +119,21 @@ import {
       {
         label:'Purpose',
         text: `
-          The <strong>Vitals</strong> screen is your central dashboard. It tracks:
-          <br>• <em>Stamina</em> — day-to-day spending.
-          <br>• <em>Mana</em> — intentional/power spending.
-          <br>• <em>Health</em> — protected savings baseline.
-          <br>• <em>Essence</em> — avatar growth, boosts, unlocks, and cosmetics.
-          <br><br>
-          As transactions flow in, tag them to the right pool. Manage your energy carefully, and see how your spending will impact your avatar's resources before confirmation.
-          From Vitals, everything else flows: quests, avatar growth, and deeper Badlands runs.
+          The <strong>Vitals</strong> screen is your core dashboard — the lifeblood of your adventure. It tracks:<br>
+          • <em>Stamina</em> — everyday energy, linked to flexible day-to-day spending.<br>
+          • <em>Mana</em> — deliberate, power spending that fuels intentional choices.<br>
+          • <em>Health</em> — your safeguarded savings baseline; drained only if others run dry.<br>
+          • <em>Essence</em> — long-term growth, powering avatar upgrades, unlocks, and cosmetics.<br><br>
+          Tag transactions to the right pool and see instantly how they affect your energy. Managing these flows is the heart of survival — quests, avatar growth, and Badlands exploration all start here.
         `,
         media:{ type:'image', src:'assets/help/vitals-overview.png' }
       },
       {
         label:'Using It',
         text: `
-          • Toggle 🌀 to view Daily/Weekly/Monthly context.<br>
-          • Watch bars for current vs. max; surplus pills hint how many full bars remain based on the current time context.<br>
-          • Use the Update Log to review pending items: tag to confirm, or let defaults apply.
+          • Toggle 🌀 to shift between Daily, Weekly, or Monthly context.<br>
+          • Bars show current vs. maximum; surplus pills = how many full bars remain.<br>
+          • The Action Log tracks pending actions — tag them before they lock in, or unlock skills to deciee for you.
         `,
         media:{ type:'video', src:'assets/help/vitals-using.mp4', poster:'assets/help/vitals-using.jpg' }
       }
@@ -152,9 +150,8 @@ import {
   // --- Quests ---
   function questsRender(){
     const content = helper(`
-      <strong>Quests</strong> turn financial goals into adventures. Complete daily, weekly, or long-term challenges
-      (e.g., tagging streaks, savings targets, clearing your Update Log). Rewards strengthen your avatar and unlock progression.
-      Active quests appear in your Journal; completion builds habits and momentum.
+      <strong>Quests</strong> transform your financial goals into challenges. Reach savings goals, maintain tagging streaks or keep manage your energy consistently  — completing quests grant rewards and build lasting habits.
+      Active quests appear in your Journal. Every success fuels momentum and strengthens your avatar for the journey ahead.
     `);
     const media = mediaBlock({ type:'image', src:'assets/help/quests.png' });
     return [content, media];
@@ -166,22 +163,19 @@ import {
       {
         label:'Progress',
         text: `
-          Your <strong>Avatar</strong> reflects your journey. Customise look, gear, and abilities as you level up.
-          Progress ties directly to Vitals and Quest completions.
-          <br><br>
-          • <em>Levelling</em> = financial resilience.<br>
-          • <em>Gear & Skills</em> = perks linked to milestones.<br>
-          • <em>Cosmetics</em> = unlocked with Essence or earned rewards.
-          <br><br>
-          A stronger avatar unlocks deeper power in The Badlands.
+          Your <strong>Avatar</strong> mirrors your journey. As you level up, customise their look, gear, and abilities to reflect your progress.<br><br>
+          • <em>Levelling</em> opens up more options to improve financial resilience.<br>
+          • <em>Gear & Skills</em> can be equipped to gain perks and automate actions.<br>
+          • <em>Cosmetics</em> can be unlocked with Essence or rewards to make your avatar truly yours.<br><br>
+          With stronger avatar comes more power, and greater rewards, in The Badlands.
         `,
         media:{ type:'image', src:'assets/help/avatars-1.png' }
       },
       {
         label:'Loadout',
         text: `
-          Equip skills and items that reflect your spending style and complement your habits (e.g., consistent tagging, savings streaks).
-          Use these to amplify your performance and see them reflected in your chosen hero during Badlands runs and events.
+          Equip skills and items that match your playstyle — maybe you’re a disciplined planner (Mana-heavy) or a flexible spender (Stamina-balanced).
+          Your loadout affects both your stats on the Vitals HUD and your hero’s performance in Badlands adventures.
         `,
         media:{ type:'image', src:'assets/help/avatars-2.png' }
       }
@@ -197,9 +191,9 @@ import {
   // --- The Badlands ---
   function badlandsRender(){
     const content = helper(`
-      <strong>The Badlands</strong> is the core gameplay: a 2D endless-runner rogue-lite where your avatar becomes a hero.
-      Explore the lands surrounding Kianova, defeat enemies, liberate towns, and discover routes that change over time. Success depends on your Avatar's strength as well as your own skill and commitment.
-      Compete or cooperate with others for leaderboards and seasonal prizes—better real-world habits fuel deeper runs.
+      <strong>The Badlands</strong> is the proving ground: a 2D endless-runner rogue-lite where your avatar becomes the hero.
+      Liberate towns, face shifting routes, and battle enemies as seasons change. Success depends on both your own skill and the strength you’ve built through Vitals management, Quests achievements, and Essence use.
+      Compete on leaderboards, cooperate with friends, and discover how better real-world habits lead to deeper, more rewarding runs
     `);
     const media = mediaBlock({ type:'video', src:'assets/help/badlands.mp4', poster:'assets/help/badlands.jpg' });
     return [content, media];
@@ -211,27 +205,25 @@ import {
       {
         label:'Overview',
         text: `
-          The <strong>Products & Guidance</strong> screen gives deeper insight into your financial health and habits,
-          and connects you to partner products/services that fit your profile.
-          You’ll see trends, spending patterns, risk flags, and opportunities to optimise.
+          The <strong>Resources</strong> screen gives you financial insight and access to curated partner tools.
+          Track spending trends, spot risks, and explore services that may grant in-game bonuses as well as real-world benefits.
         `,
         media:{ type:'image', src:'assets/help/resources-overview.png' }
       },
       {
         label:'Insights',
         text: `
-          • Behavioural trends (e.g., streaks, category drift, burn rate).<br>
-          • Projections and alerts based on your Vitals and recent activity.<br>
-          • Actionable tips that feed back into Quests and Avatar perks.
+          • Spot behavioural trends (streaks, burn rate, drift).<br>
+          • See projections and alerts based on your activity.<br>
+          • Unlock tips that feed back into Quests and Avatar perks.
         `,
         media:{ type:'image', src:'assets/help/resources-insights.png' }
       },
       {
         label:'Partner Products',
         text: `
-          Curated links to banks, cards, savings, utilities, and other services.
-          Offers are <em>context-aware</em> and optional; picking one may grant in-game bonuses or other perks.
-          We prioritise clarity and suitability—no pressure, just options that might help you on your journey to financial independence.
+          Curated services — banks, cards, savings, utilities — tailored to your journey.
+          Optional and transparent: no pressure, just potential shortcuts. Some choices may unlock in-game perks or boost your avatar.
         `,
         media:{ type:'image', src:'assets/help/resources-products.png' }
       }
@@ -255,15 +247,15 @@ import {
     ];
     const content = {
       'getting-started': {
-        text:`Set income & core expenses, then add a few transactions. Watch the HUD update live.`,
+        text:`Set income & core expenses, then add a few transactions. Watch the Vitals HUD update live.`,
         media:{type:'image', src:'assets/help/faq-start.png'}
       },
       'tagging': {
-        text:`Tag planned spending as Mana. Everything else defaults to Stamina and can overflow to Health when needed.`,
+        text:`Tag spending as Mana if it’s intentional. Otherwise it defaults to Stamina. Overspending can spill into Health, your last line of defense.`,
         media:{type:'image', src:'assets/help/faq-tag.png'}
       },
       'regen': {
-        text:`Current = (regenCurrent × daysTracked) − spentToDate. Max = regenBaseline × daysTracked.`,
+        text:`Energy regenerates over time, based on your income (after core epxenses). Spending too much will affect this, ensuring you can’t outpace your means.`,
         media:{type:'image', src:'assets/help/faq-regen.png'}
       },
       'privacy': {
@@ -312,42 +304,42 @@ import {
   const HelpMenu = {
     overview:  { 
       label:'Overview', title:'Help • Overview',
-      preview:'Start here: what MyFi is, how the world works, and how to navigate.',
+      preview:'What MyFi is, how the world works, and how to find your way around.',
       render: overviewRender
     },
     vitals:    { 
       label:'Vitals',   title:'Help • Vitals',
-      preview:'Understand Stamina, Mana, Health, and Essence — and how they regen/spend.',
+      preview:'Your energy pools — Stamina, Mana, Health, and Essence — and how they rise and fall.',
       render: vitalsRender
     },
     quests:    { 
       label:'Quests',   title:'Help • Quests',
-      preview:'Goals and challenges that build habits and unlock rewards.',
+      preview:'Turn goals into adventures: complete challenges to build habits and earn rewards.',
       render: questsRender 
     },
     avatars:   { 
       label:'Avatars',  title:'Help • Avatars',
-      preview:'Level up, customise, and equip perks that reflect your progress.',
+      preview:'Customise your hero, unlock perks, and grow stronger as your journey continues.',
       render: avatarsRender 
     },
     badlands:  { 
       label:'The Badlands', title:'Help • The Badlands',
-      preview:'Our rogue‑lite game mode: explore, fight, and push deeper as you grow.',
+      preview:'Enter the Badlands — fight, explore, and test the strength you’ve built.',
       render: badlandsRender 
     },
     resources: { 
       label:'Products / Guidance', title:'Help • Products & Guidance',
-      preview:'Insights, projections, and optional partner products tailored to you.',
+      preview:'Insights into your habits and optional partner tools that boost both game and life.',
       render: resourcesRender 
     },
     faq:       { 
       label:'FAQ',      title:'Help • FAQ',
-      preview:'Quick answers to common questions.',
+      preview:'Fast answers to common questions and mechanics.',
       render: faqRender 
     },
     report:    { 
       label:'Report an Issue', title:'Help • Report an Issue',
-      preview:'Tell us about a bug or idea — it goes straight to the team.',
+      preview:'Spotted a bug or have an idea? Send it straight to the team.',
       render: reportIssueRender, footer: reportFooter 
     },
   };
