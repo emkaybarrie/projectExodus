@@ -63,3 +63,24 @@ if (typeof window !== 'undefined') {
   window.syncTrueLayerAll = syncTrueLayerAll;     // <-- this line goes here
 }
 
+// Optional helper to nudge server backfill (incremental; safe to re-run)
+export async function triggerIngestBackfill(sinceMs) {
+  const user = auth.currentUser;
+  if (!user) return alert("Not signed in");
+  const base = 'https://europe-west2-myfi-app-7fa78.cloudfunctions.net';
+  const qs = new URLSearchParams({ uid: user.uid });
+  if (sinceMs) qs.set('sinceMs', String(sinceMs));
+  const url = `${base}/ingestTrueLayerBackfill?${qs.toString()}`;
+
+  const res = await fetch(url);
+  const json = await res.json();
+  console.log('Backfill result:', json);
+  if (!res.ok || json?.error) alert('Backfill failed (see console).');
+}
+
+// optional global for debugging
+if (typeof window !== 'undefined') {
+  window.triggerIngestBackfill = triggerIngestBackfill;
+}
+
+

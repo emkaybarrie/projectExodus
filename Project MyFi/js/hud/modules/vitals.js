@@ -228,6 +228,7 @@ function normalizeTxn(docSnap) {
     amount: Number(d?.amount ?? 0), // negative = spend; positive = income
     dateMs: d?.dateMs ?? Date.now(),
     status: d?.status || "pending",
+    source: d?.source ?? null,   // <-- ADDED: expose source for filtering
     ghostExpiryMs: d?.ghostExpiryMs ?? 0,
     addedMs: d?.addedMs ?? d?.dateMs ?? Date.now(),
     provisionalTag: { pool: d?.provisionalTag?.pool ?? null, setAtMs: d?.provisionalTag?.setAtMs ?? null },
@@ -491,7 +492,7 @@ const MANA_OVERFLOW_MODE = 'health'; // or 'stamina_then_health'
 /* ────────────────────────────────────────────────────────────────────────────
    4) Animated HUD — truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
-export async function initVitalsHUD(uid, timeMultiplier = 1) {
+export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
   const db = getFirestore();
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
   if (!snap.exists()) return;
@@ -744,6 +745,261 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   maybeStartVitalsTour(uid);
 }
 
+export async function initVitalsHUD(uid, timeMultiplier = 1) {
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+  if (!snap.exists()) return;
+
+  const cur = snap.data() || {};
+  const pools = cur.pools || {};
+  const elements = getVitalsElements();
+  ensureGridLayers(elements);
+  ensureReclaimLayers(elements);
+
+  const days0   = Number(cur.elapsedDays || 0);
+  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const seed    = cur.seed || null;
+  const seedCarry = cur.seedCarry || {};
+  const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
+
+  // STREAM-AWARE: only track pending tx from the active stream
+  const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
+
+  // Authoritative truth T at t0; animation is client-side smoothing only.
+  const truth = {};
+  const regenPerSec = {};
+  for (const pool of Object.keys(pools)) {
+    const v = pools[pool];
+
+    if (seed && seed[pool]) {
+      truth[pool] = Math.max(0, Number(seed[pool].current || 0));
+    } else {
+      truth[pool] = Math.max(
+        0,
+        (Number(v.regenCurrent || 0) * days0) - ((Number(v.spentToDate || 0)) + carryFor(pool))
+      );
+    }
+    // per-sec from daily
+    regenPerSec[pool] = Number(v.regenCurrent || 0) * (timeMultiplier / 86_400);
+  }
+
+  // Bind the debounced locker to this user
+  __triggerLockSoon = debounce(async () => {
+    try {
+      await lockExpiredOrOverflow(uid, 50); // server confirms due + overflow
+      await refreshVitals();                // pull fresh snapshot for HUD + logs
+    } catch (e) {
+      console.warn("lock/refresh failed:", e);
+    }
+  }, 200);
+
+  // Live ghosts (pending) — STREAM-AWARE QUERY
+  let pendingTx = [];
+  const pendingQ = query(
+    collection(db, `players/${uid}/classifiedTransactions`),
+    where("status", "==", "pending"),
+    where("source", "==", desiredSource) // <— only active stream
+  );
+  onSnapshot(pendingQ, (shot) => {
+    const now = Date.now();
+    pendingTx = shot.docs.map(d => {
+      const x = d.data() || {};
+      return {
+        id: d.id,
+        amount: Number(x.amount || 0),
+        dateMs: x.dateMs || 0,
+        ghostExpiryMs: x.ghostExpiryMs || 0,
+        provisionalTag: x.provisionalTag || null,
+        suggestedPool: x.suggestedPool || null,
+        transactionData: { description: x?.transactionData?.description || '' },
+      };
+    });
+    // If you want to hide already-expired ghosts locally, add:
+    // .filter(tx => now < tx.ghostExpiryMs);
+  });
+
+  window.addEventListener("vitals:locked", (e) => {
+    const applied = e?.detail?.appliedTotals; if (!applied) return;
+    for (const p of Object.keys(truth)) {
+      truth[p] = Math.max(0, truth[p] - (Number(applied[p] || 0)));
+    }
+  });
+
+  let viewMode = getViewMode();
+
+  function allocateSpendAcrossPools(spend, intent, availTruth) {
+    const out = { health:0, mana:0, stamina:0, essence:0 };
+    if (spend <= 0) return out;
+
+    if (intent === "mana") {
+      const toMana = Math.min(spend, Math.max(0, availTruth.mana));
+      if (toMana > 0) { out.mana += toMana; availTruth.mana -= toMana; }
+      const leftover = spend - toMana;
+      if (leftover > 0) out.health += leftover; // overflow→health (parity)
+      return out;
+    }
+    const toStamina = Math.min(spend, Math.max(0, availTruth.stamina));
+    if (toStamina > 0) { out.stamina += toStamina; availTruth.stamina -= toStamina; }
+    const toHealth = spend - toStamina;
+    if (toHealth > 0) out.health += toHealth;
+    return out;
+  }
+
+  function applyRemainderFirst(T, cap, L) {
+    if (cap <= 0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
+    const sNow = Math.floor(T / cap);
+    const rNow = T - sNow * cap;
+
+    if (L <= 0.000001) {
+      return { rNow, sNow, rAfter: rNow, sAfter: sNow, ghostLeftPct:0, ghostWidthPct:0 };
+    }
+    if (L <= rNow) {
+      const rAfter = rNow - L;
+      return {
+        rNow, sNow, rAfter, sAfter: sNow,
+        ghostLeftPct: (rAfter / cap) * 100,
+        ghostWidthPct: (L / cap) * 100,
+      };
+    }
+
+    let Lleft = L - rNow;
+    let s     = sNow;
+    let r     = 0;
+
+    if (s > 0) {
+      const whole = Math.min(s, Math.floor(Lleft / cap));
+      if (whole > 0) { s -= whole; Lleft -= whole * cap; }
+    }
+    if (Lleft > 0 && s > 0) { s -= 1; r = cap; }
+    const rAfter = Math.max(0, r - Lleft);
+    const ghostLeftPct  = (rAfter / cap) * 100;
+    const ghostWidthPct = ((r - rAfter) / cap) * 100;
+    return { rNow, sNow, rAfter, sAfter: s, ghostLeftPct, ghostWidthPct };
+  }
+
+  let last = null;
+
+  // Delay ghost overlay until base bars have painted once
+  let allowGhostOverlay = false;
+  function enableGhostOverlaySoon() {
+    if (!allowGhostOverlay) setTimeout(() => (allowGhostOverlay = true), 60);
+  }
+
+  function frame(ts) {
+    if (last === null) last = ts;
+    const dt = (ts - last) / 1000; last = ts;
+
+    // Animate truth by regen
+    for (const p of Object.keys(truth)) {
+      truth[p] = Math.max(0, truth[p] + regenPerSec[p] * dt);
+    }
+
+    // Ghost preview application
+    const availTruth = { ...truth };
+    let pendingTotals = { health:0, mana:0, stamina:0, essence:0 };
+    const now = Date.now();
+    const ordered = [...pendingTx].sort((a,b)=>a.dateMs - b.dateMs);
+
+    // (A) live countdown tick (emit once per second)
+    window.__myfi_lastTickSec ??= 0;
+    const sec = Math.floor(now / 1000);
+    if (sec !== window.__myfi_lastTickSec) {
+      window.__myfi_lastTickSec = sec;
+      const ticks = ordered.map(tx => ({
+        id: tx.id,
+        seconds: Math.max(0, Math.ceil((tx.ghostExpiryMs - now) / 1000))
+      }));
+      window.dispatchEvent(new CustomEvent("tx:expiry-tick", { detail: { ticks } }));
+    }
+
+    // (B) compute preview + detect expiry
+    let hasLocalExpiry = false;
+    for (const tx of ordered) {
+      const ttl = (tx.ghostExpiryMs - now);
+      if (ttl <= 0) {
+        hasLocalExpiry = true; // crossed 0: ask server to confirm asap
+        continue;              // exclude from preview immediately
+      }
+      if (tx.amount >= 0) continue; // only spending affects ghosts
+      const spend  = Math.abs(tx.amount);
+      const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
+      const split  = allocateSpendAcrossPools(spend, intent, availTruth);
+      pendingTotals = {
+        health:  pendingTotals.health  + (split.health  || 0),
+        mana:    pendingTotals.mana    + (split.mana    || 0),
+        stamina: pendingTotals.stamina + (split.stamina || 0),
+        essence: pendingTotals.essence + (split.essence || 0),
+      };
+    }
+
+    // (C) trigger server lock + refresh if any expired just now
+    if (hasLocalExpiry && __triggerLockSoon) __triggerLockSoon();
+
+    const factor = VIEW_FACTORS[viewMode];
+    let sumCurrent = 0;
+    let sumMax = 0;
+
+    for (const pool of Object.keys(pools)) {
+      const el = elements[pool]; if (!el) continue;
+      const v  = pools[pool];
+      const cap = (Number(v.regenBaseline || 0)) * factor || 0;
+
+      const T = truth[pool];
+      const L = pendingTotals[pool] || 0;
+
+      const proj = applyRemainderFirst(T, cap, L);
+
+      const useProjected = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+      const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
+      el.fill.style.width = `${pct}%`;
+
+      el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      enableGhostOverlaySoon();
+
+      setSurplusPill(el, proj.sNow, proj.sAfter);
+
+      const barEl = el.fill.closest('.bar');
+      const reclaimEl = barEl.querySelector('.bar-reclaim');
+
+      const showGhost = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+
+      if (showGhost) {
+        reclaimEl.style.left    = `${Math.max(0, Math.min(100, proj.ghostLeftPct)).toFixed(2)}%`;
+        reclaimEl.style.width   = `${Math.max(0, Math.min(100, proj.ghostWidthPct)).toFixed(2)}%`;
+        reclaimEl.style.opacity = '1';
+      } else {
+        reclaimEl.style.opacity = '0';
+        reclaimEl.style.width   = '0%';
+      }
+
+      barEl.classList.remove("overspending","underspending");
+      if (v.trend === "overspending")  barEl.classList.add("overspending");
+      if (v.trend === "underspending") barEl.classList.add("underspending");
+
+      if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+        sumCurrent += useProjected ? proj.rAfter : proj.rNow;
+        sumMax     += cap;
+      }
+    }
+
+    setVitalsTotals(sumCurrent, sumMax);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  window.addEventListener("vitals:viewmode", (e) => {
+    const next = e?.detail?.mode || "daily";
+    viewMode = VIEW_MODES.includes(next) ? next : "daily";
+    allowGhostOverlay = false;          // re-gate overlay for new caps
+    enableGhostOverlaySoon();
+    refreshBarGrids();
+  });
+
+  // Vitals Tour remains unchanged
+  maybeStartVitalsTour(uid);
+}
+
+
 
 
 
@@ -912,9 +1168,14 @@ export function autoInitUpdateLog() {
   if (!listEl && !recentEl) return;
 
   const auth = getAuth();
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     if (!user) return;
     const uid = user.uid;
+
+    // BEGIN stream filter: choose list source by vitals mode
+    const mode = await getVitalsMode(uid); // safe|accelerated|manual|true
+    const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
+    // END stream filter
 
     function setActiveButtons(li, pool) {
       const buttons = li.querySelectorAll(".tag-btn");
@@ -926,14 +1187,17 @@ export function autoInitUpdateLog() {
 
     if (listEl) {
       listenUpdateLogPending(uid, (items) => {
+        // BEGIN stream filter
+        const filtered = items.filter(x => x.source === desiredSource);
+        // END stream filter
         listEl.innerHTML = "";
-        if (!items.length) {
+        if (!filtered.length) {
           const li = document.createElement("li");
           li.textContent = "Nothing pending — nice!";
           listEl.appendChild(li);
           return;
         }
-        items.forEach(tx => {
+        filtered.forEach(tx => {
           const li = document.createElement("li");
           li.setAttribute('data-tx', tx.id);
           const tag = tx.provisionalTag?.pool ?? "stamina";
@@ -997,14 +1261,17 @@ export function autoInitUpdateLog() {
 
     if (recentEl) {
       listenRecentlyConfirmed(uid, 24 * 60 * 60 * 1000, (items) => {
+        // BEGIN stream filter
+        const filtered = items.filter(x => x.source === desiredSource);
+        // END stream filter
         recentEl.innerHTML = "";
-        if (!items.length) {
+        if (!filtered.length) {
           const li = document.createElement("li");
           li.textContent = "No recent locks.";
           recentEl.appendChild(li);
           return;
         }
-        items.forEach(tx => {
+        filtered.forEach(tx => {
           const li = document.createElement("li");
           const intentPool = tx.tag?.pool ?? "stamina";
           const name = tx.transactionData?.description || "Transaction";

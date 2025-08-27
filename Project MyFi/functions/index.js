@@ -1,7 +1,7 @@
 // index.js — drop-in replacement with TL fan-out (no regressions)
 
 const { onRequest, onCall } = require('firebase-functions/v2/https');
-const { onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentUpdated, onDocumentWritten} = require('firebase-functions/v2/firestore');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const axios = require('axios');
@@ -146,6 +146,117 @@ const firstTs = (obj, keys) => {
 const safeId = (rawId, fallback = '') =>
   (String(rawId || fallback) || `${Date.now()}`).replace(/[^\w\-:.]/g, '_');
 
+// -----------------------------------------------------------------------------
+// TL → Canonical ingestion helpers (idempotent, calc-start aware)
+// -----------------------------------------------------------------------------
+
+function canonicalIdFromTL(kind /* 'account' | 'card' */, parentId, txnId) {
+  const p = String(parentId || '').replace(/[^\w\-:.]/g, '_');
+  const t = String(txnId   || '').replace(/[^\w\-:.]/g, '_');
+  return (kind === 'card') ? `tl_card_${p}__${t}` : `tl_acc_${p}__${t}`;
+}
+
+function mapTLTxnToCanonical({ kind, parentId, txn }) {
+  const now = Date.now();
+  const postedAtTs = txn.postedAt || null; // firestore.Timestamp from our upsert
+  const dateMs = postedAtTs && typeof postedAtTs.toMillis === 'function'
+    ? postedAtTs.toMillis()
+    : now;
+
+  const amountMinor = (typeof txn.amountMinor === 'number')
+    ? txn.amountMinor
+    : Math.round(Number(txn.raw?.amount || 0) * 100);
+
+  // NOTE: canonical uses signed major units; TL amounts are already signed.
+  const amount = Number((amountMinor || 0) / 100);
+
+  const description = txn.description || txn.raw?.description || '';
+  const merchantName = txn.merchantName || txn.raw?.merchant_name || null;
+  const currency = txn.currency || txn.raw?.currency || 'GBP';
+  const providerStatus = txn.status || txn.raw?.status || null;
+  const transactionId = txn.transactionId || txn.raw?.transaction_id || 'unknown';
+  const txTypeUpper = String(txn.txType || txn.raw?.transaction_type || '').toUpperCase();
+  const isTransferCandidate =
+   Boolean(txn.isTransferCandidate) ||
+   txTypeUpper.includes('TRANSFER') ||
+   /transfer/i.test(description || '');
+
+  // We set suggestedPool only; tag/provisionalTag are added ONLY if missing on the canonical doc.
+  const ghostWindowMs = 2 * 60 * 60 * 1000; // 12h
+  const addedMs = now;
+
+  const canonical = {
+    amount,                 // signed major units
+    dateMs,
+    source: 'truelayer',
+    status: 'pending',      // locker will confirm later
+    addedMs,
+    ghostWindowMs,
+    ghostExpiryMs: addedMs + ghostWindowMs,
+    rulesVersion: 'v1',
+    suggestedPool: 'stamina', // default suggestion if no rule yet
+    sourceSubtype: isTransferCandidate ? 'transfer' : null,
+    isTransferCandidate: !!isTransferCandidate,
+    transactionData: {
+      description,
+      merchantName,
+      currency,
+      providerStatus,
+      entryDate: admin.firestore.Timestamp.fromMillis(dateMs),
+    },
+    providerRef: {
+      provider: 'truelayer',
+      kind,                    // 'account' | 'card'
+      parentId,
+      transactionId
+    },
+  };
+
+  return canonical;
+}
+
+// Ingest a single TL txn doc into canonical, with calc-start filtering and no tag override
+async function ingestOneTrueLayerTxn(db, {
+  uid, kind /* 'account' | 'card' */, parentId, txnId, txnData
+}) {
+  // 1) calc-start (reuse your helpers already in this file)
+  const startMsRaw = await ensureStartMsServer(db, uid);              // you already have this
+  const calcStartMs = calcStartMsFromStartDate(startMsRaw);           // you already have this
+
+  const postedAtMs = txnData?.postedAt?.toMillis
+    ? txnData.postedAt.toMillis()
+    : (txnData?.raw?.timestamp ? (new Date(txnData.raw.timestamp)).getTime() : 0);
+
+  if (!(postedAtMs >= calcStartMs)) {
+    // below calc-start → ignore
+    return { skipped: true, reason: 'before_calc_start' };
+  }
+
+  const canonicalId = canonicalIdFromTL(kind, parentId, txnId);
+  const canonicalRef = db.doc(`players/${uid}/classifiedTransactions/${canonicalId}`);
+
+  // 2) Build payload
+  const payload = mapTLTxnToCanonical({ kind, parentId, txn: txnData });
+
+  // 3) Non-destructive merge:
+  //    - if tag or provisionalTag already exist (manual/user action), do NOT overwrite
+  //    - if status is confirmed, do NOT revert to pending
+  const cur = await canonicalRef.get();
+  if (cur.exists) {
+    const d = cur.data() || {};
+    if (d?.tag)         delete payload.tag;
+    if (d?.provisionalTag) delete payload.provisionalTag;
+    if (d?.status === 'confirmed') delete payload.status;
+    if (d?.suggestedPool) delete payload.suggestedPool; // keep earlier suggestion
+  } else {
+    // On first write we could seed a provisionalTag if you later add rules.
+    // For now, we only set suggestedPool.
+  }
+
+  await canonicalRef.set(payload, { merge: true });
+  return { ok: true, canonicalId };
+}
+
 /**
  * ====================================================================
  *  TRUE LAYER: FAN-OUT UPSERTS
@@ -206,6 +317,10 @@ async function upsertTransactionsForAccount(uid, accountId, txns = []) {
 
   for (const t of txns) {
     const txnId = safeId(t.transaction_id, `${t.timestamp || t.posted || ''}:${t.amount}:${t.description || ''}`);
+    const txType = String(t.transaction_type || t.type || '').toUpperCase();
+    const cats   = Array.isArray(t.categories) ? t.categories : [];
+    const isTransfer = txType.includes('TRANSFER') || cats.some(c => String(c).toUpperCase().includes('TRANSFER'));
+
     const ref = tlPaths.accountTx(uid, accountId, txnId);
     batch.set(ref, {
       provider: 'truelayer',
@@ -219,6 +334,8 @@ async function upsertTransactionsForAccount(uid, accountId, txns = []) {
       currency: t.currency || 'GBP',
       runningBalanceMinor: t.running_balance ? toMinor(t.running_balance.amount) : null,
       categories: t.categories || null,
+      txType,                   // e.g. "TRANSFER", "CARD_PAYMENT", ...
+      isTransferCandidate: isTransfer,
       raw: t,
       updatedAt: now,
       createdAt: now,
@@ -375,6 +492,127 @@ exports.fetchStandingOrders = createPerAccountFunctionV2('standing_orders', 'sta
 exports.testPing = onRequest({ region: 'europe-west2' }, (req, res) => {
   res.send('Backend running fine!');
 });
+
+// -----------------------------------------------------------------------------
+// Realtime ingestion: TL → classifiedTransactions (idempotent, calc-start aware)
+// -----------------------------------------------------------------------------
+exports.ingestTL_AccountTxn = onDocumentWritten({
+  region: 'europe-west2',
+  document: 'players/{uid}/financialData_TRUELAYER/accounts/items/{accountId}/transactions/{txnId}',
+}, async (event) => {
+  const after = event.data?.after;
+  if (!after || !after.exists) return; // ignore deletes
+  const uid = event.params.uid;
+  const accountId = event.params.accountId;
+  const txnId = event.params.txnId;
+  const data = after.data() || {};
+  try {
+    await ingestOneTrueLayerTxn(db, {
+      uid, kind: 'account', parentId: accountId, txnId, txnData: data
+    });
+  } catch (e) {
+    console.error('ingestTL_AccountTxn error', { uid, accountId, txnId, e: e?.message });
+  }
+});
+
+exports.ingestTL_CardTxn = onDocumentWritten({
+  region: 'europe-west2',
+  document: 'players/{uid}/financialData_TRUELAYER/cards/items/{cardId}/transactions/{txnId}',
+}, async (event) => {
+  const after = event.data?.after;
+  if (!after || !after.exists) return;
+  const uid = event.params.uid;
+  const cardId = event.params.cardId;
+  const txnId = event.params.txnId;
+  const data = after.data() || {};
+  try {
+    await ingestOneTrueLayerTxn(db, {
+      uid, kind: 'card', parentId: cardId, txnId, txnData: data
+    });
+  } catch (e) {
+    console.error('ingestTL_CardTxn error', { uid, cardId, txnId, e: e?.message });
+  }
+});
+
+// -----------------------------------------------------------------------------
+// Backfill HTTPS: process TL transaction subcollections incrementally by watermark
+//   GET .../ingestTrueLayerBackfill?uid=...&sinceMs=... (optional)
+// -----------------------------------------------------------------------------
+exports.ingestTrueLayerBackfill = onRequest({ region: 'europe-west2' }, async (req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      const uid = String(req.query.uid || '').trim();
+      const sinceMsQ = Number(req.query.sinceMs || 0);
+      if (!uid) return res.status(400).json({ error: 'Missing uid' });
+
+      // calc-start
+      const startMsRaw = await ensureStartMsServer(db, uid);
+      const calcStartMs = calcStartMsFromStartDate(startMsRaw);
+
+      // helper: process any /items/* doc’s /transactions subcollection
+      async function backfillFor(kind /* 'account'|'card' */) {
+        const root = (kind === 'card')
+          ? db.collection(`players/${uid}/financialData_TRUELAYER/cards/items`)
+          : db.collection(`players/${uid}/financialData_TRUELAYER/accounts/items`);
+
+        const itemsSnap = await root.get();
+        let processed = 0, skipped = 0;
+
+        for (const itemDoc of itemsSnap.docs) {
+          const item = itemDoc.data() || {};
+          const sync = item.sync || {};
+          const watermarkMs = Number(sync.ingestWatermarkMs || 0);
+          const since = Math.max(calcStartMs, watermarkMs, sinceMsQ);
+
+          const txCol = itemDoc.ref.collection('transactions');
+          let q = txCol.orderBy('postedAt').where('postedAt', '>=', admin.firestore.Timestamp.fromMillis(since));
+          let last = null;
+          let loopGuard = 0;
+
+          while (loopGuard++ < 1000) {
+            let q2 = q.limit(400);
+            if (last) q2 = q2.startAfter(last);
+            const snap = await q2.get();
+            if (snap.empty) break;
+
+            for (const txDoc of snap.docs) {
+              const d = txDoc.data() || {};
+              const txId = txDoc.id;
+              const postedAtMs = d?.postedAt?.toMillis ? d.postedAt.toMillis() : 0;
+              if (!(postedAtMs >= calcStartMs)) { skipped++; continue; }
+
+              await ingestOneTrueLayerTxn(db, {
+                uid, kind, parentId: itemDoc.id, txnId: txId, txnData: d
+              });
+              processed++;
+            }
+
+            last = snap.docs[snap.docs.length - 1];
+            // advance watermark
+            const lastMs = snap.docs[snap.docs.length - 1]?.data()?.postedAt?.toMillis?.() || since;
+            await itemDoc.ref.set({ sync: { ...sync, ingestWatermarkMs: lastMs, updatedAt: FieldValue.serverTimestamp() } }, { merge: true });
+          }
+        }
+        return { processed, skipped };
+      }
+
+      const a = await backfillFor('account');
+      const c = await backfillFor('card');
+
+      return res.status(200).json({
+        ok: true,
+        calcStartMs,
+        sinceMs: sinceMsQ || null,
+        accounts: a,
+        cards: c
+      });
+    } catch (e) {
+      console.error('ingestTrueLayerBackfill error', e?.message);
+      res.status(500).json({ error: 'ingest_failed', details: e?.message });
+    }
+  });
+});
+
 
 /**
  * ====================================================================
@@ -902,14 +1140,25 @@ async function updateVitalsPoolsServer(db, uid) {
     essence: dailyDisposable * essenceAllocation,
   };
 
+  const prof = await db.doc(`players/${uid}`).get();
+  let mode = 'safe';
+  if (prof.exists) {
+    const d = prof.data() || {};
+    const m = String(d.vitalsMode || '').toLowerCase();
+    if (['safe','accelerated','manual','true'].includes(m)) mode = m;
+  }
+  const desiredSourceKey = (mode === 'true') ? 'truelayer' : 'manual';
+
   const sumSnap = await db.doc(`players/${uid}/classifiedTransactions/summary`).get();
   const usage7Day    = { health:0, mana:0, stamina:0, essence:0 };
   const usageAllTime = { health:0, mana:0, stamina:0, essence:0 };
   if (sumSnap.exists) {
-    const { recentUsage = {}, historicUsage = {} } = sumSnap.data() || {};
+    const d = sumSnap.data() || {};
+    const recent = d[`recentUsage_${desiredSourceKey}`]   || d.recentUsage   || {};
+    const hist   = d[`historicUsage_${desiredSourceKey}`] || d.historicUsage || {};
     for (const k of Object.keys(usage7Day)) {
-      usage7Day[k]    = Number(recentUsage[k]  || 0);
-      usageAllTime[k] = Number(historicUsage[k]|| 0);
+      usage7Day[k]    = Number(recent[k]  || 0);
+      usageAllTime[k] = Number(hist[k]|| 0);
     }
   }
 
@@ -936,14 +1185,9 @@ async function updateVitalsPoolsServer(db, uid) {
     };
   }
 
-  const prof = await db.doc(`players/${uid}`).get();
-  let mode = 'safe';
+
   let startMs = await ensureStartMsServer(db, uid);
-  if (prof.exists) {
-    const d = prof.data() || {};
-    const m = String(d.vitalsMode || '').toLowerCase();
-    if (['safe','accelerated','manual','true'].includes(m)) mode = m;
-  }
+  
 
   const { seedCarry, seed } =
     await ensureSeedCarryAndSeedSnapshotServer(db, uid, pools, mode, startMs, existingCarry);
@@ -994,7 +1238,7 @@ function sumPools(a,b){ return {
   essence:(a.essence||0)+(b.essence||0),
 };}
 
-async function recomputeSummaryServer(db, uid) {
+async function recomputeSummaryServerV1(db, uid) {
   const col = db.collection(`players/${uid}/classifiedTransactions`);
   const snap = await col.where("status","==","confirmed").get();
   const all={health:0,mana:0,stamina:0,essence:0};
@@ -1016,6 +1260,234 @@ async function recomputeSummaryServer(db, uid) {
   },{merge:true});
 }
 
+async function recomputeSummaryServer(db, uid) {
+  const col = db.collection(`players/${uid}/classifiedTransactions`);
+  const snap = await col.where("status","==","confirmed").get();
+
+  const sumAll = {health:0,mana:0,stamina:0,essence:0};
+  const sumAll7 = {health:0,mana:0,stamina:0,essence:0};
+
+  const sumManual = {health:0,mana:0,stamina:0,essence:0};
+  const sumManual7 = {health:0,mana:0,stamina:0,essence:0};
+
+  const sumTL = {health:0,mana:0,stamina:0,essence:0};
+  const sumTL7 = {health:0,mana:0,stamina:0,essence:0};
+
+  const since7 = Date.now() - 7 * MS_PER_DAY;
+
+  snap.forEach(d => {
+    const tx = d.data() || {};
+    const alloc = tx.appliedAllocation || {};
+    const when = tx.lockedAtMs || tx?.tag?.setAtMs || 0;
+    const src = (tx.source || '').toLowerCase();
+
+    // all
+    for (const k of Object.keys(sumAll)) sumAll[k] += Number(alloc[k] || 0);
+    if (when >= since7) for (const k of Object.keys(sumAll7)) sumAll7[k] += Number(alloc[k] || 0);
+
+    // manual stream = everything NOT from truelayer
+    const isTL = (src === 'truelayer');
+    const tgt = isTL ? sumTL : sumManual;
+    const tgt7 = isTL ? sumTL7 : sumManual7;
+
+    for (const k of Object.keys(tgt)) tgt[k] += Number(alloc[k] || 0);
+    if (when >= since7) for (const k of Object.keys(tgt7)) tgt7[k] += Number(alloc[k] || 0);
+  });
+
+  await db.doc(`players/${uid}/classifiedTransactions/summary`).set({
+    // legacy (unchanged)
+    historicUsage: roundPools(sumAll),
+    recentUsage:   roundPools(sumAll7),
+
+    // new per-stream fields
+    historicUsage_manual:    roundPools(sumManual),
+    recentUsage_manual:      roundPools(sumManual7),
+    historicUsage_truelayer: roundPools(sumTL),
+    recentUsage_truelayer:   roundPools(sumTL7),
+
+    updatedAt: Date.now(),
+  }, { merge: true });
+}
+
+// -----------------------------------------------------------------------------
+// Maintenance: recompute per-stream usage and immediately refresh vitals
+// GET .../maintenanceRecomputeUsageAndVitals?uid=USER_ID
+// -----------------------------------------------------------------------------
+exports.maintenanceRecomputeUsageAndVitals = onRequest(
+  { region: 'europe-west2' },
+  async (req, res) => {
+    corsHandler(req, res, async () => {
+      try {
+        const uid = String(req.query.uid || '').trim();
+        if (!uid) return res.status(400).json({ error: 'missing_uid' });
+
+        await recomputeSummaryServer(db, uid);             // writes per-stream fields
+        const payload = await updateVitalsPoolsServer(db, uid); // reads per-stream + writes current
+
+        return res.status(200).json({ ok: true, mode: payload?.mode, updatedAt: payload?.lastSync });
+      } catch (e) {
+        console.error('maintenanceRecomputeUsageAndVitals error:', e?.message);
+        res.status(500).json({ error: 'recompute_failed', details: e?.message });
+      }
+    });
+  }
+);
+
+// -----------------------------------------------------------------------------
+// Maintenance: wipe classifiedTransactions (keep 'summary') and reset usage to 0
+//   GET .../maintenanceResetClassified?uid=USER_ID&confirm=YES
+// https://europe-west2-myfi-app-7fa78.cloudfunctions.net/maintenanceResetClassified?uid=24Nq8ULBihaaU0gutWO0bes1BVl2&confirm=YES
+// -----------------------------------------------------------------------------
+exports.maintenanceResetClassified = onRequest({ region: 'europe-west2' }, async (req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      const uid = String(req.query.uid || '').trim();
+      const confirm = String(req.query.confirm || '').toUpperCase();
+      if (!uid)   return res.status(400).json({ error: 'missing_uid' });
+      if (confirm !== 'YES') {
+        return res.status(400).json({
+          error: 'confirmation_required',
+          hint: 'Append &confirm=YES to actually perform the reset.'
+        });
+      }
+
+      const colRef = db.collection(`players/${uid}/classifiedTransactions`);
+      let totalDeleted = 0;
+      // Delete in batches (keep 'summary')
+      while (true) {
+        const snap = await colRef.limit(400).get();
+        if (snap.empty) break;
+
+        const batch = db.batch();
+        let deletable = 0;
+        snap.docs.forEach(doc => {
+          if (doc.id !== 'summary') {
+            batch.delete(doc.ref);
+            deletable++;
+          }
+        });
+
+        if (deletable === 0) break; // only 'summary' remains
+        await batch.commit();
+        totalDeleted += deletable;
+
+        // If we fetched fewer than our page size, we're likely done.
+        if (snap.size < 400) break;
+      }
+
+      // Reset 'summary' usage fields to zero (legacy + per-stream)
+      const zeros = { health: 0, mana: 0, stamina: 0, essence: 0 };
+      await db.doc(`players/${uid}/classifiedTransactions/summary`).set({
+        historicUsage: zeros,
+        recentUsage: zeros,
+        historicUsage_manual: zeros,
+        recentUsage_manual: zeros,
+        historicUsage_truelayer: zeros,
+        recentUsage_truelayer: zeros,
+        updatedAt: Date.now(),
+      }, { merge: true });
+
+      // Refresh vitals so HUD updates immediately
+      const payload = await updateVitalsPoolsServer(db, uid);
+
+      return res.status(200).json({
+        ok: true,
+        deleted: totalDeleted,
+        mode: payload?.mode || null,
+        updatedAt: payload?.lastSync || null
+      });
+    } catch (e) {
+      console.error('maintenanceResetClassified error:', e?.message || e);
+      res.status(500).json({ error: 'reset_failed', details: e?.message || String(e) });
+    }
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Ingest ONLY the most recent TrueLayer transactions (testing helper)
+// Uses already-fetched TL subcollections; does NOT fetch from TL API.
+//   GET .../ingestTrueLayerRecent?uid=USER_ID&n=10[&nTotal=25][&kind=account|card|both]
+//   - n:      max per account/card (default 10, max 200)
+//   - nTotal: optional global cap across all accounts/cards
+//   - kind:   'account' | 'card' | 'both' (default 'both')
+//https://europe-west2-myfi-app-7fa78.cloudfunctions.net/ingestTrueLayerRecent?uid=24Nq8ULBihaaU0gutWO0bes1BVl2&n=1
+// -----------------------------------------------------------------------------
+exports.ingestTrueLayerRecent = onRequest({ region: 'europe-west2' }, async (req, res) => {
+  corsHandler(req, res, async () => {
+    try {
+      const uid = String(req.query.uid || '').trim();
+      if (!uid) return res.status(400).json({ error: 'missing_uid' });
+
+      const nPer = Math.max(1, Math.min(Number(req.query.n || 10), 200));
+      const nTotal = Math.max(0, Number(req.query.nTotal || 0)) || 0;
+      const kindParam = String(req.query.kind || 'both').toLowerCase();
+      const kinds = (kindParam === 'both') ? ['account','card']
+                    : (kindParam === 'account' || kindParam === 'card') ? [kindParam] : ['account','card'];
+
+      // Collect newest N per item (account/card)
+      const collected = [];
+      for (const kind of kinds) {
+        const root = (kind === 'card')
+          ? db.collection(`players/${uid}/financialData_TRUELAYER/cards/items`)
+          : db.collection(`players/${uid}/financialData_TRUELAYER/accounts/items`);
+
+        const itemsSnap = await root.get();
+        for (const itemDoc of itemsSnap.docs) {
+          const txSnap = await itemDoc.ref
+            .collection('transactions')
+            .orderBy('postedAt', 'desc')
+            .limit(nPer)
+            .get();
+
+          txSnap.forEach(txDoc => {
+            collected.push({
+              kind,
+              parentId: itemDoc.id,
+              txnId: txDoc.id,
+              data: txDoc.data() || {}
+            });
+          });
+        }
+      }
+
+      // Global cap across all accounts/cards if requested
+      collected.sort((a,b) => {
+        const ams = a.data?.postedAt?.toMillis?.() || 0;
+        const bms = b.data?.postedAt?.toMillis?.() || 0;
+        return bms - ams; // newest first
+      });
+      const selected = nTotal > 0 ? collected.slice(0, nTotal) : collected;
+
+      // Ingest (idempotent + calc-start aware)
+      let processed = 0, skipped = 0;
+      for (const t of selected) {
+        const r = await ingestOneTrueLayerTxn(db, {
+          uid, kind: t.kind, parentId: t.parentId, txnId: t.txnId, txnData: t.data
+        });
+        if (r?.skipped) skipped++; else processed++;
+      }
+
+      // Refresh aggregates so HUD reflects changes
+      await recomputeSummaryServer(db, uid);
+      const payload = await updateVitalsPoolsServer(db, uid);
+
+      return res.status(200).json({
+        ok: true,
+        mode: payload?.mode || null,
+        selected: selected.length,
+        processed,
+        skipped,
+        note: "Reads from TL subcollections; run fetchTransactions first if empty."
+      });
+    } catch (e) {
+      console.error('ingestTrueLayerRecent error:', e?.message || e);
+      res.status(500).json({ error: 'ingest_recent_failed', details: e?.message || String(e) });
+    }
+  });
+});
+
+
+
 exports.vitals_getSnapshot = onCall({ region: 'europe-west2' }, async (req) => {
   if (!req.auth?.uid) throw new Error('unauthenticated');
   const uid = req.auth.uid;
@@ -1030,8 +1502,26 @@ exports.vitals_lockPending = onCall({ region: 'europe-west2' }, async (req) => {
 
   const col = db.collection(`players/${uid}/classifiedTransactions`);
   const now = Date.now();
-  const dueSnap = await col.where("status","==","pending").where("ghostExpiryMs","<=",now).get();
-  const pendAsc = await col.where("status","==","pending").orderBy("addedMs","asc").get();
+
+  // STREAM-AWARE: read current mode first and pick the active stream
+  const curSnap = await db.doc(`players/${uid}/cashflowData/current`).get();
+  if (!curSnap.exists) return { locked: 0 };
+  const cur = curSnap.data() || {};
+  const mode = String(cur.mode || 'safe').toLowerCase();
+  const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
+
+  // Only consider pending from the selected stream
+  const dueSnap = await col
+    .where("status","==","pending")
+    .where("source","==", desiredSource)
+    .where("ghostExpiryMs","<=", now)
+    .get();
+
+  const pendAsc = await col
+    .where("status","==","pending")
+    .where("source","==", desiredSource)
+    .orderBy("addedMs","asc")
+    .get();
 
   const overflow = Math.max(0, pendAsc.size - queueCap);
   const toConfirm = [];
@@ -1041,27 +1531,24 @@ exports.vitals_lockPending = onCall({ region: 'europe-west2' }, async (req) => {
   }
   if (!toConfirm.length) return { locked: 0 };
 
-  const curSnap = await db.doc(`players/${uid}/cashflowData/current`).get();
-  if (!curSnap.exists) return { locked: 0 };
-  const cur = curSnap.data() || {};
+  // Availability based on current pools + mode
   const pools = cur.pools || {};
   const seedCarry = cur.seedCarry || {};
-  const mode = (cur.mode || 'safe');
-
   const days = Number(cur.elapsedDays || (await elapsedDaysFromCalcStartServer(db, uid)));
   const carryFor = (pool) => (mode === 'true' ? 0 : Number((seedCarry[pool] || 0)));
 
   const availTruth = {
-    health: Math.max(0,(pools.health?.regenCurrent ||0)*days - ((pools.health?.spentToDate ||0) + carryFor('health'))),
-    mana:   Math.max(0,(pools.mana?.regenCurrent   ||0)*days - ((pools.mana?.spentToDate   ||0) + carryFor('mana'))),
-    stamina:Math.max(0,(pools.stamina?.regenCurrent||0)*days - ((pools.stamina?.spentToDate||0) + carryFor('stamina'))),
-    essence:Math.max(0,(pools.essence?.regenCurrent||0)*days - ((pools.essence?.spentToDate||0) + carryFor('essence'))),
+    health:  Math.max(0, (pools.health?.regenCurrent  || 0) * days - ((pools.health?.spentToDate  || 0) + carryFor('health'))),
+    mana:    Math.max(0, (pools.mana?.regenCurrent    || 0) * days - ((pools.mana?.spentToDate    || 0) + carryFor('mana'))),
+    stamina: Math.max(0, (pools.stamina?.regenCurrent || 0) * days - ((pools.stamina?.spentToDate || 0) + carryFor('stamina'))),
+    essence: Math.max(0, (pools.essence?.regenCurrent || 0) * days - ((pools.essence?.spentToDate || 0) + carryFor('essence'))),
   };
 
   const batch = db.batch();
   let locked = 0;
-  let appliedTotals = {health:0,mana:0,stamina:0,essence:0};
+  let appliedTotals = { health:0, mana:0, stamina:0, essence:0 };
 
+  // Order by oldest added first for fairness
   toConfirm.sort((a,b)=> (a.data()?.addedMs||0) - (b.data()?.addedMs||0));
 
   for (const d of toConfirm) {
@@ -1070,25 +1557,46 @@ exports.vitals_lockPending = onCall({ region: 'europe-west2' }, async (req) => {
     const chosen = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
 
     if (Number(tx.amount || 0) >= 0) {
-      batch.update(d.ref, {
-        status:"confirmed",
-        tag:{ pool:chosen, setAtMs:now },
-        autoLockReason:reason,
-        lockedAtMs:now
-      });
+      // Heuristic: prefer explicit flags if present; fall back to desc regex
+      const desc = String(tx?.transactionData?.description || '');
+      const isTransfer =
+        !!tx.isTransferCandidate ||
+        tx.sourceSubtype === 'transfer' ||
+        /transfer|to .*account|from .*account/i.test(desc);
+
+      const update = {
+        status: "confirmed",
+        tag: { pool: chosen, setAtMs: now },
+        autoLockReason: reason,
+        lockedAtMs: now
+      };
+
+      if (isTransfer) {
+        // Offset the spend: apply a negative allocation equal to the income
+        const offset = Math.abs(Number(tx.amount || 0));
+        const neg = { health:0, mana:0, stamina:0, essence:0 };
+        neg[chosen] = -offset;
+        update.appliedAllocation = roundPools(neg);
+
+        // Optional: include in the client-side smoothing totals so HUD updates instantly
+        appliedTotals = sumPools(appliedTotals, roundPools(neg));
+      }
+
+      batch.update(d.ref, update);
       locked++;
       continue;
     }
+
 
     const spend = Math.abs(Number(tx.amount || 0));
     const split = allocateSpendAcrossPoolsServer(spend, chosen, availTruth);
     appliedTotals = sumPools(appliedTotals, split);
 
     batch.update(d.ref, {
-      status:"confirmed",
-      tag:{ pool:chosen, setAtMs:now },
-      autoLockReason:reason,
-      lockedAtMs:now,
+      status: "confirmed",
+      tag: { pool: chosen, setAtMs: now },
+      autoLockReason: reason,
+      lockedAtMs: now,
       appliedAllocation: roundPools(split),
     });
     locked++;
@@ -1100,6 +1608,7 @@ exports.vitals_lockPending = onCall({ region: 'europe-west2' }, async (req) => {
 
   return { locked, appliedTotals: roundPools(appliedTotals) };
 });
+
 
 exports.vitals_getEssenceAvailableMonthly = onCall({ region: 'europe-west2' }, async (req) => {
   if (!req.auth?.uid) throw new Error('unauthenticated');
