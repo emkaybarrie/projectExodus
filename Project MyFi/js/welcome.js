@@ -70,12 +70,44 @@ async function showFirstRunSetup(uid) {
   const title = document.createElement('h1'); title.textContent = 'Quick Setup'; title.style.marginTop = '0';
   const sub = helper('Fill in the below to bring your Avatar to life. You can edit them later in Finances/Settings menus.');
 
+  // --- [NEW | optional] centralise tiny helper blurbs you can tweak anytime
+  const QS_DESC = {
+    incomeAmt: 'Use your typical take-home (after tax). You can refine this later.',
+    incomeCad: 'How often this paycheck hits your account.',
+    lastPay:   'The most recent date you were paid. Helps us time accruals.',
+    expAmt:    'Your predictable monthly essentials (rent, bills, etc).',
+    expCad:    'How often those essentials are charged.',
+    modeSel:   'Pick a starting intensity. You can change this anytime in Settings.'
+  };
+
+
   const incomeAmt = makeInput('Income Amount (£)', 'number', 'qsIncomeAmt', { min:'0', step:'0.01', placeholder:'e.g. 3200.00' });
   const incomeCad = makeSelect('Income Cadence', 'qsIncomeCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
+  const lastPay   = makeInput('Last Pay Day', 'date', 'qsLastPay', {});
+  // --- [NEW prefill logic] ---
+  const lpInput = lastPay.querySelector('input');
+
+  // look up any saved value
+  const snap = await getDoc(userRef);
+  let prefillDate = null;
+  if (snap.exists()) {
+    const saved = snap.data()?.incomeMeta?.lastPayDateMs;
+    if (typeof saved === 'number' && saved > 0) {
+      prefillDate = new Date(saved);
+    }
+  }
+
+  // fallback = first day of this month
+  if (!prefillDate) {
+    const today = new Date();
+    prefillDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  }
+
+  lpInput.valueAsDate = prefillDate;
   const expAmt    = makeInput('Core Expenses Amount (£)', 'number', 'qsExpAmt', { min:'0', step:'0.01', placeholder:'e.g. 1800.00' });
   const expCad    = makeSelect('Core Expenses Cadence', 'qsExpCad', [['monthly','Monthly'],['weekly','Weekly'],['daily','Daily']]);
   const modeSel   = makeSelect('Start Mode', 'qsVitalsMode', [
-    ['safe','Cautious'], ['accelerated','Standard'], ['manual','Manual'],
+    ['relaxed','Relaxed'], ['standard','Standard'], ['focused','Focused'],
   ]);
 
   const manualWrap = document.createElement('div'); manualWrap.style.display = 'none';
@@ -103,7 +135,16 @@ async function showFirstRunSetup(uid) {
   });
   btnSave.style.background = 'linear-gradient(180deg, rgba(90,180,255,.25), rgba(90,180,255,.12))';
 
-  card.append(title, sub, incomeAmt, incomeCad, expAmt, expCad, modeSel, manualWrap, errBox, actions);
+   card.append(
+    title, sub,
+    incomeAmt, helper(QS_DESC.incomeAmt),
+    incomeCad, helper(QS_DESC.incomeCad),
+    lastPay,   helper(QS_DESC.lastPay),
+    expAmt,    helper(QS_DESC.expAmt),
+    expCad,    helper(QS_DESC.expCad),
+    modeSel,   helper(QS_DESC.modeSel),
+    manualWrap, errBox, actions
+  );
   actions.append(btnSave, btnSkip); shell.append(card);
 
   const applySmall = () => {
@@ -118,7 +159,7 @@ async function showFirstRunSetup(uid) {
 
   incomeCad.querySelector('select').value = 'monthly';
   expCad.querySelector('select').value = 'monthly';
-  modeSel.querySelector('select').value = 'accelerated';
+  modeSel.querySelector('select').value = 'standard';
   modeSel.querySelector('select').addEventListener('change', (e) => {
     manualWrap.style.display = (String(e.target.value||'safe') === 'manual') ? '' : 'none';
   });
@@ -133,7 +174,18 @@ async function showFirstRunSetup(uid) {
       const incomeCadence = String(incomeCad.querySelector('select').value || 'monthly');
       const expAmount     = Math.max(0, Number(expAmt.querySelector('input').value || 0));
       const expCadence    = String(expCad.querySelector('select').value || 'monthly');
-      const vitalsMode    = String(modeSel.querySelector('select').value || 'accelerated');
+      const vitalsMode    = String(modeSel.querySelector('select').value || 'standard');
+
+      const lastPayEl   = document.getElementById('qsLastPay');
+      const lastPayStr  = lastPayEl?.value || ''; // YYYY-MM-DD from <input type="date">
+      const lastPayDateMs = lastPayStr ? new Date(`${lastPayStr}T00:00:00`).getTime() : null;
+
+      if (lastPayDateMs && lastPayDateMs > (Date.now() + 24*60*60*1000)) {
+        showErr('Last Pay Day cannot be in the future.');
+        btnSave.disabled = false;
+        lastPayEl.focus();
+        return;
+      }
 
       clearErr();
       if (incomeAmount <= 0) { showErr('Income must be greater than 0.'); btnSave.disabled=false; incomeAmt.querySelector('input').focus(); return; }
@@ -143,36 +195,50 @@ async function showFirstRunSetup(uid) {
       await updateCoreExpenses(expAmount, expCadence);
       await updateDoc(userRef, { vitalsMode });
 
-      if (vitalsMode === 'manual') {
-        const total = Math.max(0, Number(preAmt.querySelector('input')?.value || 0));
-        let spct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreStaminaPct')?.value || 0)));
-        let mpct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreManaPct')?.value || 0)));
-        let sum = spct + mpct; if (sum <= 0.0001) { spct = 60; mpct = 40; sum = 100; }
-        spct = spct/sum; mpct = mpct/sum;
-
-        let startMs = Date.now();
-        const pSnap = await getDoc(userRef);
-        if (pSnap.exists()) {
-          const raw = pSnap.data()?.startDate;
-          if (raw?.toMillis) startMs = raw.toMillis();
-          else if (raw instanceof Date) startMs = raw.getTime();
-          else if (typeof raw === 'number') startMs = raw;
-        }
-        const d0 = new Date(startMs);
-        const startMonthStartMs = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime();
-
-        await setDoc(doc(db, `players/${uid}/manualSeed/meta`), {
-          startMonthStartMs, startDateMs: startMs, updatedAtMs: Date.now()
-        }, { merge: true });
-
-        if (total > 0) {
-          await setDoc(doc(db, `players/${uid}/manualSeed/openingSummary`), {
-            totalPrestartDiscretionary: total,
-            split: { staminaPct: spct, manaPct: mpct },
-            providedAtMs: Date.now()
+      // --- [NEW] persist Last Pay Day ---
+      try {
+        if (lastPayDateMs) {
+          await updateDoc(userRef, {
+            incomeMeta: {
+              lastPayDateMs,
+              lastPaySavedAtMs: serverTimestamp()//Date.now()
+            }
           }, { merge: true });
         }
+      } catch (e) {
+        console.warn('[Quick Setup] failed to write incomeMeta.lastPayDateMs', e);
       }
+
+      // if (vitalsMode === 'manual') {
+      //   const total = Math.max(0, Number(preAmt.querySelector('input')?.value || 0));
+      //   let spct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreStaminaPct')?.value || 0)));
+      //   let mpct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreManaPct')?.value || 0)));
+      //   let sum = spct + mpct; if (sum <= 0.0001) { spct = 60; mpct = 40; sum = 100; }
+      //   spct = spct/sum; mpct = mpct/sum;
+
+      //   let startMs = Date.now();
+      //   const pSnap = await getDoc(userRef);
+      //   if (pSnap.exists()) {
+      //     const raw = pSnap.data()?.startDate;
+      //     if (raw?.toMillis) startMs = raw.toMillis();
+      //     else if (raw instanceof Date) startMs = raw.getTime();
+      //     else if (typeof raw === 'number') startMs = raw;
+      //   }
+      //   const d0 = new Date(startMs);
+      //   const startMonthStartMs = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime();
+
+      //   await setDoc(doc(db, `players/${uid}/manualSeed/meta`), {
+      //     startMonthStartMs, startDateMs: startMs, updatedAtMs: Date.now()
+      //   }, { merge: true });
+
+      //   if (total > 0) {
+      //     await setDoc(doc(db, `players/${uid}/manualSeed/openingSummary`), {
+      //       totalPrestartDiscretionary: total,
+      //       split: { staminaPct: spct, manaPct: mpct },
+      //       providedAtMs: Date.now()
+      //     }, { merge: true });
+      //   }
+      // }
 
       // Single place to mark welcome done + timestamps
       await markWelcomeDone(uid);

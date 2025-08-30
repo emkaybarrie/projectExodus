@@ -36,7 +36,7 @@ import { initHUD } from './hud/hud.js';
 
         [
           { value: 'safe',        text: 'Safe' },
-          { value: 'accelerated', text: 'Standard' },
+          { value: 'standard', text: 'Standard' },
           { value: 'manual',      text: 'Precise' },
           { value: 'true',        text: 'True (bank sync)' },
         ].forEach(opt => {
