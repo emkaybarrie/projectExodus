@@ -458,6 +458,28 @@ import {
     open('addTransaction', { variant: 'drilldown', menuTitle: 'Actions' });
   });
 
+  // Open Add Transaction directly (content view)
+// Usage: window.MyFiOpenAddTransaction({ variant: 'single' })
+window.MyFiOpenAddTransaction = async function (opts = {}) {
+  const variant   = opts.variant || 'single';
+  const menuTitle = opts.menuTitle || (variant === 'single' ? 'Add Transaction' : 'Actions');
+
+  await ensureAuthReady();
+  const { mode } = await getPlayerCore();
+  if (mode === 'manual') {
+    FinancesMenu.manualOpening = makeManualOpeningEntry();
+  } else if (FinancesMenu.manualOpening) {
+    delete FinancesMenu.manualOpening;
+  }
+
+  setMenu(FinancesMenu);
+  open('addTransaction', { variant, menuTitle });
+
+  // optional: focus first field when rendered
+  setTimeout(() => document.getElementById('txDesc')?.focus(), 0);
+};
+
+
   // ───────────────────────── Event handlers ─────────────────────────
   window.addEventListener('tx:add', async e => {
     await ensureAuthReady();

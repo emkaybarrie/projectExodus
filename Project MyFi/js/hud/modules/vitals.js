@@ -233,6 +233,26 @@ function normalizeTxn(docSnap) {
   };
 }
 
+//  Add Transaction
+
+export function autoInitAddSpendButton() {
+  // NEW: "Add Spend" — opens the Add Transaction modal directly
+  const addBtn = document.getElementById('btn-add-spend');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      if (typeof window.MyFiOpenAddTransaction === 'function') {
+        window.MyFiOpenAddTransaction({ variant: 'single' }); // content-only
+      } else {
+        // Fallback to existing drilldown flow if financesMenu isn’t loaded yet
+        // Reuse the existing Finances handler that already opens "Add Transaction"
+      // See financesMenu.js: right-btn click -> open('addTransaction', ...)
+        document.getElementById('right-btn')?.click();
+      }
+    });
+  }
+
+}
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    History modal (unchanged)

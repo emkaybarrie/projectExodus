@@ -213,14 +213,22 @@
 
       <div class="update-log-box">
         <div class="update-log">
-          <h2>ACTION LOG <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button></h2>
+          <h2>
+            ACTION LOG
+            <!-- Right-pinned actions container: Add Spend (left) + Expand (right) -->
+            <span class="hx-actions">
+              <button class="hx-add" id="btn-add-spend" title="Add spend" aria-label="Add spend">＋ Add Spend</button>
+              <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button>
+            </span>
+          </h2>
           <ul id="update-log-list" class="scrollable"></ul>
         </div>
 
         <div class="section-divider"></div>
 
         <div class="recently-locked">
-          <h2>RECENT ACTIONS <button class="hx-expand" id="btn-expand-locked" title="View all history" aria-label="View all history">↗︎</button></h2>
+          <!-- Removed duplicate expand button here -->
+          <h2>RECENT ACTIONS</h2>
           <ul id="recently-locked-list" class="scrollable"></ul>
         </div>
       </div>
@@ -336,8 +344,9 @@
 
 <!-- Auto-wire Update Log + History buttons (unchanged) -->
 <script type="module">
-  import { autoInitUpdateLog, autoInitHistoryButtons } from './js/hud/modules/vitals.js';
+  import { autoInitUpdateLog, autoInitAddSpendButton, autoInitHistoryButtons } from './js/hud/modules/vitals.js';
   autoInitUpdateLog();
+  autoInitAddSpendButton()
   autoInitHistoryButtons();
 </script>
 
