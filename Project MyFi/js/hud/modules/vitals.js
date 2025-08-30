@@ -187,7 +187,7 @@ export async function startLevelListener(uid) {
    View mode helpers
    ──────────────────────────────────────────────────────────────────────────── */
 const VIEW_MODES   = ["daily", "weekly", "monthly"];
-const VIEW_FACTORS = { daily: 1, weekly: 7, monthly: 30 };
+const VIEW_FACTORS = { daily: 1, weekly: 7, monthly: 30.44 };
 
 export function getViewMode() {
   return localStorage.getItem("vitals:viewMode") || "daily";
@@ -205,16 +205,6 @@ export function cycleViewMode() {
   const i = VIEW_MODES.indexOf(getViewMode());
   setViewMode(VIEW_MODES[(i + 1) % VIEW_MODES.length]);
 }
-
-/* ────────────────────────────────────────────────────────────────────────────
-   Time + math
-   ──────────────────────────────────────────────────────────────────────────── */
-const MS_PER_DAY  = 86_400_000;
-const SEC_PER_DAY = 86_400;
-
-// Cached startDate ms (confirmed only)
-let START_MS = null;
-let START_CONFIRMED = false;
 
 
 
@@ -412,7 +402,7 @@ async function getVitalsMode(uid) {
     const p = await getDoc(doc(db, "players", uid));
     if (p.exists()) {
       const mode = String(p.data().vitalsMode || '').toLowerCase();
-      if (['safe','accelerated','manual','true'].includes(mode)) return mode;
+      if (['safe','standard','manual','true'].includes(mode)) return mode;
     }
   } catch (_) {}
   return 'safe';
@@ -480,20 +470,8 @@ export async function loadVitalsToHUD(uid) {
   refreshBarGrids();
 }
 
-
 /* ────────────────────────────────────────────────────────────────────────────
-   3) Ghost allocation helpers
-   ──────────────────────────────────────────────────────────────────────────── */
-const MANA_OVERFLOW_MODE = 'health'; // or 'stamina_then_health'
-
-
-/* ────────────────────────────────────────────────────────────────────────────
-   3.5) Remainder-first projection
-   ──────────────────────────────────────────────────────────────────────────── */
-
-
-/* ────────────────────────────────────────────────────────────────────────────
-   4) Animated HUD — truth uses calc-start + carry
+   3) Animated HUD — truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
 export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
   const db = getFirestore();
@@ -1002,10 +980,6 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   maybeStartVitalsTour(uid);
 }
 
-
-
-
-
 /* ────────────────────────────────────────────────────────────────────────────
    Update Log + Recently Locked + Inline edit (unchanged)
    ──────────────────────────────────────────────────────────────────────────── */
@@ -1178,7 +1152,7 @@ export function autoInitUpdateLog() {
     const uid = user.uid;
 
     // BEGIN stream filter: choose list source by vitals mode
-    const mode = await getVitalsMode(uid); // safe|accelerated|manual|true
+    const mode = await getVitalsMode(uid); // safe|standard|manual|true
     const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
     // END stream filter
 

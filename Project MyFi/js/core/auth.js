@@ -99,8 +99,9 @@ export async function signupUser(data) {
       firstName: data.firstName || "",
       lastName: data.lastName || "",
       level: Number(1),
-      vitalsMode: 'accelerated',
-      lastLoginAt: serverTimestamp()
+      vitalsMode: 'standard',
+      lastLoginAt: serverTimestamp(),
+      onboarding: {welcomeDone: false}
     });
 
     // Seed auxiliary docs (unchanged)
@@ -122,6 +123,8 @@ export async function signupUser(data) {
     });
 
     sessionStorage.setItem('showSplashNext', '1');
+    sessionStorage.setItem('myfi.welcome.v1.done', '0');
+    localStorage.setItem('myfi.welcome.v1.done', '0');
     window.location.href = "dashboard.html";
   } catch (error) {
     console.error("Signup error:", error.message);

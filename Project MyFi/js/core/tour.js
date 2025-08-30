@@ -102,14 +102,19 @@ function renderStep(index) {
   const pop = document.createElement("div");
   pop.className = "tour-pop";
   pop.innerHTML = `
-    ${step.title ? `<h4>${step.title}</h4>` : ""}
-    <div class="tour-pop__content">${step.content || ""}</div>
-    <div class="tour-pop__actions">
-      ${index > 0 ? `<button class="tour-pop__btn" data-x="prev">Back</button>` : ""}
-      <button class="tour-pop__btn" data-x="skip">Skip</button>
-      <button class="tour-pop__btn tour-pop__btn--primary" data-x="next">${index < STATE.steps.length - 1 ? "Next" : "Done"}</button>
-    </div>
-  `;
+      ${step.title ? `<h4>${step.title}</h4>` : ""}
+      <div class="tour-pop__content">${step.content || ""}</div>
+      <div class="tour-pop__actions" style="display:flex;align-items:center;gap:.5rem;">
+        <div class="tour-pop__step" style="opacity:.7;font-size:12px;margin-right:auto;">
+          ${index + 1}/${STATE.steps.length}
+        </div>
+        ${index > 0 ? `<button class="tour-pop__btn" data-x="prev">Back</button>` : ""}
+        <button class="tour-pop__btn" data-x="skip">Skip</button>
+        <button class="tour-pop__btn tour-pop__btn--primary" data-x="next">
+          ${index < STATE.steps.length - 1 ? "Next" : "Done"}
+        </button>
+      </div>
+    `;
   document.body.appendChild(pop);
   STATE.pop = pop;
 
