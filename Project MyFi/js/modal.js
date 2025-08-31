@@ -59,7 +59,7 @@
     if (currentVariant === 'drilldown') {
       setTitleForList();
       renderPreviewFor(key);
-      highlightCurrent(null);
+      highlightCurrent(key);
       backdrop.classList.remove('is-detail');
       setTimeout(() => menuEl?.querySelector('.menu__btn')?.focus(), 0);
     } else if (currentVariant === 'single') {

@@ -17,9 +17,9 @@ import { initHUD } from './hud/hud.js';
         wrap.appendChild(helper(`
           <p>Select how your avatar’s vitals are calculated:</p>
           <ul>
-            <li><strong>Safe</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily.</li>
+            <li><strong>Relaxed</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily.</li>
             <li><strong>Standard</strong> — Seeded automatically based on when in the month you begin.</li>
-            <li><strong>Precise</strong> — Enter a quick self-calibration to set more accurate starting pools.</li>
+            <li><strong>Focused</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily to promote reduced spending from Day 1</li>
             <li><strong>True</strong> — Connect your bank (paid) for a live, fully automated start.</li>
           </ul>
         `));
@@ -35,9 +35,9 @@ import { initHUD } from './hud/hud.js';
         select.className = 'input';
 
         [
-          { value: 'safe',        text: 'Safe' },
+          { value: 'relaxed',        text: 'Relaxed' },
           { value: 'standard', text: 'Standard' },
-          { value: 'manual',      text: 'Precise' },
+          { value: 'focused',      text: 'Focused' },
           { value: 'true',        text: 'True (bank sync)' },
         ].forEach(opt => {
           const o = document.createElement('option');
