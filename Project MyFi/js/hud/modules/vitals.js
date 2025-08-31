@@ -1247,8 +1247,9 @@ export function autoInitUpdateLog() {
             `
             : `
               <div class="ul-actions two">
-                <button class="tag-btn" data-pool="stamina">Stamina</button>
-                <button class="tag-btn" data-pool="mana">Mana</button>
+                <!-- SWAPPED ORDER + SHORT LABELS -->
+                <button class="tag-btn" data-pool="mana"     title="Mana"     aria-label="Mana">M</button>
+                <button class="tag-btn" data-pool="stamina"  title="Stamina"  aria-label="Stamina">S</button>
               </div>
             `;
 

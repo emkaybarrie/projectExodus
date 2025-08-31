@@ -212,23 +212,28 @@
       </div>
 
       <div class="update-log-box">
-        <div class="update-log">
+        <div class="events-header">
           <h2>
             EVENT LOG
             <!-- Right-pinned actions container: Add Spend (left) + Expand (right) -->
             <span class="hx-actions">
-              <button class="hx-add" id="btn-add-spend" title="Add spend" aria-label="Add spend">＋ Add Spend</button>
+              <button class="hx-add" id="btn-add-spend" title="Add spend" aria-label="Add spend">＋ Add</button>
               <button class="hx-expand" id="btn-expand-update" title="View all history" aria-label="View all history">↗︎</button>
             </span>
           </h2>
+        </div>
+
+        <!-- Active/pending -->
+        <div class="update-log">
+          <h2>ACTIVE ⏳</h2>
           <ul id="update-log-list" class="scrollable"></ul>
         </div>
 
         <div class="section-divider"></div>
 
+        <!-- Recently confirmed -->
         <div class="recently-locked">
-          <!-- Removed duplicate expand button here -->
-          <h2>RECENT EVENTS</h2>
+          <h2>RECENT 🔒</h2>
           <ul id="recently-locked-list" class="scrollable"></ul>
         </div>
       </div>

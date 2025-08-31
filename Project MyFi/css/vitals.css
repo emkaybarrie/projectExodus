@@ -134,7 +134,7 @@ body {
 }
 
 h1 { text-align:center; font-family:'Cinzel',serif; font-size:2rem; margin-bottom:12px; color:#f0e6d2; }
-h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-weight:600; }
+h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 .topbar h1{ margin:0; text-align:left; flex:0 0 auto; }
 
 /* Alias fits & step-downs */
@@ -379,108 +379,143 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 .locked { opacity: .3; }
 
 /* ========================================================================== 
-   Update Log / Recently Locked
+   Events Log - Active Events / Recent Events (Locked)
    ========================================================================== */
 
 .update-log-box {
+  position: relative;
   margin-top: 0;
   margin-bottom: 6px;
-  padding: 12px;
+  padding: 0 12px 12px;        /* no top padding; keep sides/bottom */
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 16px;
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(6px);
-
-  /* allow to be the flexible area that shrinks before the footer overlaps */
   flex: 1 1 220px;
   min-height: 0;
   max-height: none;
   overflow: auto;
 }
-.update-log h2, .recently-locked h2 {
-  margin: 0 0 8px; font-size: 1rem; letter-spacing: .02em; opacity:.9;
-  position: relative; padding-right: 28px; /* for expand button */
+
+/* Sticky card header ("EVENT LOG") */
+.update-log-box .events-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  margin: 0 -12px 6px;
+
+  /* tighter vertical rhythm */
+  padding: 8px 12px;           
+
+  background: linear-gradient(180deg, rgba(16,18,30,.88), rgba(16,18,30,.72));
+  backdrop-filter: blur(6px) saturate(120%);
+  /* background: #0f1220; */
+
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  /* match the container’s top corner shape */
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  /* subtle lift so it reads as a pinned piece */
+  box-shadow: 0 1px 0 rgba(255,255,255,.04);
 }
-.update-log ul, .recently-locked ul { list-style:none; margin:0; padding:0; }
-.update-log li, .recently-locked li { padding:10px 12px; border-radius:12px; display:block; transition: background 120ms ease; }
-.update-log li + li, .recently-locked li + li { margin-top:8px; }
-.update-log li:hover, .recently-locked li:hover { background: rgba(255,255,255,0.05); }
+.update-log-box .events-header h2 {
+  position: relative;
+  margin: 0;
+  line-height: 34px;          /* aligns with 34px buttons */
+  padding-right: 84px;        /* room for the right-pinned actions */
+}
 
-.ul-row   { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.ul-main  { min-width:0; }
-.ul-main > strong { display:block; font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ul-meta  { font-size:.85rem; opacity:.75; margin-top:2px; }
-
-/* Spend Add & Expand buttons */
-/* Right-pinned actions inside the ACTION LOG header */
+/* Header actions (icon buttons) pinned right & baseline-aligned */
 .hx-actions {
-  float: right;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%); /* centers on baseline area of H2 */
   display: inline-flex;
-  gap: 8px;
+  gap: 14px;
   align-items: center;
 }
-.hx-add {
-  font-size: 12px;
-  padding: 2px 10px;
-  border: 1px solid var(--line, #333);
+.hx-add, 
+.hx-expand {
+  width: 34px; height: 34px;
+  padding: 0;
+  border-radius: 10px;
+  display: inline-grid; place-items: center;
+  border: 1px solid rgba(255,255,255,.16);
   background: rgba(255,255,255,.06);
-  border-radius: 8px;
-  color: #fff;
+  color: #f0e6d2;
+  font-size: 14px; line-height: 1;
   cursor: pointer;
 }
+.hx-add {
+  width: 68px;
+}
 @media (hover:hover) {
-  .hx-add:hover { background: rgba(255,255,255,.12); }
+  .hx-add:hover, .hx-expand:hover { background: rgba(255,255,255,.10); }
 }
 
-.update-log h2 .hx-expand,
-.recently-locked h2 .hx-expand{
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.06);
-  color: #f0e6d2; border-radius: 8px; padding: 2px 6px; line-height: 1;
-  font-size: 0.9rem; cursor: pointer;
+/* Section titles ("ACTIVE EVENTS" / "RECENT EVENTS") */
+.update-log > h2,
+.recently-locked > h2 {
+  margin: 0 0 8px;
+  font-size: 1rem !important;        /* force parity */
+  letter-spacing: .02em;
+  opacity: .9;
+  position: relative;
+  padding-right: 28px;
 }
-.update-log h2 .hx-expand:hover,
-.recently-locked h2 .hx-expand:hover{ background: rgba(255,255,255,0.10); }
 
-.ul-actions { display:grid; grid-auto-flow:column; gap:6px; }
+/* Lists */
+.update-log ul, .recently-locked ul { list-style: none; margin: 0; padding: 0; }
+.update-log li, .recently-locked li { padding: 10px 12px; border-radius: 12px; display: block; transition: background 120ms ease; }
+.update-log li + li, .recently-locked li + li { margin-top: 8px; }
+.update-log li:hover, .recently-locked li:hover { background: rgba(255,255,255,0.05); }
+
+/* Row layout */
+.ul-row   { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ul-main  { min-width: 0; }
+.ul-main > strong { display: block; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ul-meta  { font-size: .85rem; opacity: .75; margin-top: 2px; }
+
+/* Compact two-button tag controls (M left, S right), pinned right */
+.ul-actions { display: grid; grid-auto-flow: column; gap: 6px; margin-left: auto; }
+.ul-actions.two { grid-template-columns: repeat(2, 34px); gap: 8px; }
 .ul-actions .tag-btn {
+  width: 34px; height: 32px;
+  padding: 0;
+  border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.06);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 0.85rem;
+  font-size: 0.9rem; font-weight: 700;
   cursor: pointer;
   transition: transform 80ms ease, background 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 .ul-actions .tag-btn:hover  { background: rgba(255,255,255,0.10); }
 .ul-actions .tag-btn:active { transform: translateY(1px); }
 
-/* Active highlights */
+/* Active highlights (keep your existing palette) */
 .ul-actions .tag-btn.active.stamina {
-  background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.35);
-  color: white;
+  background: rgba(16,185,129,.18);
+  border-color: rgba(16,185,129,.6);
+  box-shadow: 0 0 8px rgba(16,185,129,.35);
+  color: #fff;
 }
 .ul-actions .tag-btn.active.mana {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.35);
-  color: white;
+  background: rgba(59,130,246,.18);
+  border-color: rgba(59,130,246,.6);
+  box-shadow: 0 0 8px rgba(59,130,246,.35);
+  color: #fff;
 }
 
-/* Compact two-button grid */
-.ul-actions.two { display:grid; grid-template-columns: repeat(2, minmax(72px, 1fr)); gap:6px; }
-
+/* Small screens: give main text a bit more width */
 @media (max-width: 420px) {
-  .ul-actions .tag-btn { padding: 6px 8px; font-size: 0.8rem; }
-  .ul-main > strong { max-width: 56vw; }
+  .ul-main > strong { max-width: 62vw; } /* was tighter before */
 }
 
-/* Countdown & divider */
-.countdown { white-space:nowrap; font-variant-numeric: tabular-nums; }
-.section-divider { height:1px; background: rgba(255,255,255,0.08); margin:12px 0; }
+/* Utilities */
+.countdown { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.section-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 12px 0; }
 
 /* Inline Editor */
 #update-log-list li.is-editing .ul-meta { opacity: 0.5; }
