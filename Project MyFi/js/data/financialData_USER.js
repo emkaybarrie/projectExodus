@@ -83,7 +83,7 @@ export async function addTransaction(data) {
 
   // 5) CLASSIFIED PIPELINE: goes into Update Log (pending during ghost window)
   const addedMs = Date.now();
-  const ghostWindowMs = 60 * 60 * 1000; // 1 hour ghost window
+  const ghostWindowMs = 1 * 60 * 60 * 1000; // 1 hour ghost window // 63 Mana
   const classified = {
     // Basic txn facts
     amount: Number(amount),

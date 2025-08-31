@@ -271,6 +271,12 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
 /* Labels & values */
 .bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
 .bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
+/* Regen rate state for the value text */
+.bar-value.is-rate {
+  opacity: .9;
+  font-style: italic;
+}
+
 
 /* Reclaim overlay */
 .bar .bar-reclaim {
@@ -301,15 +307,15 @@ h1, .bar-label, .tag-button, .update-log h2 { font-family:'Cinzel',serif; font-w
   content: "";
   position: absolute; inset: 0;
   z-index: 0;
-  opacity: .35; filter: saturate(120%);
+  opacity: .65; filter: saturate(120%);
   transition: opacity .2s ease;
   pointer-events: none;
   border-radius: 6px;
 }
-#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .32), rgba(64, 0, 0, .32)); }
-#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .32), rgba(0, 34, 68, .32)); }
-#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .32), rgba(0, 51, 0, .32)); }
-#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .20)); }
+#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .52), rgba(64, 0, 0, .52)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .52), rgba(0, 34, 68, .52)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .52), rgba(0, 51, 0, .52)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .30)); }
 .bar.has-surplus:hover::before,
 .bar.has-surplus:focus-within::before { opacity: .45; }
 

@@ -77,14 +77,14 @@ import {
 
   async function getPlayerCore() {
     const user = (getAuth()).currentUser;
-    if (!user) return { uid: null, mode: 'safe', startMs: Date.now() };
+    if (!user) return { uid: null, mode: 'standard', startMs: Date.now() };
     const uid = user.uid;
     const db = getFirestore();
     const p = await getDoc(doc(db, "players", uid));
-    let mode = 'safe', startMs = Date.now();
+    let mode = 'standard', startMs = Date.now();
     if (p.exists()) {
       const d = p.data() || {};
-      mode = String(d.vitalsMode || 'safe').toLowerCase();
+      mode = String(d.vitalsMode || 'standard').toLowerCase();
       const raw = d.startDate;
       if (raw?.toMillis) startMs = raw.toMillis();
       else if (raw instanceof Date) startMs = raw.getTime();
@@ -92,6 +92,7 @@ import {
     }
     return { uid, mode, startMs };
   }
+
   function monthWindow(startMs) {
     const d = new Date(startMs);
     const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
@@ -99,6 +100,35 @@ import {
     return { startMonthStartMs, startDateMs };
   }
   const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
+
+  function renderConnectBankInline() {
+  const wrap = document.createElement('div');
+  wrap.className = 'card';
+  wrap.style.marginBottom = '1rem';
+
+  const info = document.createElement('div');
+  info.className = 'helper';
+  info.innerHTML = 'Link your bank to fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.';
+
+  const btn = document.createElement('button');
+  btn.className = 'btn btn--accent';
+  btn.textContent = 'Connect with TrueLayer';
+
+  btn.addEventListener('click', async () => {
+    try {
+      await connectTrueLayerAccount();
+      window.MyFiModal.close();
+      await initHUD();
+      // optional: reopen the Add Transaction view after successful connect
+      window.MyFiOpenAddTransaction?.({ variant: 'single' });
+    } catch (e) { console.warn('TrueLayer connect failed:', e); }
+  });
+
+  wrap.append(info, btn);
+  return wrap;
+  }
+
+
 
   // ───────────────────────── Unified Itemised storage ─────────────────────────
   const DEFAULT_INCOME_CATS = [
@@ -318,111 +348,8 @@ import {
     };
   }
 
-  function makeManualOpeningEntry() {
-    return {
-      label: 'Manual (Pre-start) Summary',
-      title: 'Pre-start spend this month',
-      preview: 'Log what you’d already spent earlier in the month before joining. Optional split between Stamina & Mana.',
-      render() {
-        const info = helper('Optional: record a one-off total of what you had already spent <em>in the month</em>, before your start date. Defaults use your pool allocations. You can also backfill itemised transactions later via “Add Transaction → Backfill.”.');
-        const total = field('Total pre-start spend (£)', 'number', 'prestartTotal', { min: 0, step: '0.01', placeholder: 'e.g. 350.00' });
-        const wrap = document.createElement('div'); wrap.className = 'field';
-        wrap.innerHTML = `
-          <label>Split (optional)</label>
-          <div class="row"><input id="prestartStaminaPct" type="number" class="input" min="0" max="100" step="1" value="60" /><span class="helper">Stamina %</span></div>
-          <div class="row" style="margin-top:.5rem;"><input id="prestartManaPct" type="number" class="input" min="0" max="100" step="1" value="40" /><span class="helper">Mana %</span></div>
-          <div class="helper">Health is ignored here — this split just covers Stamina and Mana.</div>
-        `;
-        return [info, total, wrap];
-      },
-      footer() {
-        return [
-          primary('Save', () => {
-            const values = {};
-            el.contentEl.querySelectorAll('input,select,textarea').forEach(i => values[i.id] = i.type === 'number' ? Number(i.value) : i.value);
-            window.dispatchEvent(new CustomEvent('manual:save', { detail: values }));
-          }),
-          cancel()
-        ];
-      }
-    };
-  }
 
   const FinancesMenu = {
-    income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and frequency. Input as a total or break it down by source.'),
-    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses', 'Define your essential costs (things you must pay every month). Itemise by category or keep it simple with one total'),
-    addTransaction: {
-      label: 'Add Transaction',
-      title: 'Add Transaction',
-      preview: 'Log a one-off income or spending. Separate from your core expenses, with support for pool assignment and backfilling in Manual mode.',
-      render() {
-        const root = document.createElement('div');
-        const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
-        const amt = field('Amount', 'number', 'txAmount', { min: 0, step: '0.01', placeholder: 'e.g. 23.40' });
-        const type = select('Type', 'txType', [['debit', 'Expense'], ['credit', 'Income']]);
-        const date = field('Date', 'date', 'txDate', {});
-        const backfill = (() => {
-          const wrap = document.createElement('div');
-          wrap.className = 'field';
-          wrap.innerHTML = `
-            <label class="checkbox">
-              <input type="checkbox" id="txBackfill" />
-              <span>Backfill (pre-start)</span>
-            </label>
-            <div class="helper">Manual mode only. Lets you log spend from earlier in the month, before your official start date..</div>
-          `;
-          return wrap;
-        })();
-        const pool = select('Pool (optional)', 'txPool', [['', 'Unassigned'], ['stamina', 'Stamina'], ['mana', 'Mana']]);
-        const note = helper('If left unassigned, the transaction is automatically tagged based on your avatar.  Default: Stamina.');
-
-        (async () => {
-          await ensureAuthReady();
-          const { mode, startMs } = await getPlayerCore();
-          const { startMonthStartMs, startDateMs } = monthWindow(startMs);
-          const dateInput = date.querySelector('#txDate');
-          const bfInput = backfill.querySelector('#txBackfill');
-
-          function setRange(prestart) {
-            if (!dateInput) return;
-            if (mode === 'manual' && prestart) {
-              dateInput.min = toISODate(startMonthStartMs);
-              dateInput.max = toISODate(startDateMs - 24 * 60 * 60 * 1000);
-            } else {
-              dateInput.min = toISODate(startDateMs);
-              dateInput.removeAttribute('max');
-            }
-          }
-          if (bfInput) bfInput.disabled = (mode !== 'manual');
-          setRange(false);
-          const todayISO = toISODate(Date.now());
-          if (dateInput) {
-            dateInput.value = todayISO;
-            if (dateInput.min && dateInput.value < dateInput.min) dateInput.value = dateInput.min;
-          }
-          bfInput?.addEventListener('change', (e) => setRange(!!e.target.checked));
-        })();
-
-        root.append(desc, amt, type, date, backfill, pool, note);
-        return [root];
-      },
-      footer() {
-        return [
-          primary('Add', () => {
-            const c = el.contentEl;
-            const detail = {
-              txDesc: c.querySelector('#txDesc')?.value || '',
-              txAmount: Number(c.querySelector('#txAmount')?.value || 0),
-              txType: c.querySelector('#txType')?.value || 'debit',
-              txDate: c.querySelector('#txDate')?.value || '',
-              txPool: c.querySelector('#txPool')?.value || ''
-            };
-            window.dispatchEvent(new CustomEvent('tx:add', { detail }));
-          }),
-          cancel()
-        ];
-      }
-    },
     connectBank: {
       label: 'Connect Bank',
       title: 'Connect a Bank (COMING SOON - TEST MODE ONLY)',
@@ -443,20 +370,69 @@ import {
       },
       footer() { return [cancel()]; }
     },
+    income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and frequency. Input as a total or break it down by source.'),
+    expenses: makeUnifiedEntry('expenses', 'Core Expenses', 'Core Expenses', 'Define your essential costs (things you must pay every month). Itemise by category or keep it simple with one total'),
+    addTransaction: {
+      label: 'Add Transaction',
+      title: 'Add Transaction',
+      preview: 'Log a one-off income or spending. Separate from your core expenses; you can optionally assign it to a pool.',
+      render() {
+        const root = document.createElement('div');
+        // 👉 Add the inline Connect Bank block at the very top
+        root.appendChild(renderConnectBankInline());
+
+        const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
+        const amt = field('Amount', 'number', 'txAmount', { min: 0, step: '0.01', placeholder: 'e.g. 23.40' });
+        const type = select('Type', 'txType', [['debit', 'Expense'], ['credit', 'Income']]);
+        const date = field('Date', 'date', 'txDate', {});
+        const pool = select('Pool (optional)', 'txPool', [['', 'Unassigned'], ['stamina', 'Stamina'], ['mana', 'Mana']]);
+        const note = helper('If left unassigned, the transaction is automatically tagged based on your avatar.  Default: Stamina.');
+
+        (async () => {
+          await ensureAuthReady();
+          const { startMs } = await getPlayerCore();
+          const { startDateMs } = monthWindow(startMs);
+          const dateInput = date.querySelector('#txDate');
+
+          if (dateInput) {
+            // Disallow dates before the player’s start date
+            dateInput.min = toISODate(startDateMs);
+            const todayISO = toISODate(Date.now());
+            dateInput.value = todayISO < dateInput.min ? dateInput.min : todayISO;
+            dateInput.removeAttribute('max');
+          }
+        })();
+
+        root.append(desc, amt, type, date, pool, note);
+        return [root];
+      },
+      footer() {
+        return [
+          primary('Add', () => {
+            const c = el.contentEl;
+            const detail = {
+              txDesc: c.querySelector('#txDesc')?.value || '',
+              txAmount: Number(c.querySelector('#txAmount')?.value || 0),
+              txType: c.querySelector('#txType')?.value || 'debit',
+              txDate: c.querySelector('#txDate')?.value || '',
+              txPool: c.querySelector('#txPool')?.value || ''
+            };
+            window.dispatchEvent(new CustomEvent('tx:add', { detail }));
+          }),
+          cancel()
+        ];
+      }
+    },
+    
   };
 
   // Open menu in DRILL‑DOWN mode
-  document.getElementById('right-btn')?.addEventListener('click', async () => {
+  document.getElementById('left-btn')?.addEventListener('click', async () => {
     await ensureAuthReady();
-    const { mode } = await getPlayerCore();
-    if (mode === 'manual') {
-      FinancesMenu.manualOpening = makeManualOpeningEntry();
-    } else {
-      if (FinancesMenu.manualOpening) delete FinancesMenu.manualOpening;
-    }
     setMenu(FinancesMenu);
-    open('addTransaction', { variant: 'drilldown', menuTitle: 'Actions' });
+    open('connectBank', { variant: 'drilldown', menuTitle: 'Actions' });
   });
+
 
   // Open Add Transaction directly (content view)
 // Usage: window.MyFiOpenAddTransaction({ variant: 'single' })
@@ -465,13 +441,6 @@ window.MyFiOpenAddTransaction = async function (opts = {}) {
   const menuTitle = opts.menuTitle || (variant === 'single' ? 'Add Transaction' : 'Actions');
 
   await ensureAuthReady();
-  const { mode } = await getPlayerCore();
-  if (mode === 'manual') {
-    FinancesMenu.manualOpening = makeManualOpeningEntry();
-  } else if (FinancesMenu.manualOpening) {
-    delete FinancesMenu.manualOpening;
-  }
-
   setMenu(FinancesMenu);
   open('addTransaction', { variant, menuTitle });
 
@@ -486,8 +455,8 @@ window.MyFiOpenAddTransaction = async function (opts = {}) {
     const user = getAuth().currentUser;
     if (!user) return;
 
-    const { mode, startMs } = await getPlayerCore();
-    const { startMonthStartMs, startDateMs } = monthWindow(startMs);
+    const { startMs } = await getPlayerCore();
+    const { startDateMs } = monthWindow(startMs);
 
     const detail = { ...e.detail };
     const type = String(detail.txType || 'debit');
@@ -497,22 +466,9 @@ window.MyFiOpenAddTransaction = async function (opts = {}) {
 
     if (detail.txPool === '') delete detail.txPool;
 
+    // Enforce no pre-start entries (remove this block if you want pre-start dates to be allowed)
     const selDateMs = detail.txDate ? new Date(detail.txDate + 'T00:00:00Z').getTime() : Date.now();
-    const isManual = (mode === 'manual');
-    const backfillChecked = el.contentEl.querySelector('#txBackfill')?.checked === true;
-    const isPre = isManual && backfillChecked;
-
-    let finalMs = selDateMs;
-    if (!isManual) {
-      if (finalMs < startDateMs) finalMs = startDateMs;
-    } else if (isPre) {
-      const latestAllowed = startDateMs - 24 * 60 * 60 * 1000;
-      if (finalMs < startMonthStartMs) finalMs = startMonthStartMs;
-      if (finalMs > latestAllowed) finalMs = latestAllowed;
-      detail.isPrestart = true;
-    } else {
-      if (finalMs < startDateMs) finalMs = startDateMs;
-    }
+    const finalMs = Math.max(selDateMs, startDateMs);
     detail.txDate = toISODate(finalMs);
 
     await addTransaction(detail);
@@ -520,44 +476,5 @@ window.MyFiOpenAddTransaction = async function (opts = {}) {
     await initHUD();
   });
 
-  window.addEventListener('manual:save', async (e) => {
-    await ensureAuthReady();
-    const user = getAuth().currentUser;
-    if (!user) return;
-    const uid = user.uid;
-
-    const total = Math.max(0, Number(e.detail.prestartTotal || 0));
-    let spct = Math.max(0, Math.min(100, Number(e.detail.prestartStaminaPct || 0)));
-    let mpct = Math.max(0, Math.min(100, Number(e.detail.prestartManaPct || 0)));
-    let sum = spct + mpct;
-    if (sum <= 0.0001) { spct = 60; mpct = 40; sum = 100; }
-    spct = spct / sum; mpct = mpct / sum;
-
-    const db = getFirestore();
-    const playersRef = doc(db, `players/${uid}`);
-    const pSnap = await getDoc(playersRef);
-    let startMs = Date.now();
-    if (pSnap.exists()) {
-      const raw = pSnap.data()?.startDate;
-      if (raw?.toMillis) startMs = raw.toMillis();
-      else if (raw instanceof Date) startMs = raw.getTime();
-      else if (typeof raw === 'number') startMs = raw;
-    }
-    const d = new Date(startMs);
-    const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-
-    await setDoc(doc(db, `players/${uid}/manualSeed/meta`), {
-      startMonthStartMs, startDateMs: startMs, updatedAtMs: Date.now()
-    }, { merge: true });
-
-    await setDoc(doc(db, `players/${uid}/manualSeed/openingSummary`), {
-      totalPrestartDiscretionary: total,
-      split: { staminaPct: spct, manaPct: mpct },
-      providedAtMs: Date.now()
-    }, { merge: true });
-
-    window.MyFiModal.close();
-    await initHUD();
-  });
 
 })();

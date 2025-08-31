@@ -422,10 +422,10 @@ async function getVitalsMode(uid) {
     const p = await getDoc(doc(db, "players", uid));
     if (p.exists()) {
       const mode = String(p.data().vitalsMode || '').toLowerCase();
-      if (['safe','standard','manual','true'].includes(mode)) return mode;
+      if (['relaxed','standard','focused','true'].includes(mode)) return mode;
     }
   } catch (_) {}
-  return 'safe';
+  return 'standard';
 }
 
 
@@ -441,10 +441,13 @@ export async function loadVitalsToHUD(uid) {
   const pools = cur.pools || {};
   const elements = getVitalsElements();
   const factor = VIEW_FACTORS[getViewMode()];
+  // Enable regen-rate peeking for this snapshot
+  installRatePeekHandlers(elements, pools, getViewMode());
+
 
   // Use server-provided timing + mode/carry/seed
   const days    = Number(cur.elapsedDays || 0);
-  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const mode    = String(cur.mode || 'standard').toLowerCase();
   const seed    = cur.seed || null;             // optional — present while in seeding state
   const seedCarry = cur.seedCarry || {};        // present after flip to truth (non-true modes)
 
@@ -472,7 +475,10 @@ export async function loadVitalsToHUD(uid) {
 
     const pct = cap > 0 ? (rNow / cap) * 100 : 0;
     el.fill.style.width = `${pct}%`;
-    el.value.innerText  = `${rNow.toFixed(2)} / ${cap.toFixed(2)}`;
+    const normalText = `${rNow.toFixed(2)} / ${cap.toFixed(2)}`;
+    const showRate = el.value.classList.contains('is-rate');
+    const rateText = el.value.__rateText || normalText;
+    el.value.innerText = showRate ? rateText : normalText;
     setSurplusPill(el, sNow, sNow);
 
     if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
@@ -503,9 +509,12 @@ export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
   const elements = getVitalsElements();
   ensureGridLayers(elements);
   ensureReclaimLayers(elements);
+  // Wire regen-rate peeking (uses server-provided pools)
+  installRatePeekHandlers(elements, pools, getViewMode());
+
 
   const days0   = Number(cur.elapsedDays || 0);
-  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const mode    = String(cur.mode || 'standard').toLowerCase();
   const seed    = cur.seed || null;
   const seedCarry = cur.seedCarry || {};
   const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
@@ -698,7 +707,10 @@ export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
       const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
       el.fill.style.width = `${pct}%`;
 
-      el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      const normalText = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      const showRate = el.value.classList.contains('is-rate');
+      const rateText = el.value.__rateText || normalText;
+      el.value.innerText = showRate ? rateText : normalText;
       // after we’ve painted at least once, allow overlay next frames
       enableGhostOverlaySoon();
 
@@ -740,6 +752,8 @@ export async function initVitalsHUDV1(uid, timeMultiplier = 1) {
     allowGhostOverlay = false;          // re-gate overlay for new caps
     enableGhostOverlaySoon();
     refreshBarGrids();
+    // NEW: keep regen-rate peek text in sync with the new mode
+    updateRatePeekTexts(elements, pools, viewMode);
   });
 
   // Vitals Tour remains unchanged
@@ -756,9 +770,12 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const elements = getVitalsElements();
   ensureGridLayers(elements);
   ensureReclaimLayers(elements);
+  // Wire regen-rate peeking (uses server-provided pools)
+  installRatePeekHandlers(elements, pools, getViewMode());
+
 
   const days0   = Number(cur.elapsedDays || 0);
-  const mode    = String(cur.mode || 'safe').toLowerCase();
+  const mode    = String(cur.mode || 'standard').toLowerCase();
   const seed    = cur.seed || null;
   const seedCarry = cur.seedCarry || {};
   const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedCarry?.[pool] || 0));
@@ -954,7 +971,10 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
       el.fill.style.width = `${pct}%`;
 
-      el.value.innerText  = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      const normalText = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+      const showRate = el.value.classList.contains('is-rate');
+      const rateText = el.value.__rateText || normalText;
+      el.value.innerText = showRate ? rateText : normalText;
       enableGhostOverlaySoon();
 
       setSurplusPill(el, proj.sNow, proj.sAfter);
@@ -994,6 +1014,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     allowGhostOverlay = false;          // re-gate overlay for new caps
     enableGhostOverlaySoon();
     refreshBarGrids();
+    // NEW: keep regen-rate peek text in sync with the new mode
+    updateRatePeekTexts(elements, pools, viewMode);
   });
 
   // Vitals Tour remains unchanged
@@ -1172,7 +1194,7 @@ export function autoInitUpdateLog() {
     const uid = user.uid;
 
     // BEGIN stream filter: choose list source by vitals mode
-    const mode = await getVitalsMode(uid); // safe|standard|manual|true
+    const mode = await getVitalsMode(uid); // relaxed|standard|focused|true
     const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
     // END stream filter
 
@@ -1443,7 +1465,9 @@ function updateModeEngrave(mode = getViewMode()){
     btn.setAttribute('aria-selected', is ? 'true' : 'false');
   });
 }
+
 function formatNum(n){ return (Math.round(n)||0).toLocaleString('en-GB'); }
+
 function setVitalsTotals(currentTotal, maxTotal){
   const el = document.getElementById('vitals-total');
   if (!el) return;
@@ -1454,6 +1478,92 @@ function setVitalsTotals(currentTotal, maxTotal){
     <span class="vital-max">${formatNum(maxTotal)}</span>
   `;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Regen-rate peek helpers
+// ────────────────────────────────────────────────────────────────────────────
+function rateTextForMode(regenCurrentPerDay, mode = getViewMode()) {
+  const perDay = Number(regenCurrentPerDay || 0);
+  switch (String(mode).toLowerCase()) {
+    case 'daily':   return `+${(perDay/24).toFixed(2)}/hr`;   // show hourly
+    case 'weekly':  return `+${(perDay).toFixed(2)}/day`;     // show daily
+    case 'monthly': return `+${(perDay*7).toFixed(2)}/wk`;    // show weekly
+    default:        return `+${(perDay/24).toFixed(2)}/hr`;
+  }
+}
+
+/**
+ * Compute and stash rate texts on each bar-value, and wire hover/tap to peek them.
+ * - Desktop: on pointerenter we swap to rate; pointerleave restores.
+ * - Mobile: on touchstart/click we show rate for ~1.5s then restore.
+ */
+function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
+  const POOLS = Object.keys(pools || {});
+  for (const p of POOLS) {
+    const el = elements[p]; if (!el?.value) continue;
+    const v  = pools[p] || {};
+    const rate = rateTextForMode(v.regenCurrent, mode);
+    console.log(`Regen peek for ${p}:`, rate);
+
+    // Stash originals + computed alt
+    el.value.__origText = el.value.textContent;
+    el.value.__rateText = rate;
+    el.value.title = `Regen: ${rate}`;  // native tooltip on desktop
+
+    // Guard: only wire once
+    if (el.value.__rateWired) continue;
+    el.value.__rateWired = true;
+
+    const bar = el.value.closest('.bar');
+
+    // swap helpers
+    const show = () => {
+      if (!el.value) return;
+      el.value.textContent = el.value.__rateText;
+      el.value.classList.add('is-rate');
+    };
+    const hide = () => {
+      if (!el.value) return;
+      el.value.textContent = el.value.__origText;
+      el.value.classList.remove('is-rate');
+    };
+
+    // Desktop hover/focus
+    bar.addEventListener('pointerenter', show);
+    bar.addEventListener('pointerleave', hide);
+    bar.addEventListener('focusin', show);
+    bar.addEventListener('focusout', hide);
+
+    // Mobile quick peek (tap)
+    let tapTimer = null;
+    bar.addEventListener('click', () => {
+      show();
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(hide, 1500);
+    }, { passive: true });
+    bar.addEventListener('touchstart', () => {
+      show();
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(hide, 1500);
+    }, { passive: true });
+  }
+}
+
+/** Recompute texts when the view mode changes (e.g., Daily→Weekly). */
+function updateRatePeekTexts(elements, pools, mode = getViewMode()) {
+  for (const p of Object.keys(pools || {})) {
+    const el = elements[p]; if (!el?.value) continue;
+    const v  = pools[p] || {};
+    el.value.__rateText = rateTextForMode(v.regenCurrent, mode);
+    // keep title in sync too
+    el.value.title = `Regen: ${el.value.__rateText}`;
+    // if the user is currently peeking, refresh the visible text
+    if (el.value.classList.contains('is-rate')) {
+      el.value.textContent = el.value.__rateText;
+    }
+  }
+}
+
 
 
 

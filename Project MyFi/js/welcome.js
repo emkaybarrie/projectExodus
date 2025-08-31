@@ -110,17 +110,6 @@ async function showFirstRunSetup(uid) {
     ['relaxed','Relaxed'], ['standard','Standard'], ['focused','Focused'],
   ]);
 
-  const manualWrap = document.createElement('div'); manualWrap.style.display = 'none';
-  const manualInfo = helper('Optional: if you already spent this month before joining, enter a one‑number total and (optionally) split it between Stamina and Mana.');
-  const preAmt   = makeInput('Pre‑start spend this month (£)', 'number', 'qsPreAmt', { min:'0', step:'0.01', placeholder:'e.g. 350.00' });
-  const splitBox = (()=>{ const box=document.createElement('div'); box.className='field';
-    box.innerHTML = `
-      <label>Split (optional)</label>
-      <div class="row"><input id="qsPreStaminaPct" type="number" class="input" min="0" max="100" step="1" value="60" /><span class="helper">Stamina %</span></div>
-      <div class="row" style="margin-top:.5rem;"><input id="qsPreManaPct" type="number" class="input" min="0" max="100" step="1" value="40" /><span class="helper">Mana %</span></div>`;
-    return box; })();
-  manualWrap.append(manualInfo, preAmt, splitBox);
-
   const errBox = document.createElement('div');
   errBox.id = 'qsError'; errBox.className = 'helper';
   Object.assign(errBox.style, { display: 'none', color: '#ff6b6b', marginTop: '4px' });
@@ -143,7 +132,7 @@ async function showFirstRunSetup(uid) {
     expAmt,    helper(QS_DESC.expAmt),
     expCad,    helper(QS_DESC.expCad),
     modeSel,   helper(QS_DESC.modeSel),
-    manualWrap, errBox, actions
+    errBox, actions
   );
   actions.append(btnSave, btnSkip); shell.append(card);
 
@@ -160,9 +149,6 @@ async function showFirstRunSetup(uid) {
   incomeCad.querySelector('select').value = 'monthly';
   expCad.querySelector('select').value = 'monthly';
   modeSel.querySelector('select').value = 'standard';
-  modeSel.querySelector('select').addEventListener('change', (e) => {
-    manualWrap.style.display = (String(e.target.value||'safe') === 'manual') ? '' : 'none';
-  });
 
   const showErr = (msg)=>{ errBox.textContent=msg; errBox.style.display='block'; };
   const clearErr= ()=>{ errBox.textContent=''; errBox.style.display='none'; };
@@ -208,37 +194,6 @@ async function showFirstRunSetup(uid) {
       } catch (e) {
         console.warn('[Quick Setup] failed to write incomeMeta.lastPayDateMs', e);
       }
-
-      // if (vitalsMode === 'manual') {
-      //   const total = Math.max(0, Number(preAmt.querySelector('input')?.value || 0));
-      //   let spct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreStaminaPct')?.value || 0)));
-      //   let mpct = Math.max(0, Math.min(100, Number(document.getElementById('qsPreManaPct')?.value || 0)));
-      //   let sum = spct + mpct; if (sum <= 0.0001) { spct = 60; mpct = 40; sum = 100; }
-      //   spct = spct/sum; mpct = mpct/sum;
-
-      //   let startMs = Date.now();
-      //   const pSnap = await getDoc(userRef);
-      //   if (pSnap.exists()) {
-      //     const raw = pSnap.data()?.startDate;
-      //     if (raw?.toMillis) startMs = raw.toMillis();
-      //     else if (raw instanceof Date) startMs = raw.getTime();
-      //     else if (typeof raw === 'number') startMs = raw;
-      //   }
-      //   const d0 = new Date(startMs);
-      //   const startMonthStartMs = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime();
-
-      //   await setDoc(doc(db, `players/${uid}/manualSeed/meta`), {
-      //     startMonthStartMs, startDateMs: startMs, updatedAtMs: Date.now()
-      //   }, { merge: true });
-
-      //   if (total > 0) {
-      //     await setDoc(doc(db, `players/${uid}/manualSeed/openingSummary`), {
-      //       totalPrestartDiscretionary: total,
-      //       split: { staminaPct: spct, manaPct: mpct },
-      //       providedAtMs: Date.now()
-      //     }, { merge: true });
-      //   }
-      // }
 
       // Single place to mark welcome done + timestamps
       await markWelcomeDone(uid);
