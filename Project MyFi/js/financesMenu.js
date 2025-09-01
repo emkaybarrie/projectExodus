@@ -17,8 +17,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 (function () {
-  const { el, helper, field, select, currentRow, primary, cancel, btnOpenItem, inlineError, setError } = window.MyFiUI;
-  const { open, setMenu, el: modalEl } = window.MyFiModal;
+  const { helper, field, select, primary, cancel, danger, inlineError, setError, btnOpenItem, btnOpenMenu, currentRow } = window.MyFiUI;
+  const { el: modalEl } = window.MyFiModal;
 
   // ───────────────────────── helpers ─────────────────────────
   const fmtGBP = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(n) || 0);

@@ -8,7 +8,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 (function(){
-  const { helper, btn, primary, cancel } = window.MyFiUI;
+
+  const { helper, field, select, primary, cancel, danger, inlineError, setError, btnOpenItem, btnOpenMenu, btn } = window.MyFiUI;
 
   // Simple media block kept local (pure UI, no network)
   function mediaBlock({type='image', src='#', alt='', poster='', autoplay=true}){

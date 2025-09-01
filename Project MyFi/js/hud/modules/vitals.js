@@ -245,7 +245,8 @@ export function autoInitAddSpendButton() {
   // NEW: "Add Spend" — opens the Add Transaction modal directly
   const addBtn = document.getElementById('btn-add-spend');
   if (addBtn) {
-    addBtn.addEventListener('click', () => {
+    addBtn.addEventListener('click', (e) => {
+      e.preventDefault(); 
       window.MyFiModal.openChildItem(window.MyFiFinancesMenu, 'addTransaction', {
         menuTitle: 'Add Transaction'
       });
