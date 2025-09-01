@@ -4,187 +4,142 @@
   --modal-bg:#0f1115; --modal-card:#141821; --modal-text:#e9edf1; --modal-muted:#94a3b8;
   --modal-accent:#6ee7ff; --border:#1f2430; --radius:16px;
 
-  --sidebar-min-mobile: 125px;  /* minimum sidebar width on mobile */
-  --sidebar-max-mobile: 25%;    /* max percentage sidebar can take on mobile */
+  /* Set at runtime by JS to the space between header & footer */
+  --modal-max-h: 86svh;
 }
 
-/* ---- Backdrop, shell ---- */
-.modal-backdrop{
+/* ---- Backdrop centers the modal ---- */
+#appModalBackdrop.modal-backdrop{
   position:fixed; inset:0; background:var(--modal-backdrop);
   display:none; align-items:center; justify-content:center; z-index:1000;
 }
-.modal-backdrop[data-open="true"]{ display:flex; }
+#appModalBackdrop[data-open="true"]{ display:flex; }
 
-.modal{
+/* ---- Modal shell: centered, auto height, clamped by --modal-max-h ---- */
+#appModalBackdrop .modal{
   width:min(720px,92vw);
-  /* KEY: give the container a concrete height so inner row can scroll */
-  height: min(86svh, 100svh);
-  max-height:86svh;
+  height:auto;
+  max-height: var(--modal-max-h);
 
   background:linear-gradient(145deg,var(--modal-card),var(--modal-bg));
   color:var(--modal-text);
   border:1px solid var(--border); border-radius:var(--radius);
   box-shadow:0 10px 40px rgba(0,0,0,.45);
 
-  /* Two columns: sidebar + body */
   display:grid;
-  grid-template-columns: minmax(140px, 35%) minmax(0, 1fr);
+  grid-template-columns: 1fr; /* single column only */
+
   overflow:hidden;
 
   transform:translateY(8px); opacity:0; transition:opacity .15s ease, transform .15s ease;
 }
-.modal-backdrop[data-open="true"] .modal{ opacity:1; transform:translateY(0); }
+#appModalBackdrop[data-open="true"] .modal{ opacity:1; transform:translateY(0); }
 
-/* ---- Sidebar (always visible) ---- */
-.modal__menu{
+/* ---- Sidebar ---- */
+#appModalBackdrop .modal__menu{ display:none !important; }
+
+#appModalBackdrop .modal__menu{
   background:rgba(255,255,255,.02);
   border-right:1px solid var(--border);
   padding:10px;
   overflow:auto;
-  -webkit-overflow-scrolling: touch; /* smooth momentum */
+  -webkit-overflow-scrolling: touch;
 }
-.modal__menu h3{
+
+#appModalBackdrop .modal__menu h3{
   font:600 13px/1.1 system-ui,sans-serif;
   letter-spacing:.08em; text-transform:uppercase; color:var(--modal-muted);
   padding:8px 10px; margin:2px 0 6px;
 }
-.menu__btn{
+#appModalBackdrop .menu__btn{
   width:100%; text-align:left; padding:12px;
   border-radius:10px; border:1px solid transparent;
   background:transparent; color:var(--modal-text); cursor:pointer;
   font:500 14px/1.25 system-ui;
 }
-.menu__btn:hover,
-.menu__btn[aria-current="true"]{
+#appModalBackdrop .menu__btn:hover,
+#appModalBackdrop .menu__btn[aria-current="true"]{
   background:rgba(110,231,255,.08);
   border-color:rgba(110,231,255,.3);
 }
 
-/* ---- Body layout (header + content + footer) ---- */
-.modal__body{
+/* ---- Body ---- */
+#appModalBackdrop .modal__body{
   display:grid;
-  grid-template-rows: auto minmax(0, 1fr) auto; /* middle row is the scroll area */
-  min-width:0;
-  /* KEY: allow the grid item to shrink so its child can scroll */
-  min-height:0;
+  grid-template-rows: auto minmax(0, 1fr) auto; /* content area can scroll */
+  min-width:0; min-height:0;
 }
-.modal__header{
+#appModalBackdrop .modal__header{
   padding:12px 12px; border-bottom:1px solid var(--border);
   display:flex; align-items:center; gap:8px;
 }
-.modal__title{ font:700 16px system-ui,sans-serif; }
-.modal__back{ display:none; } /* back hidden in split view */
+#appModalBackdrop .modal__title{ font:700 16px system-ui,sans-serif; }
+#appModalBackdrop .modal__back{ display:none; }
 
-/* ===== Scrollable content area ===== */
-.modal__content{
+#appModalBackdrop .modal__content{
   padding: 0.75rem 1.5rem;
+  overflow:auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  min-width:0;
+  scrollbar-gutter: stable;
   box-sizing: border-box;
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;  /* momentum on iOS */
-  overscroll-behavior: contain;       /* stop chain-scrolling to page */
-  min-width: 0;                       /* allow inputs to shrink */
-  scrollbar-gutter: stable;           /* avoid layout shift */
+
 }
-
-/* Subtle scrollbar to match Update Log */
-.modal__content::-webkit-scrollbar { width: 8px; }
-.modal__content::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.22);
-  border-radius: 6px;
-}
-.modal__content::-webkit-scrollbar-track { background: transparent; }
-/* Firefox */
-.modal__content { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.22) transparent; }
-
-.modal__content form { padding-bottom: 1rem; }
-
-.modal__footer{
+#appModalBackdrop .modal__footer{
   padding:10px 12px; border-top:1px solid var(--border);
   display:flex; gap:8px; justify-content:flex-end;
 }
 
-/* ---- Inputs & buttons ---- */
-.btn{
+#appModalBackdrop .modal__footer .btn--back{ margin-right:auto; }
+
+
+/* Inputs & helpers */
+#appModalBackdrop .btn{
   appearance:none; border:1px solid var(--border); background:rgba(255,255,255,.03); color:var(--modal-text);
   padding:10px 14px; border-radius:10px; cursor:pointer; font:600 14px system-ui;
 }
-.btn--accent{ border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12); }
-
-.field{ display:grid; gap:6px; margin-bottom:12px; min-width:0; }
-.field label{ font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em; }
-.input,.select{
+#appModalBackdrop .btn--accent{ border-color:rgba(110,231,255,.4); background:rgba(110,231,255,.12); }
+#appModalBackdrop .field{ display:grid; gap:6px; margin-bottom:12px; min-width:0; }
+#appModalBackdrop .field label{ font:600 12px/1 system-ui; color:var(--modal-muted); letter-spacing:.02em; }
+#appModalBackdrop .input, #appModalBackdrop select{
   width:100%; max-width:100%;
   border:1px solid var(--border); background:#0b0d12; color:var(--modal-text);
   border-radius:10px; padding:10px 12px; font:14px system-ui; min-width:0;
 }
 
-/* stack spacing inside content */
-.modal__content > * + * { margin-top: 10px; }
+#appModalBackdrop .field{ gap:8px; margin-bottom:14px; }
+#appModalBackdrop .helper{ font: 13px/1.4 system-ui,sans-serif; color: var(--modal-muted); margin: 2px 0 10px; }
+#appModalBackdrop .current-row{ display:flex; justify-content:space-between; align-items:center; }
+#appModalBackdrop .current-value{ font-weight:600; }
 
-/* helper text spacing */
-.helper { color:var(--modal-muted); font-size:12px; margin-top: 0.5rem; margin-bottom:10px; line-height:1.35; }
 
-/* a touch more space for buttons in content */
-.modal__content .btn { margin-top: 2px; }
-
-/* ---- Mobile tweaks ---- */
-@media (max-width:640px){
-  .modal{
-    grid-template-columns: minmax(var(--sidebar-min-mobile), var(--sidebar-max-mobile)) minmax(0, calc(100% - var(--sidebar-max-mobile)));
-    width: 96vw;
-  }
-  .menu__btn{ padding:10px; font-size:13px; }
-  .modal__header{ padding:10px 10px; }
-  .modal__content{
-    padding-top: 0.75rem;
-    padding-bottom: 0.75rem;
-    padding-left: 1rem;
-    padding-right: 2rem; /* space so scrollbar doesn't hug text */
-    box-sizing: border-box;
-  }
-  .btn{ padding:9px 12px; font-size:13px; }
-}
-
-/* in your modal css */
-.current-row { display:flex; justify-content:space-between; align-items:center; }
-.current-row > label { opacity:.8; }
-.current-value { padding:.5rem .75rem; border:1px solid var(--border-color, #2a2f3a); border-radius:.6rem; background:rgba(255,255,255,0.02); }
-
-/* --- Help modal extras --- */
-.help-media { margin-top: 6px; }
-.help-media img, .help-media video {
-  width: 100%; height: auto; display: block;
-  border: 1px solid var(--border); border-radius: 12px;
-}
-.subnav { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
-.subnav .btn { padding:8px 12px; }
-.subnav .seg--current { outline: 2px solid rgba(110,231,255,.35); }
-.help-body { display:grid; gap:10px; }
-
-/* ── Drill‑down state: hide sidebar during detail, show Back button ── */
+/* Single / drilldown states (unchanged) */
 #appModalBackdrop.is-detail .modal__menu { display: none; }
 #appModalBackdrop.is-detail .modal { grid-template-columns: 1fr; }
-#appModalBackdrop.is-detail .modal__header .modal__back { display: inline-flex; }
-
-/* ── Preview pane (list screen) ── */
-.modal__preview { padding: 0.75rem 1.5rem; box-sizing: border-box; min-width: 0; cursor: pointer; }
-.modal__previewTitle { font: 700 15px system-ui, sans-serif; margin: 0 0 .25rem 0; color: var(--modal-text); }
-.modal__previewBody { color: var(--modal-muted); font: 13px system-ui, sans-serif; line-height: 1.45; margin-bottom: .5rem; }
-.modal__previewCTA { width: 100%; margin-top: .25rem; }
-
-@media (hover: hover) {
-  .modal__preview { cursor: default; }
-}
-
-/* ── Single-view state: no sidebar, one column ── */
 #appModalBackdrop.is-single .modal__menu { display: none; }
 #appModalBackdrop.is-single .modal { grid-template-columns: 1fr; }
-#appModalBackdrop.is-single .modal__header .modal__back { display: none; } /* back irrelevant in single view */
 
-/* ── Inline form errors (added) ── */
-.form-error {
-  color: #e5484d;
-  font-size: 12px;
-  min-height: 1.2em; /* prevent layout jump */
-  margin: 4px 0 2px;
+/* Compact & Glass options */
+#appModalBackdrop .modal--compact { width: min(360px, 92vw) !important; grid-template-columns: minmax(0,1fr) !important; }
+#appModalBackdrop .modal--glass {
+  background: linear-gradient(145deg, rgba(20,24,33,.55), rgba(12,14,20,.45)) !important;
+  backdrop-filter: blur(14px) saturate(135%);
+  border: 1px solid rgba(200,230,255,.18);
 }
+
+/* Menu grid */
+#appModalBackdrop .modal__grid { display: grid; gap: 10px; padding: 12px 12px 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#appModalBackdrop .menuGrid__btn {
+  text-align: center; padding: 14px 10px; border-radius: 12px;
+  border: 1px solid rgba(110,231,255,.28); background: rgba(110,231,255,.08);
+  color: var(--modal-text); font: 600 13px system-ui; cursor: pointer;
+}
+
+#appModalBackdrop .btn--danger { border-color:#5b2730; background:rgba(255,80,100,.12); }
+#appModalBackdrop .btn--back   { margin-right:auto; } /* Back sits left in footer */
+
+#appModalBackdrop .helper      { color: var(--modal-muted); font: 13px/1.5 system-ui; }
+#appModalBackdrop .form-error  { color:#ff7b7b; font:12px/1.4 system-ui; margin-top:6px; }
+#appModalBackdrop .current-row { display:flex; align-items:center; justify-content:space-between; }
+

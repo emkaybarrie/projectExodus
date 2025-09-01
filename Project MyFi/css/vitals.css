@@ -408,8 +408,8 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   /* tighter vertical rhythm */
   padding: 8px 12px;           
 
-  background: linear-gradient(180deg, rgba(16,18,30,.88), rgba(16,18,30,.72));
-  backdrop-filter: blur(6px) saturate(120%);
+  background: linear-gradient(180deg, rgba(16,18,30,.95), rgba(16,18,30,1));
+  backdrop-filter: blur(14px) saturate(120%);
   /* background: #0f1220; */
 
   border-bottom: 1px solid rgba(255,255,255,.08);

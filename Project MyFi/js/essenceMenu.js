@@ -1,4 +1,7 @@
 // js/essenceMenu.js
+// Standardised Essence menu. Keeps inline validation for amount, uses MyFiUI.
+// Exposes window.MyFiEssenceMenu.
+
 import {
   getFirestore, doc, getDoc, setDoc, serverTimestamp,
   collection, query, where, onSnapshot, getDocs
@@ -7,15 +10,15 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { getFunctions, httpsCallable/*, connectFunctionsEmulator*/ } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
-import { showToast } from './core/toast.js'; // your new toast helper
+import { showToast } from './core/toast.js';
 
 (function () {
+  const { helper, primary, cancel, inlineError, setError } = window.MyFiUI;
   const { open, setMenu, el } = window.MyFiModal;
 
   const db = getFirestore();
   const auth = getAuth();
 
-  /* ------------------------------ helpers ------------------------------ */
   const fmtGBP   = (n) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(Number(n) || 0);
   const toISODate= (ms) => new Date(ms).toISOString().slice(0,10);
   const shortUid = (uid) => (uid || '').slice(0, 6) || 'PLAYER';
@@ -34,7 +37,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
     b.textContent = 'Copy';
     b.addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(text); b.textContent = 'Copied!'; setTimeout(()=>b.textContent='Copy', 1200); }
-      catch { /* keep silent: UX*/ }
+      catch { /* UX silence */ }
     });
     return b;
   }
@@ -58,36 +61,32 @@ import { showToast } from './core/toast.js'; // your new toast helper
     } catch { return null; }
   }
 
-  // --- Toast on successful contributions (Stripe or Bank) ---//
+  // Toasts on successful contributions (Stripe or Bank)
   function startContributionSuccessToasts() {
     const lsKey = (uid) => `myfi:toasted:contributions:${uid}`;
-    const loadSeen = (uid) => {
-      try { return new Set(JSON.parse(localStorage.getItem(lsKey(uid)) || '[]')); } catch { return new Set(); }
-    };
-    const saveSeen = (uid, set) => {
-      try { localStorage.setItem(lsKey(uid), JSON.stringify(Array.from(set))); } catch {}
-    };
+    const loadSeen = (uid) => { try { return new Set(JSON.parse(localStorage.getItem(lsKey(uid)) || '[]')); } catch { return new Set(); } };
+    const saveSeen = (uid, set) => { try { localStorage.setItem(lsKey(uid), JSON.stringify(Array.from(set))); } catch {} };
 
     (async () => {
       const u = await ensureUser(); if (!u) return;
       const uid = u.uid;
       const seen = loadSeen(uid);
 
-      // expected IDs (saved right before Stripe redirect or manual-bank click)
+      // expected IDs (set before Stripe redirect or manual-bank click)
       let expect = [];
       try { expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]').filter(Boolean); } catch {}
 
       const col = collection(db, `players/${uid}/contributions`);
       const q   = query(col, where('status', '==', 'succeeded'));
 
-      // Warm-up: mark existing successes as seen, EXCEPT the expected ones
+      // Warm-up: mark existing successes as seen, except expected ones
       try {
         const warm = await getDocs(q);
         warm.forEach(d => { if (!expect.includes(d.id)) seen.add(d.id); });
         saveSeen(uid, seen);
       } catch {}
 
-      // If expected IDs already succeeded (webhook beat us), toast them now
+      // If expected already succeeded, toast now
       for (const id of expect) {
         try {
           const snap = await getDoc(doc(db, `players/${uid}/contributions/${id}`));
@@ -118,15 +117,10 @@ import { showToast } from './core/toast.js'; // your new toast helper
     })();
   }
 
-
-
-  // Show monthly “available Essence” approximation, aligned with HUD seeding
   async function getEssenceAvailableMonthly(uid) {
     return await getEssenceAvailableMonthlyFromHUD(uid);
   }
 
-
-  /* ------------------------------ Contribute (MenuItem) ------------------------------ */
   function ContributeMenu() {
     return {
       label: 'Contribute',
@@ -150,8 +144,8 @@ import { showToast } from './core/toast.js'; // your new toast helper
         const amountWrap = document.createElement('div');
         amountWrap.className = 'field';
         const lab = document.createElement('label'); lab.textContent = 'Amount (£ / Essence)';
-        const input = document.createElement('input'); input.type = 'number'; input.min = '2'; input.step = '1'; input.id = 'contribAmount'; input.className = 'input';
-        const errorP = document.createElement('p'); errorP.id = 'contribError'; errorP.className = 'form-error'; errorP.setAttribute('role','alert'); errorP.setAttribute('aria-live','polite');
+        const input = document.createElement('input'); input.type = 'number'; input.min = '1'; input.step = '1'; input.id = 'contribAmount'; input.className = 'input';
+        const errorP = inlineError('contribError');
         amountWrap.append(lab, input, errorP);
 
         // Tabs
@@ -166,39 +160,36 @@ import { showToast } from './core/toast.js'; // your new toast helper
 
         // shared validation state
         let available = 0;
-        function setError(msg) {
-          errorP.textContent = msg || '';
-          const invalid = Boolean(msg);
-          if (invalid) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
-          // disable CTA in whichever tab is showing
+        function disableCTA(disabled) {
           const currentCta = body.querySelector('button[data-role="primary-cta"]');
           if (currentCta) {
-            currentCta.disabled = invalid;
-            currentCta.setAttribute('aria-disabled', invalid ? 'true' : 'false');
+            currentCta.disabled = !!disabled;
+            currentCta.setAttribute('aria-disabled', disabled ? 'true' : 'false');
           }
         }
         function validate() {
           const raw = (input.value || '').trim();
-          if (raw === '') { setError(''); return { ok: false }; }
+          if (raw === '') { setError(errorP, '', input); disableCTA(true); return { ok: false }; }
 
           const n = Number(raw);
-          if (!Number.isFinite(n)) { setError('Enter a valid number.'); return { ok: false }; }
+          if (!Number.isFinite(n)) { setError(errorP, 'Enter a valid number.', input); disableCTA(true); return { ok: false }; }
 
           // Stripe needs ≥ £2 (fees), Bank can be ≥ £1
           const usingStripe = tabs.querySelector('.seg--current') === btnStripe;
           const min = usingStripe ? 2 : 1;
 
           if (n < min) {
-            setError(`Minimum is £${min}${usingStripe ? ' for card checkout.' : '.'}`);
-            return { ok: false };
+            setError(errorP, `Minimum is £${min}${usingStripe ? ' for card checkout.' : '.'}`, input);
+            disableCTA(true); return { ok: false };
           }
 
           if (n > available) {
-            setError(`You only have £${available.toFixed(2)} Essence available.`);
-            return { ok: false };
+            setError(errorP, `You only have £${available.toFixed(2)} Essence available.`, input);
+            disableCTA(true); return { ok: false };
           }
 
-          setError('');
+          setError(errorP, '', input);
+          disableCTA(false);
           return { ok: true, value: n };
         }
 
@@ -207,7 +198,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
         // Stripe view
         const stripeView = (() => {
           const wrap = document.createElement('div');
-          const d = document.createElement('div'); d.className='helper'; d.innerHTML = `Fast checkout via card / Apple Pay / Google Pay.`;
+          const d = helper(`Fast checkout via card / Apple Pay / Google Pay.`);
           const go = document.createElement('button');
           go.className = 'btn btn--accent';
           go.dataset.role = 'primary-cta';
@@ -225,16 +216,15 @@ import { showToast } from './core/toast.js'; // your new toast helper
               const returnUrl = window.location.href.split('#')[0] + '#vitals';
               const { data } = await fn({ amountGBP: v.value, returnUrl });
               if (data?.url) {
-               try {
-                 const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
-                 expect.push(String(data.contributionId || ''));
-                 sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
-               } catch {}
-               window.location.href = data.url;
-             }
-              else setError('Could not create checkout session.');
+                try {
+                  const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
+                  expect.push(String(data.contributionId || ''));
+                  sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
+                } catch {}
+                window.location.href = data.url;
+              } else setError(errorP, 'Could not create checkout session.', input);
             } catch (err) {
-              setError(err?.message || 'Checkout error. Please try again.');
+              setError(errorP, err?.message || 'Checkout error. Please try again.', input);
             }
           });
           wrap.append(d, go);
@@ -245,10 +235,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
         const bankView = (() => {
           const wrap = document.createElement('div');
 
-          const hint = document.createElement('div');
-          hint.className = 'helper';
-          hint.innerHTML = `Send a transfer from your bank. Use the reference shown so we can match it.`;
-
+          const hint = helper('Send a transfer from your bank. Use the reference shown so we can match it.');
           const bankBlock = document.createElement('div');
           bankBlock.append(hint);
 
@@ -267,9 +254,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
             if (cfg.iban) rows.push(kvRow('IBAN', cfg.iban, true));
             rows.push(kvRow('Reference',    ref, true));
             rows.forEach(r => bankBlock.append(r));
-            if (cfg.instructions) {
-              const extra = document.createElement('div'); extra.className='helper'; extra.textContent = cfg.instructions; bankBlock.append(extra);
-            }
+            if (cfg.instructions) bankBlock.append(helper(cfg.instructions));
             bankBlock.dataset.reference = ref;
           })();
 
@@ -296,10 +281,11 @@ import { showToast } from './core/toast.js'; // your new toast helper
               status: 'awaiting_settlement',
               createdAt: serverTimestamp(),
             }, { merge: true });
+
             try {
-             const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
-             expect.push(id);
-             sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
+              const expect = JSON.parse(sessionStorage.getItem('myfi:expectContrib') || '[]');
+              expect.push(id);
+              sessionStorage.setItem('myfi:expectContrib', JSON.stringify(expect));
             } catch {}
 
             window.MyFiModal.close();
@@ -313,9 +299,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
         // Pay-by-Bank (placeholder)
         const pbbView = (() => {
           const wrap = document.createElement('div');
-          const info = document.createElement('div'); info.className = 'helper';
-          info.textContent = 'Pay by Bank (TrueLayer) is coming soon.';
-          wrap.append(info);
+          wrap.append(helper('Pay by Bank (TrueLayer) is coming soon.'));
           return wrap;
         })();
 
@@ -327,8 +311,7 @@ import { showToast } from './core/toast.js'; // your new toast helper
             tab === btnBank   ? bankView   :
                                 pbbView
           );
-          // re-evaluate current CTA enabled state against current input value
-          validate();
+          validate(); // refresh CTA state
         }
 
         btnStripe.addEventListener('click', ()=> show(btnStripe));
@@ -345,27 +328,22 @@ import { showToast } from './core/toast.js'; // your new toast helper
 
           if (elVal) elVal.textContent = fmtGBP(available);
 
-          // If not enough Essence for Stripe fees, steer to Bank and disable Stripe CTA
+          // If not enough Essence for Stripe fees, steer to Bank and message on Stripe
           if (available < 2) {
-            // Default to Bank tab
             show(btnBank);
-
-            // If user switches to Stripe, keep CTA disabled with a clear message
             btnStripe.addEventListener('click', () => {
-              setError('You need at least £2 Essence to use card checkout. Try Bank Transfer (no fees).');
+              setError(errorP, 'You need at least £2 Essence to use card checkout. Try Bank Transfer (no fees).', input);
             });
           } else {
             show(btnStripe);
           }
+          validate();
         })();
 
         return [root];
       },
       footer() {
-        const close = document.createElement('button');
-        close.className = 'btn'; close.type = 'button'; close.textContent = 'Close';
-        close.addEventListener('click', ()=> window.MyFiModal.close());
-        return [close];
+        return [ cancel() ];
       }
     };
   }
@@ -374,13 +352,9 @@ import { showToast } from './core/toast.js'; // your new toast helper
     contribute: ContributeMenu(),
   };
 
-  // Main Essence button → drill-down (list + preview → detail)
-  document.getElementById('essence-btn')?.addEventListener('click', async () => {
-    await ensureUser();
-    setMenu(EssenceMenu);
-    open('contribute', { variant: 'drilldown', menuTitle: 'Actions' });
-  });
+  window.MyFiEssenceMenu = EssenceMenu;
 
-  // 🔔 begin listening for successful contributions → show toast (Stripe & Bank)
+  // start listening for successful contributions → toast
   startContributionSuccessToasts();
+
 })();

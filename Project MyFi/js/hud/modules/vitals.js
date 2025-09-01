@@ -195,8 +195,14 @@ export function getViewMode() {
 export function setViewMode(mode) {
   const next = VIEW_MODES.includes(mode) ? mode : "daily";
   localStorage.setItem("vitals:viewMode", next);
-  const btn = document.getElementById("left-btn");
-  if (btn) btn.title = `View: ${next}`;
+
+// Update the engravings tooltip instead of the left button
+  const engrave = document.getElementById("mode-engrave");
+  if (engrave) {
+    engrave.title = `View mode: ${next} — tap a rune to change`;
+  }
+
+  // Notify listeners + refresh UI
   window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: next }}));
   refreshBarGrids();
   updateModeEngrave(next);
@@ -240,16 +246,13 @@ export function autoInitAddSpendButton() {
   const addBtn = document.getElementById('btn-add-spend');
   if (addBtn) {
     addBtn.addEventListener('click', () => {
-      if (typeof window.MyFiOpenAddTransaction === 'function') {
-        window.MyFiOpenAddTransaction({ variant: 'single' }); // content-only
-      } else {
-        // Fallback to existing drilldown flow if financesMenu isn’t loaded yet
-        // Reuse the existing Finances handler that already opens "Add Transaction"
-      // See financesMenu.js: right-btn click -> open('addTransaction', ...)
-        document.getElementById('right-btn')?.click();
-      }
+      window.MyFiModal.openChildItem(window.MyFiFinancesMenu, 'addTransaction', {
+        menuTitle: 'Add Transaction'
+      });
     });
   }
+
+
 
 }
 
@@ -1504,7 +1507,6 @@ function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
     const el = elements[p]; if (!el?.value) continue;
     const v  = pools[p] || {};
     const rate = rateTextForMode(v.regenCurrent, mode);
-    console.log(`Regen peek for ${p}:`, rate);
 
     // Stash originals + computed alt
     el.value.__origText = el.value.textContent;
@@ -1574,14 +1576,13 @@ function updateRatePeekTexts(elements, pools, mode = getViewMode()) {
    ──────────────────────────────────────────────────────────────────────────── */
 (function () {
   const run = () => {
-    const btn = document.getElementById("left-btn");
-    if (btn) {
-      btn.title = `View: ${getViewMode()}`;
-      btn.addEventListener("click", cycleViewMode);
-    }
 
     const engrave = document.getElementById("mode-engrave");
     if (engrave) {
+
+        // reflect current mode in tooltip
+      engrave.title = `View mode: ${getViewMode()} — tap a rune to change`;
+
       engrave.addEventListener("click", (ev) => {
         const b = ev.target.closest(".mode-btn");
         if (!b || !engrave.contains(b)) return;

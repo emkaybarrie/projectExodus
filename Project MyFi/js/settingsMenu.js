@@ -1,54 +1,40 @@
 // js/settingsMenu.js
+// Standardised Settings menu. Uses MyFiUI + exposes window.MyFiSettingsMenu.
+
 import { auth, db, logoutUser } from './core/auth.js';
 import { getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { initHUD } from './hud/hud.js';
 
 (function(){
-  const { open, setMenu } = window.MyFiModal;
+  const { helper, field, select, primary, cancel, danger, inlineError, setError } = window.MyFiUI;
 
   const SettingsMenu = {
-    vitalsMode: {
+    profile: {
       label: 'Vitals Start Mode',
       title: 'Vitals Start Mode',
       render(){
         const wrap = document.createElement('div');
 
-        // helper text
         wrap.appendChild(helper(`
           <p>Select how your avatar’s vitals are calculated:</p>
           <ul>
             <li><strong>Relaxed</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily.</li>
             <li><strong>Standard</strong> — Seeded automatically based on when in the month you begin.</li>
-            <li><strong>Focused</strong> — Start conservatively. Your avatar’s energy will regenerate slowly and steadily to promote reduced spending from Day 1</li>
+            <li><strong>Focused</strong> — Start conservatively to promote reduced spending from Day 1.</li>
             <li><strong>True</strong> — Connect your bank (paid) for a live, fully automated start.</li>
           </ul>
         `));
 
-        // field
-        const field = document.createElement('div');
-        field.className = 'field';
-        const label = document.createElement('label');
-        label.htmlFor = 'vitalsMode';
-        label.textContent = 'Vitals Mode';
-        const select = document.createElement('select');
-        select.id = 'vitalsMode';
-        select.className = 'input';
-
+        // select
+        const selWrap = document.createElement('div'); selWrap.className='field';
+        const lab = document.createElement('label'); lab.htmlFor='vitalsMode'; lab.textContent='Vitals Mode';
+        const sel = document.createElement('select'); sel.id='vitalsMode'; sel.className='input';
         [
-          { value: 'relaxed',        text: 'Relaxed' },
-          { value: 'standard', text: 'Standard' },
-          { value: 'focused',      text: 'Focused' },
-          { value: 'true',        text: 'True (bank sync)' },
-        ].forEach(opt => {
-          const o = document.createElement('option');
-          o.value = opt.value; o.textContent = opt.text;
-          select.appendChild(o);
-        });
+          ['relaxed','Relaxed'], ['standard','Standard'], ['focused','Focused'], ['true','True (bank sync)']
+        ].forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); });
+        selWrap.append(lab, sel);
 
-        field.append(label, select);
-        wrap.appendChild(field);
-
-        // async: load current selection from Firestore
+        // load current
         (async () => {
           try {
             const uid = auth?.currentUser?.uid;
@@ -56,16 +42,13 @@ import { initHUD } from './hud/hud.js';
             const snap = await getDoc(doc(db, "players", uid));
             if (snap.exists()) {
               const mode = snap.data().vitalsMode;
-              if (mode && select.querySelector(`option[value="${mode}"]`)) {
-                select.value = mode;
-              }
+              if (mode && sel.querySelector(`option[value="${mode}"]`)) sel.value = mode;
             }
-          } catch (e) {
-            console.warn('Failed to load vitalsMode:', e);
-          }
+          } catch (e) { console.warn('Failed to load vitalsMode:', e); }
         })();
 
-        return [ wrap ];
+        wrap.appendChild(selWrap);
+        return [wrap];
       },
       footer(){
         return [
@@ -82,12 +65,7 @@ import { initHUD } from './hud/hud.js';
     }
   };
 
-  // helpers
-  function helper(html){ const d=document.createElement('div'); d.className='helper'; d.innerHTML=html; return d; }
-  const cancel =(l='Close')=>btn(l,'',()=>window.MyFiModal.close());
-  const primary=(l='Save',fn)=>btn(l,'btn-primary',fn);
-  const danger =(l,fn)=>btn(l,'',fn);
-  function btn(label,klass,fn){ const b=document.createElement('button'); b.type='button'; b.className=`btn ${klass||''}`; b.textContent=label; b.addEventListener('click',fn); return b; }
+  window.MyFiSettingsMenu = SettingsMenu;
 
   function emit(type){
     const values={};
@@ -97,13 +75,7 @@ import { initHUD } from './hud/hud.js';
     window.dispatchEvent(new CustomEvent(type,{detail:values}));
   }
 
-  // Open Settings (split view)
-  document.getElementById('settings-btn')?.addEventListener('click', ()=>{
-    setMenu(SettingsMenu);
-    open('logout');
-  });
-
-  // Save handler for vitals start mode
+  // Save handler
   window.addEventListener('settings:vitalsMode:save', async (ev)=>{
     const mode = ev.detail?.vitalsMode;
     const uid = auth?.currentUser?.uid;
