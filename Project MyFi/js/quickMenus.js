@@ -142,6 +142,44 @@ function attachQuickMenu(btnId, getMenuDef, extraOpts = {}) {
   }, { passive: false });
 }
 
+// ---- Global helper to open a quick menu programmatically ----
+// Example inside settingsMenu.js after a reset prompt (use the button as anchor if you like)
+// window.MyFiOpenQuickMenu && window.MyFiOpenQuickMenu('finances', {});
+// or: window.MyFiOpenQuickMenu('energy', { });
+window.MyFiOpenQuickMenu = function(which, opts = {}) {
+  // Reuse the same builders/defs used by attachQuickMenu
+  const defFor = (key) => {
+    if (key === 'finances' || key === 'energy') {
+      // same grid used by the left button
+      return pick(window.MyFiFinancesMenu, ['connectBank','income','expenses']);
+    }
+    if (key === 'essence') {
+      return pick(window.MyFiEssenceMenu, ['contribute','purchase','empower']);
+    }
+    if (key === 'help') {
+      return pick(window.MyFiHelpMenu, ['overview','vitals','quests','avatars','resources','badlands','faq','report']);
+    }
+    if (key === 'general') {
+      return buildGeneralMenu();
+    }
+    // allow passing a prebuilt def object
+    if (typeof key === 'object' && key) return key;
+    return null;
+  };
+
+  const def = defFor(which);
+  if (!def) { console.warn('[QuickMenu] No menu for key:', which); return false; }
+
+  // Reuse the same presenter as the button-wired quick menus
+  openMenuFor(def, {
+    menuTitle: opts.menuTitle || (which === 'finances' || which === 'energy' ? 'Finances' : 'Actions'),
+    anchor: opts.anchor || null,   // pass a button element if you want it “anchored”
+    ...opts
+  });
+  return true;
+};
+
+
 // Help (top-centre right) → real Help menu 
 attachQuickMenu('help-btn', () =>
   pick(window.MyFiHelpMenu, ['overview','vitals', 'quests', 'avatars', 'resources', 'badlands', 'faq','report'])
