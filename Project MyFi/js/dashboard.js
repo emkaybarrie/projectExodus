@@ -9,9 +9,12 @@ import { showWelcomeThenMaybeSetup } from './welcome.js';
 
 import "./core/truelayer.js";
 import "./modal.js";
+import "./ui/kit.js";
 import "./settingsMenu.js";
 import "./helpMenu.js";
 import "./financesMenu.js";
+import "./essenceMenu.js";
+import "./quickMenus.js";
 import "./musicManager.js"
 
 const shouldShowSplash = sessionStorage.getItem('showSplashNext') === '1';

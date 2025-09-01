@@ -1,37 +1,16 @@
 // js/helpMenu.js
+// Standardised Help menu using MyFiUI + MyFiModal nav stack.
+// No direct DOM listeners here — quickMenus.js opens this via window.MyFiHelpMenu.
+
 import { db, auth } from './core/auth.js';
 import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  doc,
-  getDoc
+  collection, addDoc, serverTimestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 (function(){
-  const { el, open, setMenu } = window.MyFiModal;
+  const { helper, btn, primary, cancel } = window.MyFiUI;
 
-  // --- UI helpers ---
-  function field(labelTxt,type,id,attrs={}){
-    const wrap=document.createElement('div'); wrap.className='field';
-    const l=document.createElement('label'); l.htmlFor=id; l.textContent=labelTxt;
-    const i=document.createElement(type==='textarea'?'textarea':'input');
-    i.className='input'; if(type!=='textarea') i.type=type; i.id=id; Object.assign(i,attrs);
-    if(type==='textarea'){ i.rows = attrs.rows || 5; i.style.resize = 'vertical'; }
-    wrap.append(l,i); return wrap;
-  }
-  function select(labelTxt,id,options){
-    const wrap=document.createElement('div'); wrap.className='field';
-    const l=document.createElement('label'); l.htmlFor=id; l.textContent=labelTxt;
-    const s=document.createElement('select'); s.className='select'; s.id=id;
-    options.forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; s.appendChild(o); });
-    wrap.append(l,s); return wrap;
-  }
-  const helper=(html)=>{ const d=document.createElement('div'); d.className='helper'; d.innerHTML=html; return d; };
-  const btn=(label,klass,fn)=>{ const b=document.createElement('button'); b.type='button'; b.className=`btn ${klass||''}`; b.textContent=label; b.addEventListener('click',fn); return b; };
-  const primary=(l,f)=>btn(l,'btn--accent',f);
-  const cancel =(l='Close')=>btn(l,'',()=>window.MyFiModal.close());
-
+  // Simple media block kept local (pure UI, no network)
   function mediaBlock({type='image', src='#', alt='', poster='', autoplay=true}){
     const wrap = document.createElement('div');
     wrap.className = 'help-media';
@@ -43,10 +22,7 @@ import {
       v.controls = true;
       wrap.appendChild(v);
       const io = new IntersectionObserver((ents)=>{
-        ents.forEach(e=>{
-          if(e.isIntersecting){ v.play().catch(()=>{}); }
-          else { v.pause(); }
-        });
+        ents.forEach(e=>{ if(e.isIntersecting){ v.play().catch(()=>{}); } else { v.pause(); } });
       }, {threshold: .25});
       io.observe(v);
     } else {
@@ -61,18 +37,19 @@ import {
     const wrap = document.createElement('div');
     wrap.className = 'subnav';
     pages.forEach((p,idx)=>{
-      const b = btn(p.label, idx===0 ? 'seg--current' : '', ()=>{
+      const b = btn(p.label, idx===0 ? 'accent' : 'secondary', ()=>{
         wrap.querySelectorAll('.btn').forEach(x=>x.classList.remove('seg--current'));
         b.classList.add('seg--current');
         onChange(idx);
       });
+      if(idx===0) b.classList.add('seg--current');
       b.dataset.index = idx;
       wrap.appendChild(b);
     });
     return wrap;
   }
 
-  // --- Overview (now includes "Introduction" and "The Basics") ---
+  // Pages
   function overviewRender(){
     const pages = [
       {
@@ -113,7 +90,6 @@ import {
     return [container];
   }
 
-  // --- Vitals ---
   function vitalsRender(){
     const pages = [
       {
@@ -133,7 +109,7 @@ import {
         text: `
           • Toggle 🌀 to shift between Daily, Weekly, or Monthly context.<br>
           • Bars show current vs. maximum; surplus pills = how many full bars remain.<br>
-          • The Action Log tracks pending actions — tag them before they lock in, or unlock skills to deciee for you.
+          • The Action Log tracks pending actions — tag them before they lock in, or unlock skills to decide for you.
         `,
         media:{ type:'video', src:'assets/help/vitals-using.mp4', poster:'assets/help/vitals-using.jpg' }
       }
@@ -147,17 +123,15 @@ import {
     return [container];
   }
 
-  // --- Quests ---
   function questsRender(){
     const content = helper(`
-      <strong>Quests</strong> transform your financial goals into challenges. Reach savings goals, maintain tagging streaks or keep manage your energy consistently  — completing quests grant rewards and build lasting habits.
+      <strong>Quests</strong> transform your financial goals into challenges. Reach savings goals, maintain tagging streaks or manage your energy consistently — completing quests grants rewards and builds lasting habits.
       Active quests appear in your Journal. Every success fuels momentum and strengthens your avatar for the journey ahead.
     `);
     const media = mediaBlock({ type:'image', src:'assets/help/quests.png' });
     return [content, media];
   }
 
-  // --- Avatars ---
   function avatarsRender(){
     const pages = [
       {
@@ -188,18 +162,16 @@ import {
     return [wrap];
   }
 
-  // --- The Badlands ---
   function badlandsRender(){
     const content = helper(`
       <strong>The Badlands</strong> is the proving ground: a 2D endless-runner rogue-lite where your avatar becomes the hero.
       Liberate towns, face shifting routes, and battle enemies as seasons change. Success depends on both your own skill and the strength you’ve built through Vitals management, Quests achievements, and Essence use.
-      Compete on leaderboards, cooperate with friends, and discover how better real-world habits lead to deeper, more rewarding runs
+      Compete on leaderboards, cooperate with friends, and discover how better real-world habits lead to deeper, more rewarding runs.
     `);
     const media = mediaBlock({ type:'video', src:'assets/help/badlands.mp4', poster:'assets/help/badlands.jpg' });
     return [content, media];
   }
 
-  // --- Resources (Products / Financial Guidance) ---
   function resourcesRender(){
     const pages = [
       {
@@ -237,7 +209,6 @@ import {
     return [container];
   }
 
-  // --- FAQ ---
   function faqRender(){
     const faqs = [
       ['getting-started','How do I get started?'],
@@ -246,114 +217,79 @@ import {
       ['privacy','What data do you store?'],
     ];
     const content = {
-      'getting-started': {
-        text:`Set income & core expenses, then add a few transactions. Watch the Vitals HUD update live.`,
-        media:{type:'image', src:'assets/help/faq-start.png'}
-      },
-      'tagging': {
-        text:`Tag spending as Mana if it’s intentional. Otherwise it defaults to Stamina. Overspending can spill into Health, your last line of defense.`,
-        media:{type:'image', src:'assets/help/faq-tag.png'}
-      },
-      'regen': {
-        text:`Energy regenerates over time, based on your income (after core epxenses). Spending too much will affect this, ensuring you can’t outpace your means.`,
-        media:{type:'image', src:'assets/help/faq-regen.png'}
-      },
-      'privacy': {
-        text:`Your data stays yours. Bank connections use trusted providers; you control access.`,
-        media:{type:'image', src:'assets/help/faq-privacy.png'}
-      },
+      'getting-started': { text:`Set income & core expenses, then add a few transactions. Watch the Vitals HUD update live.`, media:{type:'image', src:'assets/help/faq-start.png'} },
+      'tagging':         { text:`Tag spending as Mana if it’s intentional. Otherwise it defaults to Stamina. Overspending can spill into Health, your last line of defense.`, media:{type:'image', src:'assets/help/faq-tag.png'} },
+      'regen':           { text:`Energy regenerates over time, based on your income (after core expenses). Spending too much will affect this, ensuring you can’t outpace your means.`, media:{type:'image', src:'assets/help/faq-regen.png'} },
+      'privacy':         { text:`Your data stays yours. Bank connections use trusted providers; you control access.`, media:{type:'image', src:'assets/help/faq-privacy.png'} },
     };
 
-    const dd = select('Question','faqSelect',faqs);
+    const wrap = document.createElement('div');
+    const lab = document.createElement('label'); lab.textContent = 'Question';
+    const sel = document.createElement('select'); sel.className='input';
+    faqs.forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); });
+    const top = document.createElement('div'); top.className='field'; top.append(lab, sel);
+
     const body = document.createElement('div'); body.className='help-body';
     function renderKey(k){ const d=content[k]; body.replaceChildren(helper(d.text), mediaBlock(d.media)); }
-    dd.querySelector('select').addEventListener('change', (e)=> renderKey(e.target.value));
+    sel.addEventListener('change', (e)=> renderKey(e.target.value));
     renderKey(faqs[0][0]);
-    return [dd, body];
+    return [top, body];
   }
 
-  // --- Report an Issue ---
-  function reportIssueRender(){
-    const cat = select('Category (optional)','issueCategory',[
-      ['bug-ui','UI bug'],
-      ['bug-data','Data issue'],
-      ['perf','Performance'],
-      ['suggestion','Suggestion/Idea'],
-      ['other','Other'],
-    ]);
-    const desc = field('Describe the issue','textarea','issueDescription',{rows:6,placeholder:'What happened? Steps to reproduce?'});
-    const email= field('Email (optional, for follow-up)','email','issueEmail',{placeholder:'you@example.com'});
-    const note = helper(`No sensitive info please. A minimal log will be attached automatically.`);
-    return [cat, desc, email, note];
-  }
-
-  function reportFooter(){
-    return [
-      primary('Submit', ()=>{
-        const values={};
-        el.contentEl.querySelectorAll('input,select,textarea').forEach(i=>values[i.id]=i.value);
-        values._meta = { ts: Date.now(), userAgent: navigator.userAgent };
-        window.dispatchEvent(new CustomEvent('help:report',{detail:values}));
-        window.MyFiModal.close();
-      }),
-      cancel()
-    ];
-  }
-
-  // --- Menu map (unified schema with previews; works for split or drill‑down) ---
+  // Unified schema
   const HelpMenu = {
-    overview:  { 
-      label:'Overview', title:'Help • Overview',
-      preview:'What MyFi is, how the world works, and how to find your way around.',
-      render: overviewRender
-    },
-    vitals:    { 
-      label:'Vitals',   title:'Help • Vitals',
-      preview:'Your energy pools — Stamina, Mana, Health, and Essence — and how they rise and fall.',
-      render: vitalsRender
-    },
-    quests:    { 
-      label:'Quests',   title:'Help • Quests',
-      preview:'Turn goals into adventures: complete challenges to build habits and earn rewards.',
-      render: questsRender 
-    },
-    avatars:   { 
-      label:'Avatars',  title:'Help • Avatars',
-      preview:'Customise your hero, unlock perks, and grow stronger as your journey continues.',
-      render: avatarsRender 
-    },
-    badlands:  { 
-      label:'The Badlands', title:'Help • The Badlands',
-      preview:'Enter the Badlands — fight, explore, and test the strength you’ve built.',
-      render: badlandsRender 
-    },
-    resources: { 
-      label:'Products / Guidance', title:'Help • Products & Guidance',
-      preview:'Insights into your habits and optional partner tools that boost both game and life.',
-      render: resourcesRender 
-    },
-    faq:       { 
-      label:'FAQ',      title:'Help • FAQ',
-      preview:'Fast answers to common questions and mechanics.',
-      render: faqRender 
-    },
-    report:    { 
-      label:'Report an Issue', title:'Help • Report an Issue',
-      preview:'Spotted a bug or have an idea? Send it straight to the team.',
-      render: reportIssueRender, footer: reportFooter 
+    overview:  { label:'Overview', title:'Help • Overview',   preview:'What MyFi is and how to get around.', render: overviewRender },
+    vitals:    { label:'Vitals',   title:'Help • Vitals',     preview:'Your energy pools and how they rise/fall.', render: vitalsRender },
+    quests:    { label:'Quests',   title:'Help • Quests',     preview:'Goals into adventures with rewards.', render: questsRender },
+    avatars:   { label:'Avatars',  title:'Help • Avatars',    preview:'Customise your hero and perks.', render: avatarsRender },
+    badlands:  { label:'The Badlands', title:'Help • The Badlands', preview:'Enter and test your strength.', render: badlandsRender },
+    resources: { label:'Products / Guidance', title:'Help • Products & Guidance', preview:'Insights and partner tools.', render: resourcesRender },
+    faq:       { label:'FAQ',      title:'Help • FAQ',         preview:'Fast answers to common questions.', render: faqRender },
+    report:    { label:'Report an Issue', title:'Help • Report an Issue', preview:'Spotted a bug or idea? Tell us.', 
+      render() {
+        const wrap = document.createElement('div');
+        const email = document.createElement('input'); email.type='email'; email.className='input'; email.id='issueEmail'; email.placeholder='you@example.com';
+        const emailField = document.createElement('div'); emailField.className='field';
+        const emailLab = document.createElement('label'); emailLab.htmlFor='issueEmail'; emailLab.textContent='Email (optional, for follow-up)';
+        emailField.append(emailLab, email);
+
+        const catField = document.createElement('div'); catField.className='field';
+        const catLab = document.createElement('label'); catLab.htmlFor='issueCategory'; catLab.textContent='Category (optional)';
+        const catSel = document.createElement('select'); catSel.id='issueCategory'; catSel.className='input';
+        [['bug-ui','UI bug'],['bug-data','Data issue'],['perf','Performance'],['suggestion','Suggestion/Idea'],['other','Other']]
+          .forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; catSel.appendChild(o); });
+        catField.append(catLab, catSel);
+
+        const descField = document.createElement('div'); descField.className='field';
+        const dLab = document.createElement('label'); dLab.htmlFor='issueDescription'; dLab.textContent='Describe the issue';
+        const dTxt = document.createElement('textarea'); dTxt.id='issueDescription'; dTxt.className='input'; dTxt.rows=6; dTxt.placeholder='What happened? Steps to reproduce?';
+        descField.append(dLab, dTxt);
+
+        const note = helper(`No sensitive info please. A minimal log will be attached automatically.`);
+
+        wrap.append(catField, descField, emailField, note);
+        return [wrap];
+      },
+      footer() {
+        return [
+          primary('Submit', ()=>{
+            const values={};
+            const root = window.MyFiModal.el.contentEl;
+            root.querySelectorAll('input,select,textarea').forEach(i=>values[i.id]=i.value);
+            values._meta = { ts: Date.now(), userAgent: navigator.userAgent };
+            window.dispatchEvent(new CustomEvent('help:report',{detail:values}));
+            window.MyFiModal.close();
+          }),
+          cancel()
+        ];
+      }
     },
   };
 
-  // expose (optional)
+  // expose for quickMenus + deep links
   window.MyFiHelpMenu = HelpMenu;
 
-  // Open Help → drill‑down (list + preview → detail)
-  document.getElementById('help-btn')?.addEventListener('click', ()=>{
-    setMenu(HelpMenu);
-    open('overview', { variant: 'drilldown', menuTitle: 'Help' });
-  });
-
-  // Save bug reports to Firestore
+  // Firestore save for reports
   window.addEventListener('help:report', async (e)=>{
     try {
       let alias = null;
@@ -363,10 +299,7 @@ import {
         if (playerSnap.exists()) alias = playerSnap.data().alias || null;
       }
       await addDoc(collection(db, 'bugReports'), {
-        ...e.detail,
-        alias,
-        uid: auth.currentUser?.uid || null,
-        createdAt: serverTimestamp()
+        ...e.detail, alias, uid, createdAt: serverTimestamp()
       });
     } catch (err) {
       console.error('[Help Report] Failed to save', err);
