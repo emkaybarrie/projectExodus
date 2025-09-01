@@ -13,8 +13,7 @@ import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
 import { showToast } from './core/toast.js';
 
 (function () {
-  const { helper, primary, cancel, inlineError, setError } = window.MyFiUI;
-  const { open, setMenu, el } = window.MyFiModal;
+  const { helper, field, select, primary, cancel, danger, inlineError, setError, btnOpenItem, btnOpenMenu } = window.MyFiUI;
 
   const db = getFirestore();
   const auth = getAuth();
