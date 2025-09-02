@@ -424,6 +424,7 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   margin: 0;
   line-height: 34px;          /* aligns with 34px buttons */
   padding-right: 84px;        /* room for the right-pinned actions */
+  font-size: 1.125rem;        /* << add this (pick your size) */
 }
 
 /* Header actions (icon buttons) pinned right & baseline-aligned */
@@ -445,7 +446,7 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   border: 1px solid rgba(255,255,255,.16);
   background: rgba(255,255,255,.06);
   color: #f0e6d2;
-  font-size: 14px; line-height: 1;
+  font-size: 12px; line-height: 1;
   cursor: pointer;
 }
 .hx-add {
