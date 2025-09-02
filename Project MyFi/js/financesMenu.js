@@ -384,7 +384,7 @@ import {
             dateInput.min = toISODate(startDateMs);
             const todayISO = toISODate(Date.now());
             dateInput.value = todayISO < dateInput.min ? dateInput.min : todayISO;
-            dateInput.removeAttribute('max');
+            dateInput.max = yyyy_mm_dd_today();
           }
         })();
 
@@ -410,6 +410,16 @@ import {
       }
     },
   };
+
+  function yyyy_mm_dd_today() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+
+
 
   // expose for quickMenus + deep links
   window.MyFiFinancesMenu = FinancesMenu;

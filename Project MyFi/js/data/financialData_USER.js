@@ -15,60 +15,72 @@
  * ---------------------------------------------------------------------------
  */
 
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  serverTimestamp,
-  Timestamp,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+/**
+ * financialData_USER.js
+ * Manual add txn with anchor/window guards.
+ */
+
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const db = getFirestore();
 const auth = getAuth();
-
-// Keep this path the same to avoid regressions in your current UI
 const targetCollection = "financialData_USER";
+
+// Read server-computed anchor if present; fallback to today
+async function getAnchorMs(uid) {
+  try {
+    const cur = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+    if (cur.exists()) {
+      const a = Number((cur.data() || {}).anchorMs || (cur.data() || {}).seedAnchor?.anchorMs || 0);
+      if (Number.isFinite(a) && a > 0) return a;
+    }
+  } catch {}
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(); // today
+}
+
 
 /**
  * addTransaction(data)
- * @param {{
- *   txType: "debit"|"credit",   // debit = expense (negative), credit = income (positive)
- *   txAmount: number,
- *   txDate?: string,            // "", ISO, or yyyy-mm-dd; if blank uses serverTimestamp()
- *   txDesc?: string,
- *   txPool?: ""|"stamina"|"mana"|"health"|"essence" // optional provisional choice
- * }} data
+ * @param {Object} data
+ * @param {"debit"|"credit"} data.txType
+ * @param {number} data.txAmount
+ * @param {string=} data.txDate  // "", ISO, or yyyy-mm-dd; if blank -> now
+ * @param {string=} data.txDesc
+ * @param {""|"stamina"|"mana"|"health"|"essence"} [data.txPool]
  */
 export async function addTransaction(data) {
   const user = auth.currentUser;
   if (!user) throw new Error("Not logged in");
 
-  // 1) Normalise amount sign by type
+  // 1) Amount sign by type
   let amount = Number(data.txAmount);
-  if (data.txType === "debit") {
-    amount = -Math.abs(amount);     // expenses are negative
-  } else if (data.txType === "credit") {
-    amount = Math.abs(amount);      // income is positive
-  } else {
-    throw new Error("Invalid txType. Use 'debit' or 'credit'.");
-  }
+  if (data.txType === "debit") amount = -Math.abs(amount);
+  else if (data.txType === "credit") amount =  Math.abs(amount);
+  else throw new Error("Invalid txType. Use 'debit' or 'credit'.");
 
-  // 2) Entry date → Firestore Timestamp (or server timestamp)
-  let entryDate;
+  // 2) Intended date (from user or now)
+  let intendedMs;
   if (!data.txDate || data.txDate === "") {
-    entryDate = serverTimestamp();
+    intendedMs = Date.now();
   } else {
     const d = new Date(data.txDate);
-    entryDate = isNaN(d.getTime()) ? serverTimestamp() : Timestamp.fromDate(d);
+    intendedMs = isNaN(d.getTime()) ? Date.now() : d.getTime();
   }
 
-  // 3) Create a unique ID we can reuse across both stores
+  // 3) Clamp to [anchor, now] (no future, no pre-anchor)
+  const anchorMs = await getAnchorMs(user.uid);
+  const nowMs = Date.now();
+  const clampedMs = Math.max(anchorMs, Math.min(intendedMs, nowMs));
+
+  // 4) Build TS for echo
+  const entryDate = Timestamp.fromMillis(clampedMs);
+
+  // 5) Shared id
   const txnID = `txn_manual_${Date.now()}`;
 
-  // 4) USER-FACING STORE (keep shape/path to avoid regressions)
-  //    NOTE: This writes a single document named "transactions" (your current pattern).
-  //    If/when you migrate to a collection, we can switch to addDoc().
+  // 6) USER-FACING store
   const userFacingRef = doc(db, "players", user.uid, targetCollection, txnID);
   const transactionData = {
     description: data.txDesc || "No description provided",
@@ -76,48 +88,42 @@ export async function addTransaction(data) {
     entryDate,
     source: "user",
   };
-  await setDoc(userFacingRef, {
-    txnID,
-    transactionData,
-  });
+  await setDoc(userFacingRef, { txnID, transactionData });
 
-  // 5) CLASSIFIED PIPELINE: goes into Update Log (pending during ghost window)
-  const addedMs = Date.now();
-  const ghostWindowMs = 1 * 60 * 60 * 1000; // 1 hour ghost window // 63 Mana
+  // 7) Classified (pending → ghost → lock)
+  const addedMs = nowMs;
+  const ghostWindowMs = 60 * 60 * 1000; // 1h
+
   const classified = {
-    // Basic txn facts
     amount: Number(amount),
-    dateMs: addedMs,                 // client-side ms; good enough for queue ordering
+    dateMs: clampedMs,             // IMPORTANT: clamped
     source: "manual",
     accountId: null,
 
-    // Queue/ghost lifecycle
-    status: "pending",               // pending contributes to the ghost overlay
+    status: "pending",
     addedMs,
     ghostWindowMs,
     ghostExpiryMs: addedMs + ghostWindowMs,
-    autoLockReason: null,            // "expiry" | "queue_cap" (set later)
+    autoLockReason: null,
 
-    // Tagging during the ghost window (not final)
     provisionalTag: {
       pool: data.txPool && data.txPool !== "" ? data.txPool : null,
       setAtMs: data.txPool && data.txPool !== "" ? addedMs : null,
     },
-    // Final tag after lock
     tag: { pool: null, setAtMs: null },
 
-    // Optional rules / hints (future)
     suggestedPool: null,
     rulesVersion: "v1",
 
-    // Echo description for convenient UI rendering
     transactionData: {
       description: transactionData.description,
-      // entryDate is a Firestore Timestamp; we keep the raw TS in this echo shape
       entryDate,
     },
   };
 
-  // use the same txnID for a clean mapping across layers
   await setDoc(doc(db, "players", user.uid, "classifiedTransactions", txnID), classified);
 }
+
+
+
+
