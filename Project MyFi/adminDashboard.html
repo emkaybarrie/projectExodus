@@ -1,0 +1,298 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MyFi Admin Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; color: #eee; background:#111; }
+    .card { max-width: 860px; margin: auto; background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:16px; }
+    label { display:block; margin:.5rem 0 .2rem; font-weight:600; }
+    input, select { width:100%; padding:.5rem .6rem; border-radius:8px; border:1px solid #333; background:#121212; color:#eee; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .row3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    button { padding:.6rem 1rem; border:1px solid #333; background:#2a2a2a; color:#fff; border-radius:10px; cursor:pointer; }
+    button.primary { background:linear-gradient(180deg,#3b82f6,#1f48a9); border:none; }
+    pre { background:#0e0e0e; border:1px solid #222; padding:12px; border-radius:10px; overflow:auto; max-height: 50vh; }
+    small { opacity:.8; }
+    .muted { opacity:.7; font-size: 12px; }
+    .sep { height:1px; background:#2b2b2b; margin:12px 0; }
+    .grid { display:grid; gap: 12px; }
+    .hidden { display:none; }
+    .pill { display:inline-block; padding:.1rem .5rem; border:1px solid #333; background:#191919; border-radius:999px; font-size:12px; margin-left: 6px; }
+    .help { margin:.15rem 0 .5rem; color:#cfcfcf; opacity:.85; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>MyFi Admin Dashboard <span class="pill">maintenance</span></h2>
+    <p class="muted">Run admin/maintenance functions. Choose a task, fill parameters, and run. Keep HTTP endpoints locked with a one-time secret; delete them after use.</p>
+
+    <!-- Task picker -->
+    <label for="task">Task</label>
+    <select id="task">
+      <!-- options are injected from JS -->
+    </select>
+    <div id="taskHelp" class="help"></div>
+
+    <!-- Dynamic form area -->
+    <div id="form" class="grid"></div>
+
+    <div class="sep"></div>
+
+    <!-- Action buttons -->
+    <div class="row">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="run" class="primary">Run</button>
+        <button id="clear">Clear Output</button>
+      </div>
+      <div style="text-align:right;">
+        <small class="muted">Project: <code>myfi-app-7fa78</code> • Region: <code>europe-west2</code></small>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <pre id="out">// Output will appear here…</pre>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+    // ---- Firebase init (same project as your app)
+    const app = initializeApp({
+      apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
+      authDomain: "myfi-app-7fa78.firebaseapp.com",
+      projectId: "myfi-app-7fa78",
+    });
+    const auth = getAuth(app);
+    const fns  = getFunctions(app, "europe-west2");
+
+    // ---- Utilities
+    const $ = (id) => document.getElementById(id);
+    const out = $('out');
+    function log(obj) {
+      out.textContent += (typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2)) + "\n";
+      out.scrollTop = out.scrollHeight;
+    }
+    function clearOut(){ out.textContent = ''; }
+
+    // ---- Task registry (add new tasks here)
+    // Each task defines:
+    // - label (menu text)
+    // - help (short description)
+    // - params: array of { key, label, type, placeholder, default, min, max, options }
+    // - run(formValues): Promise -> executes the task
+    const TASKS = [
+      {
+        id: 'handlesBackfillHttp',
+        label: 'Backfill Handles (HTTP)',
+        help: 'Populate handles/{aliasLower} from players/* using HTTP onRequest function with optional pagination and dry-run.',
+        params: [
+          { key:'httpUrl',     label:'HTTP Function URL', type:'text', placeholder:'https://europe-west2-.../backfillHandlesFromPlayersHttp', default:'https://backfillhandlesfromplayershttp-frxqsvlhwq-nw.a.run.app' },
+          { key:'secret',      label:'Secret (query/body)', type:'text', placeholder:'RUN_ONCE_CHANGE_ME', default:'RUN_ONCE_CHANGE_ME' },
+          { key:'pageSize',    label:'Page size', type:'number', min:100, max:1000, default:400 },
+          { key:'startAfter',  label:'Start after (aliasLower)', type:'text', placeholder:'(leave blank for first page)', default:'' },
+          { key:'dryRun',      label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',      label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, pageSize, startAfter, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          const payload = { secret, pageSize: Number(pageSize), dryRun: String(dryRun) };
+          if (startAfter) payload.startAfter = startAfter;
+
+          if (method === 'GET') {
+            const qs = new URLSearchParams();
+            if (secret) qs.set('secret', secret);
+            qs.set('pageSize', String(pageSize));
+            qs.set('dryRun', String(dryRun));
+            if (startAfter) qs.set('startAfter', startAfter);
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full, { method:'GET' });
+            return await resp.json();
+          } else {
+            log(`POST ${httpUrl} (JSON body)`);
+            const resp = await fetch(httpUrl, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              body: JSON.stringify(payload)
+            });
+            return await resp.json();
+          }
+        }
+      },
+      {
+        id: 'handlesBackfillCallable',
+        label: 'Backfill Handles (Callable)',
+        help: 'Populate handles/{aliasLower} via callable function backfillHandlesFromPlayers (no secret). Sign in first if your rules require it.',
+        params: [
+          { key:'email',    label:'Admin Email', type:'text', placeholder:'admin@example.com', default:'' },
+          { key:'password', label:'Admin Password', type:'password', placeholder:'••••••••', default:'' },
+        ],
+        async run(v) {
+          const { email, password } = v;
+          if (email && password) {
+            log('Signing in…');
+            await signInWithEmailAndPassword(auth, email, password);
+          }
+          log('Calling callable: backfillHandlesFromPlayers …');
+          const call = httpsCallable(fns, 'backfillHandlesFromPlayers');
+          const res = await call({});
+          return res.data;
+        }
+      },
+      {
+        id: 'aliasLowerHeal',
+        label: 'AliasLower Heal (HTTP)',
+        help: 'Set players/{uid}.aliasLower = alias.toLowerCase() when aliasLower is missing. Run in batches; use dry-run to preview.',
+        params: [
+          { key:'httpUrl',  label:'HTTP Function URL', type:'text', placeholder:'https://europe-west2-.../backfillAliasLower', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/backfillAliasLower' },
+          { key:'secret',   label:'Secret (query/body)', type:'text', placeholder:'RUN_ONCE_CHANGE_ME', default:'RUN_ONCE_CHANGE_ME' },
+          { key:'pageSize', label:'Page size', type:'number', min:100, max:1000, default:400 },
+          { key:'dryRun',   label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',   label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, pageSize, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          const payload = { secret, pageSize: Number(pageSize), dryRun: String(dryRun) };
+
+          if (method === 'GET') {
+            const qs = new URLSearchParams();
+            if (secret) qs.set('secret', secret);
+            qs.set('pageSize', String(pageSize));
+            qs.set('dryRun', String(dryRun));
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full, { method:'GET' });
+            return await resp.json();
+          } else {
+            log(`POST ${httpUrl} (JSON body)`);
+            const resp = await fetch(httpUrl, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              body: JSON.stringify(payload)
+            });
+            return await resp.json();
+          }
+        }
+      },
+    ];
+
+    // ---- Render task picker
+    const taskSel = $('task');
+    TASKS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id; opt.textContent = t.label;
+      taskSel.appendChild(opt);
+    });
+
+    // ---- Dynamic form renderer
+    function renderFormFor(task) {
+      const form = $('form');
+      form.innerHTML = '';
+      $('taskHelp').textContent = task.help || '';
+
+      task.params.forEach(p => {
+        const wrap = document.createElement('div');
+        wrap.className = (p.inline ? '' : 'field');
+        const lab = document.createElement('label');
+        lab.textContent = p.label;
+        lab.htmlFor = `p_${p.key}`;
+        let input;
+
+        if (p.type === 'select') {
+          input = document.createElement('select');
+          (p.options || []).forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.value; o.textContent = opt.label;
+            input.appendChild(o);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = p.type || 'text';
+          if (p.placeholder) input.placeholder = p.placeholder;
+          if (p.min != null) input.min = String(p.min);
+          if (p.max != null) input.max = String(p.max);
+        }
+        input.id = `p_${p.key}`;
+        input.value = (p.default ?? '');
+
+        wrap.append(lab, input);
+        form.appendChild(wrap);
+      });
+    }
+
+    // Store values between task switches
+    const memory = new Map();
+
+    function getCurrentTask() {
+      const id = taskSel.value;
+      return TASKS.find(t => t.id === id);
+    }
+    function readFormValues(task) {
+      const values = {};
+      task.params.forEach(p => {
+        const el = document.getElementById(`p_${p.key}`);
+        if (!el) return;
+        values[p.key] = (p.type === 'number') ? Number(el.value) : el.value;
+      });
+      return values;
+    }
+    function writeFormValues(task, values) {
+      task.params.forEach(p => {
+        const el = document.getElementById(`p_${p.key}`);
+        if (!el || values[p.key] == null) return;
+        el.value = values[p.key];
+      });
+    }
+
+    // Handle task change
+    taskSel.addEventListener('change', () => {
+      // save current values
+      const prevId = memory.get('__currentId');
+      if (prevId) {
+        const prevTask = TASKS.find(t => t.id === prevId);
+        if (prevTask) memory.set(prevId, readFormValues(prevTask));
+      }
+      const task = getCurrentTask();
+      renderFormFor(task);
+      // restore if available
+      const saved = memory.get(task.id);
+      if (saved) writeFormValues(task, saved);
+      memory.set('__currentId', task.id);
+    });
+
+    // Initial render
+    renderFormFor(getCurrentTask());
+    memory.set('__currentId', getCurrentTask().id);
+
+    // Buttons
+    $('clear').onclick = () => clearOut();
+
+    $('run').onclick = async () => {
+      const task = getCurrentTask();
+      const vals = readFormValues(task);
+      try {
+        $('run').disabled = true;
+        $('run').textContent = 'Running…';
+        const res = await task.run(vals);
+        log(res);
+        // convenience: auto-fill pagination token if present
+        if (res && typeof res === 'object' && res.nextStartAfter) {
+          const el = document.getElementById('p_startAfter');
+          if (el) el.value = res.nextStartAfter;
+        }
+      } catch (e) {
+        log({ error: e?.message || String(e) });
+      } finally {
+        $('run').disabled = false;
+        $('run').textContent = 'Run';
+      }
+    };
+  </script>
+</body>
+</html>
