@@ -1,7 +1,7 @@
 // js/financesMenu.js
 // Standardised Finances menu with inline validation via MyFiUI.
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
-
+import { auth, db } from './core/auth.js';
 import { initHUD } from './hud/hud.js';
 import { connectTrueLayerAccount } from './core/truelayer.js';
 import {
@@ -33,29 +33,29 @@ import {
   }
 
   async function getPlayerCore() {
-    const user = (getAuth()).currentUser;
-    if (!user) return { uid: null, mode: 'standard', startMs: Date.now() };
-    const uid = user.uid;
-    const db = getFirestore();
-    const p = await getDoc(doc(db, "players", uid));
-    let mode = 'standard', startMs = Date.now();
-    if (p.exists()) {
-      const d = p.data() || {};
-      mode = String(d.vitalsMode || 'standard').toLowerCase();
-      const raw = d.startDate;
-      if (raw?.toMillis) startMs = raw.toMillis();
-      else if (raw instanceof Date) startMs = raw.getTime();
-      else if (typeof raw === 'number') startMs = raw;
-    }
-    return { uid, mode, startMs };
+    const uid = auth?.currentUser?.uid;
+    if (!uid) throw new Error('Not signed in');
+
+    const pSnap = await getDoc(doc(db, 'players', uid));
+    const p = pSnap.exists() ? (pSnap.data() || {}) : {};
+
+    const mode = String(p.vitalsMode || 'standard').toLowerCase()
+    const incomeMeta = p.incomeMeta || {};
+    const lastPayDateMs = Number(incomeMeta.lastPayDateMs || 0) || null;
+    const anchorMs = Number(incomeMeta.lastPaySavedAtMs || 0) || null;
+    return { uid, mode, lastPayDateMs, anchorMs };
   }
 
-  function monthWindow(startMs) {
-    const d = new Date(startMs);
-    const startMonthStartMs = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-    const startDateMs = startMs;
-    return { startMonthStartMs, startDateMs };
+  async function getAnchorMsClient() {
+    const uid = auth?.currentUser?.uid;
+    if (!uid) return Date.now(); // safe fallback
+    const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
+    if (!snap.exists()) return Date.now();
+    const cur = snap.data() || {};
+    const anchor = Number(cur?.seedAnchor?.rebaseKey || 0);
+    return Number.isFinite(anchor) && anchor > 0 ? anchor : Date.now();
   }
+
   const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
 
   function renderConnectBankInline() {
@@ -376,12 +376,11 @@ import {
 
         (async () => {
           await ensureAuthReady();
-          const { startMs } = await getPlayerCore();
-          const { startDateMs } = monthWindow(startMs);
+          const anchorMs = await getAnchorMsClient();
           const dateInput = date.querySelector('#txDate');
 
           if (dateInput) {
-            dateInput.min = toISODate(startDateMs);
+            dateInput.min = toISODate(anchorMs);
             const todayISO = toISODate(Date.now());
             dateInput.value = todayISO < dateInput.min ? dateInput.min : todayISO;
             dateInput.max = yyyy_mm_dd_today();
@@ -430,8 +429,7 @@ import {
     const user = getAuth().currentUser;
     if (!user) return;
 
-    const { startMs } = await getPlayerCore();
-    const { startDateMs } = monthWindow(startMs);
+    const anchorMs = await getPlayerCore();
 
     const detail = { ...e.detail };
     const type = String(detail.txType || 'debit');
@@ -443,7 +441,7 @@ import {
 
     // No pre-start entries
     const selDateMs = detail.txDate ? new Date(detail.txDate + 'T00:00:00Z').getTime() : Date.now();
-    const finalMs = Math.max(selDateMs, startDateMs);
+    const finalMs = Math.max(selDateMs, anchorMs);
     detail.txDate = toISODate(finalMs);
 
     await addTransaction(detail);
