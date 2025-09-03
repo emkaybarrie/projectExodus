@@ -58,26 +58,6 @@ import {
 
   const toISODate = (ms) => new Date(ms).toISOString().slice(0, 10);
 
-  function renderConnectBankInline() {
-    const wrap = document.createElement('div');
-    wrap.className = 'card';
-    wrap.style.marginBottom = '1rem';
-
-    const info = helper('Link your bank to fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.');
-
-    const b = primary('Connect with TrueLayer', async () => {
-      try {
-        await connectTrueLayerAccount();
-        window.MyFiModal.close();
-        await initHUD();
-        // optional: reopen Add Transaction after successful connect
-        window.MyFiModal.openChildItem(FinancesMenu, 'addTransaction', { menuTitle: 'Add Transaction' });
-      } catch (e) { console.warn('TrueLayer connect failed:', e); }
-    });
-
-    wrap.append(info, b);
-    return wrap;
-  }
 
   // ───────────────────────── Unified Itemised storage ─────────────────────────
   const DEFAULT_INCOME_CATS = [
@@ -376,7 +356,8 @@ import {
 
         (async () => {
           await ensureAuthReady();
-          const anchorMs = await getAnchorMsClient();
+          const { anchorMs: anchorFromProfile } = await getPlayerCore();
+          const anchorMs = Number(anchorFromProfile) || Date.now();
           const dateInput = date.querySelector('#txDate');
 
           if (dateInput) {
@@ -429,7 +410,8 @@ import {
     const user = getAuth().currentUser;
     if (!user) return;
 
-    const anchorMs = await getPlayerCore();
+    const { anchorMs: anchorFromProfile } = await getPlayerCore();
+    const anchorMs = Number(anchorFromProfile) || Date.now();
 
     const detail = { ...e.detail };
     const type = String(detail.txType || 'debit');
