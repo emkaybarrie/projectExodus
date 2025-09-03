@@ -92,7 +92,7 @@ export async function addTransaction(data) {
 
   // 7) Classified (pending → ghost → lock)
   const addedMs = nowMs;
-  const ghostWindowMs = 0.005 * 60 * 60 * 1000; // 1h
+  const ghostWindowMs = 1 * 60 * 60 * 1000; // 1h
 
   const classified = {
     amount: Number(amount),
