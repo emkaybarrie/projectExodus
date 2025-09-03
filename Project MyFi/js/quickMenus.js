@@ -200,8 +200,12 @@ attachQuickMenu('essence-btn', () =>
   pick(window.MyFiEssenceMenu, ['contribute', 'purchase', 'empower'])
 );
 
+// attachQuickMenu('right-btn', () =>
+//   pick(window.MyFiSocialMenu, ['home'])
+// );
+
 // Right (General) → label-only grid used for navigation (not content)
-attachQuickMenu('right-btn', buildGeneralMenu, {
-  onSelect: navToScreen
-});
+// attachQuickMenu('right-btn', buildGeneralMenu, {
+//   onSelect: navToScreen
+// });
 

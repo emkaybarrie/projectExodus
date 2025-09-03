@@ -2,6 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
   authDomain: "myfi-app-7fa78.firebaseapp.com",
@@ -16,9 +18,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+// NEW (bind to your region)
+const fns  = getFunctions(app, "europe-west2");
 
 // === Alias policy (keep this in sync with vitals.js) ===
 const MAX_ALIAS_LEN = 16;
+const ALIAS_RE = /^[A-Za-z0-9_\-]{3,32}$/;
 
 // Optional helper: show inline info/warning if form has a helper element
 function showAliasNotice(msg, type = "warn") {
@@ -69,66 +74,75 @@ export async function loginUser(email, password) {
   }
 }
 
-// Signup (auto-truncate + warning)
+// Signup (now calls setAlias)
 export async function signupUser(data) {
   try {
-    // Validate presence
     const rawAlias = (data.alias ?? "").toString().trim();
-    if (!rawAlias) {
-      showAliasNotice("Alias is required.", "warn");
-      return; // block submission until provided
-    }
+    if (!rawAlias) { showAliasNotice("Alias is required.", "warn"); return; }
 
-    // Auto-truncate and show a non-blocking warning if too long
-    let aliasSafe = rawAlias;
+    // Normalize to policy
+    let aliasSafe = rawAlias.slice(0, MAX_ALIAS_LEN);
+    if (!ALIAS_RE.test(aliasSafe)) {
+      showAliasNotice("Alias must be 3–32 chars: letters, numbers, _ or -.", "warn");
+      return;
+    }
     if (rawAlias.length > MAX_ALIAS_LEN) {
-      aliasSafe = rawAlias.slice(0, MAX_ALIAS_LEN);
       showAliasNotice(`Alias was shortened to ${MAX_ALIAS_LEN} characters.`, "warn");
-      // Note: we do not block; we proceed with the truncated value
     }
 
-    // Create auth user
-    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const user = userCredential.user;
+    // 1) Create auth user
+    const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
 
-    // Create player doc
+    // 2) Create base player doc (no alias fields here)
     await setDoc(doc(db, "players", user.uid), {
       startDate: serverTimestamp(),
-      alias: aliasSafe,
       email: data.email,
       firstName: data.firstName || "",
       lastName: data.lastName || "",
       level: Number(1),
       vitalsMode: 'standard',
       lastLoginAt: serverTimestamp(),
-      onboarding: {welcomeDone: false}
-    });
+      onboarding: { welcomeDone: false }
+    }, { merge: true });
 
-    // Seed auxiliary docs (unchanged)
+    // 3) Reserve alias + write alias/aliasLower atomically (handles/* + players/*)
+    const setAlias = httpsCallable(fns, "setAlias");
+    await setAlias({ alias: aliasSafe });
+
+    // 4) Seed auxiliary docs (unchanged)
     await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
       dCoreExpenses: Number(0),
       dIncome: Number(0)
     });
-
     await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
       essenceAllocation: Number(0.1),
       healthAllocation: Number(0.1),
       manaAllocation: Number(0.3),
       staminaAllocation: Number(0.5),
     });
-
     await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
-      recentUsage: { essence: 0, health: 0, mana: 0, stamina: 0 },
-      historicUsage: { essence: 0, health: 0, mana: 0, stamina: 0 },
+      recentUsage:  { essence: 0, health: 0, mana: 0, stamina: 0 },
+      historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
     });
 
+    // 5) Redirect
     sessionStorage.setItem('showSplashNext', '1');
     sessionStorage.setItem('myfi.welcome.v1.done', '0');
     localStorage.setItem('myfi.welcome.v1.done', '0');
     window.location.href = "dashboard.html";
   } catch (error) {
-    console.error("Signup error:", error.message);
-    alert("Signup failed: " + error.message);
+    console.error("Signup error:", error);
+    // Map common setAlias errors nicely
+    const code = error?.code || "";
+    if (code === "already-exists") {
+      showAliasNotice("That alias is taken. Try another.", "warn");
+      return;
+    }
+    if (code === "invalid-argument") {
+      showAliasNotice("Alias must be 3–32 chars: letters, numbers, _ or -.", "warn");
+      return;
+    }
+    alert("Signup failed: " + (error?.message || "Unknown error"));
   }
 }
 
@@ -142,4 +156,4 @@ export async function logoutUser() {
   }
 }
 
-export { auth, db };
+export { auth, db, fns };

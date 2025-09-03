@@ -257,6 +257,23 @@ export function autoInitAddSpendButton() {
 
 }
 
+// Stub - Social button
+export function autoInitAddSocialButton() {
+  // NEW: "Add Spend" — opens the Add Transaction modal directly
+  const btn = document.getElementById('right-btn');
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); 
+      // Open Menu Page
+      window.MyFiModal.openChildItem(window.MyFiSocialMenu, 'home', { 
+          menuTitle: 'Social' 
+      });
+
+    });
+  }
+
+}
+
 
 /* ────────────────────────────────────────────────────────────────────────────
    History modal (unchanged)

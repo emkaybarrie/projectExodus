@@ -1,11 +1,12 @@
 // js/settingsMenu.js
 // Adds deletion policy + anchor date selection to Reset Vitals flow.
+// Now uses setAlias callable for alias changes.
 
-import { auth, db, logoutUser } from './core/auth.js';
+import { auth, db, logoutUser, fns } from './core/auth.js';
 import {
-  doc, getDoc, updateDoc,
-  collection, query, where, limit, getDocs
+  doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { resetVitalsToNow } from './data/maintenance.js';
 import { initHUD } from './hud/hud.js';
 
@@ -14,41 +15,8 @@ import { initHUD } from './hud/hud.js';
 
   const debounce = (fn, ms=300) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
 
-  function lsClearOnboardingFlags() {
-    try {
-      const keys = [];
-      for (let i=0; i<localStorage.length; i++) keys.push(localStorage.key(i));
-      keys.forEach(k => { if (/onboard|welcome|tour|intro/i.test(k)) localStorage.removeItem(k); });
-      localStorage.removeItem('myfi:welcomeShown');
-      localStorage.removeItem('myfi:onboardingComplete');
-      localStorage.removeItem('myfi:tour.vitals.v1.done');
-    } catch {}
-  }
-
-  async function aliasTaken(rawAlias, uidSelf) {
-    const alias    = String(rawAlias || '').trim();
-    const aliasLow = alias.toLowerCase();
-    if (!alias) return false;
-    try {
-      const q1 = query(collection(db, 'players'), where('aliasLower', '==', aliasLow), limit(1));
-      const s1 = await getDocs(q1);
-      if (!s1.empty && s1.docs[0].id !== uidSelf) return true;
-    } catch {}
-    try {
-      const q2 = query(collection(db, 'players'), where('alias', '==', alias), limit(1));
-      const s2 = await getDocs(q2);
-      if (!s2.empty && s2.docs[0].id !== uidSelf) return true;
-    } catch {}
-    return false;
-  }
-
-  function validateAlias(raw) {
-    const a = String(raw || '').trim();
-    if (a.length < 3)  return 'Alias must be at least 3 characters.';
-    if (a.length > 20) return 'Alias must be 20 characters or fewer.';
-    if (!/^[a-z0-9_]+$/i.test(a)) return 'Use letters, numbers, or underscores only.';
-    return '';
-  }
+  // === Alias local policy (mirror server)
+  const ALIAS_RE = /^[A-Za-z0-9_\-]{3,32}$/;
 
   function yyyy_mm_dd_local(date) {
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -110,7 +78,6 @@ import { initHUD } from './hud/hud.js';
     const savedText = savedLastPayMs
       ? `If you leave this blank, we’ll use your saved Last Pay Day: <strong>${yyyy_mm_dd_local(new Date(savedLastPayMs))}</strong>.`
       : `If you leave this blank and there’s no saved date, we’ll use <strong>${DEFAULT_FALLBACK === 'today' ? 'Today' : 'the 1st of this month'}</strong>.`;
-    // NOTE: No radio / delete policy UI anymore; we always delete ALL.
     desc.innerHTML = `Choose your <strong>Last Pay Day</strong> (limited to the past 31 days).<br>
     <em>All existing transactions will be deleted for a fresh start.</em><br>${savedText}`;
 
@@ -174,9 +141,7 @@ import { initHUD } from './hud/hud.js';
       overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
 
       btnConfirm.addEventListener('click', () => {
-        // Always default to deleting ALL transactions
         const deletePolicy = 'all';
-
         const val = String(input.value || '').trim();
         if (val) {
           const ms = midnightMsFromInput(val);
@@ -188,8 +153,6 @@ import { initHUD } from './hud/hud.js';
           cleanup({ anchorDateMs: ms, deletePolicy });
           return;
         }
-
-        // No explicit pick:
         if (Number.isFinite(savedLastPayMs)) {
           cleanup({ anchorDateMs: savedLastPayMs, deletePolicy });
         } else {
@@ -199,7 +162,6 @@ import { initHUD } from './hud/hud.js';
       });
     });
   }
-
 
   function buildProfileView(){
     const root = document.createElement('div');
@@ -239,7 +201,6 @@ import { initHUD } from './hud/hud.js';
     const wipeBtn  = document.createElement('button'); wipeBtn.type='button'; wipeBtn.className='btn btn--danger';
     wipeBtn.id = 'btnResetProfile'; wipeBtn.textContent = 'Reset Vitals (start new cycle)';
     const wipeHelp = helper('Resets vitals to a fresh pay-cycle anchor.');
-
     wipeWrap.append(wipeLab, wipeBtn);
 
     root.append(
@@ -249,6 +210,22 @@ import { initHUD } from './hud/hud.js';
       obxWrap, obxHelp,
       wipeWrap, wipeHelp
     );
+
+    // Prefill and remember original alias to detect changes
+    let originalAlias = '';
+    (async () => {
+      try {
+        const uid = auth?.currentUser?.uid; if (!uid) return;
+        const snap = await getDoc(doc(db, "players", uid));
+        if (snap.exists()) {
+          const d = snap.data() || {};
+          originalAlias = d.alias || '';
+          root.querySelector('#profileAlias').value = originalAlias;
+        }
+      } catch(e) {
+        console.warn('[Settings] Prefill failed', e);
+      }
+    })();
 
     (async () => {
       try {
@@ -286,7 +263,7 @@ import { initHUD } from './hud/hud.js';
       }
     });
 
-    // NEW: Reset Vitals handler w/ delete policy
+    // Reset Vitals flow (unchanged except dialog copy)
     wipeBtn.addEventListener('click', async () => {
       const uid = auth?.currentUser?.uid; if (!uid) return;
 
@@ -322,17 +299,14 @@ import { initHUD } from './hud/hud.js';
       }
     });
 
+    // Local format validation (no client-side uniqueness query)
     const aliasInput = root.querySelector('#profileAlias');
     const showAliasError = (msg) => { aliasError.textContent = msg || ''; aliasInput.setAttribute('aria-invalid', msg ? 'true' : 'false'); };
-    const runAliasCheck = debounce(async () => {
-      const uid = auth?.currentUser?.uid || null;
-      const raw = aliasInput.value;
-      const v = validateAlias(raw);
-      if (v) { showAliasError(v); return; }
-      const taken = await aliasTaken(raw, uid);
-      showAliasError(taken ? 'Sorry, that alias is taken.' : '');
-    }, 350);
-
+    const runAliasCheck = debounce(() => {
+      const raw = String(aliasInput.value || '').trim();
+      const ok = ALIAS_RE.test(raw);
+      showAliasError(ok ? '' : 'Use 3–32 chars: letters, numbers, _ or -.');
+    }, 250);
     aliasInput.addEventListener('input', runAliasCheck);
     aliasInput.addEventListener('blur', runAliasCheck);
 
@@ -345,16 +319,31 @@ import { initHUD } from './hud/hud.js';
       const last     = String(root.querySelector('#profileLast')?.value  || '').trim();
       const vitals   = root.querySelector('#vitalsMode')?.value || 'standard';
 
-      const vMsg = validateAlias(alias);
-      if (vMsg) { showAliasError(vMsg); return; }
-      const taken = await aliasTaken(alias, uid);
-      if (taken) { showAliasError('Sorry, that alias is taken.'); return; }
+      // Local format validation
+      if (!ALIAS_RE.test(alias)) { showAliasError('Use 3–32 chars: letters, numbers, _ or -.'); return; }
       showAliasError('');
 
+      // 1) If alias changed → setAlias callable (atomic: players + handles)
+      if (alias !== originalAlias) {
+        try {
+          const setAlias = httpsCallable(fns, 'setAlias');
+          await setAlias({ alias });
+          originalAlias = alias; // update local marker
+        } catch (e) {
+          const code = e?.code || '';
+          const msg =
+            code === 'already-exists'    ? 'Sorry, that alias is taken.' :
+            code === 'invalid-argument'  ? 'Use 3–32 chars: letters, numbers, _ or -.' :
+            code === 'permission-denied' ? 'You are not allowed to change alias right now.' :
+            'Could not update alias.';
+          showAliasError(msg);
+          return;
+        }
+      }
+
+      // 2) Save other profile fields
       try {
         await updateDoc(doc(db, "players", uid), {
-          alias,
-          aliasLower: alias.toLowerCase(),
           firstName: first,
           lastName:  last,
           vitalsMode: vitals

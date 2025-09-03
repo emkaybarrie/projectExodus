@@ -14,6 +14,7 @@ import "./settingsMenu.js";
 import "./helpMenu.js";
 import "./financesMenu.js";
 import "./essenceMenu.js";
+import "./socialMenu.js";
 import "./quickMenus.js";
 import "./musicManager.js"
 
