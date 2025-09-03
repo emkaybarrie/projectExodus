@@ -1,5 +1,6 @@
 // js/modal.js
 (function () {
+  // -------------- Constants and DOM refs --------------
   const backdrop  = document.getElementById('appModalBackdrop');
   const titleEl   = document.getElementById('modalTitle');
   const contentEl = document.getElementById('modalContent');
@@ -7,6 +8,53 @@
   const shell     = document.querySelector('#appModalBackdrop .modal');
 
   if (!backdrop || !shell) { console.warn('Modal mount not found'); return; }
+// ---------------- Helpers for mobile keyboard prevention ----------------
+  // --- prevent mobile keyboard on open (focus a non-input element) ---
+function ensureFocusSentinel() {
+  let sentinel = document.getElementById('modalFocusSentinel');
+  if (!sentinel) {
+    const btn = document.createElement('button');
+    btn.id = 'modalFocusSentinel';
+    btn.type = 'button';
+    btn.tabIndex = 0;
+    btn.setAttribute('aria-hidden', 'true');
+    // visually hidden but focusable
+    btn.style.position = 'absolute';
+    btn.style.width = '1px';
+    btn.style.height = '1px';
+    btn.style.padding = '0';
+    btn.style.margin = '-1px';
+    btn.style.overflow = 'hidden';
+    btn.style.clip = 'rect(0 0 0 0)';
+    btn.style.whiteSpace = 'nowrap';
+    btn.style.border = '0';
+    // insert at the start of modal content (or backdrop as fallback)
+    (contentEl || backdrop).prepend(btn);
+    sentinel = btn;
+  }
+  return sentinel;
+}
+
+function stripAutofocus(rootEl) {
+  const removed = [];
+  rootEl.querySelectorAll('[autofocus]').forEach(el => {
+    removed.push(el);
+    el.removeAttribute('autofocus');
+  });
+  return removed;
+}
+
+function safeBlurActive() {
+  try { if (document.activeElement) document.activeElement.blur(); } catch {}
+}
+
+function preventAutoKeyboardOnOpen() {
+  safeBlurActive();
+  const sentinel = ensureFocusSentinel();
+  // focusing a button won't open the keyboard on mobile
+  setTimeout(() => sentinel.focus({ preventScroll: true }), 0);
+}
+
 
   // ---------------- state ----------------
   let lastOpenOpts = {};
@@ -167,6 +215,11 @@
     document.addEventListener('keydown', onKey);
     backdrop.addEventListener('keydown', trapTab);
 
+    // prevent mobile keyboard on open
+    stripAutofocus(backdrop);
+    preventAutoKeyboardOnOpen();
+
+
     // initial layout and live observers
     recalcMaxHeight();
     attachObservers();
@@ -182,8 +235,10 @@
         contentEl.textContent = '';
         titleEl.textContent = menuTitleOverride || 'Menu';
       }
-      setTimeout(() =>
-        contentEl?.querySelector('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')?.focus(), 0);
+      setTimeout(() => {
+        const el = contentEl?.querySelector('button,[href],[tabindex]:not([tabindex="-1"])');
+        (el || document.getElementById('modalFocusSentinel'))?.focus();
+      }, 0);
     } else {
       // Menu grid
       backdrop.classList.add('is-single'); // visually hide sidebar (single column)
@@ -224,9 +279,10 @@
     contentEl.scrollTop = 0;
 
     setTimeout(() => {
-      const first = contentEl.querySelector('input,select,textarea,button,[tabindex]:not([tabindex="-1"])');
-      first?.focus();
+      const firstSafe = contentEl.querySelector('button,[href],[tabindex]:not([tabindex="-1"])');
+      (firstSafe || document.getElementById('modalFocusSentinel'))?.focus();
     }, 0);
+
 
     requestAnimationFrame(recalcMaxHeight);
   }
