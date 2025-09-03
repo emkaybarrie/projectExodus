@@ -110,7 +110,9 @@ import { initHUD } from './hud/hud.js';
     const savedText = savedLastPayMs
       ? `If you leave this blank, we’ll use your saved Last Pay Day: <strong>${yyyy_mm_dd_local(new Date(savedLastPayMs))}</strong>.`
       : `If you leave this blank and there’s no saved date, we’ll use <strong>${DEFAULT_FALLBACK === 'today' ? 'Today' : 'the 1st of this month'}</strong>.`;
-    desc.innerHTML = `Choose your <strong>Last Pay Day</strong> (limited to the past 31 days), and how to treat existing transactions.<br>${savedText}`;
+    // NOTE: No radio / delete policy UI anymore; we always delete ALL.
+    desc.innerHTML = `Choose your <strong>Last Pay Day</strong> (limited to the past 31 days).<br>
+    <em>All existing transactions will be deleted for a fresh start.</em><br>${savedText}`;
 
     const dateField = document.createElement('div');
     dateField.className = 'field';
@@ -143,29 +145,6 @@ import { initHUD } from './hud/hud.js';
       input.value = (btn.dataset.pick === 'today') ? max : firstStr;
     });
 
-    // NEW: delete policy radios
-    const delWrap = document.createElement('div');
-    delWrap.className = 'field';
-    const delLab = document.createElement('label');
-    delLab.textContent = 'Delete transactions';
-    const delOpts = document.createElement('div');
-    delOpts.style.marginTop = '6px';
-    delOpts.innerHTML = `
-      <label style="display:block;margin:.25rem 0;">
-        <input type="radio" name="delScope" value="all" checked />
-        Delete <strong>all</strong> transactions (recommended fresh start)
-      </label>
-      <label style="display:block;margin:.25rem 0;">
-        <input type="radio" name="delScope" value="before_anchor" />
-        Delete only transactions <strong>before</strong> the reset time
-      </label>
-      <label style="display:block;margin:.25rem 0;">
-        <input type="radio" name="delScope" value="none" />
-        Keep all transactions (advanced)
-      </label>
-    `;
-    delWrap.append(delLab, delOpts);
-
     const hint = document.createElement('div');
     hint.className = 'helper';
     hint.textContent = savedLastPayMs
@@ -182,9 +161,9 @@ import { initHUD } from './hud/hud.js';
       padding:'.55rem .85rem', borderRadius:'10px', border:'1px solid var(--line,#333)', cursor:'pointer', color:'#fff'
     }));
     btnConfirm.style.background = 'linear-gradient(180deg, rgba(90,180,255,.25), rgba(90,180,255,.12))';
-    row.append(btnConfirm, btnCancel);
 
-    card.append(title, desc, dateField, picks, delWrap, hint, row);
+    card.append(title, desc, dateField, picks, hint, row);
+    row.append(btnConfirm, btnCancel);
     overlay.append(card);
     document.body.appendChild(overlay);
 
@@ -195,9 +174,8 @@ import { initHUD } from './hud/hud.js';
       overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
 
       btnConfirm.addEventListener('click', () => {
-        const radios = delOpts.querySelectorAll('input[name="delScope"]');
-        let deletePolicy = 'all';
-        radios.forEach(r => { if (r.checked) deletePolicy = r.value; });
+        // Always default to deleting ALL transactions
+        const deletePolicy = 'all';
 
         const val = String(input.value || '').trim();
         if (val) {
@@ -213,16 +191,15 @@ import { initHUD } from './hud/hud.js';
 
         // No explicit pick:
         if (Number.isFinite(savedLastPayMs)) {
-          // Use saved lastPayDateMs; server will set anchor to NOW
           cleanup({ anchorDateMs: savedLastPayMs, deletePolicy });
         } else {
-          // Fallback policy
           const fallbackStr = (DEFAULT_FALLBACK === 'today') ? max : firstStr;
           cleanup({ anchorDateMs: midnightMsFromInput(fallbackStr), deletePolicy });
         }
       });
     });
   }
+
 
   function buildProfileView(){
     const root = document.createElement('div');
