@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const portraitImage = document.querySelector(".portrait");
       let portraitKey = playerData.portraitKey || "default";
-      const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty"];
+      const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
       portraitKey = portraitNames.includes(playerData.firstName) ? ('avatar' + playerData.firstName) : 'default';
       if (portraitImage) portraitImage.src = `./assets/portraits/${portraitKey}.png`;
 
