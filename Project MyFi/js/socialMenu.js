@@ -502,7 +502,8 @@ function stopSocialListeners() {
       try {
         const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
         const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'ensureInviteCode');
-        const { data } = await fn({});
+        const baseHint = window.location.href; // e.g., http://127.0.0.1:5500/Project%20MyFi/somepage.html
+        const { data } = await fn({baseHint});
         codeEl.textContent = `Your code: ${data.inviteCode}`;
         linkEl.textContent = data.inviteUrl;
       } catch (e) {
