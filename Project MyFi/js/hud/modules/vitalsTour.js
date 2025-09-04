@@ -55,15 +55,15 @@ function getVitalsTourSteps() {
     },
     {
       target: '.update-log',
-      title: 'Action Log',
+      title: 'Events Log - Active',
       content:
-        'Tracks pending actions that will soon affect your avatar. Tap, or long-press to edit before they lock in. Once confirmed, they become part of your story.'
+        'Add and track events that will soon affect your avatar. Tap, or long-press to edit before they lock in. Once confirmed, they become part of your story.'
     },
     {
       target: '.recently-locked',
-      title: 'Recent Actions',
+      title: 'Events Log - Recent',
       content:
-        'Confirmed actions that have shaped your avatar. Once here, the consequences are permanent — adapt and press forward.'
+        'Confirmed events that have shaped your avatar. Once here, the consequences are permanent — adapt and press forward.'
     },
     {
       target: '#vital-essence',
@@ -79,15 +79,15 @@ function getVitalsTourSteps() {
     },
     {
       target: '#left-btn',
-      title: 'Cycle Context',
+      title: 'Energy Menu',
       content:
-        'Tap 🌀 to shift through different timeframes — Daily, Weekly, Monthly — to see how your energy stacks up.'
+        "Set the values that determine power your avatar's very being  — watch it shape the foundations of their vitals. Can connect to your bank for full automation and unlock the full game experience"
     },
     {
       target: '#right-btn',
-      title: 'Finance Menu',
+      title: 'Social Menu',
       content:
-        'Tap 📜 to log spending, set income and expenses, or connect your bank for automation. This powers your vitals and unlocks the full game experience.'
+        'Connect with friends, band together to take on The Badlands, and invite others to join in the fight.'
     },
     {
       target: '.myfi-nav-btn',
