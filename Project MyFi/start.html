@@ -81,11 +81,12 @@
       html.classList.add('ready');
     }, { once:true });
 
-    // Tap to proceed -> fade button, then go to auth.html
+    // Tap to proceed -> fade button, then go to auth.html (preserves ?invite=CODE)
     cta.addEventListener('click', () => {
       cta.classList.add('leaving');
+      const qs = window.location.search || '';  // preserve query string
       // keep overlays running while navigating
-      setTimeout(() => { window.location.href = 'auth.html'; }, 260);
+      setTimeout(() => { window.location.href = 'auth.html' + qs; }, 260);
     });
   </script>
 </body>

@@ -257,7 +257,7 @@
     container.replaceChildren(
         helper('<strong>Friend requests</strong>'),
         ...state.requests.map(r => requestRow(r, onAccept, onDecline)),
-        state.requests.length ? null : helper('No pending requests.')
+        state.requests.length ? '' : helper('No pending requests.')
     );
     }
 
