@@ -73,10 +73,10 @@ async function showFirstRunSetup(uid) {
   // --- [NEW | optional] centralise tiny helper blurbs you can tweak anytime
   const QS_DESC = {
     incomeAmt: 'Use your typical take-home (after tax). You can refine this later.',
-    incomeCad: 'How often this paycheck hits your account.',
-    lastPay:   'The most recent date you were paid. Helps us time accruals.',
-    expAmt:    'Your predictable monthly essentials (rent, bills, etc).',
-    expCad:    'How often those essentials are charged.',
+    incomeCad: 'How often this pay check hits your account.',
+    lastPay:   'The most recent date you were paid. Required to calculate your vitals.',
+    expAmt:    'Your predictable "must-pay" essentials (rent, bills, debts, etc).',
+    expCad:    'How often this amount is due.',
     modeSel:   'Pick a starting intensity. You can change this anytime in Settings.'
   };
 
@@ -236,23 +236,23 @@ export async function showWelcomeThenMaybeSetup(uid) {
 
   const INTRO_HTML = `
     <h1>Welcome to Project MyFi</h1>
-    <p class="lead"><strong>Thanks for joining us in our goal to make managing your finances a more enjoyable experience — we look forward to your feedback as the game continues to grow!</strong> 😊</p>
     <p class="lead">
       <strong>Project MyFi</strong> is an ever‑evolving world, where your real-life spending habits power your in‑game journey.  Reimagine your finances, and see the impact of your day-to-day choices through the eyes of your <em>Avatar</em>:<br><br>
       • <strong>Progress</strong> - and rise to the challenge of <em>Quests</em> that promote saving.<br>
-      • <strong>Customise</strong> - around your habits, goals and style.<br>
-      • <strong>Empower</strong> - and push deeper into <em>The Badlands</em> for greater rewards.<br><br>
-      Spend wisely, plan intentionally, and grow stronger over time.
+      • <strong>Customise</strong> - your chosen hero around your habits, goals and style.<br>
+      • <strong>Empower</strong> - through your actions, and push deeper into <em>The Badlands</em> for greater rewards.<br><br>
+      Spend wisely, plan intentionally, and see your strength grow over time.
     </p>
+
+    <p class="lead"><strong>Thanks for joining us in our goal to make managing your finances a more enjoyable experience — we look forward to your feedback as the game continues to grow!</strong> 😊</p>
   `;
   const QUICKSTART_HTML = `
     <h1>Quick Start</h1>
     <p class="lead">Five key steps to get started.</p>
     <ol class="steps">
-      <li>📜 Set income & core expenses in <strong>Finances</strong> to provide your avatar with energy.</li>
-      <li>📜 Log transactions in <strong>Finances</strong> (long‑press to edit whilst in the Update Log).</li>
-      <li>🌀 Manage your Health, Mana, Stamina, and Essence from a Daily/Weekly/Monthly view.</li>
-      <li>⚔️ Empower your avatar and prepare them for <strong>The Badlands</strong>.</li>
+      <li>🌀 Manage your avatar's source of energy, by setting your income & core expenses (this affects your <strong>Vitals</strong> shown on the main hub screen).</li>
+      <li>📜 Log, and review spending via the <strong>Events Log</strong> (long‑press to edit whilst they are "Active").</li>
+      <li>🔮 Empower your avatar and prepare them for <strong>The Badlands</strong> (Coming Soon).</li>
       <li>❔ See <strong>Help</strong> to learn more.</li>
     </ol>
   `;

@@ -347,9 +347,9 @@ import {
 
         const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
         const amt = field('Amount', 'number', 'txAmount', { min: 0, step: '0.01', placeholder: 'e.g. 23.40' });
-        const type = select('Type', 'txType', [['debit', 'Expense'], ['credit', 'Income']]);
+        //const type = select('Type', 'txType', [['debit', 'Expense'], ['credit', 'Income']]);
         const date = field('Date', 'date', 'txDate', {});
-        const pool = select('Pool (optional)', 'txPool', [['', 'Unassigned'], ['stamina', 'Stamina'], ['mana', 'Mana']]);
+        const pool = select('Pool (optional)', 'txPool', [['', 'Automatic'], ['stamina', 'Stamina'], ['mana', 'Mana']]);
         const note = helper('If left unassigned, the transaction is automatically tagged based on your avatar. Default: Stamina.');
 
 
@@ -369,7 +369,7 @@ import {
         })();
 
 
-        root.append(desc, amt, type, date, pool, note);
+        root.append(desc, amt, date, pool, note); // Removed type until income type logic sorted
         return [root];
       },
       footer() {

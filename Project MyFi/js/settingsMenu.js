@@ -176,17 +176,16 @@ import { initHUD } from './hud/hud.js';
     const lastName   = field('Last Name',  'text', 'profileLast',  { placeholder: 'e.g. Morgan' });
 
     const vmWrap = document.createElement('div'); vmWrap.className='field';
-    const vmLab  = document.createElement('label'); vmLab.htmlFor='vitalsMode'; vmLab.textContent='Vitals Start Mode';
+    const vmLab  = document.createElement('label'); vmLab.htmlFor='vitalsMode'; vmLab.textContent='Vitals Mode';
     const vmSel  = document.createElement('select'); vmSel.id='vitalsMode'; vmSel.className='input';
-    [['relaxed','Relaxed'], ['standard','Standard'], ['focused','Focused'], ['true','True (bank sync)']]
+    [['relaxed','Relaxed'], ['standard','Standard'], ['focused','Focused']]
       .forEach(([v,t])=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; vmSel.appendChild(o); });
     vmWrap.append(vmLab, vmSel);
     const vmHelp = helper(`
       <ul>
-        <li><strong>Relaxed</strong> — conservative regen.</li>
-        <li><strong>Standard</strong> — auto-seed based on when you start.</li>
-        <li><strong>Focused</strong> — encourages reduced spending from Day 1.</li>
-        <li><strong>True</strong> — connect your bank (paid) for fully live automation.</li>
+        <li><strong>Relaxed</strong> — nudges you gently into the right spending habits.</li>
+        <li><strong>Standard</strong> — recommended for most players.</li>
+        <li><strong>Focused</strong> — encourages greater spending disicpline.</li>
       </ul>
     `);
 

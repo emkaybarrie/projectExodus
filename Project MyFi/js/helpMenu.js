@@ -244,7 +244,7 @@ import {
     quests:    { label:'Quests',   title:'Help • Quests',     preview:'Goals into adventures with rewards.', render: questsRender },
     avatars:   { label:'Avatars',  title:'Help • Avatars',    preview:'Customise your hero and perks.', render: avatarsRender },
     badlands:  { label:'The Badlands', title:'Help • The Badlands', preview:'Enter and test your strength.', render: badlandsRender },
-    resources: { label:'Products / Guidance', title:'Help • Products & Guidance', preview:'Insights and partner tools.', render: resourcesRender },
+    resources: { label:'Resources', title:'Help • Resources', preview:'Insights and partner tools.', render: resourcesRender },
     faq:       { label:'FAQ',      title:'Help • FAQ',         preview:'Fast answers to common questions.', render: faqRender },
     report:    { label:'Report an Issue', title:'Help • Report an Issue', preview:'Spotted a bug or idea? Tell us.', 
       render() {
