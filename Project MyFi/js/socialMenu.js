@@ -35,7 +35,7 @@
         const d = snap.exists() ? snap.data() : {};
 
         // Stub for profile pic
-        const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty"];
+        const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
         const portraitKey = portraitNames.includes(d.firstName) ? ('avatar' + d.firstName) : 'default';
         const portraitImageSrc = `./assets/portraits/${portraitKey}.png`;
 
