@@ -125,6 +125,23 @@ export async function signupUser(data) {
       historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
     });
 
+    // Capture Invite code if present (non-blocking)
+    try {
+      const params = new URL(window.location.href).searchParams;
+      const invite = (params.get('invite') || params.get('ref') || '').trim();
+      if (invite) {
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+        const fn = httpsCallable(getFunctions(app, 'europe-west2'), 'captureInviteOnSignup');
+        await fn({ inviteCode: invite });
+        // optional: show a quick toast
+        // alert('Invite captured, thanks!');
+      }
+    } catch (e) {
+      console.warn('[Signup] captureInviteOnSignup failed:', e);
+      // non-fatal; user continues
+    }
+
+
     // 5) Redirect
     sessionStorage.setItem('showSplashNext', '1');
     sessionStorage.setItem('myfi.welcome.v1.done', '0');

@@ -33,7 +33,13 @@
         const db = getFirestore();
         const snap = await getDoc(doc(db, 'players', uid));
         const d = snap.exists() ? snap.data() : {};
-        const obj = { alias: d.alias || uid.slice(0,6), avatar: d.avatarUrl || './assets/portraits/default.png' };
+
+        // Stub for profile pic
+        const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty"];
+        const portraitKey = portraitNames.includes(d.firstName) ? ('avatar' + d.firstName) : 'default';
+        const portraitImageSrc = `./assets/portraits/${portraitKey}.png`;
+
+        const obj = { alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png' };
         _profileCache.set(uid, obj);
         return obj;
     } catch { return { alias: uid.slice(0,6), avatar: '/assets/avatars/placeholder.png' }; }
@@ -109,7 +115,7 @@
     }});
 
     const avatar = el('img', {
-      src: friend.avatar || '/assets/avatars/placeholder.png',
+      src: friend.avatar || './assets/portraits/default.png',
       alt: `${friend.alias} avatar`,
       style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }
     });
@@ -476,18 +482,40 @@ function stopSocialListeners() {
   // -------------------- Invite placeholder --------------------
   function inviteRender() {
     const root = el('div');
+    const codeEl = el('div', { style:{ fontSize:'14px', opacity:0.85 }}, 'Loading…');
+    const linkEl = el('code', { style:{ display:'block', marginTop:'6px', wordBreak:'break-all' }}, '');
+    const copyBtn = btn('Copy link', 'secondary', async () => {
+      const txt = linkEl.textContent || '';
+      await navigator.clipboard?.writeText(txt);
+      alert('Copied!');
+    });
+
     root.append(
       helper('<strong>Invite to MyFi</strong>'),
       helper('Share your personal invite link or code with friends.'),
-      // In v2: replace below with dynamic link/code from CF
-      helper('<code>myfi.app/invite/ABC123</code> (placeholder)'),
-      btn('Copy link', 'secondary', () => {
-        navigator.clipboard?.writeText('https://myfi.app/invite/ABC123');
-        alert('Copied!');
-      })
+      codeEl,
+      linkEl,
+      copyBtn
     );
+
+    (async () => {
+      try {
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+        const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'ensureInviteCode');
+        const { data } = await fn({});
+        codeEl.textContent = `Your code: ${data.inviteCode}`;
+        linkEl.textContent = data.inviteUrl;
+      } catch (e) {
+        console.warn('[Invite] ensureInviteCode failed', e);
+        codeEl.textContent = 'Could not load your invite code.';
+        linkEl.textContent = '';
+        copyBtn.disabled = true;
+      }
+    })();
+
     return [root];
   }
+
   function inviteFooter() { return [ cancel('Close') ]; }
 
   // -------------------- Menu map --------------------
