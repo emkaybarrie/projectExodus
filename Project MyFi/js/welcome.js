@@ -252,6 +252,7 @@ export async function showWelcomeThenMaybeSetup(uid) {
     <ol class="steps">
       <li>🌀 Manage your avatar's source of energy, by setting your income & core expenses (this affects your <strong>Vitals</strong> shown on the main hub screen).</li>
       <li>📜 Log, and review spending via the <strong>Events Log</strong> (long‑press to edit whilst they are "Active").</li>
+      <li>👥 Add your friends, or invite them to join MyFi.</li>
       <li>🔮 Empower your avatar and prepare them for <strong>The Badlands</strong> (Coming Soon).</li>
       <li>❔ See <strong>Help</strong> to learn more.</li>
     </ol>
