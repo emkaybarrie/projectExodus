@@ -134,7 +134,7 @@ import { showToast } from './core/toast.js';
         availableRow.className = 'field';
         availableRow.innerHTML = `
           <div class="current-row">
-            <label>Available Essence (Monthly)</label>
+            <label>Available Essence</label>
             <div id="ess-available" class="current-value">—</div>
           </div>
         `;

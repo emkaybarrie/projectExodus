@@ -313,14 +313,15 @@ import {
   const FinancesMenu = {
     connectBank: {
       label: 'Connect Bank',
-      title: 'Connect a Bank (COMING SOON - TEST MODE ONLY)',
+      title: 'Connect a Bank (COMING SOON)',
       preview: 'Link your bank for automatic transaction sync (via TrueLayer). Unlocks full automation.',
       render() {
         // keep this simple; also reachable from Add Transaction via cross-link
         const info = helper('Linking your bank lets the app fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.');
         const b = primary('Connect with TrueLayer', async () => {
-          try { await connectTrueLayerAccount(); window.MyFiModal.close(); await initHUD(); }
-          catch (e) { console.warn('TrueLayer connect failed:', e); }
+          // try { await connectTrueLayerAccount(); window.MyFiModal.close(); await initHUD(); }
+          // catch (e) { console.warn('TrueLayer connect failed:', e); }
+          alert('Coming soon!');
         });
         return [info, b];
       },
