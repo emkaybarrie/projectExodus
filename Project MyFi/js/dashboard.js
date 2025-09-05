@@ -61,12 +61,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!docSnap.exists()) { await setDoc(userRef, { startDate: serverTimestamp() }, { merge: true }); }
 
       const playerData = await playerDataManager.init(uid).then((p) => { console.log("Player data loaded:", p.alias); return p; });
+      console.log("Player data ready:", playerData);
+      let avatarKey = playerData.avatarKey || "default";
 
+     if (avatarKey === 'default' || avatarKey === ''){
+       
+        const avatarsSource = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
+        avatarKey = avatarsSource.includes(playerData.firstName) ? (playerData.firstName) : 'default';
+        // Update avatarKey in player doc if empty or default
+          // try { await updateDoc(userRef, { avatarKey: portraitKey }); } catch (e) { console.warn("Failed to update avatarKey:", e); }
+          try { await setDoc(userRef, { avatarKey: avatarKey }, { merge: true }); } catch (e) { console.warn("Failed to update avatarKey:", e); }
+      }
+      console.log("Using avatarKey:", avatarKey);
       const portraitImage = document.querySelector(".portrait");
-      let portraitKey = playerData.portraitKey || "default";
-      const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
-      portraitKey = portraitNames.includes(playerData.firstName) ? ('avatar' + playerData.firstName) : 'default';
-      if (portraitImage) portraitImage.src = `./assets/portraits/${portraitKey}.png`;
+      if (portraitImage) portraitImage.src = `./assets/portraits/${avatarKey}.png`;
 
       await initHUD(uid);
     })();
