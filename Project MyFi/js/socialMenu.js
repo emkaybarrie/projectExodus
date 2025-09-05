@@ -37,11 +37,10 @@
         const d = snap.exists() ? snap.data() : {};
 
         // Stub for profile pic
-        const portraitNames = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
-        const portraitKey = portraitNames.includes(d.firstName) ? ('avatar' + d.firstName) : 'default';
-        const portraitImageSrc = `./assets/portraits/${portraitKey}.png`;
+        if (!d.avatarKey){ d.avatarKey = 'default'; }
+        const portraitImageSrc = `./assets/portraits/${d.avatarKey}.png`;
 
-        const obj = { alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png', firstName: d.firstName || ''};
+        const obj = { avatarKey: d.avatarKey || 'default', alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png', firstName: d.firstName || ''};
         _profileCache.set(uid, obj);
         return obj;
     } catch { return { alias: uid.slice(0,6), avatar: './assets/portraits/default.png' }; }
@@ -132,7 +131,7 @@
     const text = el('div', { class: 'social__rowText' });
     const alias = el('div', { style:{ fontWeight:'600' }}, friend.alias);
     const secondaryText = (friend.theirTrust && friend.firstName)
-      ? `First name visible: ${friend.firstName}`
+      ? `${friend.firstName}`
       : (friend.status || '—');
     const status = el('div', { class: 'social__status', style:{ opacity:0.8, fontSize:'12px' }}, secondaryText);
     text.append(alias, status);
