@@ -205,40 +205,70 @@
       {
         id: 'invitesReset',
         label: 'Invites Reset / Clear (HTTP)',
-        help: 'Delete all invites (batched), delete a single invite by code, clear a specific owner’s invite, or purge an owner’s referrals.',
+        help: 'Delete all invites (batched), delete a single invite by code, clear one owner’s invite, purge owner referrals, or sweep players with stale invite codes.',
         params: [
           { key:'httpUrl',  label:'HTTP Function URL', type:'text', placeholder:'https://…/resetInvitesMaintenanceHttp', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/resetInvitesMaintenanceHttp' },
-          { key:'secret',   label:'Secret (query/body)', type:'text', placeholder:'Enter secret if set', default:'' },
+          { key:'secret',   label:'Secret (query/body)', type:'text', placeholder:'RUN_ONCE_CHANGE_ME', default:'RUN_ONCE_CHANGE_ME' },
           { key:'action',   label:'Action', type:'select', options:[
             {value:'deleteAllInvites', label:'Delete ALL invites (batched)'},
             {value:'deleteInviteByCode', label:'Delete ONE invite by code'},
             {value:'clearOwnerInvite', label:'Clear one owner’s invite (and delete invite doc)'},
-            {value:'purgeOwnerReferrals', label:'Purge owner’s referrals subcollection'}
+            {value:'purgeOwnerReferrals', label:'Purge owner’s referrals subcollection'},
+            {value:'clearStalePlayerInviteFields', label:'SWEEP: clear player invite fields if invite doc missing'}
           ], default:'deleteAllInvites' },
+
+          // deleteAllInvites-only extras
+          { key:'alsoClearPlayers', label:'Also clear players invite fields (when deleting ALL)', type:'select',
+            options:[{value:'0',label:'No'},{value:'1',label:'Yes'}], default:'1' },
+          { key:'pageSize', label:'Page size (deleteAllInvites)', type:'number', min:100, max:1000, default:500 },
+
+          // deleteInviteByCode
           { key:'code',     label:'Invite code (when deleting ONE)', type:'text', placeholder:'ABC-123XYZ', default:'' },
+
+          // clearOwnerInvite / purgeOwnerReferrals
           { key:'ownerUid', label:'Owner uid (when clearing/purging)', type:'text', placeholder:'uid_...', default:'' },
-          { key:'pageSize', label:'Page size (when deleting ALL)', type:'number', min:100, max:1000, default:500 },
+
+          // clearStalePlayerInviteFields (sweep)
+          { key:'startAfterUid',  label:'Start after (uid) — sweep', type:'text', placeholder:'(leave blank for first page)', default:'' },
+
           { key:'method',   label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
         ],
         async run(v) {
-          const { httpUrl, secret, action, code, ownerUid, pageSize, method } = v;
+          const { httpUrl, secret, action, code, ownerUid, pageSize, method, alsoClearPlayers, startAfterUid } = v;
           if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
-          const basePayload = { secret, action, code, ownerUid, pageSize: Number(pageSize) };
 
           if (method === 'GET') {
             const qs = new URLSearchParams();
             qs.set('secret', secret);
             qs.set('action', action);
-            if (code) qs.set('code', code);
-            if (ownerUid) qs.set('ownerUid', ownerUid);
-            if (action === 'deleteAllInvites') qs.set('pageSize', String(pageSize));
+            if (action === 'deleteAllInvites') {
+              qs.set('pageSize', String(pageSize));
+              qs.set('alsoClearPlayers', String(alsoClearPlayers || '0'));
+            }
+            if (action === 'deleteInviteByCode' && code) qs.set('code', code);
+            if ((action === 'clearOwnerInvite' || action === 'purgeOwnerReferrals') && ownerUid) qs.set('ownerUid', ownerUid);
+            if (action === 'clearStalePlayerInviteFields') {
+              if (startAfterUid) qs.set('startAfterUid', startAfterUid);
+              qs.set('pageSize', String(pageSize));
+            }
             const full = `${httpUrl}?${qs.toString()}`;
             log(`GET ${full}`);
             const resp = await fetch(full);
             return await resp.json();
           } else {
+            const payload = { secret, action };
+            if (action === 'deleteAllInvites') {
+              payload.pageSize = Number(pageSize);
+              payload.alsoClearPlayers = String(alsoClearPlayers || '0');
+            }
+            if (action === 'deleteInviteByCode') payload.code = code;
+            if (action === 'clearOwnerInvite' || action === 'purgeOwnerReferrals') payload.ownerUid = ownerUid;
+            if (action === 'clearStalePlayerInviteFields') {
+              payload.startAfterUid = startAfterUid;
+              payload.pageSize = Number(pageSize);
+            }
             log(`POST ${httpUrl}`);
-            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(basePayload) });
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
             return await resp.json();
           }
         }
