@@ -15,12 +15,14 @@
   const state = {
     currentTab: 'friends', // 'friends' | 'community' | 'requests'
     friends: [
-    //   { uid:'u_anna', alias:'Azakai', avatar:'./assets/portraits/avatarEmkay.png', status:'—' },
-    //   { uid:'u_ron',  alias:'Maestro',       avatar:'./assets/portraits/avatarAlie.png',  status:'—' },
     ],
     requests: [
-    //   { uid:'u_jay', alias:'Tatumkamun',  avatar:'./assets/portraits/avatarRichard.png',  sinceMs: Date.now()-3600_000 },
     ],
+    // Outgoing (sent) — shown in the new "Sent" sub-tab
+    sentRequests: [
+      // { uid:'u_kai', alias:'Kai', avatar:'./assets/portraits/avatarKai.png', sinceMs: Date.now()-2200_000 }
+    ],
+
   };
 
   // -------------------- Helpers --------------------
@@ -39,15 +41,11 @@
         const portraitKey = portraitNames.includes(d.firstName) ? ('avatar' + d.firstName) : 'default';
         const portraitImageSrc = `./assets/portraits/${portraitKey}.png`;
 
-        const obj = { alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png' };
+        const obj = { alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png', firstName: d.firstName || ''};
         _profileCache.set(uid, obj);
         return obj;
-    } catch { return { alias: uid.slice(0,6), avatar: '/assets/avatars/placeholder.png' }; }
+    } catch { return { alias: uid.slice(0,6), avatar: './assets/portraits/default.png' }; }
     }
-
-  // Expose a tiny handle so child items can adjust tab on return
-    if (!window.MyFiSocialMenu) window.MyFiSocialMenu = {};
-    window.MyFiSocialMenu.__state = state;
 
   // Small utility
   const timeAgo = (ms) => {
@@ -57,6 +55,14 @@
     const h = Math.floor(m/60); if (h < 24) return `${h}h ago`;
     const d = Math.floor(h/24); return `${d}d ago`;
   };
+
+  function pendingReceivedCount(){ return state.requests.length|0; }
+  function pendingTotalCount(){ return (state.requests.length + state.sentRequests.length) | 0; }
+
+  // ---- External badge API (call this once from your app to attach a target) ----
+  if (!window.MyFiSocialMenu) window.MyFiSocialMenu = {};
+  window.MyFiSocialMenu.__state = state;
+
 
   // -------------------- Header (title + Invite) --------------------
   function headerBar() {
@@ -92,13 +98,16 @@
 
     const f = mkTab('friends', 'Friends');
     const c = mkTab('community', 'Community');
-    const r = mkTab('requests', 'Requests');
+    const r = mkTab('requests', '');
 
     function paint() {
       [f,c,r].forEach(b => {
         if (b.dataset.tab === state.currentTab) b.classList.add('is-active');
         else b.classList.remove('is-active');
       });
+
+      const rc = pendingReceivedCount();
+      r.textContent = rc > 0 ? `Requests (${rc})` : 'Requests';
     }
     paint();
     bar.append(f,c,r);
@@ -122,7 +131,10 @@
 
     const text = el('div', { class: 'social__rowText' });
     const alias = el('div', { style:{ fontWeight:'600' }}, friend.alias);
-    const status = el('div', { class: 'social__status', style:{ opacity:0.8, fontSize:'12px' }}, friend.status || '—');
+    const secondaryText = (friend.theirTrust && friend.firstName)
+      ? `First name visible: ${friend.firstName}`
+      : (friend.status || '—');
+    const status = el('div', { class: 'social__status', style:{ opacity:0.8, fontSize:'12px' }}, secondaryText);
     text.append(alias, status);
 
     // Sandwich button + tiny dropdown
@@ -156,6 +168,34 @@
     });
     sendMsg.style.width = '100%';
 
+    // Trusted Friendship
+    const toggleTrust = btn(friend.myTrust ? 'Remove trust' : 'Trust friend', 'secondary', async () => {
+      const wantTrust = !friend.myTrust;
+      const ok = confirm(
+        wantTrust
+          ? 'Trust this friend? Your first name will be visible to them (and more in future).'
+          : 'Remove trust for this friend? They will lose access to your first name.'
+      );
+      if (!ok) return;
+
+      // Backend hook
+      try {
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+        const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'setFriendTrust');
+        await fn({ friendUid: friend.uid, trusted: wantTrust });
+
+        friend.trusted = wantTrust;
+        // Repaint current panel
+        const panel = modal().contentEl?.querySelector('.social__panel');
+        panel && panel.parentElement?.paintPanel?.();
+        menu.style.display = 'none';
+      } catch (e) {
+        alert('Could not update trust. Please try again.');
+      }
+    });
+    toggleTrust.style.width = '100%';
+
+
     // Remove Friend
     const removeBtn = btn('Remove friend', 'secondary', async () => {
     if (!confirm(`Remove ${friend.alias} from your friends?`)) return;
@@ -178,10 +218,20 @@
     });
     removeBtn.style.width = '100%';
 
-    menu.append(sendMsg, removeBtn);
+    menu.append(sendMsg, toggleTrust, removeBtn);
     actionsWrap.append(menuBtn, menu);
 
     row.append(avatar, text, actionsWrap);
+
+    // Make clickable (but not on menu button)
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', (e) => {
+      if (actionsWrap.contains(e.target)) return; // ignore menu clicks
+      window.MyFiModal.openChildItem(window.MyFiSocialMenu, 'friendProfile', {
+        menuTitle: friend.alias,
+        friend
+      });
+    });
     return row;
   }
 
@@ -194,7 +244,7 @@
     }});
 
     const avatar = el('img', {
-      src: req.avatar || '/assets/avatars/placeholder.png',
+      src: req.avatar || './assets/portraits/default.png',
       alt: `${req.alias} avatar`,
       style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }
     });
@@ -230,37 +280,112 @@
     );
   }
 
-    function renderRequestsPanel(container) {
+  function renderRequestsPanel(container) {
+    // local UI state for sub-tab
+    let subTab = 'received'; // 'received' | 'sent'
+
+    const wrap = el('div', {});
+
+    // Sub-tabs
+    const tabs = el('div', { style:{ display:'flex', gap:'8px', marginBottom:'8px', flexWrap:'wrap' }});
+    const tRecv = btn('Received', 'secondary', () => { subTab='received'; paint(); });
+    const tSent = btn('Sent',     'secondary', () => { subTab='sent';     paint(); });
+    function paintSubTabs(){
+      [tRecv, tSent].forEach(b=>b.classList.remove('is-active'));
+      (subTab === 'received' ? tRecv : tSent).classList.add('is-active');
+    }
+    tabs.append(tRecv, tSent);
+
+    const list = el('div');
+
     const onAccept = async (req) => {
-        try {
-        const requestId = `${req.uid}__${(await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js')).getAuth().currentUser.uid}`;
+      try {
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const me = getAuth()?.currentUser?.uid;
+        if (!me) throw new Error('No auth');
+        const requestId = `${req.uid}__${me}`;
         const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
         const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'respondToFriendRequest');
         await fn({ requestId, accept: true });
-        // UI will refresh via listener
-        } catch (e) {
+        // listener updates UI
+      } catch (e) {
         alert('Could not accept the request.'); console.warn(e);
-        }
+      }
     };
     const onDecline = async (req) => {
-        try {
-        const requestId = `${req.uid}__${(await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js')).getAuth().currentUser.uid}`;
+      try {
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const me = getAuth()?.currentUser?.uid;
+        if (!me) throw new Error('No auth');
+        const requestId = `${req.uid}__${me}`;
         const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
         const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'respondToFriendRequest');
         await fn({ requestId, accept: false });
-        // UI will refresh via listener
-        } catch (e) {
+      } catch (e) {
         alert('Could not decline the request.'); console.warn(e);
-        }
+      }
+    };
+    const onCancelSent = async (req) => {
+      try {
+        // TODO: implement cancelFriendRequest in backend
+        const { getAuth } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
+        const me = getAuth()?.currentUser?.uid;
+        if (!me) throw new Error('Not signed in');
+
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+        const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'cancelFriendRequest');
+        await fn({ requestId: `${me}__${req.uid}` });
+
+        paint();
+      } catch (e) {
+        alert('Could not cancel the request.'); console.warn(e);
+      }
     };
 
-    container.replaceChildren(
-        helper('<strong>Friend requests</strong>'),
-        ...state.requests.map(r => requestRow(r, onAccept, onDecline)),
-        state.requests.length ? '' : helper('No pending requests.')
-    );
+    function sentRow(req){
+      const row = el('div', { class:'social__row', style:{
+        display:'grid', gridTemplateColumns:'40px 1fr auto', alignItems:'center',
+        gap:'10px', padding:'8px 6px', border:'1px solid rgba(255,255,255,0.06)',
+        borderRadius:'10px', marginBottom:'8px', background:'rgba(255,255,255,0.03)'
+      }});
+      const avatar = el('img', { src:req.avatar || './assets/portraits/default.png', alt:`${req.alias} avatar`,
+        style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }});
+      const text = el('div', {});
+      const alias = el('div', { style:{ fontWeight:'600' }}, req.alias);
+      const since = el('div', { style:{ opacity:0.8, fontSize:'12px' }}, `Sent ${timeAgo(req.sinceMs || Date.now())}`);
+      text.append(alias, since);
+      const actions = el('div', { style:{ display:'flex', gap:'8px' }});
+      const cancelBtn = btn('Cancel', 'secondary', () => onCancelSent(req));
+      actions.append(cancelBtn);
+      row.append(avatar, text, actions);
+      return row;
     }
 
+    function paintList(){
+      if (subTab === 'received') {
+        list.replaceChildren(
+          helper('<strong>Friend requests — Received</strong>'),
+          ...state.requests.map(r => requestRow(r, onAccept, onDecline)),
+          state.requests.length ? '' : helper('No pending received requests.')
+        );
+      } else {
+        list.replaceChildren(
+          helper('<strong>Friend requests — Sent</strong>'),
+          ...state.sentRequests.map(sentRow),
+          state.sentRequests.length ? '' : helper('No pending sent requests.')
+        );
+      }
+    }
+
+    function paint(){
+      paintSubTabs();
+      paintList();
+    }
+
+    wrap.append(tabs, list);
+    container.replaceChildren(wrap);
+    paint();
+  }
 
   // -------------------- Add Friend (child item) --------------------
     function addFriendRender() {
@@ -337,6 +462,60 @@
 
     return [send];
     }
+  
+  // -------------------- Friend Profile --------------------
+  function friendProfileRender(opts){
+    const friend = opts?.friend || {};
+    const root = el('div', { style:{ display:'grid', gap:'12px' }});
+
+    const avatar = el('img', {
+      src: friend.avatar || './assets/portraits/default.png',
+      alt: `${friend.alias} avatar`,
+      style:{ width:'96px', height:'96px', borderRadius:'14px', objectFit:'cover' }
+    });
+
+    const title = el('div', { style:{ fontWeight:'700', fontSize:'18px' }}, friend.alias || 'Friend');
+
+    const sub = el('div', { style:{ opacity:.85 }});
+    const lines = [];
+    if (friend.theirTrust && friend.firstName) lines.push(`<strong>First name:</strong> ${friend.firstName}`);
+    lines.push(`<strong>Your sharing:</strong> ${friend.myTrust ? 'You trust them' : 'Standard'}`);
+    sub.innerHTML = lines.join('<br>');
+
+    const actions = el('div', { style:{ display:'flex', gap:'8px', flexWrap:'wrap' }});
+    const msg = btn('Send message', 'secondary', () => alert(`(Placeholder) Start chat with ${friend.alias}`));
+
+    const toggleTrust = btn(friend.myTrust ? 'Remove trust' : 'Trust friend', 'secondary', async () => {
+      const wantTrust = !friend.myTrust;
+      const ok = confirm(
+        wantTrust
+          ? 'Trust this friend? Your first name will be visible to them (and more in future).'
+          : 'Remove trust for this friend? They will lose access to your first name.'
+      );
+      if (!ok) return;
+
+      // Backend hook
+      try {
+        const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+        const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'setFriendTrust');
+        await fn({ friendUid: friend.uid, trusted: wantTrust });
+
+        friend.trusted = wantTrust;
+        // Repaint current panel
+        const panel = modal().contentEl?.querySelector('.social__panel');
+        panel && panel.parentElement?.paintPanel?.();
+        menu.style.display = 'none';
+      } catch (e) {
+        alert('Could not update trust. Please try again.');
+      }
+    });
+
+    actions.append(msg, toggleTrust);
+    root.append(avatar, title, sub, actions);
+    return [root];
+  }
+  function friendProfileFooter(){ return [ cancel('Close') ]; }
+
 
 // Unsub holders so we can cleanup if needed
 let _unsubFriends = null;
@@ -344,7 +523,7 @@ let _unsubRequests = null;
 
 // Start/stop listeners for current user
 async function startSocialListeners(uid, onFriends, onRequests) {
-  const { getFirestore, collection, onSnapshot, query, orderBy } =
+  const { getFirestore, collection, doc, getDoc, onSnapshot, query, orderBy } =
     await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
   const db = getFirestore();
 
@@ -356,8 +535,22 @@ async function startSocialListeners(uid, onFriends, onRequests) {
     const rows = [];
     for (const docSnap of snap.docs) {
       const fuid = docSnap.id;
-      const prof = await fetchProfile(fuid);
-      rows.push({ uid: fuid, alias: prof.alias, avatar: prof.avatar, status: '—' });
+      const [prof, theirEdge] = await Promise.all([
+        fetchProfile(fuid),
+        // reverse edge: do THEY trust ME?
+        getDoc(doc(db, 'players', fuid, 'friends', uid)).catch(() => null)
+      ]);
+      const myTrust    = !!docSnap.data()?.trusted;
+      const theirTrust = !!(theirEdge && theirEdge.exists && theirEdge.data()?.trusted);
+      rows.push({
+        uid: fuid,
+        alias: prof.alias,
+        firstName: prof.firstName || '',
+        avatar: prof.avatar,
+        myTrust,          // I trust them (lets THEM see MY name)
+        theirTrust,       // They trust me (lets ME see THEIR name)
+        status: '—'
+      });
     }
     onFriends(rows);
   });
@@ -382,6 +575,35 @@ async function startSocialListeners(uid, onFriends, onRequests) {
     }
     onRequests(rows);
   });
+
+  // OPTIONAL: Sent requests listener (if you maintain such a subcollection)
+  try {
+    const sentCol = collection(db, 'players', uid, 'requestsSent');
+    const qSent = query(sentCol, orderBy('createdMs', 'desc'));
+    onSnapshot(qSent, async (snap) => {
+      const rows = [];
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data() || {};
+        const toUid = d.toUid;
+        if (!toUid) continue;
+        const prof = await fetchProfile(toUid);
+        rows.push({
+          uid: toUid,
+          alias: prof.alias,
+          avatar: prof.avatar,
+          sinceMs: d.createdMs || Date.now()
+        });
+      }
+      state.sentRequests = rows;
+     // repaint if user is on Requests tab and viewing "Sent"
+     if (state.currentTab === 'requests') {
+       const panel = document.querySelector('.social__panel');
+       // Note: renderRequestsPanel fully rerenders, so just call holder's paint if available
+       panel && panel.parentElement?.paintPanel?.();
+     }
+    });
+  } catch {}
+ 
 }
 
 function stopSocialListeners() {
@@ -405,7 +627,7 @@ function stopSocialListeners() {
         if (!uid) return; // not signed-in; keep stubs
         await startSocialListeners(uid,
         (friends) => { state.friends = friends; root.paintPanel?.(); },
-        (requests) => { state.requests = requests; if (state.currentTab === 'requests') root.paintPanel?.(); }
+        (requests) => { state.requests = requests; tabs.paint?.(); if (state.currentTab === 'requests') root.paintPanel?.();}
         );
     } catch (e) {
         console.warn('[Social] listeners failed to start', e);
@@ -435,6 +657,7 @@ function stopSocialListeners() {
       else renderRequestsPanel(panel);
     }
     paintPanel();
+    tabs.paint?.();
 
     // Save a handle so footer can refresh its primary action label
     root.paintPanel = paintPanel;
@@ -548,7 +771,15 @@ function stopSocialListeners() {
         preview: 'Send a friend request by alias or code',
         render: addFriendRender,
         footer: addFriendFooter,
-    }    
+    }, 
+    friendProfile: {
+      label: 'Friend',
+      title: 'Friend',
+      preview: 'Friend details',
+      render: friendProfileRender,
+      footer: friendProfileFooter,
+    },
+   
   };
 
   window.MyFiSocialMenu = SocialMenu;
