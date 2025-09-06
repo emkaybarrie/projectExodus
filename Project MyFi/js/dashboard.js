@@ -63,16 +63,20 @@ document.addEventListener("DOMContentLoaded", () => {
       const playerData = await playerDataManager.init(uid).then((p) => { console.log("Player data loaded:", p.alias); return p; });
       console.log("Player data ready:", playerData);
       let avatarKey = playerData.avatarKey || "default";
+ 
+      const avatarsSource = ["Azakai","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
 
-     if (avatarKey === 'default' || avatarKey === ''){
-       
-        const avatarsSource = ["Emkay","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
-        avatarKey = avatarsSource.includes(playerData.firstName) ? (playerData.firstName) : 'default';
+     if (avatarKey === 'default' || avatarKey === '' || avatarsSource.includes(playerData.alias) || avatarsSource.includes(playerData.firstName)){
+
+        if (avatarsSource.includes(playerData.alias)){
+          avatarKey = avatarsSource.includes(playerData.alias) ? (playerData.alias) : 'default';
+        } else {
+          avatarKey = avatarsSource.includes(playerData.firstName) ? (playerData.firstName) : 'default';
+        }       
         // Update avatarKey in player doc if empty or default
-          // try { await updateDoc(userRef, { avatarKey: portraitKey }); } catch (e) { console.warn("Failed to update avatarKey:", e); }
           try { await setDoc(userRef, { avatarKey: avatarKey }, { merge: true }); } catch (e) { console.warn("Failed to update avatarKey:", e); }
       }
-      console.log("Using avatarKey:", avatarKey);
+
       const portraitImage = document.querySelector(".portrait");
       if (portraitImage) portraitImage.src = `./assets/portraits/${avatarKey}.png`;
 
