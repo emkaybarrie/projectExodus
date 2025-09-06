@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("Player data ready:", playerData);
       let avatarKey = playerData.avatarKey || "default";
  
-      const avatarsSource = ["Azakai","Alie","Richard","Mohammed","Jane","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Kim"];
+      const avatarsSource = ["Azakai","Maestro","Richard","Mohammed","Umee","Amandeep","Matthew","Gerard","Sammi","Kirsty", "Lola"];
 
      if (avatarKey === 'default' || avatarKey === '' || avatarsSource.includes(playerData.alias) || avatarsSource.includes(playerData.firstName)){
 
