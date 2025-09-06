@@ -54,7 +54,7 @@ function tsToMillis(ts) {
   if (isSecondsNanosMap(ts))
     return ts.seconds * 1000 + Math.floor(ts.nanoseconds / 1e6);
   if (typeof ts === "number") return ts;
-  return null;
+  return 0;
 }
 
 function millisToTimestamp(ms) {
@@ -89,6 +89,11 @@ function normalizeFromCache(cached) {
     }
   }
   return copy;
+}
+
+/* Freshness helper: read server's updatedAt as ms (0 if missing) */
+function updatedMsOfLiveDoc(live) {
+  return tsToMillis(live?.updatedAt) || 0;
 }
 
 /* -----------------------------------------------------------
@@ -134,16 +139,24 @@ async function ensureStartDateOnce(uid) {
     const snap = await tx.get(ref);
     if (!snap.exists()) {
       // create minimal doc with immutable startDate
-      tx.set(ref, {
-        startDate: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      tx.set(
+        ref,
+        {
+          startDate: serverTimestamp(),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
       return;
     }
     const sd = snap.data().startDate;
     if (!sd) {
-      tx.set(ref, { startDate: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+      tx.set(
+        ref,
+        { startDate: serverTimestamp(), updatedAt: serverTimestamp() },
+        { merge: true }
+      );
     }
     // if present as a proper Timestamp, do nothing.
   });
@@ -167,8 +180,6 @@ async function repairStartDateIfNeeded(uid) {
     }
   });
 }
-
-
 
 /* -----------------------------------------------------------
    Player Data Manager (public API unchanged)
@@ -195,28 +206,43 @@ const playerDataManager = (() => {
       if (!playerId) throw new Error("No player ID or authenticated user found.");
     }
 
-    // Always ensure/repair startDate first, then heal onboardedAt if needed.
+    // Always ensure/repair startDate first
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
 
-    // Try cache first
-    const local = await db.playerData.get(playerId);
-    if (local) {
-      memoryStore.player = normalizeFromCache({ ...local, id: playerId });
-    } else {
-      const ref = doc(firestore, "players", playerId);
-      const snap = await getDoc(ref);
+    // Try both cache and cloud, then pick the freshest
+    const ref  = doc(firestore, "players", playerId);
+    const [local, snap] = await Promise.all([
+      db.playerData.get(playerId),
+      getDoc(ref),
+    ]);
 
-      if (snap.exists()) {
-        const live = snap.data();
-        memoryStore.player = { ...live, id: playerId };
-        await db.playerData.put({ ...normalizeForCache(memoryStore.player), id: playerId });
+    let localData   = local ? normalizeFromCache({ ...local, id: playerId }) : null;
+    const liveExists  = snap.exists();
+    let liveData    = liveExists ? { ...snap.data(), id: playerId } : null;
+
+    if (!localData && !liveExists) {
+      // brand new — write minimal defaults (WITHOUT startDate/onboardedAt) then cache
+      const fresh = createDefaultPlayer(playerId);
+      memoryStore.player = fresh;
+      await setDoc(ref, { ...fresh, updatedAt: serverTimestamp() }, { merge: true });
+      await db.playerData.put({ ...normalizeForCache(fresh), id: playerId });
+    } else {
+      // Pick freshest by comparing timestamps
+      const localMs = Number(localData?.lastUpdated || 0);
+      const liveMs  = updatedMsOfLiveDoc(liveData);
+
+      if (liveExists && liveMs > localMs) {
+        // Firestore newer → adopt live and overwrite cache
+        memoryStore.player = liveData;
+        await db.playerData.put({ ...normalizeForCache(liveData), id: playerId });
+      } else if (localData) {
+        // Local newer or equal → adopt local
+        memoryStore.player = localData;
       } else {
-        // brand new — write minimal defaults (WITHOUT startDate/onboardedAt) then cache
-        const fresh = createDefaultPlayer(playerId);
-        memoryStore.player = fresh;
-        await db.playerData.put(normalizeForCache(fresh));
-        await setDoc(ref, { ...fresh, updatedAt: serverTimestamp() }, { merge: true });
+        // No local but server exists
+        memoryStore.player = liveData;
+        await db.playerData.put({ ...normalizeForCache(liveData), id: playerId });
       }
     }
 
@@ -256,16 +282,30 @@ const playerDataManager = (() => {
     trigger("update", memoryStore.player);
   }
 
-  // Save to Dexie and Firestore.
-  // IMPORTANT: Never write startDate/createdAt/onboardedAt from cache (immutable).
+  // Save to Dexie and Firestore (guarded: don't overwrite newer server docs)
   async function save(andLocalStorage = false) {
     if (!memoryStore.player) return;
     const id = memoryStore.player.id;
 
+    // 0) Check server recency first
+    const ref  = doc(firestore, "players", id);
+    const snap = await getDoc(ref);
+    const serverMs = snap.exists() ? updatedMsOfLiveDoc(snap.data()) : 0;
+    const localMs  = Number(memoryStore.player.lastUpdated || 0);
+
+    if (serverMs > localMs) {
+      console.warn(
+        "[playerDataManager] Aborting save: server is newer (serverMs %d > localMs %d). Reloading from cloud.",
+        serverMs, localMs
+      );
+      await forceLoadFromCloud(id);   // adopt server to prevent stomping
+      return memoryStore.player;
+    }
+
     // 1) Local cache — normalize timestamps to millis
     await db.playerData.put({ ...normalizeForCache(memoryStore.player), id });
 
-    // 2) Cloud save — strip immutable fields and set updatedAt
+    // 2) Cloud save — strip immutables and set updatedAt
     const {
       startDate,
       createdAt,
@@ -273,10 +313,9 @@ const playerDataManager = (() => {
       id: _dropId,
       ...rest
     } = memoryStore.player || {};
-
     const safePatch = { ...rest, updatedAt: serverTimestamp() };
 
-    await setDoc(doc(firestore, "players", id), safePatch, { merge: true });
+    await setDoc(ref, safePatch, { merge: true });
 
     if (andLocalStorage) saveToLocalStorage();
 
@@ -317,7 +356,6 @@ const playerDataManager = (() => {
     await ensureStartDateOnce(playerId);
     await repairStartDateIfNeeded(playerId);
 
-
     const ref = doc(firestore, "players", playerId);
     const snap = await getDoc(ref);
 
@@ -331,11 +369,33 @@ const playerDataManager = (() => {
     return null;
   }
 
+  async function reconcileAndSave() {
+    if (!memoryStore.player) return;
+    const id  = memoryStore.player.id;
+    const ref = doc(firestore, "players", id);
+    const snap = await getDoc(ref);
+
+    const serverMs = snap.exists() ? updatedMsOfLiveDoc(snap.data()) : 0;
+    const localMs  = Number(memoryStore.player.lastUpdated || 0);
+
+    if (localMs > serverMs) {
+      // We have unsynced newer local data → save it
+      await save();
+    } else if (serverMs > localMs) {
+      // Server has fresher data → pull it down and update cache
+      console.log("Auto-Backup: server newer; pulling latest.");
+      await forceLoadFromCloud(id);
+    } else {
+      // In sync → no-op
+      console.log("Auto-Backup: already in sync.");
+    }
+  }
+
   function startAutoSync() {
     stopAutoSync();
     syncInterval = setInterval(() => {
-      console.log("Auto-Backup triggered...");
-      save();
+      console.log("Auto-Backup reconciliation triggered...");
+      reconcileAndSave();
     }, syncFrequencyMs);
   }
 
