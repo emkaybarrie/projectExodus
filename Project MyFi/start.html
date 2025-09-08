@@ -4,7 +4,13 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Project MyFi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&display=swap" rel="stylesheet">
   <style>
+    :root{
+      --title-top: 52px;     /* ↓ move the title down (ex: 56px) */
+      --title-size: 32px;    /* ↑ make the title bigger (ex: 36px or 40px) */
+      --cta-bottom: 64px;    /* ↑ raise "Tap to Start" (ex: 80px) */
+    }
     html,body{height:100%;margin:0;background:#000;overflow:hidden}
     .stage{position:fixed;inset:0}
     .layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -14,19 +20,76 @@
     #intro{z-index:2}
     /* overlays sit above still after intro */
     .motion{z-index:3;mix-blend-mode:screen;opacity:0;transition:opacity .6s ease}
-    .ready .motion{opacity:.95} /* tweak .85–1.0 */
-    .pulse {z-index:4; mix-blend-mode:screen; }             /* black becomes transparent-ish glow */
-    .ready .pulse{opacity:.95} /* tweak .85–1.0 */
+    .ready .motion{opacity:.95}
+    .pulse {z-index:4; mix-blend-mode:screen;}
+    .ready .pulse{opacity:.95}
+    /* Title */
+    .title{
+      position:absolute; top:var(--title-top); left:50%; transform:translateX(-50%);
+      z-index:5; font-family:'Cinzel', serif; font-size:var(--title-size);
+      letter-spacing:1px; opacity:0; transition:opacity .4s ease; pointer-events:none;
+      text-shadow:0 2px 6px rgba(0,0,0,.7);
+      color:#fff;
+/* 
+      // Gentle metallic sheen that drifts */
+      background-image: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #efe9ff 40%,
+        #cbd1ff 60%,
+        #ffffff 100%
+      );
+      -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color: transparent; /* keeps text crisp */
+      background-size: 200% 200%;
+      animation: titleSheen 8s ease-in-out infinite;
+
+      /* Arcane Glow */
+      text-shadow:
+          0 2px 6px rgba(0,0,0,.7),
+          0 0 8px rgba(255,200,120,.15),
+          0 0 22px rgba(160,120,255,.12);
+        animation: titleSheen 8s ease-in-out infinite, glowPulse 6s ease-in-out infinite;
+      }
+
+
+    .ready .title{opacity:1}
     /* CTA */
     .cta{
-      position:absolute;left:50%;bottom:28px;transform:translateX(-50%);
-      z-index:4;padding:.65rem 1.1rem;border:1px solid rgba(255,255,255,.2);
-      border-radius:12px;background:rgba(10,12,18,.55);backdrop-filter:saturate(120%) blur(4px);
-      color:#fff;font:600 16px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      opacity:0;transition:opacity .4s ease;pointer-events:auto
+      position:absolute; left:50%; bottom:var(--cta-bottom); transform:translateX(-50%);
+      z-index:5;background:none;border:none;padding:0;margin:0;
+      color:#fff;font:600 16px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      opacity:0;transition:opacity .4s ease;
+      pointer-events:none; /* purely visual now */
+
+      text-shadow:
+          0 2px 6px rgba(0,0,0,.7),
+          0 0 8px rgba(255,200,120,.15),
+          0 0 22px rgba(160,120,255,.12);
+      animation: titleSheen 8s ease-in-out infinite, glowPulse 6s ease-in-out infinite, floaty 7s ease-in-out infinite;
     }
+
+          @keyframes titleSheen{
+        0%,100% { background-position: 50% 0%; }
+        50%     { background-position: 50% 100%; }
+      }
+      @keyframes glowPulse{
+        0%,100%{
+          text-shadow:
+            0 2px 6px rgba(0,0,0,.7),
+            0 0 8px rgba(255,200,120,.15),
+            0 0 22px rgba(160,120,255,.12);
+        }
+        50%{
+          text-shadow:
+            0 2px 6px rgba(0,0,0,.7),
+            0 0 12px rgba(255,200,120,.25),
+            0 0 30px rgba(160,120,255,.18);
+        }
+      }
+    @keyframes floaty{ 0%,100%{ transform:translate(-50%,0) } 50%{ transform:translate(-50%,-2px) } }
     .ready .cta{opacity:1}
-    /* small helper for fade-out on tap */
+    /* fade-out helper */
     .leaving{animation:fadeout .35s ease forwards}
     @keyframes fadeout{to{opacity:0;transform:translateX(-50%) translateY(2px)}}
   </style>
@@ -34,19 +97,18 @@
 <body>
   <main class="stage">
 
-    <!-- Background still (final locked frame) -->
+    <!-- Background still -->
     <img id="still" class="layer still" src="./assets/start/start_still.png" alt="">
 
-    <!-- Flashy intro (includes the white flash that masks the match cut) -->
+    <!-- Flashy intro -->
     <video id="intro" class="layer" playsinline muted preload="auto">
       <source src="./assets/start/intro-start_HD.webm" type="video/webm" />
     </video>
 
-    <!-- Loop overlays (luminous on black; will be revealed after intro) -->
+    <!-- Loop overlays -->
     <video id="fire" class="layer motion" playsinline muted loop preload="auto">
       <source src="./assets/start/fire.webm" type="video/webm" />
     </video>
-
     <video id="smoke" class="layer motion" playsinline muted loop preload="auto">
       <source src="./assets/start/smoke.webm" type="video/webm" />
     </video>
@@ -54,38 +116,42 @@
       <source src="./assets/start/rays.webm" type="video/webm" />
     </video>
 
-    <!-- Painterly pulse overlay (this is the new video you asked for) -->
+    <!-- Painterly pulse -->
     <video id="pulse" class="layer pulse" playsinline muted loop preload="auto">
       <source src="./assets/start/pulse.webm" type="video/webm"/>
     </video>
 
+    <!-- Title -->
+    <div id="title" class="title">Project MyFi</div>
+
+    <!-- Visual-only CTA -->
     <button id="cta" class="cta" type="button">Tap to Start</button>
   </main>
 
   <script>
     const html  = document.documentElement;
     const intro = document.getElementById('intro');
-    const fire = document.getElementById('fire');
+    const fire  = document.getElementById('fire');
     const smoke = document.getElementById('smoke');
     const rays  = document.getElementById('rays');
     const pulse = document.getElementById('pulse');
     const cta   = document.getElementById('cta');
+    const stage = document.querySelector('.stage');
 
-    // Start intro immediately (muted + playsinline allows autoplay on iOS)
+    // Start intro immediately
     intro.currentTime = 0;
     intro.play().catch(()=>{});
 
-    // When intro ends, start loops in sync and reveal CTA
+    // When intro ends, start loops + reveal UI
     intro.addEventListener('ended', () => {
       [fire, smoke, rays, pulse].forEach(v => { v.currentTime = 0; v.play().catch(()=>{}); });
       html.classList.add('ready');
     }, { once:true });
 
-    // Tap to proceed -> fade button, then go to auth.html (preserves ?invite=CODE)
-    cta.addEventListener('click', () => {
+    // Tap anywhere to proceed
+    stage.addEventListener('click', () => {
       cta.classList.add('leaving');
-      const qs = window.location.search || '';  // preserve query string
-      // keep overlays running while navigating
+      const qs = window.location.search || '';
       setTimeout(() => { window.location.href = 'auth.html' + qs; }, 260);
     });
   </script>
