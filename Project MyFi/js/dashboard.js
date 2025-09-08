@@ -292,44 +292,85 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // PWA INstall
+  // PWA Install — register SW from root so it can control all pages
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./js/core/serviceWorker.js')
+    navigator.serviceWorker.register('./serviceWorker.js', { scope: './' })
       .then(reg => console.log("SW registered", reg))
       .catch(err => console.error("SW failed", err));
   }
 
-  let deferredPrompt = null;
+  // ----- PWA helper (put near the top-level in dashboard.js) -----
+let __deferredPrompt = null;
+let __isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const __isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
+window.MyFiPWA = {
+  platform: __isIOS ? 'ios' : 'other',
+  isInstalled() { return __isStandalone; },
+  canPrompt() { return !!__deferredPrompt; },
+  async promptInstall() {
+    if (!__deferredPrompt) return { ok:false, reason:'no-beforeinstallprompt' };
+    __deferredPrompt.prompt();
+    const choice = await __deferredPrompt.userChoice.catch(() => ({ outcome:'dismissed' }));
+    __deferredPrompt = null;
+    window.dispatchEvent(new CustomEvent('pwa:prompt-consumed', { detail: choice }));
+    return { ok: choice?.outcome === 'accepted', outcome: choice?.outcome };
+  }
+};
 
-    const banner = document.getElementById('installBanner');
-    if (banner) banner.style.display = 'flex';
-  });
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Not fired on iOS; will fire on eligible platforms.
+  e.preventDefault();
+  __deferredPrompt = e;
+  window.dispatchEvent(new Event('pwa:can-install'));
+});
 
-  // document.addEventListener('DOMContentLoaded', () => {
-    const installBtn = document.getElementById('installBtn');
-    const dismissBtn = document.getElementById('dismissInstall');
-    const banner = document.getElementById('installBanner');
+window.addEventListener('appinstalled', () => {
+  __isStandalone = true;
+  window.dispatchEvent(new Event('pwa:installed'));
+});
 
-    if (installBtn) {
-      installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const result = await deferredPrompt.userChoice;
-          console.log("User choice:", result.outcome);
-          deferredPrompt = null;
-          if (banner) banner.style.display = 'none';
-        }
-      });
+// Show your banner when we *can* prompt (non-iOS). Keep your existing elements.
+(function setupInstallBanner(){
+  const banner   = document.getElementById('installBanner');
+  const installBtn  = document.getElementById('installBtn');
+  const dismissBtn  = document.getElementById('dismissInstall');
+
+  function syncBanner() {
+    if (!banner) return;
+    if (window.MyFiPWA.isInstalled()) {
+      banner.style.display = 'none';
+      return;
     }
-
-    if (dismissBtn) {
-      dismissBtn.addEventListener('click', () => {
-        if (banner) banner.style.display = 'none';
-      });
+    // On iOS, beforeinstallprompt never fires; show an instructional banner instead (optional).
+    if (__isIOS) {
+      // You can either show nothing or show a small hint like: "Share → Add to Home Screen".
+      // Example minimal hint:
+      banner.style.display = 'flex';
+      banner.querySelector('.banner-text')?.replaceChildren(document.createTextNode('On iPhone: Share → Add to Home Screen to install.'));
+      if (installBtn) installBtn.style.display = 'none';
+    } else {
+      // Show banner only if we can prompt.
+      banner.style.display = window.MyFiPWA.canPrompt() ? 'flex' : 'none';
     }
-  // });
+  }
+
+  window.addEventListener('pwa:can-install',   syncBanner);
+  window.addEventListener('pwa:installed',     syncBanner);
+  window.addEventListener('pwa:prompt-consumed', syncBanner);
+  document.addEventListener('DOMContentLoaded', syncBanner);
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      const res = await window.MyFiPWA.promptInstall();
+      console.log('Install outcome:', res);
+      syncBanner();
+    });
+  }
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => { if (banner) banner.style.display = 'none'; });
+  }
+})();
+
 
 });
