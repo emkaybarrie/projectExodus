@@ -371,8 +371,13 @@ import { initHUD } from './hud/hud.js';
     return { nodes: [root], onSave };
   }
 
-  // Helper: small iOS instructions sheet
+// Helper: iOS instructions (uses shared modal if available)
 function showIOSInstallHelp() {
+  if (window.MyFiShowIOSInstallModal) {
+    window.MyFiShowIOSInstallModal({ autoPulse: true });
+    return;
+  }
+  // Fallback (rare): minimal sheet if global modal isn't loaded yet
   const overlay = document.createElement('div');
   Object.assign(overlay.style, {
     position:'fixed', inset:'0', display:'grid', placeItems:'center',
@@ -384,24 +389,19 @@ function showIOSInstallHelp() {
     border:'1px solid #333', borderRadius:'14px', padding:'14px 14px 10px',
     boxShadow:'0 18px 50px rgba(0,0,0,.35)'
   });
-
   const h = document.createElement('h3'); h.textContent = 'Install on iPhone';
   const p = document.createElement('p');
-  p.innerHTML = `
-    1) Tap the <strong>Share</strong> icon in Safari<br>
-    2) Choose <strong>Add to Home Screen</strong><br>
-    3) Tap <strong>Add</strong>
-  `;
+  p.innerHTML = `1) In <strong>Safari</strong> tap <strong>Share</strong> → <strong>Add to Home Screen</strong> → <strong>Add</strong>`;
   const row = document.createElement('div');
   Object.assign(row.style, { display:'flex', justifyContent:'flex-end', marginTop:'10px' });
   const close = document.createElement('button'); close.className='btn'; close.textContent='Close';
   close.addEventListener('click', () => overlay.remove());
   row.appendChild(close);
-
   card.append(h, p, row);
-  overlay.appendChild(card);
+  overlay.append(card);
   document.body.appendChild(overlay);
 }
+
 
 function buildAppView(){
   const root = document.createElement('div');
@@ -422,22 +422,22 @@ function buildAppView(){
     btn.textContent = installed ? 'Installed' : (window.MyFiPWA?.platform === 'ios' ? 'How to Install' : 'Install');
   }
 
-  btn.addEventListener('click', async () => {
-    if (window.MyFiPWA?.isInstalled?.()) return;
-    if (window.MyFiPWA?.platform === 'ios') {
-      showIOSInstallHelp();
-      return;
-    }
-    const canPrompt = window.MyFiPWA?.canPrompt?.();
-    if (!canPrompt) {
-      // Fallback message if prompt not available yet (engagement criteria not met)
-      alert('If the Install prompt doesn’t appear yet, try visiting the app a bit more or updating your browser. You can also install from the address bar in some browsers.');
-      return;
-    }
-    const res = await window.MyFiPWA.promptInstall();
-    console.log('Manual install outcome:', res);
-    syncButton();
-  });
+btn.addEventListener('click', async () => {
+  if (window.MyFiPWA?.isInstalled?.()) return;
+  if (window.MyFiPWA?.platform === 'ios') {
+    showIOSInstallHelp(); // opens shared modal + hotspot
+    return;
+  }
+  const canPrompt = window.MyFiPWA?.canPrompt?.();
+  if (!canPrompt) {
+    alert('If the Install prompt doesn’t appear yet, try visiting the app a bit more or updating your browser. You can also install from the address bar in some browsers.');
+    return;
+  }
+  const res = await window.MyFiPWA.promptInstall();
+  console.log('Manual install outcome:', res);
+  syncButton();
+});
+
 
   // React to global PWA events
   window.addEventListener('pwa:can-install',     syncButton);
