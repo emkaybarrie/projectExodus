@@ -187,7 +187,7 @@ attachQuickMenu('help-btn', () =>
 
 // Settings (top-right) → real Settings menu (show only Profile + Log Out)
 attachQuickMenu('settings-btn', () =>
-  pick(window.MyFiSettingsMenu, ['profile','logout'])
+  pick(window.MyFiSettingsMenu, ['profile', 'app','logout'])
 );
 
 // Left (Energy) → real Finances menu items

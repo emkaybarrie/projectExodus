@@ -371,12 +371,98 @@ import { initHUD } from './hud/hud.js';
     return { nodes: [root], onSave };
   }
 
+  // Helper: small iOS instructions sheet
+function showIOSInstallHelp() {
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, {
+    position:'fixed', inset:'0', display:'grid', placeItems:'center',
+    background:'rgba(10,10,14,.65)', backdropFilter:'blur(6px)', zIndex:'99999', padding:'16px'
+  });
+  const card = document.createElement('div');
+  Object.assign(card.style, {
+    width:'min(420px, 92vw)', background:'rgba(22,22,28,.95)', color:'#fff',
+    border:'1px solid #333', borderRadius:'14px', padding:'14px 14px 10px',
+    boxShadow:'0 18px 50px rgba(0,0,0,.35)'
+  });
+
+  const h = document.createElement('h3'); h.textContent = 'Install on iPhone';
+  const p = document.createElement('p');
+  p.innerHTML = `
+    1) Tap the <strong>Share</strong> icon in Safari<br>
+    2) Choose <strong>Add to Home Screen</strong><br>
+    3) Tap <strong>Add</strong>
+  `;
+  const row = document.createElement('div');
+  Object.assign(row.style, { display:'flex', justifyContent:'flex-end', marginTop:'10px' });
+  const close = document.createElement('button'); close.className='btn'; close.textContent='Close';
+  close.addEventListener('click', () => overlay.remove());
+  row.appendChild(close);
+
+  card.append(h, p, row);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+}
+
+function buildAppView(){
+  const root = document.createElement('div');
+
+  const field = document.createElement('div'); field.className = 'field';
+  const lab   = document.createElement('label'); lab.textContent = 'Install App';
+  const btn   = document.createElement('button'); btn.type='button'; btn.id='btnInstallPWA'; btn.className='btn';
+  const help  = (window.MyFiUI?.helper?.('Install Project MyFi to your device for a full-screen, app-like experience.')) || (()=> {
+    const el = document.createElement('p'); el.className='helper'; el.textContent='Install Project MyFi to your device for a full-screen, app-like experience.'; return el;
+  })();
+
+  field.append(lab, btn);
+  root.append(field, help);
+
+  function syncButton() {
+    const installed = window.MyFiPWA?.isInstalled?.() || false;
+    btn.disabled = installed;
+    btn.textContent = installed ? 'Installed' : (window.MyFiPWA?.platform === 'ios' ? 'How to Install' : 'Install');
+  }
+
+  btn.addEventListener('click', async () => {
+    if (window.MyFiPWA?.isInstalled?.()) return;
+    if (window.MyFiPWA?.platform === 'ios') {
+      showIOSInstallHelp();
+      return;
+    }
+    const canPrompt = window.MyFiPWA?.canPrompt?.();
+    if (!canPrompt) {
+      // Fallback message if prompt not available yet (engagement criteria not met)
+      alert('If the Install prompt doesn’t appear yet, try visiting the app a bit more or updating your browser. You can also install from the address bar in some browsers.');
+      return;
+    }
+    const res = await window.MyFiPWA.promptInstall();
+    console.log('Manual install outcome:', res);
+    syncButton();
+  });
+
+  // React to global PWA events
+  window.addEventListener('pwa:can-install',     syncButton);
+  window.addEventListener('pwa:installed',       syncButton);
+  window.addEventListener('pwa:prompt-consumed', syncButton);
+
+  // Initial state
+  syncButton();
+
+  return { nodes:[root] };
+}
+
+
   const SettingsMenu = {
     profile: {
       label: 'Profile',
       title: 'Profile',
       render() { if (!this._view) this._view = buildProfileView(); return this._view.nodes; },
       footer() { return [ primary('Save', () => this._view?.onSave?.()), cancel('Close') ]; }
+    },
+    app: {
+      label: 'App',
+      title: 'App',
+      render() { if (!this._view) this._view = buildAppView(); return this._view.nodes; },
+      footer() { return [ cancel('Close') ]; }
     },
     logout: {
       label: 'Log Out',
