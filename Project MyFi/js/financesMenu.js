@@ -313,7 +313,7 @@ import {
   const FinancesMenu = {
     connectBank: {
       label: 'Connect Bank',
-      title: 'Connect a Bank (COMING SOON)',
+      title: 'Connect a Bank (Coming Soon)',
       preview: 'Link your bank for automatic transaction sync (via TrueLayer). Unlocks full automation.',
       render() {
         // keep this simple; also reachable from Add Transaction via cross-link
