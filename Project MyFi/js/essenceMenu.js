@@ -123,7 +123,7 @@ import { showToast } from './core/toast.js';
   function ContributeMenu() {
     return {
       label: 'Contribute',
-      title: 'Contribute Essence',
+      title: 'Contribute Essence (Test Mode)',
       preview: 'Contribute your Essence to support development. Choose Stripe (card/wallet) or no-fee bank transfer.',
       ctaLabel: 'Open',
       render() {
