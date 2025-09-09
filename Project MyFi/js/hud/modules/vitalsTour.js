@@ -30,22 +30,22 @@ function getVitalsTourSteps() {
         'Represents your everyday energy. Linked to routine, flexible spending that regenerates steadily over time. Balance it wisely to avoid draining more vital reserves.'
     },
     {
-      target: '.bar-surplus',
-      title: 'Stored Energy',
-      content:
-        'Shows the number of reserve bars available in this context (e.g. x1). When a bar is emptied, reserves are automatically tapped to refill it.'
-    },
-    {
       target: '#mode-engrave',
       title: 'Context Mode',
       content:
-        'Switches the lens on your vitals — Daily, Weekly, or Monthly — so you can see your energy flows in the timeframe that matters most.'
+        '"Current" is your main view — aligned to your longer cycles of energy, closely reflecting the rhythm of real life. It shows the broader arc of how your strength has been managed. Switch to "Focus" for just today or this week, giving you a sharper sense of your immediate flow. Use these views to guide real choices, and to shape how your avatar’s story unfolds.'
+    },
+    {
+      target: '.bar-surplus',
+      title: 'Stored Energy',
+      content:
+        'Represents the reserve built beyond your daily needs, shown as extra days of strength (e.g. +3). This surplus can be drawn upon when you need it in the real world, or preserved to empower your avatar within The Badlands and beyond.'
     },
     {
       target: '#vitals-total',
       title: 'Total Energy',
       content:
-        'Shows your combined available and maximum energy across all pools in the current context.'
+        'Shows the sum of all your available energy across Health, Mana, Stamina, and Essence within the current view — whether the broader arc of your long cycle or the focused window of today or this week.'
     },
     {
       target: '.skills-row',
@@ -81,13 +81,13 @@ function getVitalsTourSteps() {
       target: '#left-btn',
       title: 'Energy Menu',
       content:
-        "Set the values that determine power your avatar's very being  — watch it shape the foundations of their vitals. Can connect to your bank for full automation and unlock the full game experience"
+        "⚡ Set the values that determine power your avatar's very being  — watch it shape the foundations of their vitals. Can connect to your bank for full automation and unlock the full game experience"
     },
     {
       target: '#right-btn',
       title: 'Social Menu',
       content:
-        'Connect with friends, band together to take on The Badlands, and invite others to join in the fight.'
+        '👥 Connect with friends, band together to take on The Badlands, and invite others to join the fight.'
     },
     {
       target: '.myfi-nav-btn',

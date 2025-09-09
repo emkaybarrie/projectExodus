@@ -182,22 +182,26 @@ window.MyFiOpenQuickMenu = function(which, opts = {}) {
 
 // Help (top-centre right) → real Help menu 
 attachQuickMenu('help-btn', () =>
-  pick(window.MyFiHelpMenu, ['overview','vitals', 'quests', 'avatars', 'resources', 'badlands', 'faq','report'])
+  pick(window.MyFiHelpMenu, ['overview','vitals', 'quests', 'avatars', 'resources', 'badlands', 'faq','report']),
+  { menuTitle: 'Help' }
 );
 
 // Settings (top-right) → real Settings menu (show only Profile + Log Out)
 attachQuickMenu('settings-btn', () =>
-  pick(window.MyFiSettingsMenu, ['profile', 'app','logout'])
+  pick(window.MyFiSettingsMenu, ['profile', 'app','logout']),
+  { menuTitle: 'Settings' }
 );
 
 // Left (Energy) → real Finances menu items
 attachQuickMenu('left-btn', () =>
-  pick(window.MyFiFinancesMenu, ['connectBank','income','expenses'])
+  pick(window.MyFiFinancesMenu, ['connectBank','income','expenses']), 
+  { menuTitle: 'Energy Source' } // or 'Finances'
 );
 
 // Center (Essence) → real Essence menu items
 attachQuickMenu('essence-btn', () =>
-  pick(window.MyFiEssenceMenu, ['contribute', 'purchase', 'empower'])
+  pick(window.MyFiEssenceMenu, ['contribute', 'purchase', 'empower']),
+  { menuTitle: 'Essence' }
 );
 
 // attachQuickMenu('right-btn', () =>
@@ -207,5 +211,6 @@ attachQuickMenu('essence-btn', () =>
 // Right (General) → label-only grid used for navigation (not content)
 // attachQuickMenu('right-btn', buildGeneralMenu, {
 //   onSelect: navToScreen
+//   menuTitle: 'Navigate'
 // });
 

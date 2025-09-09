@@ -347,8 +347,88 @@ import { showToast } from './core/toast.js';
     };
   }
 
+  function PurchaseMenu() {
+  return {
+    label: 'Purchase',
+    title: 'Purchase Credits',
+    preview: 'Buy spendable Credits for Myana (coming soon).',
+    ctaLabel: 'Open',
+    render() {
+      const root = document.createElement('div');
+      root.append(
+        helper(`
+          <p><strong>Credits (TBC)</strong> will let you pick up cosmetics, seasonal passes, boosts, and partner perks.</p>
+          <p>This feature is <em>coming soon</em>. We’re finalising pricing and delivery so it feels fair, transparent, and optional.</p>
+          <ul>
+            <li>One-tap checkout (card/wallet) and fee-free bank transfer</li>
+            <li>Instant wallet crediting with receipt in your Events Log</li>
+            <li>Bonuses for streaks and supporter milestones</li>
+          </ul>
+          <p>Thanks for your patience while we finish wiring this up.</p>
+        `)
+      );
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn--accent';
+      btn.textContent = 'Notify me when ready';
+      btn.addEventListener('click', () => {
+        try {
+          // simple local flag; hook into your settings/profile later if you like
+          localStorage.setItem('myfi:notifyPurchaseReady', '1');
+          window.dispatchEvent(new CustomEvent('myfi:toast', { detail: { type:'success', text:'We’ll let you know in-app when Purchase goes live.' }}));
+        } catch {}
+        window.MyFiModal.close();
+      });
+
+      return [root, btn];
+    },
+    footer() { return [ cancel() ]; }
+  };
+}
+
+function EmpowerMenu() {
+  return {
+    label: 'Empower',
+    title: 'Empower Your Avatar',
+    preview: 'Channel Essence into your Core via a conduit to unlock power (coming soon).',
+    ctaLabel: 'Open',
+    render() {
+      const root = document.createElement('div');
+      root.append(
+        helper(`
+          <p><strong>Empower</strong> lets you channel your saved Essence into a personal <em>Core</em> (your avatar’s heart).
+          Through a <em>conduit</em>, you’ll unlock persistent bonuses and new skill interactions.</p>
+          <ul>
+            <li>Convert Essence → Core charge over time (with caps and tiers)</li>
+            <li>Tie bonuses to your playstyle (Stamina/Mana/Health leaning)</li>
+            <li>Seasonal conduits for special events in The Badlands</li>
+          </ul>
+          <p>This system is in active development. We’re designing it to be meaningful, not pay-to-win.</p>
+        `)
+      );
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn--accent';
+      btn.textContent = 'Keep me posted';
+      btn.addEventListener('click', () => {
+        try {
+          localStorage.setItem('myfi:notifyEmpowerReady', '1');
+          window.dispatchEvent(new CustomEvent('myfi:toast', { detail: { type:'success', text:'Got it — we’ll ping you in-app when Empower is live.' }}));
+        } catch {}
+        window.MyFiModal.close();
+      });
+
+      return [root, btn];
+    },
+    footer() { return [ cancel() ]; }
+  };
+}
+
+
   const EssenceMenu = {
     contribute: ContributeMenu(),
+    purchase:   PurchaseMenu(),   // NEW
+    empower:    EmpowerMenu(),    // NEW
   };
 
   window.MyFiEssenceMenu = EssenceMenu;

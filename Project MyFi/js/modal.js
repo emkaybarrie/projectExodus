@@ -271,9 +271,13 @@ function preventAutoKeyboardOnOpen() {
     currentKey = key;
     titleEl.textContent = def.title || def.label || menuTitleOverride || 'Menu';
 
-    const nodes = [].concat(def.render?.() || []);
+    // ALWAYS forward the lastOpenOpts to render/footer
+    const opts = lastOpenOpts || {};
+
+    const nodes = [].concat(def.render?.(opts) || []);
     contentEl.replaceChildren(...nodes);
-    const f = (def.footer?.() || defaultFooter());
+
+    const f = (def.footer?.(opts) || defaultFooter());
     footerEl.replaceChildren(...withBack(f));
 
     contentEl.scrollTop = 0;
@@ -283,9 +287,9 @@ function preventAutoKeyboardOnOpen() {
       (firstSafe || document.getElementById('modalFocusSentinel'))?.focus();
     }, 0);
 
-
     requestAnimationFrame(recalcMaxHeight);
   }
+
 
   // -------------- chrome: menu + footer --------------
   function withBack(arr){

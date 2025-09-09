@@ -74,7 +74,7 @@ import {
           • <em>Avatar</em> — customise, level up, and unlock perks.<br>
           • <em>Resources</em> — financial insights and partner tools.<br>
           • <em>The Badlands</em> — a rogue-lite adventure to test your avatar and earn rewards.<br><br>
-          Tip: Use the 🌀 toggle on Vitals to swap Daily/Weekly/Monthly views.
+          Tip: Open the Energy Menu ⚡ to set the energy sources that power your avatar.
         `,
         media:{ type:'image', src:'assets/help/basics-nav.png' }
       }
@@ -101,16 +101,16 @@ import {
           • <em>Mana</em> — deliberate, power spending that fuels intentional choices.<br>
           • <em>Health</em> — your safeguarded savings baseline; drained only if others run dry.<br>
           • <em>Essence</em> — long-term growth, powering avatar upgrades, unlocks, and cosmetics.<br><br>
-          Tag transactions to the right pool and see instantly how they affect your energy. Managing these flows is the heart of survival — quests, avatar growth, and Badlands exploration all start here.
+          Tag spending to the right pool and see instantly how they affect your energy. Managing these flows is the heart of survival — quests, avatar growth, and Badlands exploration all start here.
         `,
         media:{ type:'image', src:'assets/help/vitals-overview.png' }
       },
       {
         label:'Using It',
         text: `
-          • Toggle 🌀 to shift between Daily, Weekly, or Monthly context.<br>
-          • Bars show current vs. maximum; surplus pills = how many full bars remain.<br>
-          • The Action Log tracks pending actions — tag them before they lock in, or unlock skills to decide for you.
+          • Use 🌀 to open the Energy Menu and confirm the sources of energyy available to power your avatar.<br>
+          • Bars show current vs. maximum; surplus icons = extra full days of energy you’ve stored.<br>
+          • The Events Log tracks active and recent spending events — tag them before they lock in, or unlock skills to decide for you.
         `,
         media:{ type:'video', src:'assets/help/vitals-using.mp4', poster:'assets/help/vitals-using.jpg' }
       }
@@ -220,7 +220,7 @@ import {
     const content = {
       'getting-started': { text:`Set income & core expenses, then add a few transactions. Watch the Vitals HUD update live.`, media:{type:'image', src:'assets/help/faq-start.png'} },
       'tagging':         { text:`Tag spending as Mana if it’s intentional. Otherwise it defaults to Stamina. Overspending can spill into Health, your last line of defense.`, media:{type:'image', src:'assets/help/faq-tag.png'} },
-      'regen':           { text:`Energy regenerates over time, based on your income (after core expenses). Spending too much will affect this, ensuring you can’t outpace your means.`, media:{type:'image', src:'assets/help/faq-regen.png'} },
+      'regen':           { text:`Energy regenerates steadily from your income (after core expenses). Overspending slows this flow, so you can’t outpace your real capacity.`, media:{type:'image', src:'assets/help/faq-regen.png'} },
       'privacy':         { text:`Your data stays yours. Bank connections use trusted providers; you control access.`, media:{type:'image', src:'assets/help/faq-privacy.png'} },
     };
 

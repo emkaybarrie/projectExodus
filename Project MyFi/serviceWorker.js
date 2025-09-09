@@ -1,5 +1,6 @@
-// /service-worker.js
-const VERSION = 'v1.2';
+// /serviceWorker.js
+const VERSION = 'v1.4';
+const DEV_MODE = /^(localhost|127\.0\.0\.1)$/.test(self.location.hostname);
 const APP_SHELL_CACHE = `myfi-shell-${VERSION}`;
 const RUNTIME_CACHE   = `myfi-runtime-${VERSION}`;
 const IMAGE_CACHE     = `myfi-images-${VERSION}`;
@@ -11,7 +12,7 @@ const APP_SHELL = [
   '/start.html',
   '/dashboard.html',
   // CSS (core only)
-  '/vitals.css',
+  '/css/vitals.css',
   '/css/global/forms.css',
   // JS (core only)
   '/js/dashboard.js',
@@ -49,6 +50,11 @@ self.addEventListener('activate', (event) => {
 
 // Optional: navigation preload can speed SSR apps
 // self.addEventListener('activate', (e)=>{ if (self.registration.navigationPreload) self.registration.navigationPreload.enable(); });
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 // ---- Fetch handler with sensible defaults
 self.addEventListener('fetch', (event) => {
@@ -64,7 +70,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1) Handle navigations (HTML)
+  // 1) Handle navigations (HTML): keep network-first (good for dev & prod)
   if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith((async () => {
       try {
@@ -82,8 +88,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2) Static assets (scripts/styles/fonts): cache-first
-  if (['script', 'style', 'font'].includes(req.destination)) {
+ // 2) Scripts/styles: stale-while-revalidate so code updates land quickly
+   //    DEV → network-first (see changes on first reload)
+  //    PROD → stale-while-revalidate (fast, then quietly refresh)
+  if (['script', 'style'].includes(req.destination)) {
+    if (DEV_MODE) {
+      event.respondWith(networkFirst(req, RUNTIME_CACHE));
+    } else {
+      event.respondWith(staleWhileRevalidateWithLimit(req, RUNTIME_CACHE, 80));
+    }
+    return;
+  }
+  // Fonts: cache-first is fine
+  if (req.destination === 'font') {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE));
     return;
   }
