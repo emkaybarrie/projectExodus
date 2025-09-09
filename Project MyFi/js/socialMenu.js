@@ -40,11 +40,19 @@
         if (!d.avatarKey){ d.avatarKey = 'default'; }
         const portraitImageSrc = `./assets/portraits/${d.avatarKey}.png`;
 
-        const obj = { avatarKey: d.avatarKey || 'default', alias: d.alias || uid.slice(0,6), avatar: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png', firstName: d.firstName || ''};
+        const obj = { avatarKey: d.avatarKey || 'default', alias: d.alias || uid.slice(0,6), avatarImgPath: portraitImageSrc || d.avatarUrl || './assets/portraits/default.png', firstName: d.firstName || ''};
         _profileCache.set(uid, obj);
         return obj;
     } catch { return { alias: uid.slice(0,6), avatar: './assets/portraits/default.png' }; }
     }
+
+  // Avatar Images
+  function portraitSrcFrom(srcOrKey) {
+    if (!srcOrKey) return './assets/portraits/default.png';
+    const looksLikeUrl = /^https?:\/\//i.test(srcOrKey) || srcOrKey.startsWith('./') || srcOrKey.startsWith('/assets/');
+    return looksLikeUrl ? srcOrKey : `./assets/portraits/${srcOrKey}.png`;
+  }
+
 
   // Small utility
   const timeAgo = (ms) => {
@@ -123,7 +131,7 @@
     }});
 
     const avatar = el('img', {
-      src: friend.avatar || './assets/portraits/default.png',
+      src: friend.avatarImgPath || './assets/portraits/default.png',
       alt: `${friend.alias} avatar`,
       style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }
     });
@@ -243,7 +251,7 @@
     }});
 
     const avatar = el('img', {
-      src: req.avatar || './assets/portraits/default.png',
+      src: req.avatarImgPath || './assets/portraits/default.png',
       alt: `${req.alias} avatar`,
       style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }
     });
@@ -347,7 +355,7 @@
         gap:'10px', padding:'8px 6px', border:'1px solid rgba(255,255,255,0.06)',
         borderRadius:'10px', marginBottom:'8px', background:'rgba(255,255,255,0.03)'
       }});
-      const avatar = el('img', { src:req.avatar || './assets/portraits/default.png', alt:`${req.alias} avatar`,
+      const avatar = el('img', { src:req.avatarImgPath || './assets/portraits/default.png', alt:`${req.alias} avatar`,
         style:{ width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover' }});
       const text = el('div', {});
       const alias = el('div', { style:{ fontWeight:'600' }}, req.alias);
@@ -463,29 +471,76 @@
     }
   
   // -------------------- Friend Profile --------------------
+  // function friendProfileRender(opts){
+  //   const friend = opts?.friend || {};
+  //   const root = el('div', { style:{ display:'grid', gap:'12px' }});
+
+  //   const avatar = el('img', {
+  //     src: friend.avatarImgPath || './assets/portraits/default.png',
+  //     alt: `${friend.alias} avatar`,
+  //     style:{ width:'96px', height:'96px', borderRadius:'14px', objectFit:'cover' }
+  //   });
+
+  //   const title = el('div', { style:{ fontWeight:'700', fontSize:'18px' }}, friend.alias || 'Friend');
+
+  //   const sub = el('div', { style:{ opacity:.85 }});
+  //   const lines = [];
+  //   if (friend.theirTrust && friend.firstName) lines.push(`<strong>First name:</strong> ${friend.firstName}`);
+  //   lines.push(`<strong>Your sharing:</strong> ${friend.myTrust ? 'You trust them' : 'Standard'}`);
+  //   sub.innerHTML = lines.join('<br>');
+
+  //   const actions = el('div', { style:{ display:'flex', gap:'8px', flexWrap:'wrap' }});
+  //   const msg = btn('Send message', 'secondary', () => alert(`(Placeholder) Start chat with ${friend.alias}`));
+
+  //   const toggleTrust = btn(friend.myTrust ? 'Remove trust' : 'Trust friend', 'secondary', async () => {
+  //     const wantTrust = !friend.myTrust;
+  //     const ok = confirm(
+  //       wantTrust
+  //         ? 'Trust this friend? Your first name will be visible to them (and more in future).'
+  //         : 'Remove trust for this friend? They will lose access to your first name.'
+  //     );
+  //     if (!ok) return;
+
+  //     // Backend hook
+  //     try {
+  //       const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
+  //       const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'setFriendTrust');
+  //       await fn({ friendUid: friend.uid, trusted: wantTrust });
+
+  //       friend.trusted = wantTrust;
+  //       // Repaint current panel
+  //       const panel = modal().contentEl?.querySelector('.social__panel');
+  //       panel && panel.parentElement?.paintPanel?.();
+  //       menu.style.display = 'none';
+  //     } catch (e) {
+  //       alert('Could not update trust. Please try again.');
+  //     }
+  //   });
+
+  //   actions.append(msg, toggleTrust);
+  //   root.append(avatar, title, sub, actions);
+  //   return [root];
+  // }
   function friendProfileRender(opts){
-    const friend = opts?.friend || {};
+    const passed = opts?.friend || {};
     const root = el('div', { style:{ display:'grid', gap:'12px' }});
 
+    // Shell elements (we'll fill them after (re)hydration)
     const avatar = el('img', {
-      src: friend.avatar || './assets/portraits/default.png',
-      alt: `${friend.alias} avatar`,
+      src: portraitSrcFrom(passed.avatarImgPath || passed.avatarKey || passed.avatar),
+      alt: `${passed.alias || 'Friend'} avatar`,
       style:{ width:'96px', height:'96px', borderRadius:'14px', objectFit:'cover' }
     });
+    avatar.addEventListener('error', () => { avatar.src = './assets/portraits/default.png'; });
 
-    const title = el('div', { style:{ fontWeight:'700', fontSize:'18px' }}, friend.alias || 'Friend');
+    const title = el('div', { style:{ fontWeight:'700', fontSize:'18px' }}, passed.alias || 'Friend');
+    const sub   = el('div', { style:{ opacity:.85 }});
 
-    const sub = el('div', { style:{ opacity:.85 }});
-    const lines = [];
-    if (friend.theirTrust && friend.firstName) lines.push(`<strong>First name:</strong> ${friend.firstName}`);
-    lines.push(`<strong>Your sharing:</strong> ${friend.myTrust ? 'You trust them' : 'Standard'}`);
-    sub.innerHTML = lines.join('<br>');
-
+    // Actions
     const actions = el('div', { style:{ display:'flex', gap:'8px', flexWrap:'wrap' }});
-    const msg = btn('Send message', 'secondary', () => alert(`(Placeholder) Start chat with ${friend.alias}`));
-
-    const toggleTrust = btn(friend.myTrust ? 'Remove trust' : 'Trust friend', 'secondary', async () => {
-      const wantTrust = !friend.myTrust;
+    const msg = btn('Send message', 'secondary', () => alert(`(Placeholder) Start chat with ${current.alias || 'friend'}`));
+    const toggleTrust = btn((passed.myTrust ? 'Remove trust' : 'Trust friend'), 'secondary', async () => {
+      const wantTrust = !current.myTrust;
       const ok = confirm(
         wantTrust
           ? 'Trust this friend? Your first name will be visible to them (and more in future).'
@@ -493,26 +548,60 @@
       );
       if (!ok) return;
 
-      // Backend hook
       try {
         const { getFunctions, httpsCallable } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js');
         const fn = httpsCallable(getFunctions(undefined, 'europe-west2'), 'setFriendTrust');
-        await fn({ friendUid: friend.uid, trusted: wantTrust });
+        await fn({ friendUid: current.uid, trusted: wantTrust });
 
-        friend.trusted = wantTrust;
-        // Repaint current panel
-        const panel = modal().contentEl?.querySelector('.social__panel');
-        panel && panel.parentElement?.paintPanel?.();
-        menu.style.display = 'none';
+        // Update the field you actually render
+        current.myTrust = wantTrust;
+        paintSub(current);
       } catch (e) {
         alert('Could not update trust. Please try again.');
       }
     });
-
     actions.append(msg, toggleTrust);
+
     root.append(avatar, title, sub, actions);
+
+    // Local "current" snapshot we can repaint into
+    let current = { ...passed };
+
+    // Painter
+    function paintSub(f) {
+      title.textContent = f.alias || 'Friend';
+      toggleTrust.textContent = f.myTrust ? 'Remove trust' : 'Trust friend';
+      avatar.src = portraitSrcFrom(f.avatarImgPath || f.avatarKey || f.avatar);
+
+      const lines = [];
+      if (f.theirTrust && f.firstName) lines.push(`<strong>First name:</strong> ${f.firstName}`);
+      lines.push(`<strong>Your sharing:</strong> ${f.myTrust ? 'You trust them' : 'Standard'}`);
+      sub.innerHTML = lines.join('<br>');
+    }
+
+    // Initial paint (from passed)
+    paintSub(current);
+
+    // Rehydrate fresh profile + reverse edge (theirTrust) if needed
+    (async () => {
+      try {
+        if (!current.uid) return; // nothing else to load
+        const [prof] = await Promise.all([ fetchProfile(current.uid) ]);
+        // Merge: prefer latest from prof but keep trust booleans already computed
+        current = {
+          ...current,
+          alias: prof.alias ?? current.alias,
+          firstName: prof.firstName ?? current.firstName,
+          avatarImgPath: prof.avatarImgPath ?? current.avatarImgPath,
+          avatarKey: prof.avatarKey ?? current.avatarKey,
+        };
+        paintSub(current);
+      } catch (_) { /* silent */ }
+    })();
+
     return [root];
   }
+  
   function friendProfileFooter(){ return [ cancel('Close') ]; }
 
 
@@ -545,7 +634,7 @@ async function startSocialListeners(uid, onFriends, onRequests) {
         uid: fuid,
         alias: prof.alias,
         firstName: prof.firstName || '',
-        avatar: prof.avatar,
+        avatarImgPath: prof.avatarImgPath,
         myTrust,          // I trust them (lets THEM see MY name)
         theirTrust,       // They trust me (lets ME see THEIR name)
         status: '—'
@@ -568,7 +657,7 @@ async function startSocialListeners(uid, onFriends, onRequests) {
       rows.push({
         uid: fromUid,
         alias: prof.alias,
-        avatar: prof.avatar,
+        avatarImgPath: prof.avatarImgPath,
         sinceMs: d.createdMs || Date.now()
       });
     }
@@ -589,7 +678,7 @@ async function startSocialListeners(uid, onFriends, onRequests) {
         rows.push({
           uid: toUid,
           alias: prof.alias,
-          avatar: prof.avatar,
+          avatarImgPath: prof.avatarImgPath,
           sinceMs: d.createdMs || Date.now()
         });
       }

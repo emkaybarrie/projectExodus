@@ -446,11 +446,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // PWA INstall
   // PWA Install — register SW from root so it can control all pages
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./serviceWorker.js', { scope: './' })
-      .then(reg => console.log("SW registered", reg))
-      .catch(err => console.error("SW failed", err));
-  }
+// PWA Install — register SW from root so it can control all pages
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./serviceWorker.js', { scope: './' })
+    .then(reg => {
+      console.log('[SW] registered', reg);
+
+      // optional: force update check on load
+      reg.update?.();
+
+      // auto-activate new SWs without requiring a manual reload
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        nw?.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+
+      // when controller changes (new SW active), reload once to get fresh files
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // avoid reload loop
+        if (!window.__reloadedForSW) {
+          window.__reloadedForSW = true;
+          location.reload();
+        }
+      });
+    })
+    .catch(err => console.error('[SW] failed', err));
+}
+
 
   // === Android/Desktop install banner (iOS uses modal instead) ===
   (function setupInstallBanner(){

@@ -26,6 +26,6 @@ export async function initHUD() {
 
   // Start the animated HUD (includes live ghost + mode handling)
   initVitalsHUD(userId, 1); 
-
+  
   console.log("HUD initialized");
 }
