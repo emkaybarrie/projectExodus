@@ -95,7 +95,8 @@ self.addEventListener('fetch', (event) => {
     if (DEV_MODE) {
       event.respondWith(networkFirst(req, RUNTIME_CACHE));
     } else {
-      event.respondWith(staleWhileRevalidateWithLimit(req, RUNTIME_CACHE, 80));
+      event.respondWith(networkFirst(req, RUNTIME_CACHE));
+      // event.respondWith(staleWhileRevalidateWithLimit(req, RUNTIME_CACHE, 80));
     }
     return;
   }
@@ -107,7 +108,8 @@ self.addEventListener('fetch', (event) => {
 
   // 3) Images: stale-while-revalidate with a small cache
   if (req.destination === 'image') {
-    event.respondWith(staleWhileRevalidateWithLimit(req, IMAGE_CACHE, 60));
+    event.respondWith(networkFirst(req, RUNTIME_CACHE));
+    // event.respondWith(staleWhileRevalidateWithLimit(req, IMAGE_CACHE, 60));
     return;
   }
 
