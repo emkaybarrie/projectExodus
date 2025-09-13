@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           avatarKey = avatarsSource.includes(playerData.firstName) ? (playerData.firstName) : 'default';
         }       
-        // Update avatarKey in player doc if empty or default
+        // Update avatarKey in player doc 
           try { await setDoc(userRef, { avatarKey: avatarKey }, { merge: true }); } catch (e) { console.warn("Failed to update avatarKey:", e); }
       }
 
