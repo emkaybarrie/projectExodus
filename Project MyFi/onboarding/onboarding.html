@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Awakening • Onboarding</title>
 
+  <!-- Preload fantasy fonts to avoid first-line reflow -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+
   <!-- Your existing app styles -->
   <link rel="stylesheet" href="../css/general.css">
   <link rel="stylesheet" href="../css/modal.css">
@@ -24,14 +28,9 @@
   <div class="loading">Opening the conduit…</div>
 
   <script type="module">
-    // Import your Firebase singletons
     import { auth } from "../js/core/auth.js";
-
-    // Load the wizard (auto-starts if onboarding not complete)
-    import "./architectOnboarding.js";
-
-    // Explicit boot to start after auth, or bounce to dashboard if already done
-    import "./onboardingBoot.js";
+    import "./architectOnboarding.js"; // auto-starts if not done
+    import "./onboardingBoot.js";      // explicit start/bounce logic
   </script>
 </body>
 </html>

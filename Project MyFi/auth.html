@@ -102,14 +102,6 @@
         </div>
       </div>
 
-      <div class="field">
-        <!-- Truncate while typing via maxlength -->
-        <input type="text" id="alias" placeholder="Alias" required maxlength="16" />
-        <button type="button" class="info-btn" aria-label="Alias help" aria-expanded="false">i</button>
-        <div class="tooltip" role="tooltip">
-          <strong>Game name</strong>. Shown to others and used to identify you. 16 character limit.
-        </div>
-      </div>
 
       <div class="field">
         <input type="text" id="firstName" placeholder="First Name" required />
@@ -171,7 +163,6 @@
       const data = {
         email: document.getElementById("signup-email").value,
         password: document.getElementById("signup-password").value,
-        alias: document.getElementById("alias").value,
         firstName: document.getElementById("firstName").value,
         lastName: document.getElementById("lastName").value,
       };
