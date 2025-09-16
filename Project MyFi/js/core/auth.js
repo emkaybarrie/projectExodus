@@ -146,7 +146,8 @@ export async function signupUser(data) {
     sessionStorage.setItem('showSplashNext', '1');
     sessionStorage.setItem('myfi.welcome.v1.done', '0');
     localStorage.setItem('myfi.welcome.v1.done', '0');
-    window.location.href = "dashboard.html";
+    //window.location.href = "dashboard.html";
+    window.location.replace("./onboarding/onboarding.html");
   } catch (error) {
     console.error("Signup error:", error);
     // Map common setAlias errors nicely

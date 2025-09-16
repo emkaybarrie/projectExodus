@@ -4,18 +4,18 @@
 // Drop-in: import this module from dashboard (or include via <script type="module">) and call MyFiOnboarding.start().
 // It also auto-starts if it detects onboarding not done for the current user.
 
-import { auth, db } from './core/auth.js';
+import { auth, db } from '../js/core/auth.js';
 import {
   getDoc, doc, setDoc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { initHUD } from "./hud/hud.js"; // just in case we want to refresh after finish
-import { VO, UI } from "./onboarding/architectCopy.js";
+import { initHUD } from "../js/hud/hud.js"; // just in case we want to refresh after finish
+import { VO, UI } from "./architectCopy.js";
 
 // Optional TrueLayer helper if present
 let connectTrueLayerAccount = null;
 try {
-  const tl = await import('./core/truelayer.js');
+  const tl = await import('../js/core/truelayer.js');
   connectTrueLayerAccount = tl?.connectTrueLayerAccount || null;
 } catch {}
 
@@ -59,8 +59,8 @@ const state = {
   lastPayDateMs: null,
   runwayAmount: null,
   stretchMonths: 3,
-  allocations: { health:.35, mana:.25, stamina:.30, essence:.10 },
-  seed: 'safe', // 'safe'|'accel'|'manual'|'true'
+  allocations: { health:.20, mana:.25, stamina:.45, essence:.10 },
+  mode: 'standard', // 'safe'|'accel'|'manual'|'true'
   avatar: null
 };
 
@@ -207,10 +207,10 @@ function scene4(){
 
   const tiles = el('div','ao-tiles');
   const presets = [
-    ['balanced','Balanced',{h:.35,m:.25,s:.30,e:.10}],
-    ['saver','Enduring (Health+)',{h:.45,m:.20,s:.25,e:.10}],
-    ['everyday','Everyday (Stamina+)',{h:.30,m:.20,s:.40,e:.10}],
-    ['ardent','Ardent (Mana+)',{h:.30,m:.40,s:.20,e:.10}],
+    ['balanced','Balanced',{h:.20,m:.25,s:.45,e:.10}],
+    ['saver','Enduring (Health+)',{h:.35,m:.15,s:.40,e:.10}],
+    ['everyday','Everyday (Stamina+)',{h:.15,m:.20,s:.55,e:.10}],
+    ['ardent','Ardent (Mana+)',{h:.10,m:.45,s:.35,e:.10}],
   ];
   presets.forEach(([key,label,vals])=>{
     const t = tile({ title: label, desc:'', key });
@@ -238,13 +238,12 @@ function scene5(){
 
   const tiles = el('div','ao-tiles');
   const opts = [
-    ['safe','Safe — a gentle spark'],
-    ['accel','Accelerated — brighter start'],
-    ['manual','Manual — I will tune it'],
-    ['true','True — bound to streams'],
+    ['relaxed','Relaxed — easy mode'],
+    ['standard','Standard — normal mode'],
+    ['focused','Focused — hard mode'],
   ];
   opts.forEach(([k, label])=>{
-    const t = tile({ title: label, desc:'', key:k, selected: state.seed===k });
+    const t = tile({ title: label, desc:'', key:k, selected: state.mode===k });
     t.addEventListener('click', ()=>{
       tiles.querySelectorAll('.ao-tile').forEach(x=>x.setAttribute('aria-selected','false'));
       t.setAttribute('aria-selected','true');
@@ -325,7 +324,7 @@ async function persistAndFinish(){
       expectedNextIncomeMs: null,
       lastPayDateMs: state.lastPayDateMs || null
     },
-    vitalsMode: (state.seed==='true') ? 'true' : (state.seed==='accel' ? 'focused' : (state.seed==='safe' ? 'relaxed' : 'standard'))
+    vitalsMode: state.mode
   };
 
   await setDoc(ref, payload, { merge: true });
@@ -379,7 +378,7 @@ export async function start(){
     const link = document.createElement('link');
     link.id = 'ao-style';
     link.rel = 'stylesheet';
-    link.href = './onboarding/architectOnboarding.css';
+    link.href = './architectOnboarding.css';
     document.head.appendChild(link);
   }
   scene1();

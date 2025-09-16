@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Awakening • Onboarding</title>
+
+  <!-- Your existing app styles -->
+  <link rel="stylesheet" href="../css/general.css">
+  <link rel="stylesheet" href="../css/modal.css">
+
+  <!-- Onboarding styles -->
+  <link rel="stylesheet" href="./architectOnboarding.css">
+
+  <style>
+    body{
+      background:#0b0d12; color:#e9edf1; min-height:100svh; margin:0;
+      display:grid; place-items:center;
+    }
+    .loading{opacity:.85; font:600 14px system-ui,sans-serif; letter-spacing:.02em;}
+  </style>
+</head>
+<body>
+  <div class="loading">Opening the conduit…</div>
+
+  <script type="module">
+    // Import your Firebase singletons
+    import { auth } from "../js/core/auth.js";
+
+    // Load the wizard (auto-starts if onboarding not complete)
+    import "./architectOnboarding.js";
+
+    // Explicit boot to start after auth, or bounce to dashboard if already done
+    import "./onboardingBoot.js";
+  </script>
+</body>
+</html>
