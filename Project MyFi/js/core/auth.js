@@ -21,27 +21,6 @@ const db = getFirestore(app);
 // NEW (bind to your region)
 const fns  = getFunctions(app, "europe-west2");
 
-// === Alias policy (keep this in sync with vitals.js) ===
-const MAX_ALIAS_LEN = 16;
-const ALIAS_RE = /^[A-Za-z0-9_\-]{3,32}$/;
-
-// Optional helper: show inline info/warning if form has a helper element
-function showAliasNotice(msg, type = "warn") {
-  // Try common helper selectors; tweak if you have a specific element in your form.
-  const el = document.querySelector('#aliasHelp, [data-alias-help], .alias-help');
-  if (el) {
-    el.textContent = msg;
-    el.style.display = "block";
-    el.style.color = type === "warn" ? "#ffb4b4" : "#cde8a2";
-    // auto-clear after a few seconds so it’s non-blocking
-    clearTimeout(el.__timer);
-    el.__timer = setTimeout(() => { el.textContent = ""; el.style.display = "none"; }, 4500);
-  } else {
-    // Fallback so user still sees something
-    alert(msg);
-  }
-}
-
 // Helper
 const getUserDataFromFirestore = async (uid) => {
   const userDocRef = doc(db, "players", uid);
@@ -74,26 +53,14 @@ export async function loginUser(email, password) {
   }
 }
 
-// Signup (now calls setAlias)
+// Signup
 export async function signupUser(data) {
   try {
-    const rawAlias = (data.alias ?? "").toString().trim();
-    if (!rawAlias) { showAliasNotice("Alias is required.", "warn"); return; }
-
-    // Normalize to policy
-    let aliasSafe = rawAlias.slice(0, MAX_ALIAS_LEN);
-    if (!ALIAS_RE.test(aliasSafe)) {
-      showAliasNotice("Alias must be 3–32 chars: letters, numbers, _ or -.", "warn");
-      return;
-    }
-    if (rawAlias.length > MAX_ALIAS_LEN) {
-      showAliasNotice(`Alias was shortened to ${MAX_ALIAS_LEN} characters.`, "warn");
-    }
 
     // 1) Create auth user
     const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
 
-    // 2) Create base player doc (no alias fields here)
+    // 2) Create base player doc
     await setDoc(doc(db, "players", user.uid), {
       startDate: serverTimestamp(),
       email: data.email,
@@ -105,11 +72,7 @@ export async function signupUser(data) {
       onboarding: { welcomeDone: false }
     }, { merge: true });
 
-    // 3) Reserve alias + write alias/aliasLower atomically (handles/* + players/*)
-    const setAlias = httpsCallable(fns, "setAlias");
-    await setAlias({ alias: aliasSafe });
-
-    // 4) Seed auxiliary docs (unchanged)
+    // 3) Seed auxiliary docs (unchanged)
     await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
       dCoreExpenses: Number(0),
       dIncome: Number(0)
@@ -142,23 +105,13 @@ export async function signupUser(data) {
     }
 
 
-    // 5) Redirect
+    // 4) Redirect
     sessionStorage.setItem('showSplashNext', '1');
     sessionStorage.setItem('myfi.welcome.v1.done', '0');
     localStorage.setItem('myfi.welcome.v1.done', '0');
-    window.location.href = "dashboard.html";
+    window.location.replace("./onboarding/onboarding.html");
   } catch (error) {
     console.error("Signup error:", error);
-    // Map common setAlias errors nicely
-    const code = error?.code || "";
-    if (code === "already-exists") {
-      showAliasNotice("That alias is taken. Try another.", "warn");
-      return;
-    }
-    if (code === "invalid-argument") {
-      showAliasNotice("Alias must be 3–32 chars: letters, numbers, _ or -.", "warn");
-      return;
-    }
     alert("Signup failed: " + (error?.message || "Unknown error"));
   }
 }
