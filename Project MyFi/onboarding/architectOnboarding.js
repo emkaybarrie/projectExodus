@@ -52,7 +52,7 @@ function setBackgroundImage(url){ const st=ensureStage(); st.className='ao-bg-im
 
 let NARRATION_BOXED = false;
 let SHOW_ADVANCE_CHIP = true;
-let SPEED = { wordBase: 15.0, lineGap: 43.0, punctuationPause: 39.0 }; // tweakable
+let SPEED = { wordBase: 150, lineGap: 430, punctuationPause: 390 }; // tweakable
 
 function setNarrationBoxed(flag){ NARRATION_BOXED = !!flag; }
 function setAdvanceChipVisible(flag){ SHOW_ADVANCE_CHIP = !!flag; }
