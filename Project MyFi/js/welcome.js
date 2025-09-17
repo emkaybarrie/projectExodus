@@ -263,8 +263,8 @@ export async function showWelcomeThenMaybeSetup(uid) {
     <div class="wcard">
       <div class="wcontent"></div>
       <div class="actions">
-        <button id="wo-quickstart" class="ws-btn ws-primary">Quick Start</button>
-        <button id="wo-open" class="ws-btn ws-accent">Open Vitals</button>
+        <button id="wo-quickstart" class="ws-btn ws-primary">Quick Start Tips</button>
+        <button id="wo-open" class="ws-btn ws-accent">Continue</button>
       </div>
     </div>
   `;
@@ -318,7 +318,11 @@ export async function showWelcomeThenMaybeSetup(uid) {
     if (btn.id === 'wo-open') {
       // Close the intro card and proceed to Quick Setup
       shell.remove(); window.removeEventListener('resize', applySmallScreen);
-      showFirstRunSetup(uid);
+      //showFirstRunSetup(uid);
+
+          try { markWelcomeDone(uid); } catch (e) { console.warn('[Quick Setup] skip failed:', e); }
+          shell.remove(); window.removeEventListener('resize', applySmallScreen);
+          WELCOME_OPEN = false; // ✅ clear guard on close
       return;
     }
     if (btn.id === 'wo-quickstart') {
