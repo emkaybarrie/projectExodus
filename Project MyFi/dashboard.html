@@ -385,29 +385,6 @@
 })();
 </script>
 
-<!-- TEMP: Backfill TrueLayer (last 30 days) -->
-<!-- <button id="tlBackfillBtn" style="position:fixed;right:12px;bottom:12px;z-index:9999">
-  Backfill TL (30d)
-</button>
-
-<script type="module">
-  import { triggerIngestBackfill } from './js/core/truelayer.js';
-
-  const btn = document.getElementById('tlBackfillBtn');
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
-    const sinceMs = Date.now() - 30 * 24 * 60 * 60 * 1000; // last 30 days
-    try {
-      await triggerIngestBackfill(sinceMs);
-      alert('Backfill kicked off.\nCheck console for details.');
-    } catch (e) {
-      console.error(e);
-      alert('Backfill failed (see console).');
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script> -->
 
 <!-- TEMP: Recompute per-stream usage + refresh vitals -->
 <!-- <button id="recomputeVitalsBtn"

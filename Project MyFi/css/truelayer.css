@@ -1,0 +1,25 @@
+/* Auth footer: Powered by TrueLayer */
+.powered-by-tl{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font-size: .95rem;
+  color: #f0e6d2;
+  opacity: .92;
+  z-index: 10000;         /* sits above cinematic layers and cards */
+  pointer-events: none;   /* let clicks pass through */
+  text-shadow: 0 1px 2px rgba(0,0,0,.5);
+}
+.powered-by-tl img{
+  vertical-align: -3px;
+  margin-left: 6px;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.45));
+}
+
+/* Optional: subtle separator when UI is bright */
+@media (prefers-color-scheme: light) {
+  .powered-by-tl { color: #222; opacity: .85; text-shadow: none; }
+}

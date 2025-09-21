@@ -194,7 +194,7 @@ attachQuickMenu('settings-btn', () =>
 
 // Left (Energy) → real Finances menu items
 attachQuickMenu('left-btn', () =>
-  pick(window.MyFiFinancesMenu, ['connectBank','income','expenses']), 
+  pick(window.MyFiFinancesMenu, ['connectBank', 'smartReview','income','expenses']), 
   { menuTitle: 'Energy Source' } // or 'Finances'
 );
 
