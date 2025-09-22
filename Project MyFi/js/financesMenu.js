@@ -3,7 +3,7 @@
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
 import { auth, db } from './core/auth.js';
 import { initHUD } from './hud/hud.js';
-import { connectTrueLayerAccount } from './core/truelayer.js';
+import { connectTrueLayerAccount, ensureTlConsentDialog, runSmartReviewFlow  } from './core/truelayer.js';
 import {
   updateIncome, updateCoreExpenses, getDailyIncome, getDailyCoreExpenses
 } from './data/cashflowData.js';
@@ -313,19 +313,57 @@ import {
   const FinancesMenu = {
     connectBank: {
       label: 'Connect Bank',
-      title: 'Connect a Bank (Coming Soon)',
+      title: 'Connect a Bank',
       preview: 'Link your bank for automatic transaction sync (via TrueLayer). Unlocks full automation.',
       render() {
-        // keep this simple; also reachable from Add Transaction via cross-link
-        const info = helper('Linking your bank lets the app fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.');
-        const b = primary('Connect with TrueLayer', async () => {
-          // try { await connectTrueLayerAccount(); window.MyFiModal.close(); await initHUD(); }
-          // catch (e) { console.warn('TrueLayer connect failed:', e); }
-          alert('Coming soon!');
+        const info = helper(
+          'Linking your bank lets the app fetch transactions automatically through TrueLayer. Safe, optional, and unlocks full game features.'
+        );
+        const btn = primary('Connect with TrueLayer', async () => {
+          const dlg = ensureTlConsentDialog();
+          // show modal
+          dlg.showModal();
+
+          // on Agree -> call TL connect; guard against multiple bindings
+          const agree = dlg.querySelector('#tlAgree');
+          const onAgree = async (ev) => {
+            ev?.preventDefault?.();
+            try {
+              dlg.close();
+              await connectTrueLayerAccount();   // this now includes PKCE in truelayer.js
+              window.MyFiModal.close();          // close the finances menu modal
+              await initHUD();                   // refresh HUD after callback sync completes
+            } catch (e) {
+              console.warn('TrueLayer connect failed:', e);
+            } finally {
+              agree.removeEventListener('click', onAgree);
+            }
+          };
+          agree.addEventListener('click', onAgree);
         });
-        return [info, b];
+
+        return [info, btn];
       },
       footer() { return [cancel()]; }
+    },
+
+    smartReview: {
+      label: 'Smart Review',
+      title: 'Re-run Smart Review',
+      preview: 'Re-analyse recent bank data to refresh Income & Core Outflow. You can adjust later.',
+      render() {
+        const info = helper('Use this to refresh your inflow/outflow baseline after new transactions arrive.');
+        const btn  = primary('Run now', async () => {
+          try {
+            await runSmartReviewFlow(); // force
+            await initHUD();
+          } catch (e) {
+            console.warn('Smart Review failed:', e);
+          }
+        });
+        return [info, btn];
+      },
+      footer(){ return [cancel()]; }
     },
 
     income:   makeUnifiedEntry('income',   'Income',        'Income',        'Set your recurring income and frequency. Input as a total or break it down by source.'),

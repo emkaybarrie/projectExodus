@@ -24,43 +24,41 @@ Others burn as Fire — bold, transformative, capable of sudden and dramatic cha
 And some are touched by Chaos — unbound, weaving all paths into one, and balanced through flux.
 This is your affinity — the element that colors your spirit. Choose what feels most comfortable.`,
 
-  s4_title: "Energy",
-  s4: `Now… close your eyes and search within. Do you feel it — the source of your power, ebbing and flowing?
-Some spirits know it well: a steady stream, feeding their light each cycle, time after time.
-Others… carry only a spark. A reserve of energy already gathered, precious, to be spent with care until it can be renewed.`,
-
-  s5_title: "Ember",
-  s5: `Whatever your source, every spirit bears an Ember - the quiet weight of survival. 
-It burns without pause, consuming what is owed each cycle.  That which must be fed, so the spirit may endure.
-Tell me: how much does your ember take from you?`,
-
-  s6_title: "Flame",
-  s6: `Your flame stirs. Each spirit chooses how theirs will burn:
+  s4_title: "Flame",
+  s4: `Your flame stirs. Each spirit chooses how theirs will burn:
 gentle and forgiving, steady and balanced, or sharp and demanding.
 Your choice shapes how the world challenges you.`,
 
-  s7_title: "Essence",
-  s7: `Soon you’ll walk through vessels — avatars empowered by your very being, as you cross into their world.
+  s5_title: "Essence",
+  s5: `Soon you’ll walk through vessels — avatars empowered by your very being, as you cross into their world.
 Describe your essence and I will guide you to a fitting vessel.
 When the time is right, I will teach you how to move between them freely…
 but most grow close to the one that truly feels like home.`,
 
-  s8_title: "The Crucible",
-  s8: `Your first steps are taken. Your name is spoken, your alignment chosen, your flame alive.
+  s6_title: "The Crucible",
+  s6: `Your first steps are taken. Your name is spoken, your alignment chosen, your flame alive.
 This is your Crucible — the heart where your essence gathers, the source from which your power flows.
 Every spirit carries theirs, and it grows with them.
 Guard it, nurture it, and it will shape everything you become. You walk among us now.`
+
+//   s4_title: "Energy",
+//   s4: `Now… close your eyes and search within. Do you feel it — the source of your power, ebbing and flowing?
+// Some spirits know it well: a steady stream, feeding their light each cycle, time after time.
+// Others… carry only a spark. A reserve of energy already gathered, precious, to be spent with care until it can be renewed.`,
+
+//   s5_title: "Ember",
+//   s5: `Whatever your source, every spirit bears an Ember - the quiet weight of survival. 
+// It burns without pause, consuming what is owed each cycle.  That which must be fed, so the spirit may endure.
+// Tell me: how much does your ember take from you?`,
 };
 
 export const PROMPT = {
   s1: "What will you be called?",
   s2: "Choose your Alignment",
   s3: "Choose your Affinity",
-  s4: "Confirm your Source",
-  s5: "Confirm your Ember",
-  s6: "Choose how your flame burns",
-  s7: "Describe your essence",
-  s8: "Enter the Crucible"
+  s4: "Choose how your flame burns",
+  s5: "Describe your essence",
+  s6: "Enter the Crucible"
 };
 
 export const INFO = {
@@ -80,14 +78,6 @@ You can adjust later in Settings.`,
 • Chaos: unpredictable, fluid, touching all — balanced through flux
 Your choice is thematic, shaping how your spirit is expressed, and how affects the way you obtain rewards in the Badlands.`,
 
-  source: `How your energy enters the system.
-• Stream: a recurring flow (e.g., salary, stipend) — regenerates each cycle.
-• Spark: a finite reserve (e.g., savings, loan, grant) — lasts until it’s spent.
-Both appear the same on your HUD; only regeneration rules differ.`,
-
-  ember:`Your Ember represents mandatory outgoings — the minimum fire you must feed each cycle to exist.
-Examples: rent or mortgage, essential bills, debts, basic food, survival costs.`,
-
   flame: `Mode sets how strongly the app nudges you toward the plan:
 • Gentle: strong pressure to save, pushing you to reduced burn each cycle
 • Standard: balanced approach to saving and spending
@@ -96,4 +86,12 @@ You can change this later.`,
 
   essence: `Answer a few quick questions; we suggest a starter avatar that fits your traits.
 You can switch later; bonds deepen as you stick with one.`
+
+//   source: `How your energy enters the system.
+// • Stream: a recurring flow (e.g., salary, stipend) — regenerates each cycle.
+// • Spark: a finite reserve (e.g., savings, loan, grant) — lasts until it’s spent.
+// Both appear the same on your HUD; only regeneration rules differ.`,
+
+//   ember:`Your Ember represents mandatory outgoings — the minimum fire you must feed each cycle to exist.
+// Examples: rent or mortgage, essential bills, debts, basic food, survival costs.`,
 };

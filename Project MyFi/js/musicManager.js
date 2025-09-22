@@ -3,8 +3,8 @@
 // Requires an audio file at: ./assets/audio/main.mp3 (change path below if needed)
 
 (function () {
-  const MUSIC_SRC = "./assets/audio/main.mp3"; // <-- update if your path differs
-  const DEFAULT_VOL = 0.6;   // normal playing volume
+  const MUSIC_SRC = "./assets/audio/main-full.mp3"; // <-- update if your path differs
+  const DEFAULT_VOL = 0.7;   // normal playing volume
   const MIN_VOL = 0.0;
   const MAX_VOL = 1.0;
 

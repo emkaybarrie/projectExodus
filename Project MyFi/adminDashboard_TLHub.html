@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Hub — Project MyFi</title>
+<style>
+  :root{ --bg:#0f1115; --card:#141821; --text:#e9edf1; --muted:#94a3b8; --accent:#6ee7ff; --border:#1f2430; }
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Apple Color Emoji,Segoe UI Emoji;}
+  header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center}
+  header h1{font-size:18px;margin:0;flex:1}
+  .tabs{display:flex;gap:8px}
+  .tabs button{background:transparent;color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:10px;cursor:pointer}
+  .tabs button[aria-selected="true"]{border-color:var(--accent);box-shadow:0 0 0 2px rgba(110,231,255,.15) inset}
+  main{padding:20px;max-width:1100px;margin:0 auto}
+  section.panel{display:none}
+  section.panel[aria-hidden="false"]{display:block}
+  .card{background:linear-gradient(145deg,var(--card),var(--bg));border:1px solid var(--border);border-radius:14px;padding:16px;margin:12px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid .card{min-height:120px}
+  h2{font-size:16px;margin:0 0 8px}
+  h3{font-size:14px;margin:0 0 6px;color:var(--muted)}
+  label{display:block;margin:6px 0;color:var(--muted)}
+  input,select,button,textarea{background:#0c0f14;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+  button.primary{border-color:var(--accent)}
+  pre{background:#0b0d11;border:1px dashed var(--border);padding:10px;border-radius:10px;overflow:auto;max-height:320px}
+  details{background:#0c0f14;border:1px solid var(--border);border-radius:10px;padding:10px;margin:10px 0}
+  summary{cursor:pointer}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .muted{color:var(--muted)}
+  footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;color:var(--muted)}
+  .badge{display:inline-block;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:12px;margin-left:8px}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Admin Hub — Project MyFi <span class="badge">v1</span></h1>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-admin" aria-selected="true" aria-controls="panel-admin">Admin Ops</button>
+      <button role="tab" id="tab-truelayer" aria-selected="false" aria-controls="panel-truelayer">TrueLayer Agent Tasks</button>
+      <button role="tab" id="tab-logs" aria-selected="false" aria-controls="panel-logs">Logs</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Admin Ops Panel -->
+    <section id="panel-admin" class="panel" aria-hidden="false" role="tabpanel" aria-labelledby="tab-admin">
+      <div class="grid">
+        <div class="card">
+          <h2>TrueLayer Controls</h2>
+          <div class="two-col">
+            <div>
+              <label>UID <input id="uid" placeholder="player uid"></label>
+              <label>Since (YYYY-MM-DD) <input id="since" placeholder="2025-06-01"></label>
+              <label>Recent pages <input id="pages" type="number" value="1"></label>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-end">
+              <button id="btnFetchAccounts" class="primary">Fetch Accounts</button>
+              <button id="btnFetchCards">Fetch Cards</button>
+              <button id="btnFetchTx">Fetch Transactions</button>
+              <button id="btnBackfill">Backfill (since)</button>
+              <button id="btnRecent">Ingest Recent (N)</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Tokens & Consent</h2>
+          <div class="two-col">
+            <div>
+              <button id="btnRefreshToken">Force Refresh</button>
+              <button id="btnRevoke">Revoke / Disconnect</button>
+            </div>
+            <div>
+              <p class="muted">Use with care. Revoke will remove TL token and (optionally) raw docs.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Output</h2>
+        <pre id="out">{ "ready": true }</pre>
+      </div>
+    </section>
+
+    <!-- TrueLayer Agent Tasks Panel -->
+    <section id="panel-truelayer" class="panel" aria-hidden="true" role="tabpanel" aria-labelledby="tab-truelayer">
+      <div class="card">
+        <h2>Priority P0</h2>
+        <details open>
+          <summary><strong>PKCE + ID Token Verification</strong></summary>
+          <p class="muted">Implement S256 PKCE and verify caller identity during token exchange.</p>
+          <h3>truelayer.js</h3>
+          <pre>// PKCE helpers + challenge in auth URL (see sheet)</pre>
+          <h3>callback.html</h3>
+          <pre>// Send code_verifier + Authorization: Bearer &lt;idToken&gt;</pre>
+          <h3>functions/index.js</h3>
+          <pre>// verifyIdToken() then forward code_verifier to TL connect/token</pre>
+        </details>
+        <details>
+          <summary><strong>Nightly Refresh Scheduler</strong></summary>
+          <pre>exports.nightlyTrueLayerRefresh = onSchedule("0 2 * * *", async () => { /* iterate users */ });</pre>
+        </details>
+        <details>
+          <summary><strong>Consent Modal (Agent wording)</strong></summary>
+          <pre>&lt;dialog id="tlConsent"&gt;We act as agent of TrueLayer...&lt;/dialog&gt;</pre>
+        </details>
+      </div>
+      <div class="card">
+        <h2>Priority P1</h2>
+        <details>
+          <summary><strong>Refresh-on-401 + Retry</strong></summary>
+          <pre>// exports.refreshToken + withAutoRefresh(uid, fn) wrapper</pre>
+        </details>
+        <details>
+          <summary><strong>Transactions Viewer + Refresh</strong></summary>
+          <pre>// Table markup + loadTx() + button to call fetch then reload</pre>
+        </details>
+        <details>
+          <summary><strong>Retention Purge Job</strong></summary>
+          <pre>// weeklyTrueLayerPurge scheduled function removing raw &gt; 90d</pre>
+        </details>
+      </div>
+      <div class="card">
+        <h2>Priority P2</h2>
+        <details>
+          <summary><strong>Revoke/Disconnect</strong></summary>
+          <pre>// exports.revokeToken + settings button to call it</pre>
+        </details>
+        <details>
+          <summary><strong>DDs/SOs & Cards Viewers</strong></summary>
+          <pre>// simple lists bound to Firestore paths written by functions</pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- Logs Panel -->
+    <section id="panel-logs" class="panel" aria-hidden="true" role="tabpanel" aria-labelledby="tab-logs">
+      <div class="card">
+        <h2>Recent Activity</h2>
+        <p class="muted">Paste logs or wire Cloud Logging export here later.</p>
+        <textarea id="logs" rows="14" style="width:100%" placeholder="[time][uid][endpoint] status latency ..."></textarea>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Powered by TrueLayer</span>
+    <span>Admin Hub · Project MyFi</span>
+  </footer>
+
+<script type="module">
+  // Simple tabs
+  const tabs = [...document.querySelectorAll('nav[role=tablist] [role=tab]')];
+  function show(id){
+    tabs.forEach(t=>t.setAttribute('aria-selected', t.id===id));
+    document.querySelectorAll('.panel').forEach(p=>p.setAttribute('aria-hidden', p.id !== document.getElementById(id).getAttribute('aria-controls')));
+  }
+  tabs.forEach(t=>t.addEventListener('click', ()=>show(t.id)));
+
+  // Wire admin buttons (replace URL consts with your deployed function URLs)
+  const U = {
+    FETCH_ACCOUNTS_URL: 'https://fetchaccounts-frxqsvlhwq-nw.a.run.app',
+    FETCH_CARDS_URL: '/__functions__/fetchCards',
+    FETCH_TRANSACTIONS_URL: '/__functions__/fetchTransactions',
+    INGEST_BACKFILL_URL: '/__functions__/ingestTrueLayerBackfill',
+    INGEST_RECENT_URL: '/__functions__/ingestTrueLayerRecent',
+    REFRESH_URL: '/__functions__/refreshToken',
+    REVOKE_URL: '/__functions__/revokeToken'
+  };
+  const $ = (id)=>document.getElementById(id);
+  const out = (x)=>$('out').textContent = typeof x==='string' ? x : JSON.stringify(x,null,2);
+  async function call(url, opts={}){
+    try{
+      const r = await fetch(url, opts);
+      const ct = r.headers.get('content-type')||'';
+      if(ct.includes('application/json')) return await r.json();
+      return { ok:r.ok, status:r.status, text: await r.text() };
+    }catch(e){ return { error:String(e) }; }
+  }
+  $('btnFetchAccounts').onclick = async ()=> out(await call(`${U.FETCH_ACCOUNTS_URL}?uid=${$('uid').value}`));
+  $('btnFetchCards').onclick    = async ()=> out(await call(`${U.FETCH_CARDS_URL}?uid=${$('uid').value}`));
+  $('btnFetchTx').onclick       = async ()=> out(await call(`${U.FETCH_TRANSACTIONS_URL}?uid=${$('uid').value}`));
+  $('btnBackfill').onclick      = async ()=> out(await call(`${U.INGEST_BACKFILL_URL}?uid=${$('uid').value}&sinceMs=${Date.parse($('since').value)}`));
+  $('btnRecent').onclick        = async ()=> out(await call(`${U.INGEST_RECENT_URL}?uid=${$('uid').value}&n=${Number($('pages').value)}`));
+
+  $('btnRefreshToken').onclick = async ()=> out(await call(U.REFRESH_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid:$('uid').value }) }));
+  $('btnRevoke').onclick       = async ()=> out(await call(U.REVOKE_URL,   { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ uid:$('uid').value }) }));
+</script>
+</body>
+</html>
