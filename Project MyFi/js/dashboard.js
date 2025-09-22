@@ -143,6 +143,94 @@ window.MyFiShowIOSInstallModal = MyFiShowIOSInstallModal;
 // ===== END of PWA + iOS helpers =====
 
 
+// ===== Edge Glow module (centralized) =====
+(function initEdgeGlow(){
+  const mount = document.getElementById('edgeGlowMount');
+  if (!mount) return;
+
+  const layer = document.createElement('div');
+  layer.className = 'edge-glow';
+  mount.appendChild(layer);
+
+  const dirs = ['up','right','down','left'];
+  const strips = new Map();
+  dirs.forEach(dir => {
+    const s = document.createElement('div');
+    s.className = 'edge-glow__strip tone-default is-disabled';
+    s.dataset.dir = dir;
+    layer.appendChild(s);
+    strips.set(dir, s);
+  });
+
+  // internal state
+  const state = {
+    available: { up:false, right:false, down:false, left:false },
+    tones:     { up:'default', right:'default', down:'default', left:'default' },
+  };
+
+  function setAvailability(next = {}) {
+    Object.assign(state.available, next);
+    for (const d of dirs) {
+      const el = strips.get(d);
+      el.classList.toggle('is-disabled', !state.available[d]);
+    }
+  }
+
+  function setTone(dir, tone = 'default') {
+    const el = strips.get(dir);
+    if (!el) return;
+    state.tones[dir] = tone;
+    el.classList.remove('tone-default','tone-notify','tone-alert','tone-okay');
+    el.classList.add('tone-' + tone);
+  }
+
+  function clearTone(dir) { setTone(dir, 'default'); }
+
+  function peek(dir, on = true) {
+    const el = strips.get(dir);
+    if (!el || !state.available[dir]) return;
+    el.classList.toggle('is-peek', !!on);
+    if (on) {
+      // auto clear after a beat so it doesn't hang
+      clearTimeout(el.__peekT);
+      el.__peekT = setTimeout(() => el.classList.remove('is-peek'), 900);
+    }
+  }
+
+  function drag(dir, on = true) {
+    const el = strips.get(dir);
+    if (!el || !state.available[dir]) return;
+    el.classList.toggle('is-drag', !!on);
+    if (on) {
+      clearTimeout(el.__dragT);
+      el.__dragT = setTimeout(() => el.classList.remove('is-drag'), 300);
+    }
+  }
+
+  function pulse(dir, on = true) {
+    const el = strips.get(dir);
+    if (!el) return;
+    el.classList.toggle('is-pulsing', !!on);
+  }
+
+  // public API
+  window.MyFiEdgeGlow = {
+    setAvailability,
+    setTone, clearTone,
+    peek, drag, pulse,
+    // convenience: set multiple at once: { left:{tone:'notify', pulse:true}, up:{tone:'default'} }
+    set(config = {}) {
+      for (const [dir, v] of Object.entries(config)) {
+        if (v.tone) setTone(dir, v.tone);
+        if (typeof v.available === 'boolean') state.available[dir] = v.available;
+        if (typeof v.pulse === 'boolean') pulse(dir, v.pulse);
+        if (v.peek) peek(dir, true);
+      }
+      setAvailability(state.available);
+    }
+  };
+})();
+
 
 // ===== YOUR ORIGINAL FILE STARTS HERE =====
 import { auth, db } from './core/auth.js';
@@ -340,6 +428,9 @@ document.addEventListener("DOMContentLoaded", () => {
             ? (dx < 0 ? 'right' : 'left')
             : (dy < 0 ? 'down'  : 'up');
 
+          // 🔵 NEW: flare that edge briefly as we commit
+          window.MyFiEdgeGlow?.drag(dir, true);
+          
           slideTo(dir);
         };
 
@@ -347,8 +438,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const EDGE = 36;
         const maybeShowOnEdge = (x,y)=>{
           const w=window.innerWidth, h=window.innerHeight;
-          if (x<EDGE || x>w-EDGE || y<EDGE || y>h-EDGE) showIndicators();
+          if (x < EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('left', true);  }
+          else if (x > w - EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('right', true); }
+          if (y < EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('up', true);   }
+          else if (y > h - EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('down', true); }
         };
+
 
         // Touch
         STAGE.addEventListener('touchstart',(e)=>{
@@ -413,6 +508,16 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         // show briefly on initial render / after a move
         showIndicators();
+
+        // 🔵 NEW: update edge glow availability to mirror nav possibilities
+        if (window.MyFiEdgeGlow) {
+          window.MyFiEdgeGlow.setAvailability({
+            up:    canGo('up'),
+            right: canGo('right'),
+            down:  canGo('down'),
+            left:  canGo('left'),
+          });
+        }
       }
       renderIndicators();
 
