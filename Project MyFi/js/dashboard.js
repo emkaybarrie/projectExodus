@@ -242,6 +242,8 @@ import { createSplash } from './splash.js';
 import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";
 import { showWelcomeThenMaybeSetup } from './welcome.js';
 
+import { createRouter } from './navigation.js';
+
 import "./core/truelayer.js";
 import "./modal.js";
 import "./ui/kit.js";
@@ -338,201 +340,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     /* ---------- SLIDE ROUTER (Vitals hub + satellites) ---------- */
-    (function setupSlideRouter(){
-      const STAGE = document.getElementById('screen-stage');
-      const HUB_ID = 'vitals-root';
 
-      // Map neighbors from Vitals
-      const layout = {
-        down:  'screen-myana',
+    // after HUD is ready / welcome flow
+    const router = createRouter({
+      stage: document.getElementById('screen-stage'),
+      hubId: 'vitals-root',
+      layout: {
         up:    'screen-products',
-        left:  'screen-quests',
         right: 'screen-avatar',
-      };
-      const reverseDir = d => ({up:'down',down:'up',left:'right',right:'left'})[d] || null;
-      const backDirByScreen = Object.fromEntries(
-        Object.entries(layout).filter(([,id])=>id).map(([dir,id])=>[id, reverseDir(dir)])
-      );
-
-      let currentId = (document.querySelector('.screen.screen--active')?.id) || HUB_ID;
-      let animating = false;
-
-      const byId = id => document.getElementById(id);
-      const canGo = (dir) => (currentId === HUB_ID) ? !!layout[dir] : backDirByScreen[currentId] === dir;
-      const targetFor = (dir) => (currentId === HUB_ID) ? (layout[dir] || null) : (canGo(dir) ? HUB_ID : null);
-
-      function slideTo(dir){
-        if (!canGo(dir) || animating) return;
-        const toId = targetFor(dir);
-        const fromEl = byId(currentId);
-        const toEl   = byId(toId);
-        if (!toEl || !fromEl) return;
-
-        animating = true;
-
-        const enterClass = ({up:'from-up', down:'from-down', left:'from-left', right:'from-right'})[dir];
-        // EXIT is the opposite direction so the current screen moves away correctly
-        const exitClass  = ({up:'to-down', down:'to-up', left:'to-right', right:'to-left'})[dir];
-
-        toEl.classList.add('screen--active', enterClass);
-        fromEl.classList.add('animating');
-        toEl.classList.add('animating');
-
-        requestAnimationFrame(() => {
-          fromEl.classList.add(exitClass);
-          toEl.classList.remove(enterClass);
-
-          const onDone = () => {
-            fromEl.classList.remove('screen--active','animating','to-up','to-down','to-left','to-right');
-            toEl.classList.remove('animating','from-up','from-down','from-left','from-right');
-            fromEl.setAttribute('aria-hidden','true');
-            toEl.removeAttribute('aria-hidden');
-
-            currentId = toId; animating = false; renderIndicators();
-            document.dispatchEvent(new CustomEvent('myfi:navigate', { detail: { fromId: fromEl.id, toId }}));
-          };
-
-          let ended = 0;
-          const doneOnce = () => { if (++ended >= 2) onDone(); };
-          fromEl.addEventListener('transitionend', doneOnce, { once:true });
-          toEl.addEventListener('transitionend',   doneOnce, { once:true });
-        });
+        down:  'screen-myana',
+        left:  'screen-quests',
+      },
+      onNavigate: ({ fromId, toId }) => {
+        // optionally announce
+        document.dispatchEvent(new CustomEvent('myfi:navigate', { detail: { fromId, toId } }));
       }
+    });
 
-      // Gestures (touch + mouse for devtools) — SIMPLE GUARD:
-      // If the gesture started inside a .scrollable element, never navigate.
-      (function setupGestures(){
-        const MIN = 40; // same threshold you had
-        let startX = 0, startY = 0, tracking = false;
-        let startedInScrollable = false;
+    // First paint (also makes glow visible immediately on hub)
+    router.update();
 
-        const onStart = (x, y, target) => {
-          startX = x; startY = y; tracking = true;
-          // hard stop: if we began in a scrollable region, this gesture will never navigate
-          startedInScrollable = !!(target && target.closest('.scrollable'));
-        };
-
-        const onEnd = (x, y) => {
-          if (!tracking) return;
-          tracking = false;
-
-          // If the gesture started in a scrollable area, swallow it.
-          if (startedInScrollable) { startedInScrollable = false; return; }
-
-        const dx = x - startX, dy = y - startY;
-          const ax = Math.abs(dx), ay = Math.abs(dy);
-          if (ax < MIN && ay < MIN) return;
-
-          // Direct mapping: swipe up => go "down", swipe left => go "right"
-          const dir = ax > ay
-            ? (dx < 0 ? 'right' : 'left')
-            : (dy < 0 ? 'down'  : 'up');
-
-          // 🔵 NEW: flare that edge briefly as we commit
-          window.MyFiEdgeGlow?.drag(dir, true);
-          
-          slideTo(dir);
-        };
-
-        // Edge-intent reveal (unchanged)
-        const EDGE = 36;
-        const maybeShowOnEdge = (x,y)=>{
-          const w=window.innerWidth, h=window.innerHeight;
-          if (x < EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('left', true);  }
-          else if (x > w - EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('right', true); }
-          if (y < EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('up', true);   }
-          else if (y > h - EDGE) { showIndicators(); window.MyFiEdgeGlow?.peek('down', true); }
-        };
+    // Expose tiny helper if needed elsewhere
+    window.MyFiRouter = {
+      go: (dir)=> router.go(dir),
+      setLayout: (next)=> router.setLayout(next),
+      current: ()=> router.current(),
+    };
 
 
-        // Touch
-        STAGE.addEventListener('touchstart',(e)=>{
-          const t = e.changedTouches[0];
-          maybeShowOnEdge(t.clientX, t.clientY);
-          onStart(t.clientX, t.clientY, e.target);
-        }, { passive: true });
-
-        STAGE.addEventListener('touchend',(e)=>{
-          const t = e.changedTouches[0];
-          onEnd(t.clientX, t.clientY);
-        }, { passive: true });
-
-        // Mouse (devtools)
-        STAGE.addEventListener('mousedown',(e)=>{
-          maybeShowOnEdge(e.clientX, e.clientY);
-          onStart(e.clientX, e.clientY, e.target);
-        });
-        window.addEventListener('mouseup',(e)=> onEnd(e.clientX, e.clientY));
-      })();
-
-
-
-      // Keyboard
-      (function setupKeys(){
-        document.addEventListener('keydown',(e)=>{
-          if (!['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].includes(e.key)) return;
-          const tag = (document.activeElement?.tagName||'').toLowerCase();
-          if (tag==='input'||tag==='textarea'||document.activeElement?.isContentEditable) return;
-          e.preventDefault();
-          showIndicators();
-          const map = { ArrowUp:'up', ArrowRight:'right', ArrowDown:'down', ArrowLeft:'left' };
-          slideTo(map[e.key]);
-        }, { capture:true });
-      })();
-
-      // Minimal edge arrows
-      const mount = document.getElementById('myfiNavMount');
-      const layer = document.createElement('div');
-      layer.className = 'myfi-nav myfi-nav--edge nav-hidden'; // start hidden
-
-      ['up','right','down','left'].forEach(dir=>{
-        const b=document.createElement('button');
-        b.className='myfi-nav-btn'; b.type='button'; b.dataset.dir=dir; b.setAttribute('aria-label',`Navigate ${dir}`);
-        b.addEventListener('click',()=> slideTo(dir));
-        layer.appendChild(b);
-      });
-      mount.appendChild(layer);
-
-      // Show/hide helpers
-      let hideTimer = null;
-      function showIndicators() {
-        layer.classList.remove('nav-hidden');
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(()=>{ layer.classList.add('nav-hidden'); }, 1400);
-      }
-
-      function renderIndicators(){
-        layer.querySelectorAll('.myfi-nav-btn').forEach(btn=>{
-          const dir = btn.dataset.dir;
-          if (canGo(dir)) btn.classList.remove('myfi-hidden'); else btn.classList.add('myfi-hidden');
-        });
-        // show briefly on initial render / after a move
-        showIndicators();
-
-        // 🔵 NEW: update edge glow availability to mirror nav possibilities
-        if (window.MyFiEdgeGlow) {
-          window.MyFiEdgeGlow.setAvailability({
-            up:    canGo('up'),
-            right: canGo('right'),
-            down:  canGo('down'),
-            left:  canGo('left'),
-          });
-        }
-      }
-      renderIndicators();
-
-      // Expose tiny API (optional)
-      window.MyFiNav = {
-        go: (dir)=> slideTo(dir),
-        navigateToHub: ()=>{ if (currentId!==HUB_ID) slideTo(backDirByScreen[currentId]); },
-        setLayout: (next)=>{
-          Object.assign(layout, next||{});
-          Object.keys(backDirByScreen).forEach(k=>delete backDirByScreen[k]);
-          Object.entries(layout).filter(([,id])=>id).forEach(([d,id])=> backDirByScreen[id]=reverseDir(d));
-          renderIndicators();
-        }
-      };
-    })();
 
       /* ---------- Music player ---------- */
       // Header button click -> toggle mute (counts as a user gesture)
