@@ -103,14 +103,23 @@ if (typeof window !== 'undefined') {
 // ───────────────────────── Server fetch triggers ─────────────────────────
 export async function triggerTrueLayerFetch(type) {
   const user = auth.currentUser;
-  if (!user) return alert("Not signed in");
+  if (!user) throw new Error("Not signed in");
+  const idToken = await user.getIdToken();
 
-  const functionUrl = `https://europe-west2-myfi-app-7fa78.cloudfunctions.net/fetch${type}?uid=${user.uid}`;
-  const res = await fetch(functionUrl);
-  const json = await res.json();
-  if (!json.success) throw json;
+  const base = {
+    Accounts:       'https://fetchaccounts-frxqsvlhwq-nw.a.run.app',
+    Cards:          'https://fetchcards-frxqsvlhwq-nw.a.run.app',
+    Transactions:   'https://fetchtransactions-frxqsvlhwq-nw.a.run.app',
+    DirectDebits:   'https://fetchdirectdebits-frxqsvlhwq-nw.a.run.app',
+    StandingOrders: 'https://fetchstandingorders-frxqsvlhwq-nw.a.run.app',
+  }[type];
+
+  const r = await fetch(base, { headers: { Authorization: 'Bearer ' + idToken }});
+  const json = await r.json();
+  if (!r.ok || json?.error) throw json?.error || new Error('fetch_failed');
   return json.data;
 }
+
 export async function syncTrueLayerAll() {
   await triggerTrueLayerFetch('Accounts');
   await triggerTrueLayerFetch('Cards');
@@ -175,18 +184,89 @@ const FREQ_OPTIONS_FULL = [['weekly','Weekly'],['fortnightly','Fortnightly'],['m
 const toMonthly = (value, cadence)=> Number((Number(value||0) * (MONTHLY_MULT[cadence]??1)).toFixed(2));
 
 // Firestore IO
-async function readRecentTransactions(uid, lookbackDays=365){
+// Replace your current readRecentTransactions with this:
+
+async function readRecentTransactions(uid, lookbackDays = 365) {
   const db = getFirestore();
-  const agg = await getDoc(doc(db, `players/${uid}/financialData/transactions`));
-  if (!agg.exists()) return [];
-  const d = agg.data()||{};
-  const items = Array.isArray(d.items)? d.items : [];
-  const cutoff = Date.now() - lookbackDays*24*3600*1000;
-  return items.filter(t => {
-    const ts = Number(new Date(t.timestamp || t.date || t.booked || t.valueDate));
-    return Number.isFinite(ts) && ts >= cutoff;
-  });
+  const cutoff = Date.now() - lookbackDays * 24 * 3600 * 1000;
+
+  // 1) Try the new fan-out (preferred)
+  try {
+    const itemsCol = doc(db, `players/${uid}/financialData_TRUELAYER/accounts`).parent.collection('accounts').doc('items');
+    const itemsSnap = await itemsCol.get?.()  // SDK compat guard
+      ?? await (await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"))
+            .getDocs((await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"))
+            .collection(db, `players/${uid}/financialData_TRUELAYER/accounts/items`));
+
+    const txns = [];
+    if (itemsSnap?.forEach) {
+      // Iterate all accounts’ /transactions subcollections
+      const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+      const tasks = [];
+      itemsSnap.forEach(accDoc => {
+        const txCol = collection(db, `players/${uid}/financialData_TRUELAYER/accounts/items/${accDoc.id}/transactions`);
+        tasks.push(getDocs(txCol));
+      });
+      const all = await Promise.all(tasks);
+      for (const snap of all) {
+        snap.forEach(d => {
+          const t = d.data() || {};
+          const ts = t?.postedAt?.toMillis?.() ?? (t.raw?.timestamp ? new Date(t.raw.timestamp).getTime() : NaN);
+          if (Number.isFinite(ts) && ts >= cutoff) {
+            txns.push({
+              timestamp: ts,
+              amount: (typeof t.amountMinor === 'number') ? t.amountMinor / 100 : t.raw?.amount ?? 0,
+              description: t.description || t.raw?.description || '',
+              merchant: t.merchantName || t.raw?.merchant_name || '',
+              currency: t.currency || t.raw?.currency || 'GBP',
+            });
+          }
+        });
+      }
+      if (txns.length) return txns;
+    }
+  } catch (_) { /* fall back below */ }
+
+  // 2) Try the old aggregate TL doc if present
+  try {
+    const aggSnap = await getDoc(doc(db, `players/${uid}/financialData_TRUELAYER/transactions`));
+    if (aggSnap.exists()) {
+      const payload = aggSnap.data()?.data || {};     // { [accountId]: [tx...] }
+      const txns = [];
+      for (const arr of Object.values(payload)) {
+        for (const t of (arr || [])) {
+          const ts = Number(new Date(t.timestamp || t.posted || t.booked || t.date));
+          if (Number.isFinite(ts) && ts >= cutoff) {
+            txns.push({
+              timestamp: ts,
+              amount: t.amount, // TL REST aggregate is in major units (signed)
+              description: t.description || '',
+              merchant: t.merchant_name || '',
+              currency: t.currency || 'GBP',
+            });
+          }
+        }
+      }
+      if (txns.length) return txns;
+    }
+  } catch (_) { /* ignore */ }
+
+  // 3) Lastly, try the very old path you had (kept for safety)
+  try {
+    const snap = await getDoc(doc(db, `players/${uid}/financialData/transactions`));
+    if (snap.exists()) {
+      const d = snap.data() || {};
+      const items = Array.isArray(d.items) ? d.items : [];
+      return items.filter(t => {
+        const ts = Number(new Date(t.timestamp || t.date || t.booked || t.valueDate));
+        return Number.isFinite(ts) && ts >= cutoff;
+      });
+    }
+  } catch (_) {}
+
+  return [];
 }
+
 async function writeUnified(uid, kind, totalAmount, categories){
   await setDoc(doc(getFirestore(), `players/${uid}/cashflowData/itemised_${kind}`), {
     mode:'itemised', cadence:'monthly', totalAmount: Number(totalAmount)||0, categories: categories||{}, updatedAt: Date.now()

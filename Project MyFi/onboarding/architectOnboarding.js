@@ -10,11 +10,6 @@ import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { VO, PROMPT, INFO } from "./architectCopy.js";
 
-import {emit, QuestEvents} from "../quests/events.js"
-
-// Reuse same cashflow writers as dashboard
-import { updateIncome, updateCoreExpenses } from "../js/data/cashflowData.js";
-
 // Optional: TrueLayer connector (kept disabled by default)
 let connectTrueLayerAccount = null;
 try {
@@ -507,10 +502,6 @@ async function persistAndFinish(){
     staminaAllocation: Number((allocations.staminaAllocation ?? 0.4).toFixed(3)),
   }, { merge: true });
 
-  await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
-    recentUsage:  { essence: 0, health: 0, mana: 0, stamina: 0 },
-    historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
-  }, { merge: true });
 }
 
 /* =========================================================
