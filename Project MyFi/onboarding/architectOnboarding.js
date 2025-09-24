@@ -8,8 +8,9 @@
 import { auth, db, fns } from '../js/core/auth.js';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { initHUD } from "../js/hud/hud.js";
 import { VO, PROMPT, INFO } from "./architectCopy.js";
+
+import {emit, QuestEvents} from "../quests/events.js"
 
 // Reuse same cashflow writers as dashboard
 import { updateIncome, updateCoreExpenses } from "../js/data/cashflowData.js";
@@ -479,16 +480,6 @@ async function persistAndFinish(){
     state.alignment==='everyday' ? {healthAllocation:.15,manaAllocation:.20,staminaAllocation:.50,essenceAllocation:.10} :
     state.alignment==='ardent'   ? {healthAllocation:.25,manaAllocation:.45,staminaAllocation:.20,essenceAllocation:.10} :
                                    {healthAllocation:.20,manaAllocation:.30,staminaAllocation:.40,essenceAllocation:.10};
-
-  // Push through SAME writers the dashboard uses (keeps the pipeline consistent)
-  // Convert monthly totals to the cadence the writer expects:
-  // updateIncome/updateCoreExpenses expect (amount, 'monthly'|'weekly'|'daily'), but we pass monthly already normalised.
-  try {
-    await updateIncome(Number(state.incomeMonthly||0), 'monthly');
-  } catch(e){ console.warn('[onboarding] updateIncome failed, will still write meta:', e); }
-  try {
-    await updateCoreExpenses(Number(state.coreMonthly||0), 'monthly');
-  } catch(e){ console.warn('[onboarding] updateCoreExpenses failed, will still write meta:', e); }
 
   const payload = {
     onboarding: { architectWizardDone: true, architectWizardDoneAt: serverTimestamp() },

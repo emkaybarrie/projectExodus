@@ -1,25 +1,5 @@
 // js/navigation.js
-// Centralized Navigation: layout + state + edge glow + arrows + continuous drag + keys + tour hooks
-//
-// Usage from dashboard.js:
-//   import { createRouter } from './navigation.js';
-//   const router = createRouter({
-//     stage: document.getElementById('screen-stage'),
-//     hubId: 'vitals-root',
-//     layout: { up:'screen-products', right:'screen-avatar', down:'screen-myana', left:'screen-quests' },
-//     onNavigate: ({ fromId, toId }) => { /* optional */ },
-//   });
-//   router.update(); // first paint
-//
-// Public API returned:
-//   - update()               -> refreshes arrows + glow availability
-//   - setLayout(nextLayout)  -> change neighbours dynamically
-//   - current()              -> current screen id
-//   - go(dir)                -> programmatic navigation ('up'|'right'|'down'|'left')
-//   - setLegend(dir, text)   -> small legend near edge (for tours); pass null to clear
-//   - setTone(dir, tone)     -> 'default'|'notify'|'alert'|'okay'
-//   - pulse(dir, on)         -> subtle pulsing on/off
-//
+// Centralized Navigation: layout + state + edge glow (global + local) + arrows + continuous drag (rAF) + keys + tour hooks
 
 export function createRouter({ stage, hubId, layout, onNavigate }) {
   const dirs = ['up','right','down','left'];
@@ -42,7 +22,9 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
   const canGo = (dir) => (currentId === hubId) ? !!layout[dir] : backDirByScreen[currentId] === dir;
   const targetFor = (dir) => (currentId === hubId) ? (layout[dir] || null) : (canGo(dir) ? hubId : null);
 
-  // ---------- Edge Glow ----------
+  // ======================================================
+  // GLOBAL EDGE GLOW (used while idle / not dragging)
+  // ======================================================
   const edgeMount = document.getElementById('edgeGlowMount');
   const glowLayer = document.createElement('div');
   glowLayer.className = 'edge-glow';
@@ -57,7 +39,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     strips[d] = s;
   });
 
-  // Optional legends (tour labels)
+  // Legends (tour labels)
   const legends = Object.create(null);
   dirs.forEach(d=>{
     const l = document.createElement('div');
@@ -91,7 +73,6 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
   function dragGlow(dir, on=true){
     const el = strips[dir]; if (!el || !glowState.available[dir]) return;
     el.classList.toggle('is-drag', !!on);
-    if (on){ clearTimeout(el.__dragT); el.__dragT=setTimeout(()=>el.classList.remove('is-drag'), 220); }
   }
   function setLegend(dir, text){
     const l = legends[dir]; if (!l) return;
@@ -99,11 +80,45 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     else { l.style.display='none'; }
   }
 
-  // Expose tour hooks globally if you want (optional)
+  // Optional tour hooks
   window.MyFiNav = {
     setAvailability, setTone, pulse, peek, drag: dragGlow, legend: setLegend,
     clear(dir){ setTone(dir,'default'); pulse(dir,false); setLegend(dir,null); },
   };
+
+  // ======================================================
+  // LOCAL EDGE GLOW (mounted inside screens while dragging)
+  // ======================================================
+  function mountLocalGlow(screenEl) {
+    let host = screenEl.querySelector(':scope > .edge-glow-local');
+    if (host) return host; // reuse
+    host = document.createElement('div');
+    host.className = 'edge-glow-local';
+    screenEl.appendChild(host);
+    // add 4 strips so we can light any edge on this screen
+    dirs.forEach(d=>{
+      const s = document.createElement('div');
+      s.className = 'edge-glow__strip tone-default';
+      s.dataset.dir = d;
+      host.appendChild(s);
+    });
+    return host;
+  }
+  function getLocalStrip(host, dir) {
+    return host?.querySelector(`.edge-glow__strip[data-dir="${dir}"]`) || null;
+  }
+  function showLocal(host, dir, on=true) {
+    if (!host) return;
+    dirs.forEach(d=>{
+      const s = getLocalStrip(host, d);
+      if (!s) return;
+      s.classList.toggle('is-disabled', d !== dir || !on);
+      s.classList.toggle('is-drag', !!on);
+    });
+  }
+  function unmountLocalGlow(host) {
+    if (host && host.parentNode) host.parentNode.removeChild(host);
+  }
 
   // ---------- Arrow buttons ----------
   const navMount = document.getElementById('myfiNavMount');
@@ -120,6 +135,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     b.addEventListener('click', () => {
       showArrows();
       dragGlow(d, true);
+      peek(d, true);
       go(d);
     });
     arrowLayer.appendChild(b);
@@ -139,7 +155,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
       if (canGo(d)) btn.classList.remove('myfi-hidden'); else btn.classList.add('myfi-hidden');
     });
 
-    // 2) sync glow availability
+    // 2) sync glow availability (hub edges enabled)
     setAvailability({
       up: canGo('up'), right: canGo('right'), down: canGo('down'), left: canGo('left')
     });
@@ -147,14 +163,14 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     // 3) short reveal
     showArrows();
 
-    // 4) first paint: peek the available edges so it’s clearly visible in devtools desktop too
+    // 4) first paint: peek any available edges so it’s obvious on hub too
     if (!window.__EG_FIRST_PEEK_DONE) {
       window.__EG_FIRST_PEEK_DONE = true;
       dirs.forEach(d => canGo(d) && peek(d, true));
     }
   }
 
-  // ---------- Programmatic slide (animated) ----------
+  // ---------- Programmatic slide (animated fallback) ----------
   function go(dir) {
     if (!canGo(dir) || animating) return;
     const toId = targetFor(dir);
@@ -162,7 +178,6 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     if (!fromEl || !toEl) return;
 
     animating = true;
-    // position the incoming screen at its starting offset, then animate with CSS classes (fall-back)
     const enter = {up:'from-up', right:'from-right', down:'from-down', left:'from-left'}[dir];
     const exit  = {up:'to-down',  right:'to-left',   down:'to-up',    left:'to-right'}[dir];
 
@@ -178,10 +193,11 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
         fromEl.setAttribute('aria-hidden','true');
         toEl.removeAttribute('aria-hidden');
 
+        const prev = currentId;
         currentId = toId;
         animating = false;
         refreshIndicators();
-        onNavigate?.({ fromId: fromEl.id, toId });
+        onNavigate?.({ fromId: prev, toId: currentId });
       };
 
       let ended = 0;
@@ -191,16 +207,23 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     });
   }
 
-  // ---------- Continuous drag (follow finger) ----------
+  // ---------- Continuous drag (pixel-perfect via LOCAL glow) ----------
   (function setupDrag(){
     if (!stage) return;
 
     let tracking = false;
     let startX=0, startY=0, dx=0, dy=0;
-    let axis = null; // 'x'|'y'
-    let dragDir = null; // 'left'|'right'|'up'|'down'
+    let axis = null;       // 'x'|'y'
+    let dragDir = null;    // 'left'|'right'|'up'|'down'
     let targetId = null;
     let fromEl = null, toEl = null;
+
+    // Local glow hosts (inherit transform from screens)
+    let originGlow = null;   // mounted in fromEl
+    let targetGlow = null;   // mounted in toEl
+
+    // rAF ticker to apply transforms at the display refresh rate
+    let raf = 0, needsFrame = false;
 
     const EDGE_HINT = 28;
     const LOCK = 10;         // movement before we lock axis
@@ -210,11 +233,37 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     const h = () => window.innerHeight;
 
     function begin(x,y,target){
-      // if started on a scrollable area, ignore navigation
+      // ignore if started in a scrollable region
       if (target && target.closest && target.closest('.scrollable')) return;
       startX=x; startY=y; dx=0; dy=0; axis=null; dragDir=null; targetId=null;
       tracking = true;
+      tick(); // start rAF
     }
+
+    function applyTransforms() {
+      if (!tracking || !toEl) return;
+
+      if (axis === 'x') {
+        const prog = Math.max(-1, Math.min(1, dx / w())); // -1..1
+        fromEl.style.transform = `translate3d(${prog*100}%,0,0)`;
+        toEl  .style.transform = `translate3d(${(prog>0? (prog-1):(prog+1))*100}%,0,0)`;
+      } else if (axis === 'y') {
+        const prog = Math.max(-1, Math.min(1, dy / h()));
+        fromEl.style.transform = `translate3d(0,${prog*100}%,0)`;
+        toEl  .style.transform = `translate3d(0,${(prog>0? (prog-1):(prog+1))*100}%,0)`;
+      }
+      // NOTE: local glows inherit transforms automatically -> pixel-perfect
+    }
+
+    function tick() {
+      if (!tracking) { raf = 0; return; }
+      if (needsFrame) {
+        needsFrame = false;
+        applyTransforms();
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
     function update(x,y){
       if (!tracking) return;
       dx = x - startX; dy = y - startY;
@@ -225,10 +274,11 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
           axis = (Math.abs(dx) > Math.abs(dy)) ? 'x' : 'y';
         } else {
           // show edge hint if we’re near
+          const wv=w(), hv=h();
           if (x < EDGE_HINT) peek('left', true);
-          else if (x > w() - EDGE_HINT) peek('right', true);
+          else if (x > wv - EDGE_HINT) peek('right', true);
           if (y < EDGE_HINT) peek('up', true);
-          else if (y > h() - EDGE_HINT) peek('down', true);
+          else if (y > hv - EDGE_HINT) peek('down', true);
           return;
         }
       }
@@ -239,19 +289,21 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
         : (dy < 0 ? 'down'  : 'up');
 
       if (dragDir !== want) {
-        // on direction change, initialise drag scene
+        // initialise drag scene on direction change
         dragDir = want;
         targetId = canGo(dragDir) ? targetFor(dragDir) : null;
 
-        // clean any previous inline transforms
+        // clean any previous inline transforms / locals
         if (fromEl) { fromEl.style.transform=''; fromEl.style.transition=''; }
         if (toEl)   { toEl.style.transform='';   toEl.style.transition='';   toEl.classList.remove('screen--active'); }
+        if (originGlow) { unmountLocalGlow(originGlow); originGlow = null; }
+        if (targetGlow) { unmountLocalGlow(targetGlow); targetGlow = null; }
 
         fromEl = byId(currentId);
         toEl   = targetId ? byId(targetId) : null;
 
         if (!toEl) { // direction not allowed → stop tracking
-          tracking = false; axis=null; dragDir=null; return;
+          tracking = false; axis=null; dragDir=null; cancelAnimationFrame(raf); raf=0; return;
         }
 
         // prepare positions
@@ -266,29 +318,34 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
                       right:`translate3d(100%,0,0)` }[dragDir];
         toEl.style.transform = off;
 
-        // punch up the glow slightly while dragging
-        dragGlow(dragDir, true);
+        // HIDE global glow while dragging, and mount local glows
+        glowLayer.classList.add('eg-global-hidden');
+
+        originGlow = mountLocalGlow(fromEl);
+        targetGlow = mountLocalGlow(toEl);
+
+        // show only the relevant edges:
+        //  - origin: the outgoing edge (dragDir)
+        //  - target: the opposite (where it will enter from)
+        showLocal(originGlow, dragDir, true);
+        showLocal(targetGlow, reverseDir(dragDir), true);
       }
 
-      // apply live transforms
-      if (toEl) {
-        if (axis === 'x') {
-          const prog = Math.max(-1, Math.min(1, dx / w())); // -1..1
-          fromEl.style.transform = `translate3d(${prog*100}%,0,0)`;
-          toEl  .style.transform = `translate3d(${(prog>0? (prog-1):(prog+1))*100}%,0,0)`;
-        } else {
-          const prog = Math.max(-1, Math.min(1, dy / h()));
-          fromEl.style.transform = `translate3d(0,${prog*100}%,0)`;
-          toEl  .style.transform = `translate3d(0,${(prog>0? (prog-1):(prog+1))*100}%,0)`;
-        }
-      }
+      needsFrame = true; // rAF will apply transforms
     }
+
     function end(){
       if (!tracking) return;
       tracking = false;
+      cancelAnimationFrame(raf); raf = 0;
 
       if (!toEl) {
-        axis=null; dragDir=null; return;
+        axis=null; dragDir=null;
+        glowLayer.classList.remove('eg-global-hidden');
+        if (originGlow) unmountLocalGlow(originGlow), originGlow=null;
+        if (targetGlow) unmountLocalGlow(targetGlow), targetGlow=null;
+        dirs.forEach(d=> strips[d].classList.remove('is-drag'));
+        return;
       }
 
       // decide commit vs snap-back
@@ -302,9 +359,8 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
         // finish move
         if (axis === 'x') {
           const endFrom = (dx < 0) ? '-100%' : '100%';
-          const endTo   = '0%';
           fromEl.style.transform = `translate3d(${endFrom},0,0)`;
-          toEl  .style.transform = `translate3d(${endTo},0,0)`;
+          toEl  .style.transform = `translate3d(0,0,0)`;
         } else {
           const endFrom = (dy < 0) ? '-100%' : '100%';
           fromEl.style.transform = `translate3d(0,${endFrom},0)`;
@@ -312,7 +368,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
         }
 
         const finish = () => {
-          // cleanup classes/styles
+          // cleanup
           fromEl.classList.remove('screen--active');
           fromEl.setAttribute('aria-hidden','true');
           fromEl.style.transform = fromEl.style.transition = '';
@@ -320,6 +376,13 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
 
           const prev = currentId;
           currentId = targetId;
+
+          // remove locals, restore global
+          glowLayer.classList.remove('eg-global-hidden');
+          if (originGlow) unmountLocalGlow(originGlow), originGlow=null;
+          if (targetGlow) unmountLocalGlow(targetGlow), targetGlow=null;
+
+          dirs.forEach(d=> strips[d].classList.remove('is-drag'));
           refreshIndicators();
           onNavigate?.({ fromId: prev, toId: currentId });
           axis=null; dragDir=null; toEl=null; fromEl=null;
@@ -340,6 +403,12 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
           toEl.setAttribute('aria-hidden','true');
           fromEl.style.transform = fromEl.style.transition = '';
           toEl  .style.transform = toEl  .style.transition  = '';
+
+          glowLayer.classList.remove('eg-global-hidden');
+          if (originGlow) unmountLocalGlow(originGlow), originGlow=null;
+          if (targetGlow) unmountLocalGlow(targetGlow), targetGlow=null;
+
+          dirs.forEach(d=> strips[d].classList.remove('is-drag'));
           axis=null; dragDir=null; toEl=null; fromEl=null;
           refreshIndicators();
         };
@@ -347,15 +416,18 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
       }
     }
 
-    // Touch
+    // Touch — prevent PTR during nav drags (vertical)
     stage.addEventListener('touchstart', (e)=> {
       const t = e.changedTouches[0];
       begin(t.clientX, t.clientY, e.target);
     }, { passive:true });
+
     stage.addEventListener('touchmove', (e)=> {
       const t = e.changedTouches[0];
       update(t.clientX, t.clientY);
-    }, { passive:true });
+      if (axis === 'y') e.preventDefault(); // block pull-to-refresh while nav-dragging
+    }, { passive:false });
+
     stage.addEventListener('touchend', ()=> end(), { passive:true });
 
     // Mouse (dev)
@@ -373,7 +445,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
     showArrows();
     const map = { ArrowUp:'up', ArrowRight:'right', ArrowDown:'down', ArrowLeft:'left' };
     const dir = map[e.key];
-    if (canGo(dir)) { dragGlow(dir,true); go(dir); }
+    if (canGo(dir)) { dragGlow(dir,true); peek(dir, true); go(dir); }
   }, { capture:true });
 
   // ---------- Controller API ----------

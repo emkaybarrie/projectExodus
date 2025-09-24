@@ -143,97 +143,9 @@ window.MyFiShowIOSInstallModal = MyFiShowIOSInstallModal;
 // ===== END of PWA + iOS helpers =====
 
 
-// ===== Edge Glow module (centralized) =====
-(function initEdgeGlow(){
-  const mount = document.getElementById('edgeGlowMount');
-  if (!mount) return;
-
-  const layer = document.createElement('div');
-  layer.className = 'edge-glow';
-  mount.appendChild(layer);
-
-  const dirs = ['up','right','down','left'];
-  const strips = new Map();
-  dirs.forEach(dir => {
-    const s = document.createElement('div');
-    s.className = 'edge-glow__strip tone-default is-disabled';
-    s.dataset.dir = dir;
-    layer.appendChild(s);
-    strips.set(dir, s);
-  });
-
-  // internal state
-  const state = {
-    available: { up:false, right:false, down:false, left:false },
-    tones:     { up:'default', right:'default', down:'default', left:'default' },
-  };
-
-  function setAvailability(next = {}) {
-    Object.assign(state.available, next);
-    for (const d of dirs) {
-      const el = strips.get(d);
-      el.classList.toggle('is-disabled', !state.available[d]);
-    }
-  }
-
-  function setTone(dir, tone = 'default') {
-    const el = strips.get(dir);
-    if (!el) return;
-    state.tones[dir] = tone;
-    el.classList.remove('tone-default','tone-notify','tone-alert','tone-okay');
-    el.classList.add('tone-' + tone);
-  }
-
-  function clearTone(dir) { setTone(dir, 'default'); }
-
-  function peek(dir, on = true) {
-    const el = strips.get(dir);
-    if (!el || !state.available[dir]) return;
-    el.classList.toggle('is-peek', !!on);
-    if (on) {
-      // auto clear after a beat so it doesn't hang
-      clearTimeout(el.__peekT);
-      el.__peekT = setTimeout(() => el.classList.remove('is-peek'), 900);
-    }
-  }
-
-  function drag(dir, on = true) {
-    const el = strips.get(dir);
-    if (!el || !state.available[dir]) return;
-    el.classList.toggle('is-drag', !!on);
-    if (on) {
-      clearTimeout(el.__dragT);
-      el.__dragT = setTimeout(() => el.classList.remove('is-drag'), 300);
-    }
-  }
-
-  function pulse(dir, on = true) {
-    const el = strips.get(dir);
-    if (!el) return;
-    el.classList.toggle('is-pulsing', !!on);
-  }
-
-  // public API
-  window.MyFiEdgeGlow = {
-    setAvailability,
-    setTone, clearTone,
-    peek, drag, pulse,
-    // convenience: set multiple at once: { left:{tone:'notify', pulse:true}, up:{tone:'default'} }
-    set(config = {}) {
-      for (const [dir, v] of Object.entries(config)) {
-        if (v.tone) setTone(dir, v.tone);
-        if (typeof v.available === 'boolean') state.available[dir] = v.available;
-        if (typeof v.pulse === 'boolean') pulse(dir, v.pulse);
-        if (v.peek) peek(dir, true);
-      }
-      setAvailability(state.available);
-    }
-  };
-})();
-
 
 // ===== YOUR ORIGINAL FILE STARTS HERE =====
-import { auth, db } from './core/auth.js';
+import { app, auth, db, fns as functions } from './core/auth.js';
 import { getDoc, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import playerDataManager from "./playerDataManager.js";
 import { initHUD } from "./hud/hud.js";
@@ -243,6 +155,10 @@ import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";
 import { showWelcomeThenMaybeSetup } from './welcome.js';
 
 import { createRouter } from './navigation.js';
+
+// in dashboard.js (post onAuthStateChanged success)
+import { initQuestEngine } from "../quests/questEngine.js";
+import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 import "./core/truelayer.js";
 import "./modal.js";
@@ -269,7 +185,15 @@ document.addEventListener("DOMContentLoaded", () => {
   auth.onAuthStateChanged(async (user) => {
     if (!user) { window.location.href = 'start.html'; return; }
 
-    
+    // Ensure an ID token exists before any callables
+    async function waitForValidIdToken() {
+      try { await user.getIdToken(true); } catch (e) { console.warn("[auth] getIdToken failed", e); }
+      await new Promise((resolve) => {
+        const unsub = auth.onIdTokenChanged(() => { unsub(); resolve(); });
+      });
+    }
+    await waitForValidIdToken();
+
     /* ---------- Load player + HUD ---------- */
     const uid = user.uid;
     window.localStorage.setItem('user', JSON.stringify(user));
@@ -318,6 +242,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (portraitImage) portraitImage.src = `./assets/portraits/${avatarKey}.png`;
 
       await initHUD(uid);
+      await initQuestEngine();  // calls seed via the same app/region-bound instance
+
+      // Use the shared Functions instance (same app + region)
+      async function ensureStarterQuest() {
+        try {
+          await httpsCallable(functions, "seedQuestCatalog")({});
+          await httpsCallable(functions, "grantQuestIfEligible")({ questId: "starter-income-set" });
+        } catch (e) {
+          console.warn("[onboarding] ensureStarterQuest failed", e?.message || e);
+        }
+      }
+      await ensureStarterQuest();
+
+
     })();
 
     if (shouldShowSplash) {

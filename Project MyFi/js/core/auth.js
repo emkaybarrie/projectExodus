@@ -126,4 +126,4 @@ export async function logoutUser() {
   }
 }
 
-export { auth, db, fns };
+export {app, auth, db, fns };
