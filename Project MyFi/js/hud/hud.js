@@ -1,9 +1,4 @@
-import { triggerTrueLayerFetch } from "../core/truelayer.js";
-import {
-  loadTransactionsFromFirestore,
-  processTransactions,
-  loadClassifiedTransactionsFromFirestore
-} from "../core/firestore.js";
+
 import { auth } from "../core/auth.js";
 
 // Import updated HUD vitals APIs

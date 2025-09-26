@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Smart Review</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+  </head>
+  <body>
+    <!-- SR will render itself into body -->
+    <script type="module">
+      import { auth } from './js/core/auth.js'; // your existing init wrapper
+      import { mountSmartReview } from './js/smartreview.js';
+
+      // Optionally expose project id for function URLs
+      window.__MYFI_PROJECT_ID__ = 'myfi-app-7fa78';
+
+      // Ensure signed-in
+      const waitForAuth = () => new Promise(r => {
+        if (auth.currentUser) return r(auth.currentUser);
+        const u = auth.onAuthStateChanged(user => { u(); r(user); });
+      });
+
+      (async ()=>{
+        const user = await waitForAuth();
+        if (!user) { location.href = 'start.html'; return; }
+        await mountSmartReview();
+      })();
+    </script>
+  </body>
+</html>

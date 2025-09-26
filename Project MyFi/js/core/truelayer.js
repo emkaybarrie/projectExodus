@@ -1,4 +1,4 @@
-// js/core/truelayer.js
+// js/core/truelayer.js - CLIENT SIDE
 // Centralised TrueLayer client helpers + RICH Smart Review UI (with stub fallback).
 
 import { auth } from "./auth.js";
@@ -192,11 +192,11 @@ async function readRecentTransactions(uid, lookbackDays = 365) {
 
   // 1) Try the new fan-out (preferred)
   try {
-    const itemsCol = doc(db, `players/${uid}/financialData_TRUELAYER/accounts`).parent.collection('accounts').doc('items');
+    const itemsCol = doc(db, `players/${uid}/financialSourceData_VERIFIED/accounts`).parent.collection('accounts').doc('items');
     const itemsSnap = await itemsCol.get?.()  // SDK compat guard
       ?? await (await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"))
             .getDocs((await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"))
-            .collection(db, `players/${uid}/financialData_TRUELAYER/accounts/items`));
+            .collection(db, `players/${uid}/financialSourceData_VERIFIED/accounts/items`));
 
     const txns = [];
     if (itemsSnap?.forEach) {
@@ -204,7 +204,7 @@ async function readRecentTransactions(uid, lookbackDays = 365) {
       const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
       const tasks = [];
       itemsSnap.forEach(accDoc => {
-        const txCol = collection(db, `players/${uid}/financialData_TRUELAYER/accounts/items/${accDoc.id}/transactions`);
+        const txCol = collection(db, `players/${uid}/financialSourceData_VERIFIED/accounts/items/${accDoc.id}/transactions`);
         tasks.push(getDocs(txCol));
       });
       const all = await Promise.all(tasks);
@@ -229,7 +229,7 @@ async function readRecentTransactions(uid, lookbackDays = 365) {
 
   // 2) Try the old aggregate TL doc if present
   try {
-    const aggSnap = await getDoc(doc(db, `players/${uid}/financialData_TRUELAYER/transactions`));
+    const aggSnap = await getDoc(doc(db, `players/${uid}/financialSourceData_VERIFIED/transactions`));
     if (aggSnap.exists()) {
       const payload = aggSnap.data()?.data || {};     // { [accountId]: [tx...] }
       const txns = [];
