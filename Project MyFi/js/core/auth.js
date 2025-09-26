@@ -126,4 +126,6 @@ export async function logoutUser() {
   }
 }
 
+window.auth = auth;
+
 export {app, auth, db, fns };

@@ -169,14 +169,16 @@
         statusEl.textContent = `Something failed on "${steps[i].label}". Using stub data…`;
         stubBanner.style.display = 'block';
         overlay.style.display = 'none'
-        await runSmartReviewFlow({ useStub: true });
+        // await runSmartReviewFlow({ useStub: true });
+        //window.location.href = 'smartreview.html';
         return;
       }
     }
 
     // All steps succeeded: run REAL Smart Review (will fall back to stub if needed)
     overlay.style.display = 'none'
-    await runSmartReviewFlow();
+    // await runSmartReviewFlow();
+    window.location.href = 'smartreview.html';
   }
 
   // ---------------- Main flow ----------------
@@ -188,7 +190,7 @@
     if (!(code && uid)) {
       console.error('Missing code or state in redirect URL. Falling back to stub.');
       stubBanner.style.display = 'block';
-      await runSmartReviewFlow({ useStub: true });
+      //await runSmartReviewFlow({ useStub: true });
       return;
     }
 
@@ -196,7 +198,7 @@
     if (!user) {
       console.warn('User not signed in; cannot exchange token safely. Falling back to stub.');
       stubBanner.style.display = 'block';
-      await runSmartReviewFlow({ useStub: true });
+      //await runSmartReviewFlow({ useStub: true });
       return;
     }
 
@@ -222,7 +224,7 @@
     } catch (e) {
       console.error('Token exchange failed; using stub path.', e.details || e.message);
       stubBanner.style.display = 'block';
-      await runSmartReviewFlow({ useStub: true });
+      // await runSmartReviewFlow({ useStub: true });
       return;
     }
 
