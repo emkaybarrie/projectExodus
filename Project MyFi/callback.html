@@ -85,6 +85,7 @@
 <script type="module">
   import { auth } from './js/core/auth.js';
   import { triggerTrueLayerFetch, renderLegalLinks, runSmartReviewFlow } from './js/core/truelayer.js';
+  import { runSmartReviewAfterTLSync } from './js/smartreview.js';
 
   // Render legal links
   const legalHost = document.getElementById('legal-links');
@@ -230,6 +231,7 @@
 
     // Success → fetch sequence, then run Smart Review
     await runSyncThenSmartReview();
+    runSmartReviewAfterTLSync();     // <— sets flag & navigates to dashboard (or opens if already there)
   })();
 </script>
 </body>
