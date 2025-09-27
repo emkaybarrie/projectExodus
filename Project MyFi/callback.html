@@ -48,19 +48,7 @@
 <body>
 
 <!-- Disclosure -->
-<section id="tl-disclosure" style="max-width:780px;margin:12px auto 8px;padding:10px 12px;
-  border:1px solid rgba(255,255,255,.15);border-radius:10px;background:rgba(20,22,30,.5);
-  font-size:.95rem;line-height:1.35">
-  <strong>USING DEMO DATA - Bank connection in progress.</strong>
-  We connect via <strong>TrueLayer</strong> and act as their <em>agent</em> to access your data with your consent.
-  <!-- <div id="legal-links" style="margin-top:6px;opacity:.9"></div> -->
-</section>
 
-<!-- Stub banner -->
-<div id="stubBanner" class="stub-banner">
-  We hit a snag linking your bank just now, so we’re using <strong>stub data</strong> to keep you moving.
-  You can review and adjust the inferred Income & Wardfire on the next step, and reconnect later.
-</div>
 
 <div id="syncOverlay">
   <div class="box">
@@ -172,14 +160,14 @@
         setStepState(i, 'fail', 'Failed');
         statusEl.textContent = `Something failed on "${steps[i].label}".`;
         stubBanner.style.display = 'block';
-        // overlay.style.display = 'none'
-        // window.location.href = 'dashboard.html';
-        //return;
+         overlay.style.display = 'none'
+         window.location.href = 'dashboard.html';
+        return;
       }
     }
 
     // All steps succeeded: run REAL Smart Review (will fall back to stub if needed)
-    // overlay.style.display = 'none'
+     overlay.style.display = 'none'
     showSmartReviewAfterTrueLayer();     // <— sets flag & navigates to dashboard (or opens if already there)
     window.location.href = 'dashboard.html';
     return;
@@ -193,14 +181,13 @@
 
     if (!(code && uid)) {
       console.error('Missing code or state in redirect URL.');
-      //return;
+      return;
     }
 
     const user = await waitForAuthUser(8000);
     if (!user) {
-      console.warn('User not signed in; cannot exchange token safely. Falling back to stub.');
-      stubBanner.style.display = 'block';
-      //return;
+      console.warn('User not signed in; cannot exchange token safely.');
+      return;
     }
 
     // Exchange code → tokens (backend must verify Firebase ID token + PKCE)
@@ -224,9 +211,7 @@
       }
     } catch (e) {
       console.error('Token exchange failed', e.details || e.message);
-      stubBanner.style.display = 'block';
-
-      //return;
+      return;
     }
 
     // Success → fetch sequence, then run Smart Review
