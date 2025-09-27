@@ -159,6 +159,7 @@ import { createRouter } from './navigation.js';
 // in dashboard.js (post onAuthStateChanged success)
 import { initQuestEngine } from "../quests/questEngine.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { hydrateSmartReviewOnDashboard } from './smartReview.js';
 
 import "./core/truelayer.js";
 import "./modal.js";
@@ -276,6 +277,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => window.MyFiShowIOSInstallModal({ autoPulse: true }), 300);
     }
 
+    hydrateSmartReviewOnDashboard()
 
     /* ---------- SLIDE ROUTER (Vitals hub + satellites) ---------- */
 
