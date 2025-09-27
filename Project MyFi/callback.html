@@ -154,7 +154,7 @@
   }
 
   // Full sync, then Smart Review. On any failure → stub Smart Review.
-  async function runSyncThenSmartReview() {
+  async function runSync(runSmartReview = false) {
     overlay.style.display = 'flex';
     renderSteps();
     statusEl.textContent = 'Syncing your bank data…';
@@ -167,19 +167,21 @@
       } catch (err) {
         console.error(`Step ${steps[i].label} failed`, err);
         setStepState(i, 'fail', 'Failed');
-        statusEl.textContent = `Something failed on "${steps[i].label}". Using stub data…`;
-        stubBanner.style.display = 'block';
-        overlay.style.display = 'none'
-        // await runSmartReviewFlow({ useStub: true });
-        //window.location.href = 'smartreview.html';
+        statusEl.textContent = `Something failed on "${steps[i].label}".`;
+        // stubBanner.style.display = 'block';
+        // overlay.style.display = 'none'
+        window.location.href = 'dashboard.html';
         return;
       }
     }
 
     // All steps succeeded: run REAL Smart Review (will fall back to stub if needed)
-    overlay.style.display = 'none'
-    // await runSmartReviewFlow();
-    window.location.href = 'smartreview.html';
+    if(runSmartReview){
+    // overlay.style.display = 'none'
+    showSmartReviewAfterTrueLayer();     // <— sets flag & navigates to dashboard (or opens if already there)
+    }
+    window.location.href = 'dashboard.html';
+    return;
   }
 
   // ---------------- Main flow ----------------
@@ -189,16 +191,14 @@
     const uid  = p.get('state');
 
     if (!(code && uid)) {
-      console.error('Missing code or state in redirect URL. Falling back to stub.');
-      stubBanner.style.display = 'block';
-      //await runSmartReviewFlow({ useStub: true });
+      console.error('Missing code or state in redirect URL.');
       return;
     }
 
     const user = await waitForAuthUser(8000);
     if (!user) {
       console.warn('User not signed in; cannot exchange token safely. Falling back to stub.');
-      stubBanner.style.display = 'block';
+      // stubBanner.style.display = 'block';
       //await runSmartReviewFlow({ useStub: true });
       return;
     }
@@ -230,8 +230,7 @@
     }
 
     // Success → fetch sequence, then run Smart Review
-    await runSyncThenSmartReview();
-    runSmartReviewAfterTLSync();     // <— sets flag & navigates to dashboard (or opens if already there)
+    await runSync(true);
   })();
 </script>
 </body>
