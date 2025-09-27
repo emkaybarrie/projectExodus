@@ -1,17 +1,11 @@
-// smartreview.js — Smart Review overlay (frontend) — v3
+// smartreview.js — Smart Review overlay (frontend, v2 tweaks)
 //
-// What’s new (vs your current baseline):
-// 1) Summary totals update live when toggling Include on any row.
-// 2) Per-group monthly amount is color-coded: green (Energy/inflow), red (Emberward/outflow).
-// 3) Stronger grouping logic:
-//    - Robust outlier filtering (IQR fence) within each merchant group.
-//    - Period-sum cadence detector: for each candidate period (weekly/fortnightly/monthly/quarterly/yearly),
-//      we aggregate sums per period bin, measure coverage + stability, and pick the best.
-//      Representative amount = median(period sums), not median(transaction amounts).
-//    - Keeps your merchant normalizer; we can tighten later if needed.
-//
-// Flags let you switch between backend endpoints or pure client mode.
-// Overlay is self-contained: can open after TL fetch, on dashboard, or manually.
+// Changes vs previous:
+// - Anchor picker is a dropdown of UNIQUE dates (last 30d, eligible).
+// - Cadence is READ-ONLY text. All monthly normalization preserved.
+// - More responsive summary layout (no overflow on phones).
+// - Same flags: can work with backend endpoints or stub writes.
+// - Reads processed verified from Firestore (no backend imports).
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -22,37 +16,28 @@ import {
 // CONFIG
 // ---------------------------------------------------------------------------
 const SR_CFG = {
-  // I/O toggles
   useBackendAnalyze: false,
   useBackendSave:    false,
   callRecompute:     true,
   devWriteRailsStub: true,
 
-  // Endpoints (only used when flags above are true)
   endpoints: {
     analyzeUrl:    "https://smartreview-analyze-frxqsvlhwq-nw.a.run.app",
     saveUrl:       "https://smartreview-save-frxqsvlhwq-nw.a.run.app",
     recomputeUrl:  "https://recomputerails-frxqsvlhwq-nw.a.run.app",
   },
 
-  // Analytics windows
-  lookbackMonthsFetch: 36, // raw fetch horizon
-  lookbackMonthsGroup: 12, // grouping horizon
+  lookbackMonthsFetch: 36,
+  lookbackMonthsGroup: 12,
   minOccurrences: 2,
-
-  // Anchor gating
   minConfidenceForAnchor: 0.25,
   minAnchorAmountMajor: 20,
+  excludeNonLiquid: true,
+  defaultExcludeCreditCard: true,
 
-  // Filters
-  excludeNonLiquid: true,            // auto-exclude obvious non-liquid like "mortgage"
-  defaultExcludeCreditCard: true,    // default exclude credit card repayments
-
-  // Categories
   incomeCategories: ["Salary","Bonus","Stipend","Pension","Other"],
   emberCategories:  ["Shelter","Energy","Internet","Insurance","Council Tax","Loan","Phone","Other"],
 
-  // UI / debugging
   onTelemetry: (eventName, payload)=>{ /* console.log("[SR]", eventName, payload); */ },
   conflictCheck: true,
   showConfidenceBadges: false,
@@ -92,9 +77,6 @@ function ensureStyles(){
   .row-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-top:8px}
   .tiny{font-size:11px;opacity:.7}
   .toolbar{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
-  .amount-chip{font-weight:700}
-  .amount-chip.green{color:#10b981}
-  .amount-chip.red{color:#ef4444}
 
   @media (min-width: 720px){
     .sr-summary{grid-template-columns:1fr auto}
@@ -133,120 +115,6 @@ function normName(s=''){
   return n || 'unknown';
 }
 
-// Heuristic: default “Include” for inflow rows if they look like real income.
-// Returns true for salary-like inflows, false otherwise.
-function suggestInclude(name = "") {
-  const s = String(name).toLowerCase();
-
-  // Signals that this is genuine incoming money:
-  const POS = /(salary|payroll|wage|hmrc|pension|stipend|scholarship|grant|employer|bursary|benefit|universal\s*credit|student\s*loan|income|pay\s*day)/i;
-
-  // Things we don't want to pre-include as income:
-  const NEG = /(transfer|refund|reversal|cash\s*(deposit|in)|crypto|savings|isa|loan\s*repay|credit\s*card|visa|mastercard|amex|top\s*up)/i;
-
-  if (NEG.test(s)) return false;
-  if (POS.test(s)) return true;
-
-  // Default: conservative for inflow (user can tick include themselves)
-  return false;
-}
-
-
-// Robust IQR filter: return whitelist of indices to keep
-function iqrFilter(values){
-  if (values.length < 4) return values.map((_,i)=>i);
-  const vs = values.slice().sort((a,b)=>a-b);
-  const q1 = vs[Math.floor((vs.length-1)*0.25)];
-  const q3 = vs[Math.floor((vs.length-1)*0.75)];
-  const iqr = q3 - q1;
-  const lo = q1 - 1.5*iqr;
-  const hi = q3 + 1.5*iqr;
-  const keep = [];
-  for (let i=0;i<values.length;i++){
-    const v = values[i];
-    if (v>=lo && v<=hi) keep.push(i);
-  }
-  return keep;
-}
-
-// ISO week index (approx; good enough for grouping)
-function isoWeekKey(ms){
-  const d = new Date(ms);
-  // set to nearest Thursday to determine ISO week
-  const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = tmp.getUTCDay() || 7;
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(),0,1));
-  const weekNo = Math.ceil((((tmp - yearStart) / DAYS) + 1) / 7);
-  return `${tmp.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
-}
-function monthKey(ms){
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-}
-function fortnightKey(ms){
-  // 1st–15th -> A, 16th–end -> B
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getDate()<=15?'A':'B'}`;
-}
-function quarterKey(ms){
-  const d = new Date(ms); const q = Math.floor(d.getMonth()/3)+1;
-  return `${d.getFullYear()}-Q${q}`;
-}
-function yearKey(ms){
-  return String(new Date(ms).getFullYear());
-}
-
-// Aggregate by cadence candidate into period sums
-function aggregateByCadence(occ, cadence){
-  const keyFn = cadence==='weekly'      ? isoWeekKey
-               : cadence==='fortnightly'? fortnightKey
-               : cadence==='monthly'    ? monthKey
-               : cadence==='quarterly'  ? quarterKey
-               : cadence==='yearly'     ? yearKey
-               : monthKey;
-  const map = new Map();
-  for (const o of occ){
-    const k = keyFn(o.ts);
-    map.set(k, (map.get(k)||0) + Math.abs(o.amt));
-  }
-  // Return stable order by key
-  const entries = Array.from(map.entries()).sort((a,b)=> a[0]<b[0]? -1 : 1);
-  const sums = entries.map(e=>e[1]);
-  return { entries, sums };
-}
-
-function median(vals){
-  if (!vals.length) return 0;
-  const v = vals.slice().sort((a,b)=>a-b);
-  return v[Math.floor(v.length/2)];
-}
-function mad(vals){
-  if (vals.length<3) return 0;
-  const m = median(vals);
-  const dev = vals.map(x=>Math.abs(x-m));
-  return median(dev);
-}
-
-// Score a cadence by coverage + stability
-function scoreCadence(occ, cadence, periodCountHint=12){
-  const { sums } = aggregateByCadence(occ, cadence);
-  if (sums.length < SR_CFG.minOccurrences) return { fit:0, hits:0, rep:0 };
-
-  const hits = sums.filter(x=>x>0).length;
-  // Coverage: periods with activity / total periods seen
-  const coverage = hits / sums.length;
-
-  // Stability: lower MAD relative to median => higher stability
-  const m = median(sums);
-  const m_mad = mad(sums);
-  const stab = m === 0 ? 0 : Math.max(0, 1 - (m_mad / (m*1.2))); // gentle scaling
-
-  // Fit: weighted
-  const fit = 0.6*coverage + 0.4*stab;
-  return { fit, hits, rep: m };
-}
-
 // ---------------------------------------------------------------------------
 // DATA LOADING
 // ---------------------------------------------------------------------------
@@ -274,82 +142,99 @@ async function loadProcessedVerified(uid, monthsFetch){
 }
 
 // ---------------------------------------------------------------------------
-// ANALYZER (client fallback, enriched)
+// ANALYZER (client fallback)
 // ---------------------------------------------------------------------------
+function detectCadence(occ){
+  if (occ.length < SR_CFG.minOccurrences) return { cadence: 'monthly', fit: 0.3, hits: 0 };
+  const deltas = [];
+  for (let i=1;i<occ.length;i++) deltas.push((occ[i].ts - occ[i-1].ts)/DAYS);
+  deltas.sort((a,b)=>a-b);
+  const bands = [
+    {key:'weekly',center:7,tol:2},
+    {key:'fortnightly',center:14,tol:2},
+    {key:'monthly',center:30,tol:4},
+    {key:'quarterly',center:91,tol:10},
+    {key:'yearly',center:365,tol:30},
+  ];
+  let best={cadence:'monthly',fit:0,hits:0};
+  for (const b of bands){
+    const hits = deltas.filter(d=>Math.abs(d-b.center)<=b.tol).length;
+    const fit = hits / Math.max(1,deltas.length);
+    if (fit>best.fit) best={cadence:b.key,fit,hits};
+  }
+  return best;
+}
+
+function representative(occ){
+  const vals = occ.map(o=>Math.abs(o.amt)).sort((a,b)=>a-b);
+  return vals[Math.floor(vals.length/2)] || 0;
+}
+
+function suggestInclude(name){
+  const n = (name||'').toLowerCase();
+  if (SR_CFG.excludeNonLiquid && /mortgage/.test(n)) return false;
+  if (SR_CFG.defaultExcludeCreditCard && /credit\s*card/.test(n)) return false;
+  return true;
+}
+
 function buildGroups(processed, monthsGroup){
   const cutoff = Date.now() - monthsGroup*30.44*DAYS;
 
-  // 1) Pull core signal for each txn
-  const txsRaw = processed
+  const txs = processed
     .map(x => {
-      const amount = Number(x.amount ?? x.amountMajor ?? 0);
+      const amt = Number(x.amount ?? x.amountMajor ?? 0);
       const td = x.transactionData || {};
       const name = normName(td.description || td.merchantName || x.label || x.counterparty || '');
-      return { ts: x.ts, amt: amount, name };
+      return { ts: x.ts, amt, name };
     })
     .filter(t => Number.isFinite(t.ts) && t.ts >= cutoff);
 
-  // 2) Group by (name, sign)
-  const groups = new Map(); // key -> { name, kind, occ:[{ts,amt}] }
-  for (const t of txsRaw){
+  // Group
+  const map = new Map();
+  for (const t of txs){
     const kind = t.amt >= 0 ? 'inflow' : 'ember';
     const key = `${t.name}|${kind}`;
-    if (!groups.has(key)) groups.set(key, { name: t.name, kind, occ: [] });
-    groups.get(key).occ.push({ ts: t.ts, amt: Math.abs(t.amt) });
+    if (!map.has(key)) map.set(key, { name: t.name, kind, occ: [] });
+    map.get(key).occ.push({ ts: t.ts, amt: Math.abs(t.amt) });
   }
-  groups.forEach(g => g.occ.sort((a,b)=>a.ts-b.ts));
+  map.forEach(g => g.occ.sort((a,b)=>a.ts-b.ts));
 
-  // 3) Outlier filter per group (IQR)
-  for (const g of groups.values()){
-    const vals = g.occ.map(o=>o.amt);
-    const keepIdx = iqrFilter(vals);
-    g.occ = keepIdx.map(i => g.occ[i]).sort((a,b)=>a.ts-b.ts);
-  }
-
-  // 4) Cadence selection via period-sum scoring
-  const candidates = ['weekly','fortnightly','monthly','quarterly','yearly'];
+  // Summarise
   const items = [];
-  for (const g of groups.values()){
-    if (g.occ.length < SR_CFG.minOccurrences) continue;
-
-    let best = { cadence:'monthly', fit:0, hits:0, rep:0 };
-    for (const c of candidates){
-      const sc = scoreCadence(g.occ, c);
-      if (sc.fit > best.fit) best = { cadence:c, ...sc };
-    }
-
-    const confidence = Math.min(1, best.fit); // keep simple 0..1
+  for (const g of map.values()){
+    const cad = detectCadence(g.occ);
+    const rep = representative(g.occ);
+    const hits = g.occ.length;
+    const confidence = Math.min(1, (0.6*cad.fit) + (0.4*Math.min(1, hits/6)));
     items.push({
       id: g.name + '|' + (g.kind==='inflow'?'in':'out'),
       name: g.name,
       kind: g.kind,
-      cadence: best.cadence,
-      representative: Number((best.rep || 0).toFixed(2)), // median period sum
-      txCount: g.occ.length,
+      cadence: cad.cadence,
+      representative: Number(rep.toFixed(2)),
+      txCount: hits,
       confidence
     });
   }
-
-  // 5) Sort + split
   const inflow = items.filter(i=>i.kind==='inflow').sort((a,b)=>b.confidence-a.confidence);
   const ember  = items.filter(i=>i.kind==='ember') .sort((a,b)=>b.confidence-a.confidence);
 
-  // 6) Anchor candidates (unique dates by calendar day)
+  // Anchor candidates (unique dates only)
   const thirtyDaysAgo = Date.now() - 30*DAYS;
-  const eligibleInflows = txsRaw.filter(t => t.amt>=SR_CFG.minAnchorAmountMajor && t.ts>=thirtyDaysAgo && t.amt>0);
-  // join confidence by name
+  const eligible = txs.filter(t => t.amt>=SR_CFG.minAnchorAmountMajor && t.ts>=thirtyDaysAgo);
+  // Keep only if their GROUP’s confidence >= threshold (join by name)
   const confByName = new Map(inflow.map(i=>[i.name, i.confidence]));
   const dateSet = new Set();
-  for (const t of eligibleInflows){
+  for (const t of eligible){
     const conf = confByName.get(t.name) || 0;
     if (conf < SR_CFG.minConfidenceForAnchor) continue;
+    // key by date (YYYY-MM-DD)
     const d = new Date(t.ts);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     dateSet.add(key);
   }
-  const anchorDates = Array.from(dateSet).sort((a,b)=> (a<b?1:-1)); // newest → oldest
-
-  return { inflow, ember, anchorDates };
+  const uniqueDatesDesc = Array.from(dateSet).sort((a,b)=> (a<b?1:-1));
+  return { inflow, ember, anchorDates: uniqueDatesDesc };
 }
 
 async function analyzeClient(uid){
@@ -393,7 +278,6 @@ async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
     await setDoc(doc(db, `players/${uid}/cashflowData/verified`), {
       itemised_inflow:  { total: Number(incomeMo.toFixed(2)),  categories: incCats,  cadence:"monthly", updatedAt: now },
       itemised_outflow: { total: Number(emberMo.toFixed(2)),   categories: outCats, cadence:"monthly", updatedAt: now },
-      anchorMs: anchorTs || null,
       updatedAt: now
     }, { merge: true });
 
@@ -446,12 +330,9 @@ function buildRowUI(group, kind){
   // Cadence is READ-ONLY text now
   const cadenceText = el('div','sr-sub', (group.cadence||'monthly').replace(/^\w/, c=>c.toUpperCase()));
 
-  // Monthly chip (color-coded)
-  const monthlyVal = Number(((group.representative || 0) * MONTHLY_MULT[group.cadence || 'monthly']).toFixed(2));
-  const monthly = el('div','', `<span class="amount-chip ${kind==='inflow'?'green':'red'}">${GBP(monthlyVal)}/mo</span>`);
+  const monthly = el('div','sr-sub', `${GBP((group.representative||0) * MONTHLY_MULT[group.cadence || 'monthly'])}/mo`);
 
-  const include = document.createElement('input'); include.type='checkbox'; include.checked = (kind==='inflow')
-    ? suggestInclude(group.name) : true;
+  const include = document.createElement('input'); include.type='checkbox'; include.checked = suggestInclude(group.name);
 
   const grid = el('div','row-grid');
   const incWrap = el('div','',`<label class="sr-sub">Include</label>`); incWrap.append(include);
@@ -468,15 +349,14 @@ function buildRowUI(group, kind){
 
   return {
     node: row,
-    include,
     collect: () => ({
       id: group.id,
       name: group.name,
       label: label.value.trim() || group.name || '',
       category: category.value || 'Other',
-      cadence: group.cadence || 'monthly', // fixed/view-only
+      cadence: group.cadence || 'monthly', // fixed
       representative: Number(group.representative || 0),
-      monthly: monthlyVal,
+      monthly: Number(((group.representative || 0) * MONTHLY_MULT[group.cadence || 'monthly']).toFixed(2)),
       include: include.checked,
       classAs: kind
     })
@@ -486,7 +366,7 @@ function buildRowUI(group, kind){
 function renderContinuousPhase(host, analysis){
   host.innerHTML = '';
 
-  // Summary area (responsive)
+  // Summary area (responsive, no overflow)
   const summary = document.createElement('div'); summary.className='sr-summary';
   const totals = document.createElement('div'); totals.className='sr-totals';
   const k1 = el('div','sr-kpi'); const lEng = el('div','kbox','Energy Source'); const vEng = el('div','kbox green','£0/mo'); k1.append(lEng,vEng);
@@ -524,7 +404,7 @@ function renderContinuousPhase(host, analysis){
   // List
   const list = el('div','sr-list'); host.append(list);
 
-  // Build rows
+  // Rows
   const inRows = (analysis.inflow||[]).map(g=>buildRowUI(g,'inflow'));
   const outRows= (analysis.ember ||[]).map(g=>buildRowUI(g,'ember'));
 
@@ -543,7 +423,6 @@ function renderContinuousPhase(host, analysis){
   host.insertBefore(toolbar, list);
   btnUndo.onclick = undo; btnRedo.onclick = redo;
 
-  // Live total recalc
   function recalc(){
     const ins  = inRows .map(r=>r.collect()).filter(x=>x.include);
     const outs = outRows.map(r=>r.collect()).filter(x=>x.include);
@@ -558,12 +437,6 @@ function renderContinuousPhase(host, analysis){
     const netWeekly= Number(((incMo - outMo)/MONTHLY_MULT.weekly).toFixed(2));
     dailyBox.textContent = `Daily: ${GBP(netDaily)}`; weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
   }
-
-  // Attach real-time listeners on all Include checkboxes
-  [...inRows, ...outRows].forEach(r => {
-    r.include.addEventListener('change', ()=>{ recalc(); pushHistory(); });
-  });
-
   function show(kind){
     tabIn.classList.toggle('active', kind==='in');
     tabOut.classList.toggle('active', kind==='out');
@@ -580,8 +453,8 @@ function renderContinuousPhase(host, analysis){
       emberRows:  outRows.map(r=>r.collect())
     };
   }
-  function applyState(_state){
-    // Currently only totals depend on Include; labels/categories don’t affect totals.
+  function applyState(state){
+    // minimal, as before (keeps current editing simple)
     recalc();
   }
 
