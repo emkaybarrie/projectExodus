@@ -8,7 +8,7 @@ Here, among us, every spirit carries a name.
 So tell me, friend.... how would you like to be known.`,
 
   s2_title: "Alignment",
-  s2: `Each of us leans toward a way of being. How we wield the power we posses.
+  s2: `Each of us leans toward a way of being. How we wield the power we possess.
 Some are resilient — guarding for the unseen storm.
 Others are willful — moving with intent and power to shape the world.
 Some are adaptable — flowing through whatever comes, anticipating the unknown.
@@ -65,9 +65,10 @@ export const INFO = {
   alias: `Shown to others and used to identify you`,
   alignment: `Alignment chooses how your energy is divided across your pools (max values).
 Examples:
-• Enduring: more Health (stability/savings)
-• Ardent: more Mana (will/intentional spends)
-• Everyday: more Stamina (daily spending flexibility)
+• Sentinel: more Health (stability/savings)
+• Invoker: more Mana (will/intentional spends)
+• Strider: more Stamina (daily spending flexibility)
+• Harmonist: balanced across each pool type
 You can adjust later in Settings.`,
 
   affinity: `Affinity reflects your elemental nature — and your temperament toward risk and reward:
