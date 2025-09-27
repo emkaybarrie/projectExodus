@@ -1,17 +1,8 @@
-// smartreview.js — Smart Review overlay (frontend) — v3
-//
-// What’s new (vs your current baseline):
-// 1) Summary totals update live when toggling Include on any row.
-// 2) Per-group monthly amount is color-coded: green (Energy/inflow), red (Emberward/outflow).
-// 3) Stronger grouping logic:
-//    - Robust outlier filtering (IQR fence) within each merchant group.
-//    - Period-sum cadence detector: for each candidate period (weekly/fortnightly/monthly/quarterly/yearly),
-//      we aggregate sums per period bin, measure coverage + stability, and pick the best.
-//      Representative amount = median(period sums), not median(transaction amounts).
-//    - Keeps your merchant normalizer; we can tighten later if needed.
-//
-// Flags let you switch between backend endpoints or pure client mode.
-// Overlay is self-contained: can open after TL fetch, on dashboard, or manually.
+// smartreview.js — Smart Review overlay (frontend) — v5 (layout polish)
+// - Summary sits flush under mode pills
+// - “Net per month” on its own row (between Energy/Ember and Daily/Weekly)
+// - Row shows “Avg (per cadence)” (left) + “Monthly (normalised)” (right), same row
+// - Lists scroll; summary + tabs pinned; amounts colour-coded; live totals
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -36,27 +27,26 @@ const SR_CFG = {
   },
 
   // Analytics windows
-  lookbackMonthsFetch: 36, // raw fetch horizon
-  lookbackMonthsGroup: 12, // grouping horizon
+  lookbackMonthsFetch: 36,
+  lookbackMonthsGroup: 12,
   minOccurrences: 2,
 
   // Anchor gating
   minConfidenceForAnchor: 0.25,
   minAnchorAmountMajor: 20,
 
-  // Filters
-  excludeNonLiquid: true,            // auto-exclude obvious non-liquid like "mortgage"
-  defaultExcludeCreditCard: true,    // default exclude credit card repayments
-
   // Categories
   incomeCategories: ["Salary","Bonus","Stipend","Pension","Other"],
   emberCategories:  ["Shelter","Energy","Internet","Insurance","Council Tax","Loan","Phone","Other"],
 
-  // UI / debugging
+  // UI / telemetry
   onTelemetry: (eventName, payload)=>{ /* console.log("[SR]", eventName, payload); */ },
-  conflictCheck: true,
   showConfidenceBadges: false,
 };
+
+const DAYS = 86400000;
+const MONTHLY_MULT = { monthly:1, weekly:52/12, fortnightly:26/12, quarterly:4/12, yearly:1/12, daily:30.44 };
+const GBP = n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
 
 // ---------------------------------------------------------------------------
 // STYLE
@@ -65,44 +55,58 @@ function ensureStyles(){
   if (document.getElementById('sr-styles')) return;
   const css = `
   #srOverlay{position:fixed;inset:0;background:rgba(6,8,12,.88);backdrop-filter:saturate(120%) blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;}
-  #srWrap{width:min(1120px,94vw);max-height:94vh;overflow:auto;padding:16px;border:1px solid #273142;border-radius:16px;background:#0f1118;color:#fff;box-shadow:0 20px 80px rgba(0,0,0,.5)}
-  #srWrap h2{margin:0 0 8px;font-size:20px}
-  .sr-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+  #srWrap{width:min(1120px,94vw);max-height:94vh;display:flex;flex-direction:column;border:1px solid #273142;border-radius:16px;background:#0f1118;color:#fff;box-shadow:0 20px 80px rgba(0,0,0,.5)}
+  #srTop{position:sticky;top:0;z-index:3;background:#0f1118;border-bottom:1px solid #1f2937}
+  #srTopInner{padding:16px}
+  #srBody{flex:1;min-height:0;overflow:auto;padding:0 16px 12px 16px}
+  .sr-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #1f2937;background:#0f1118;position:sticky;bottom:0;z-index:2}
+  #srTop h2{margin:0 0 8px;font-size:20px}
   .pill{padding:6px 10px;border-radius:999px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
   .pill.active{outline:2px solid #3b82f6}
-  .sr-summary{display:grid;grid-template-columns:1fr;gap:12px;margin:8px 0 12px}
-  .sr-totals{display:grid;grid-template-columns:1fr;gap:10px}
-  .sr-kpi{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
-  .kbox{border-radius:10px;padding:8px 12px;background:#111827;border:1px solid #1f2937;min-width:0}
-  .green{color:#10b981} .red{color:#ef4444} .muted{opacity:.8}
+
+  /* Summary block (flush to pills) */
+  .sr-summary{margin-top:8px}
+  .sr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+  .sr-row-1 .kbox{display:flex;gap:8px;align-items:center}
+  .sr-row-2{margin-top:8px}
+  .sr-row-3{margin-top:8px;display:flex;gap:12px;align-items:center}
+  .sr-right{display:grid;gap:8px}
   .bar{height:16px;border-radius:12px;background:#1f2937;overflow:hidden}
   .bar>div{height:100%;width:0%}
   .bar .pos{background:linear-gradient(90deg,#22c55e,#06b6d4)}
   .bar .neg{background:linear-gradient(90deg,#ef4444,#f59e0b)}
+  .kbox{border-radius:10px;padding:8px 12px;background:#111827;border:1px solid #1f2937;min-width:0}
+  .green{color:#10b981} .red{color:#ef4444} .muted{opacity:.8}
   .sr-sub{font-size:12px;opacity:.85}
-  .sr-subgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .anchor-box{display:grid;grid-template-columns:1fr;gap:6px;align-items:center}
-  .sr-tabs{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+
+  .anchor-box{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+
+  .sr-tabs{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
   .tab{padding:6px 10px;border:1px solid #2a3a55;border-radius:8px;background:#0d1220;color:#fff}
   .tab.active{outline:2px solid #3b82f6}
-  .sr-list{display:flex;flex-direction:column;gap:8px}
+
+  .toolbar{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center;justify-content:space-between}
+  .count-pill{font-size:12px;opacity:.85}
+
+  .sr-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .ao-tile{border:1px solid #223044;border-radius:12px;padding:10px;background:#121626}
   .row-top{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
   .ao-input,.ao-select{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
-  .row-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-top:8px}
-  .tiny{font-size:11px;opacity:.7}
-  .toolbar{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+
+  /* Row grid:
+     Row 1: Label (2fr) | Category (1fr) | Include (auto)
+     Row 2: Cadence (left) | Avg per cadence (middle) | Monthly (right) */
+  .row-grid{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-top:8px;grid-auto-rows:auto;align-items:end}
+  .row-line{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:8px;align-items:end}
+
+
   .amount-chip{font-weight:700}
   .amount-chip.green{color:#10b981}
   .amount-chip.red{color:#ef4444}
 
-  @media (min-width: 720px){
-    .sr-summary{grid-template-columns:1fr auto}
-    .sr-totals{grid-template-columns:1fr 1fr 1fr}
-  }
-  @media (max-width: 480px){
-    .sr-subgrid{grid-template-columns:1fr}
-    .row-grid{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  @media (max-width: 640px){
+    .sr-row{grid-template-columns:1fr}
+    .anchor-box{justify-content:flex-start}
   }
   `;
   const style=document.createElement('style');
@@ -114,13 +118,7 @@ function ensureStyles(){
 // ---------------------------------------------------------------------------
 // UTILS
 // ---------------------------------------------------------------------------
-const GBP = n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
-const DAYS = 86400000;
-const MONTHLY_MULT = { monthly:1, weekly:52/12, fortnightly:26/12, quarterly:4/12, yearly:1/12, daily:30.44 };
-
 function el(tag, cls, html){ const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; }
-function button(text, cls='pill'){ const b=document.createElement('button'); b.className=cls; b.textContent=text; return b; }
-
 function normName(s=''){
   let n = String(s||'').toLowerCase();
   n = n.replace(/card\s*\d+|pos\s*\d+|ref[:\s]*\d+|#[a-z0-9]+/g,' ');
@@ -132,27 +130,21 @@ function normName(s=''){
        .replace(/oyster|tfl/,'tfl').replace(/hmrc.*$/,'hmrc');
   return n || 'unknown';
 }
-
-// Heuristic: default “Include” for inflow rows if they look like real income.
-// Returns true for salary-like inflows, false otherwise.
-function suggestInclude(name = "") {
-  const s = String(name).toLowerCase();
-
-  // Signals that this is genuine incoming money:
-  const POS = /(salary|payroll|wage|hmrc|pension|stipend|scholarship|grant|employer|bursary|benefit|universal\s*credit|student\s*loan|income|pay\s*day)/i;
-
-  // Things we don't want to pre-include as income:
-  const NEG = /(transfer|refund|reversal|cash\s*(deposit|in)|crypto|savings|isa|loan\s*repay|credit\s*card|visa|mastercard|amex|top\s*up)/i;
-
-  if (NEG.test(s)) return false;
-  if (POS.test(s)) return true;
-
-  // Default: conservative for inflow (user can tick include themselves)
-  return false;
+function cadenceUnitLabel(cadence) {
+  switch (cadence) {
+    case 'weekly':      return 'per week';
+    case 'fortnightly': return 'per fortnight';
+    case 'monthly':     return 'per month';
+    case 'quarterly':   return 'per quarter';
+    case 'yearly':      return 'per year';
+    case 'daily':       return 'per day';
+    default:            return 'per period';
+  }
 }
-
-
-// Robust IQR filter: return whitelist of indices to keep
+function suggestInclude(name=''){
+  const s = String(name).toLowerCase();
+  return /(salary|payroll|wage|stipend|pension|employer|scholarship|grant)/.test(s);
+}
 function iqrFilter(values){
   if (values.length < 4) return values.map((_,i)=>i);
   const vs = values.slice().sort((a,b)=>a-b);
@@ -162,17 +154,11 @@ function iqrFilter(values){
   const lo = q1 - 1.5*iqr;
   const hi = q3 + 1.5*iqr;
   const keep = [];
-  for (let i=0;i<values.length;i++){
-    const v = values[i];
-    if (v>=lo && v<=hi) keep.push(i);
-  }
+  for (let i=0;i<values.length;i++){ const v=values[i]; if (v>=lo && v<=hi) keep.push(i); }
   return keep;
 }
-
-// ISO week index (approx; good enough for grouping)
 function isoWeekKey(ms){
   const d = new Date(ms);
-  // set to nearest Thursday to determine ISO week
   const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = tmp.getUTCDay() || 7;
   tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
@@ -180,24 +166,10 @@ function isoWeekKey(ms){
   const weekNo = Math.ceil((((tmp - yearStart) / DAYS) + 1) / 7);
   return `${tmp.getUTCFullYear()}-W${String(weekNo).padStart(2,'0')}`;
 }
-function monthKey(ms){
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-}
-function fortnightKey(ms){
-  // 1st–15th -> A, 16th–end -> B
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getDate()<=15?'A':'B'}`;
-}
-function quarterKey(ms){
-  const d = new Date(ms); const q = Math.floor(d.getMonth()/3)+1;
-  return `${d.getFullYear()}-Q${q}`;
-}
-function yearKey(ms){
-  return String(new Date(ms).getFullYear());
-}
-
-// Aggregate by cadence candidate into period sums
+const monthKey     = ms => `${new Date(ms).getFullYear()}-${String(new Date(ms).getMonth()+1).padStart(2,'0')}`;
+const fortnightKey = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${d.getDate()<=15?'A':'B'}`; };
+const quarterKey   = ms => { const d = new Date(ms), q=Math.floor(d.getMonth()/3)+1; return `${d.getFullYear()}-Q${q}`; };
+const yearKey      = ms => String(new Date(ms).getFullYear());
 function aggregateByCadence(occ, cadence){
   const keyFn = cadence==='weekly'      ? isoWeekKey
                : cadence==='fortnightly'? fortnightKey
@@ -206,66 +178,42 @@ function aggregateByCadence(occ, cadence){
                : cadence==='yearly'     ? yearKey
                : monthKey;
   const map = new Map();
-  for (const o of occ){
-    const k = keyFn(o.ts);
-    map.set(k, (map.get(k)||0) + Math.abs(o.amt));
-  }
-  // Return stable order by key
+  for (const o of occ){ const k = keyFn(o.ts); map.set(k, (map.get(k)||0) + Math.abs(o.amt)); }
   const entries = Array.from(map.entries()).sort((a,b)=> a[0]<b[0]? -1 : 1);
   const sums = entries.map(e=>e[1]);
   return { entries, sums };
 }
-
-function median(vals){
-  if (!vals.length) return 0;
-  const v = vals.slice().sort((a,b)=>a-b);
-  return v[Math.floor(v.length/2)];
-}
-function mad(vals){
-  if (vals.length<3) return 0;
-  const m = median(vals);
-  const dev = vals.map(x=>Math.abs(x-m));
-  return median(dev);
-}
-
-// Score a cadence by coverage + stability
-function scoreCadence(occ, cadence, periodCountHint=12){
+function median(vals){ if (!vals.length) return 0; const v=vals.slice().sort((a,b)=>a-b); return v[Math.floor(v.length/2)]; }
+function mad(vals){ if (vals.length<3) return 0; const m=median(vals); const dev=vals.map(x=>Math.abs(x-m)); return median(dev); }
+function scoreCadence(occ, cadence){
   const { sums } = aggregateByCadence(occ, cadence);
   if (sums.length < SR_CFG.minOccurrences) return { fit:0, hits:0, rep:0 };
-
   const hits = sums.filter(x=>x>0).length;
-  // Coverage: periods with activity / total periods seen
   const coverage = hits / sums.length;
-
-  // Stability: lower MAD relative to median => higher stability
   const m = median(sums);
   const m_mad = mad(sums);
-  const stab = m === 0 ? 0 : Math.max(0, 1 - (m_mad / (m*1.2))); // gentle scaling
-
-  // Fit: weighted
+  const stab = m===0 ? 0 : Math.max(0, 1 - (m_mad / (m*1.2)));
   const fit = 0.6*coverage + 0.4*stab;
   return { fit, hits, rep: m };
 }
 
 // ---------------------------------------------------------------------------
-// DATA LOADING
+// DATA LOAD
 // ---------------------------------------------------------------------------
 async function loadProcessedVerified(uid, monthsFetch){
   const db = getFirestore();
   const sinceMs = Date.now() - monthsFetch*30.44*DAYS;
-
-  const tryColl = [
-    collection(db, `players/${uid}/financialData/processedTransactions/verified`)
+  const candidates = [
+    collection(db, `players/${uid}/financialData/processedTransactions/verified`),
   ];
-
-  for (const coll of tryColl){
+  for (const coll of candidates){
     try {
       const qs = await getDocs(coll);
       const arr = [];
       qs.forEach(d => {
         const x = d.data() || {};
         const ts = x.dateMs ?? x.postedAtMs ?? x.transactionData?.entryDate?.toMillis?.() ?? 0;
-        if (ts >= sinceMs) arr.push({ id: d.id, ...x, ts });
+        if (ts >= sinceMs) arr.push({ id:d.id, ...x, ts });
       });
       if (arr.length) return arr;
     } catch (_) {}
@@ -274,91 +222,78 @@ async function loadProcessedVerified(uid, monthsFetch){
 }
 
 // ---------------------------------------------------------------------------
-// ANALYZER (client fallback, enriched)
+// ANALYZE (client)
 // ---------------------------------------------------------------------------
 function buildGroups(processed, monthsGroup){
   const cutoff = Date.now() - monthsGroup*30.44*DAYS;
-
-  // 1) Pull core signal for each txn
   const txsRaw = processed
     .map(x => {
       const amount = Number(x.amount ?? x.amountMajor ?? 0);
       const td = x.transactionData || {};
       const name = normName(td.description || td.merchantName || x.label || x.counterparty || '');
-      return { ts: x.ts, amt: amount, name };
+      return { ts:x.ts, amt:amount, name };
     })
     .filter(t => Number.isFinite(t.ts) && t.ts >= cutoff);
 
-  // 2) Group by (name, sign)
-  const groups = new Map(); // key -> { name, kind, occ:[{ts,amt}] }
+  const groups = new Map();
   for (const t of txsRaw){
     const kind = t.amt >= 0 ? 'inflow' : 'ember';
     const key = `${t.name}|${kind}`;
-    if (!groups.has(key)) groups.set(key, { name: t.name, kind, occ: [] });
-    groups.get(key).occ.push({ ts: t.ts, amt: Math.abs(t.amt) });
+    if (!groups.has(key)) groups.set(key, { name:t.name, kind, occ:[] });
+    groups.get(key).occ.push({ ts:t.ts, amt:Math.abs(t.amt) });
   }
   groups.forEach(g => g.occ.sort((a,b)=>a.ts-b.ts));
 
-  // 3) Outlier filter per group (IQR)
   for (const g of groups.values()){
     const vals = g.occ.map(o=>o.amt);
-    const keepIdx = iqrFilter(vals);
-    g.occ = keepIdx.map(i => g.occ[i]).sort((a,b)=>a.ts-b.ts);
+    const keep  = iqrFilter(vals);
+    g.occ = keep.map(i=>g.occ[i]);
   }
 
-  // 4) Cadence selection via period-sum scoring
   const candidates = ['weekly','fortnightly','monthly','quarterly','yearly'];
   const items = [];
   for (const g of groups.values()){
     if (g.occ.length < SR_CFG.minOccurrences) continue;
-
     let best = { cadence:'monthly', fit:0, hits:0, rep:0 };
     for (const c of candidates){
       const sc = scoreCadence(g.occ, c);
       if (sc.fit > best.fit) best = { cadence:c, ...sc };
     }
-
-    const confidence = Math.min(1, best.fit); // keep simple 0..1
     items.push({
       id: g.name + '|' + (g.kind==='inflow'?'in':'out'),
       name: g.name,
       kind: g.kind,
       cadence: best.cadence,
-      representative: Number((best.rep || 0).toFixed(2)), // median period sum
+      representative: Number((best.rep || 0).toFixed(2)),
       txCount: g.occ.length,
-      confidence
+      confidence: Math.min(1, best.fit)
     });
   }
-
-  // 5) Sort + split
   const inflow = items.filter(i=>i.kind==='inflow').sort((a,b)=>b.confidence-a.confidence);
   const ember  = items.filter(i=>i.kind==='ember') .sort((a,b)=>b.confidence-a.confidence);
 
-  // 6) Anchor candidates (unique dates by calendar day)
-  const thirtyDaysAgo = Date.now() - 30*DAYS;
-  const eligibleInflows = txsRaw.filter(t => t.amt>=SR_CFG.minAnchorAmountMajor && t.ts>=thirtyDaysAgo && t.amt>0);
-  // join confidence by name
+  // Unique anchor date candidates (confidence + amount gated)
   const confByName = new Map(inflow.map(i=>[i.name, i.confidence]));
   const dateSet = new Set();
-  for (const t of eligibleInflows){
+  const thirtyDaysAgo = Date.now() - 30*DAYS;
+  for (const t of txsRaw){
+    if (t.amt < SR_CFG.minAnchorAmountMajor) continue;
+    if (t.ts < thirtyDaysAgo) continue;
     const conf = confByName.get(t.name) || 0;
     if (conf < SR_CFG.minConfidenceForAnchor) continue;
     const d = new Date(t.ts);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    dateSet.add(key);
+    dateSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
   }
-  const anchorDates = Array.from(dateSet).sort((a,b)=> (a<b?1:-1)); // newest → oldest
-
+  const anchorDates = Array.from(dateSet).sort((a,b)=> (a<b?1:-1));
   return { inflow, ember, anchorDates };
 }
-
 async function analyzeClient(uid){
   const raw = await loadProcessedVerified(uid, SR_CFG.lookbackMonthsFetch);
   return buildGroups(raw, SR_CFG.lookbackMonthsGroup);
 }
 
 // ---------------------------------------------------------------------------
-// SAVE + optional recompute
+// SAVE
 // ---------------------------------------------------------------------------
 async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
   const user = getAuth().currentUser;
@@ -367,8 +302,8 @@ async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
   const uid = user.uid;
   const db = getFirestore();
 
-  const ins = inflowRows.filter(x=>x.include);
-  const outs= emberRows .filter(x=>x.include);
+  const ins  = inflowRows.filter(x=>x.include);
+  const outs = emberRows .filter(x=>x.include);
 
   const incomeMo = ins.reduce((s,x)=>s+(x.monthly||0),0);
   const emberMo  = outs.reduce((s,x)=>s+(x.monthly||0),0);
@@ -393,16 +328,15 @@ async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
     await setDoc(doc(db, `players/${uid}/cashflowData/verified`), {
       itemised_inflow:  { total: Number(incomeMo.toFixed(2)),  categories: incCats,  cadence:"monthly", updatedAt: now },
       itemised_outflow: { total: Number(emberMo.toFixed(2)),   categories: outCats, cadence:"monthly", updatedAt: now },
-      anchorMs: anchorTs || null,
-      updatedAt: now
-    }, { merge: true });
+      anchorMs: anchorTs || null, updatedAt: now
+    }, { merge:true });
 
     await setDoc(doc(db, `players/${uid}/cashflowData/active`), {
       mode: mode==="finite" ? "finite" : "continuous", cadence:"monthly",
       inflow:{ total: Number(incomeMo.toFixed(2)), categories: incCats },
       outflow:{ total: Number(emberMo.toFixed(2)), categories: outCats },
       updatedAt: now
-    }, { merge: true });
+    }, { merge:true });
   }
 
   if (SR_CFG.callRecompute){
@@ -415,12 +349,39 @@ async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
       if (!res.ok) console.warn("recompute failed", json);
     } catch (e) { console.warn("recompute error", e?.message||e); }
   }
-
   SR_CFG.onTelemetry("save_ok", { mode, incomeMo, emberMo, anchorTs });
 }
 
 // ---------------------------------------------------------------------------
-// UI
+// LIST CONTROLS
+// ---------------------------------------------------------------------------
+function addListControls(host, rows, labelText, onChange) {
+  const bar = document.createElement('div'); bar.className='toolbar';
+
+  const left = document.createElement('div');
+  const title = document.createElement('strong'); title.textContent = labelText;
+  const count = el('span','count-pill', `(${rows.length} group${rows.length!==1?'s':''})`);
+  left.append(title, count);
+
+  const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px';
+  const btnToggle = document.createElement('button'); btnToggle.className='pill'; btnToggle.textContent='Select all';
+  btnToggle.onclick = () => {
+    const allChecked = btnToggle.dataset.state === 'all';
+    const target = !allChecked;
+    rows.forEach(r => r.setIncluded?.(target));
+    btnToggle.dataset.state = target ? 'all' : 'none';
+    btnToggle.textContent = target ? 'Unselect all' : 'Select all';
+    onChange?.();
+  };
+  btnToggle.dataset.state = 'none';
+
+  right.append(btnToggle);
+  bar.append(left, right);
+  host.append(bar);
+}
+
+// ---------------------------------------------------------------------------
+// ROW UI
 // ---------------------------------------------------------------------------
 function buildRowUI(group, kind){
   const row = el('div','ao-tile');
@@ -428,10 +389,9 @@ function buildRowUI(group, kind){
 
   const left = el('div','', `
     <strong>${group.name || 'unknown'}</strong>
-    <div class="sr-sub">${group.txCount} hits${SR_CFG.showConfidenceBadges ? ` • conf ${(group.confidence*100|0)}%` : ''}</div>
+    <div class="sr-sub">${group.txCount} hit${group.txCount!==1?'s':''}${SR_CFG.showConfidenceBadges ? ` • conf ${(group.confidence*100|0)}%` : ''}</div>
   `);
-
-  const kindTag = el('div','tiny muted', kind==='inflow' ? 'Energy' : 'Ember');
+  const kindTag = el('div','sr-sub muted', kind==='inflow' ? 'Energy' : 'Ember');
   top.append(left, kindTag);
 
   const label = document.createElement('input'); label.className='ao-input';
@@ -439,30 +399,46 @@ function buildRowUI(group, kind){
   label.value = group.name || '';
 
   const category = document.createElement('select'); category.className='ao-select';
-  const cats = (kind==='inflow'? SR_CFG.incomeCategories : SR_CFG.emberCategories);
-  cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; category.append(o); });
+  (kind==='inflow'? SR_CFG.incomeCategories : SR_CFG.emberCategories)
+    .forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; category.append(o); });
   category.value = "Other";
 
-  // Cadence is READ-ONLY text now
-  const cadenceText = el('div','sr-sub', (group.cadence||'monthly').replace(/^\w/, c=>c.toUpperCase()));
+  const include = document.createElement('input'); include.type='checkbox';
+  include.checked = (kind==='inflow') ? suggestInclude(group.name) : true;
 
-  // Monthly chip (color-coded)
   const monthlyVal = Number(((group.representative || 0) * MONTHLY_MULT[group.cadence || 'monthly']).toFixed(2));
-  const monthly = el('div','', `<span class="amount-chip ${kind==='inflow'?'green':'red'}">${GBP(monthlyVal)}/mo</span>`);
+  const avgPerCadence = `${GBP(group.representative || 0)} ${cadenceUnitLabel(group.cadence || 'monthly')}`;
 
-  const include = document.createElement('input'); include.type='checkbox'; include.checked = (kind==='inflow')
-    ? suggestInclude(group.name) : true;
-
+  // Grid
   const grid = el('div','row-grid');
-  const incWrap = el('div','',`<label class="sr-sub">Include</label>`); incWrap.append(include);
 
-  grid.append(
-    el('div','',`<label class="sr-sub">Label</label>`), label,
-    el('div','',`<label class="sr-sub">Category</label>`), category,
-    el('div','',`<label class="sr-sub">Cadence</label>`), cadenceText,
-    el('div','',`<label class="sr-sub">Monthly</label>`), monthly,
-    el('div','',``), incWrap
-  );
+  // Row 1
+  const labWrap = el('div','',`<label class="sr-sub">Label</label>`);    labWrap.append(label);
+  const catWrap = el('div','',`<label class="sr-sub">Category</label>`); catWrap.append(category);
+  const incWrap = el('div','',`<label class="sr-sub">Include</label>`);  incWrap.append(include);
+  grid.append(labWrap, catWrap, incWrap);
+
+  // Row 2: Cadence (left) | Avg per cadence (middle) | Monthly normalised (right)
+  const line2 = el('div','row-line');
+
+  const cadenceCell = el('div','', `
+    <label class="sr-sub">Cadence</label>
+    <div>${(group.cadence || 'monthly').replace(/^\w/, c=>c.toUpperCase())}</div>
+  `);
+
+  const avgCell = el('div','', `
+    <label class="sr-sub">Avg (${group.cadence || 'monthly'})</label>
+    <div class="amount-chip ${kind==='inflow'?'green':'red'}">${avgPerCadence}</div>
+  `);
+
+  const monthlyCell = el('div','', `
+    <label class="sr-sub">Monthly</label>
+    <div class="amount-chip ${kind==='inflow'?'green':'red'}">${GBP(monthlyVal)}/mo</div>
+  `);
+
+  line2.append(cadenceCell, avgCell, monthlyCell);
+  grid.append(line2);
+
 
   row.append(top, grid);
 
@@ -474,33 +450,37 @@ function buildRowUI(group, kind){
       name: group.name,
       label: label.value.trim() || group.name || '',
       category: category.value || 'Other',
-      cadence: group.cadence || 'monthly', // fixed/view-only
+      cadence: group.cadence || 'monthly',
       representative: Number(group.representative || 0),
       monthly: monthlyVal,
       include: include.checked,
       classAs: kind
-    })
+    }),
+    setIncluded: (on) => { include.checked = !!on; include.dispatchEvent(new Event('change')); }
   };
 }
 
-function renderContinuousPhase(host, analysis){
-  host.innerHTML = '';
+// ---------------------------------------------------------------------------
+// PHASE: CONTINUOUS
+// ---------------------------------------------------------------------------
+function renderContinuousPhase(bodyHost, analysis){
+  bodyHost.innerHTML = '';
 
-  // Summary area (responsive)
-  const summary = document.createElement('div'); summary.className='sr-summary';
-  const totals = document.createElement('div'); totals.className='sr-totals';
-  const k1 = el('div','sr-kpi'); const lEng = el('div','kbox','Energy Source'); const vEng = el('div','kbox green','£0/mo'); k1.append(lEng,vEng);
-  const k2 = el('div','sr-kpi'); const lEmb = el('div','kbox','Emberward');    const vEmb = el('div','kbox red','£0/mo');  k2.append(lEmb,vEmb);
-  const k3 = el('div','sr-kpi'); const lNet = el('div','kbox','Net per month'); const vNet = el('div','kbox','£0/mo');     k3.append(lNet,vNet);
-  totals.append(k1,k2,k3);
+  // Sticky TOP (title + pills live outside)
+  const summary = document.createElement('div');
+  summary.className = 'sr-summary';
+
+  // Row 1: Energy/Ember on left; right column with bar + anchor
+  const row1 = el('div','sr-row sr-row-1');
+
+  const totals = document.createElement('div');
+  const k1 = el('div','kbox'); k1.innerHTML = `<div>Energy Source</div><div id="srKpiEnergy" class="green">£0/mo</div>`;
+  const k2 = el('div','kbox'); k2.innerHTML = `<div>Emberward</div><div id="srKpiEmber"  class="red">£0/mo</div>`;
+  totals.append(k1, k2);
+
+  const rightCol = el('div','sr-right');
   const bar = el('div','bar'); const fill = el('div','pos'); bar.append(fill);
-  summary.append(totals, bar);
 
-  const subgrid = el('div','sr-subgrid');
-  const dailyBox  = el('div','kbox','Daily: £0');  const weeklyBox = el('div','kbox','Weekly: £0');
-  subgrid.append(dailyBox, weeklyBox);
-
-  // Anchor: dropdown of unique dates
   const anchorWrap = el('div','anchor-box');
   const anchorLabel = el('div','sr-sub','Anchor date (last 30d):');
   const anchorSelect = document.createElement('select'); anchorSelect.className='ao-select';
@@ -512,96 +492,115 @@ function renderContinuousPhase(host, analysis){
   });
   anchorWrap.append(anchorLabel, anchorSelect);
 
-  host.append(summary, subgrid, anchorWrap);
+  rightCol.append(bar, anchorWrap);
+  row1.append(totals, rightCol);
 
-  // Tabs
+  // Row 2: Net per month (its own row)
+  const row2 = el('div','sr-row sr-row-2');
+  const netBox = el('div','kbox'); netBox.style.gridColumn = '1 / -1';
+  netBox.innerHTML = `<div>Net per month</div><div id="srKpiNet">£0/mo</div>`;
+  row2.append(netBox);
+
+  // Row 3: Daily + Weekly (same row)
+  const row3 = el('div','sr-row-3');
+  const dailyBox  = el('div','kbox','Daily: £0');
+  const weeklyBox = el('div','kbox','Weekly: £0');
+  row3.append(dailyBox, weeklyBox);
+
+  summary.append(row1, row2, row3);
+
+  // Tabs (pinned with summary)
   const tabs = el('div','sr-tabs');
   const tabIn  = el('button','tab active', 'Energy Source');
   const tabOut = el('button','tab',         'Emberward');
   tabs.append(tabIn, tabOut);
-  host.append(tabs);
 
-  // List
-  const list = el('div','sr-list'); host.append(list);
+  // Insert sticky area into top container (so it stays flush to pills)
+  const topInner = document.getElementById('srTopInner');
+  topInner.append(summary, tabs);
+
+  // ===== Scrollable list body =====
+  const listWrap = document.createElement('div');
+  listWrap.className = 'sr-list';
+  bodyHost.append(listWrap);
 
   // Build rows
-  const inRows = (analysis.inflow||[]).map(g=>buildRowUI(g,'inflow'));
-  const outRows= (analysis.ember ||[]).map(g=>buildRowUI(g,'ember'));
+  const inRows  = (analysis.inflow||[]).map(g=>buildRowUI(g,'inflow'));
+  const outRows = (analysis.ember ||[]).map(g=>buildRowUI(g,'ember'));
 
-  // Undo/Redo
-  const history = []; let histIdx = -1;
-  function pushHistory(){
-    const payload = collectSelections();
-    history.splice(histIdx+1); history.push(JSON.stringify(payload)); histIdx = history.length-1;
-  }
-  function undo(){ if (histIdx<=0) return; histIdx--; applyState(JSON.parse(history[histIdx])); }
-  function redo(){ if (histIdx>=history.length-1) return; histIdx++; applyState(JSON.parse(history[histIdx])); }
+  // Toolbars
+  const toolIn  = document.createElement('div');
+  const toolOut = document.createElement('div');
+  addListControls(toolIn,  inRows,  'Source (inflows)', () => updateSummary());
+  addListControls(toolOut, outRows, 'Ember (foundation outflows)', () => updateSummary());
 
-  const toolbar = el('div','toolbar');
-  const btnUndo = button('Undo'); const btnRedo = button('Redo');
-  toolbar.append(btnUndo, btnRedo);
-  host.insertBefore(toolbar, list);
-  btnUndo.onclick = undo; btnRedo.onclick = redo;
+  // Summary updater
+  const vEng = () => document.getElementById('srKpiEnergy');
+  const vEmb = () => document.getElementById('srKpiEmber');
+  const vNet = () => document.getElementById('srKpiNet');
 
-  // Live total recalc
-  function recalc(){
+  function updateSummary(){
     const ins  = inRows .map(r=>r.collect()).filter(x=>x.include);
     const outs = outRows.map(r=>r.collect()).filter(x=>x.include);
     const incMo = ins .reduce((s,x)=>s+(x.monthly||0),0);
     const outMo = outs.reduce((s,x)=>s+(x.monthly||0),0);
-    vEng.textContent = GBP(incMo) + '/mo';
-    vEmb.textContent = GBP(outMo) + '/mo';
-    vNet.textContent = GBP(incMo - outMo) + '/mo';
-    fill.style.width = Math.max(0, Math.min(100, incMo? ((incMo-outMo)/incMo*100):0)) + '%';
+    vEng().textContent = GBP(incMo) + '/mo';
+    vEmb().textContent = GBP(outMo) + '/mo';
+    vNet().textContent = GBP(incMo - outMo) + '/mo';
+    const fillPct = Math.max(0, Math.min(100, incMo? ((incMo-outMo)/incMo*100):0));
+    fill.style.width = fillPct + '%';
     fill.className = (incMo - outMo >= 0) ? 'pos' : 'neg';
     const netDaily = Number(((incMo - outMo)/MONTHLY_MULT.daily).toFixed(2));
     const netWeekly= Number(((incMo - outMo)/MONTHLY_MULT.weekly).toFixed(2));
-    dailyBox.textContent = `Daily: ${GBP(netDaily)}`; weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
+    dailyBox.textContent  = `Daily: ${GBP(netDaily)}`;
+    weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
   }
 
-  // Attach real-time listeners on all Include checkboxes
+  // Change handlers
   [...inRows, ...outRows].forEach(r => {
-    r.include.addEventListener('change', ()=>{ recalc(); pushHistory(); });
+    r.include.addEventListener('change', updateSummary);
   });
 
   function show(kind){
     tabIn.classList.toggle('active', kind==='in');
     tabOut.classList.toggle('active', kind==='out');
-    list.innerHTML=''; (kind==='in'?inRows:outRows).forEach(r=>list.append(r.node));
-    recalc();
-    pushHistory();
+    listWrap.innerHTML='';
+    if (kind==='in'){
+      listWrap.append(toolIn);
+      inRows.forEach(r=>listWrap.append(r.node));
+    } else {
+      listWrap.append(toolOut);
+      outRows.forEach(r=>listWrap.append(r.node));
+    }
+    updateSummary();
   }
-  function collectSelections(){
-    const anchorTs = anchorSelect.value ? Number(anchorSelect.value) : null;
-    return {
-      mode: "continuous",
-      anchorTs,
-      inflowRows: inRows.map(r=>r.collect()),
-      emberRows:  outRows.map(r=>r.collect())
-    };
-  }
-  function applyState(_state){
-    // Currently only totals depend on Include; labels/categories don’t affect totals.
-    recalc();
-  }
-
   tabIn.onclick = ()=> show('in');
   tabOut.onclick= ()=> show('out');
-  show('in'); // initial
-
-  return { collectSelections, recalc };
-}
-
-function renderFinitePhase(host){
-  host.innerHTML='';
-  const card = el('div','ao-tile',
-    `<h3 style="margin:0 0 8px;">Finite mode</h3>
-     <p class="sr-sub">Seed/duration/replenishment screen will live here (placeholder). You can still save to switch modes.</p>`);
-  host.append(card);
+  show('in');
 
   return {
-    collectSelections: ()=>({ mode:"finite", anchorTs:null, inflowRows:[], emberRows:[] })
+    collectSelections: () => {
+      const anchorTs = anchorSelect.value ? Number(anchorSelect.value) : null;
+      return {
+        mode: "continuous",
+        anchorTs,
+        inflowRows: inRows.map(r=>r.collect()),
+        emberRows:  outRows.map(r=>r.collect())
+      };
+    }
   };
+}
+
+// ---------------------------------------------------------------------------
+// PHASE: FINITE (placeholder)
+// ---------------------------------------------------------------------------
+function renderFinitePhase(bodyHost){
+  bodyHost.innerHTML='';
+  const card = el('div','ao-tile',
+    `<h3 style="margin:0 0 8px;">Finite mode</h3>
+     <p class="sr-sub">Seed/duration/replenishment screen will live here (placeholder).</p>`);
+  bodyHost.append(card);
+  return { collectSelections: ()=>({ mode:"finite", anchorTs:null, inflowRows:[], emberRows:[] }) };
 }
 
 // ---------------------------------------------------------------------------
@@ -609,28 +608,36 @@ function renderFinitePhase(host){
 // ---------------------------------------------------------------------------
 export async function openSmartReviewOverlay(){
   ensureStyles();
-  const overlay = el('div','', ''); overlay.id='srOverlay';
-  const wrap = el('section','', `
-    <h2>Smart Review</h2>
-    <div style="display:flex;gap:8px;margin:8px 0 12px;flex-wrap:wrap">
-      <button id="pill-cont" class="pill active">Continuous</button>
-      <button id="pill-fin"  class="pill">Finite</button>
+
+  const overlay = document.createElement('div'); overlay.id='srOverlay';
+  const wrap = document.createElement('section'); wrap.id='srWrap';
+
+  const top = document.createElement('div'); top.id='srTop';
+  top.innerHTML = `
+    <div id="srTopInner">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;">
+        <h2 style="margin:0">Smart Review</h2>
+        <div style="display:flex;gap:8px;">
+          <button id="pill-cont" class="pill active">Continuous</button>
+          <button id="pill-fin"  class="pill">Finite</button>
+        </div>
+      </div>
     </div>
-    <div id="srBody"><div class="ao-tile">Loading…</div></div>
-    <div class="sr-actions">
-      <button id="srBack">Back</button>
-      <button id="srApply" class="pill">Apply & Continue</button>
-    </div>
-  `);
-  wrap.id='srWrap';
+  `;
+  const body = document.createElement('div'); body.id='srBody';
+  const actions = document.createElement('div'); actions.className='sr-actions';
+  actions.innerHTML = `
+    <button id="srBack" class="pill">Back</button>
+    <button id="srApply" class="pill">Apply & Continue</button>
+  `;
+  wrap.append(top, body, actions);
   overlay.append(wrap);
   document.body.appendChild(overlay);
 
-  const body = wrap.querySelector('#srBody');
-  const back = wrap.querySelector('#srBack');
-  const apply= wrap.querySelector('#srApply');
-  const pillC= wrap.querySelector('#pill-cont');
-  const pillF= wrap.querySelector('#pill-fin');
+  const back = actions.querySelector('#srBack');
+  const apply= actions.querySelector('#srApply');
+  const pillC= top.querySelector('#pill-cont');
+  const pillF= top.querySelector('#pill-fin');
 
   let mode='continuous';
   let phaseApi={ collectSelections: ()=>({ mode, anchorTs:null, inflowRows:[], emberRows:[] }) };
@@ -639,10 +646,8 @@ export async function openSmartReviewOverlay(){
     mode=m; pillC.classList.toggle('active', m==='continuous'); pillF.classList.toggle('active', m==='finite');
     if (m==='finite'){
       phaseApi = renderFinitePhase(body);
-      SR_CFG.onTelemetry("mode_set",{mode});
       return;
     }
-    // Continuous: load analysis
     body.innerHTML = `<div class="ao-tile">Analysing your transactions…</div>`;
     try{
       const uid = getAuth().currentUser?.uid;
@@ -661,10 +666,8 @@ export async function openSmartReviewOverlay(){
       }
 
       phaseApi = renderContinuousPhase(body, analysis);
-      SR_CFG.onTelemetry("analysis_ok",{ mode, counts: { in: analysis.inflow?.length||0, out: analysis.ember?.length||0 } });
     } catch (e) {
       body.innerHTML = `<div class="ao-tile">Could not analyse data. ${e?.message||e}</div>`;
-      SR_CFG.onTelemetry("analysis_fail",{ mode, error: e?.message||String(e) });
       phaseApi = { collectSelections: ()=>({ mode, anchorTs:null, inflowRows:[], emberRows:[] }) };
     }
   }
@@ -673,31 +676,23 @@ export async function openSmartReviewOverlay(){
   pillF.onclick = ()=> setMode('finite');
   setMode('continuous');
 
-  back.onclick = ()=>{
-    overlay.remove();
-    window.dispatchEvent(new CustomEvent('smartReview:closed'));
-  };
+  back.onclick = ()=>{ overlay.remove(); window.dispatchEvent(new CustomEvent('smartReview:closed')); };
 
-  apply.onclick = async ()=>{
+  apply.onclick = async ()=> {
     try{
       const state = phaseApi.collectSelections();
-
-      // Guardrail: in continuous, block if Ember > Energy
       if (state.mode==='continuous'){
         const incMo = state.inflowRows.filter(x=>x.include).reduce((s,x)=>s+x.monthly,0);
         const outMo = state.emberRows .filter(x=>x.include).reduce((s,x)=>s+x.monthly,0);
         if (outMo > incMo){
-          alert(`Your Emberward exceeds your Energy Source. Consider adjusting, or switch to Finite mode.\nNet: ${GBP(incMo - outMo)}/mo`);
+          alert(`Your Emberward exceeds your Energy Source. Adjust selections or switch to Finite.\nNet: ${GBP(incMo - outMo)}/mo`);
           return;
         }
       }
-
       await saveSelections(state);
-      SR_CFG.onTelemetry("apply_ok", {mode: state.mode});
       overlay.remove();
       window.dispatchEvent(new CustomEvent('cashflow:updated', { detail:{ source:'smartReview' } }));
     } catch(e){
-      SR_CFG.onTelemetry("apply_fail", { error: e?.message||String(e) });
       alert("Could not save your Smart Review. " + (e?.message||e));
     }
   };
@@ -705,7 +700,6 @@ export async function openSmartReviewOverlay(){
   return true;
 }
 
-// Helpers to wire SR after TL flow or on page load
 export function showSmartReviewAfterTrueLayer(){ localStorage.setItem('showSmartReviewOnce','1'); }
 export function maybeOpenSmartReviewOnLoad(){
   if (localStorage.getItem('showSmartReviewOnce') === '1'){
