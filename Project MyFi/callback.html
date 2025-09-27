@@ -84,8 +84,8 @@
 
 <script type="module">
   import { auth } from './js/core/auth.js';
-  import { triggerTrueLayerFetch, renderLegalLinks, runSmartReviewFlow } from './js/core/truelayer.js';
-  import { runSmartReviewAfterTLSync } from './js/smartreview.js';
+  import { triggerTrueLayerFetch, renderLegalLinks } from './js/core/truelayer.js';
+  import { openSmartReviewOverlay, showSmartReviewAfterTrueLayer } from './js/smartreview.js';
 
   // Render legal links
   const legalHost = document.getElementById('legal-links');
@@ -154,7 +154,7 @@
   }
 
   // Full sync, then Smart Review. On any failure → stub Smart Review.
-  async function runSync(runSmartReview = false) {
+  async function runSync() {
     overlay.style.display = 'flex';
     renderSteps();
     statusEl.textContent = 'Syncing your bank data…';
@@ -168,18 +168,16 @@
         console.error(`Step ${steps[i].label} failed`, err);
         setStepState(i, 'fail', 'Failed');
         statusEl.textContent = `Something failed on "${steps[i].label}".`;
-        // stubBanner.style.display = 'block';
+        stubBanner.style.display = 'block';
         // overlay.style.display = 'none'
-        window.location.href = 'dashboard.html';
-        return;
+        // window.location.href = 'dashboard.html';
+        //return;
       }
     }
 
     // All steps succeeded: run REAL Smart Review (will fall back to stub if needed)
-    if(runSmartReview){
     // overlay.style.display = 'none'
     showSmartReviewAfterTrueLayer();     // <— sets flag & navigates to dashboard (or opens if already there)
-    }
     window.location.href = 'dashboard.html';
     return;
   }
@@ -192,15 +190,14 @@
 
     if (!(code && uid)) {
       console.error('Missing code or state in redirect URL.');
-      return;
+      //return;
     }
 
     const user = await waitForAuthUser(8000);
     if (!user) {
       console.warn('User not signed in; cannot exchange token safely. Falling back to stub.');
-      // stubBanner.style.display = 'block';
-      //await runSmartReviewFlow({ useStub: true });
-      return;
+      stubBanner.style.display = 'block';
+      //return;
     }
 
     // Exchange code → tokens (backend must verify Firebase ID token + PKCE)
@@ -223,14 +220,14 @@
         throw Object.assign(new Error('token_exchange_failed'), { details: data, status: r.status });
       }
     } catch (e) {
-      console.error('Token exchange failed; using stub path.', e.details || e.message);
+      console.error('Token exchange failed', e.details || e.message);
       stubBanner.style.display = 'block';
-      // await runSmartReviewFlow({ useStub: true });
-      return;
+
+      //return;
     }
 
     // Success → fetch sequence, then run Smart Review
-    await runSync(true);
+    await runSync();
   })();
 </script>
 </body>
