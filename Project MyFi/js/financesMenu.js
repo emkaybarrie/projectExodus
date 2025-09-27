@@ -3,7 +3,8 @@
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
 import { auth, db } from './core/auth.js';
 import { initHUD } from './hud/hud.js';
-import { connectTrueLayerAccount, ensureTlConsentDialog, runSmartReviewFlow  } from './core/truelayer.js';
+import { connectTrueLayerAccount, ensureTlConsentDialog } from './core/truelayer.js';
+import { openSmartReviewOverlay } from './smartReview.js'
 import {
   updateIncome, updateCoreExpenses, getDailyIncome, getDailyCoreExpenses
 } from './data/cashflowData.js';
@@ -355,7 +356,7 @@ import {
         const info = helper('Use this to refresh your inflow/outflow baseline after new transactions arrive.');
         const btn  = primary('Run now', async () => {
           try {
-            await runSmartReviewFlow(); // force
+            await openSmartReviewOverlay(); // force
             await initHUD();
           } catch (e) {
             console.warn('Smart Review failed:', e);
