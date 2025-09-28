@@ -1,8 +1,10 @@
-// smartreview.js — Smart Review overlay (frontend) — v8
-// Fixes: net layout (side-by-side), coloured Energy/Ember tabs (subtle aura),
-// card bottom-row two-column (Cadence/Avg left; Monthly+Include right),
-// label+category same row, dedicated sticky region with independent
-// Continuous vs Finite header content, mobile-friendly (no x-scroll).
+// smartreview.js — Smart Review overlay (frontend) — v9
+// Changes (vs v8):
+// - Anchor row moved directly under the Title/Mode pills (top of sticky summary)
+// - Energy/Ember totals stay side-by-side on a single row (even width; on all breakpoints)
+// - Net monthly is a single row below the bar
+// - Daily & Weekly are below Net monthly, side-by-side (labels above values)
+// - Tap/click Net monthly row to toggle Daily/Weekly sliding in/out from below (animated)
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -33,6 +35,8 @@ const DAYS = 86400000;
 const MONTHLY_MULT = { monthly:1, weekly:52/12, fortnightly:26/12, quarterly:4/12, yearly:1/12, daily:30.44 };
 const GBP = n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
 
+let SR_NET_INLINE = true
+
 // ───────────────────────────────── STYLE ─────────────────────────────────
 function ensureStyles(){
   if (document.getElementById('sr-styles')) return;
@@ -58,60 +62,92 @@ function ensureStyles(){
   .pill{padding:6px 12px;border-radius:999px;border:1px solid #2a3a55;background:var(--chip);color:var(--ink)}
   .pill.active{outline:2px solid var(--blue)}
 
-  /* Summary layout (sticky region content) */
+  /* Sticky summary content (now ordered: Anchor → Totals → Bar → Net → Daily/Weekly) */
   .sr-summary{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-  .totals-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  /* Anchor row (moved to the top of summary) */
   .kbox{border-radius:12px;padding:10px 12px;background:var(--panel);border:1px solid var(--edge);min-width:0}
+  .anchor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+  .ao-select,.ao-input{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
+  .sr-sub{font-size:12px;opacity:var(--muted)}
   .kval{font-weight:700}
-  .green{color:var(--green)} .red{color:var(--red)} .muted{opacity:var(--muted)}
+  .green{color:var(--green)} .red{color:var(--red)}
+
+  /* Energy / Ember totals: always two columns (even width, do not collapse on mobile) */
+  .totals-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+  /* Progress bar */
   .bar{height:14px;border-radius:12px;background:var(--edge);overflow:hidden}
   .bar>div{height:100%;width:0%}
   .bar .pos{background:linear-gradient(90deg,#22c55e,#06b6d4)}
   .bar .neg{background:linear-gradient(90deg,#ef4444,#f59e0b)}
-  .anchor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-  .ao-select,.ao-input{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
 
-  /* Net grid: Net (left spans 2 rows) + right stack (Daily, Weekly) — always 2 columns */
-  .net-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
-  .net-left{display:flex;flex-direction:column;justify-content:center;min-height:96px;grid-row:1 / span 2}
-  .right-stack{display:grid;grid-template-rows:1fr 1fr;gap:10px}
+  /* Net monthly as its own single row below bar */
+  .net-row{display:grid;grid-template-columns:1fr;gap:10px}
+  .net-box{cursor:pointer; user-select:none; display:flex;flex-direction:column;justify-content:center;min-height:72px}
+  /* --- Tap affordance for Net --- */
+  .net-box{position:relative; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .net-box.clickable{cursor:pointer; border:1px solid var(--edge);}
+  .net-box.clickable:hover{box-shadow:0 0 0 1px rgba(255,255,255,.06) inset;}
+  .net-box:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:12px;}
 
-  /* Tabs for lists (single set, full width) with subtle aura when active */
+  .net-right{display:flex; align-items:center; gap:8px}
+  .chev{opacity:.7; transition:transform .2s ease}
+  .net-box.expanded .chev{transform:rotate(180deg)}
+
+  /* Net: stacked vs inline switch */
+  .net-content{display:flex; flex-direction:column}
+  .net-box.inline .net-content{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    align-items:baseline;
+    column-gap:10px;
+  }
+
+
+
+  /* Daily/Weekly sit below Net monthly, side-by-side (labels above value) with slide animation */
+  .dw-wrap{overflow:hidden;max-height:0;opacity:0;transform:translateY(-4px);
+    transition:max-height .22s ease, opacity .22s ease, transform .22s ease;}
+  .dw-wrap.open{max-height:240px;opacity:1;transform:translateY(0)}
+  .dw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+
+  /* Tabs (single set, subtle aura on active) */
   .sr-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
   .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:var(--ink);text-align:center;transition:box-shadow .15s ease,border-color .15s ease}
   .tab.in.active{border-color:rgba(16,185,129,.5); box-shadow:0 0 0 1px rgba(16,185,129,.25), 0 0 12px rgba(16,185,129,.25) inset}
   .tab.out.active{border-color:rgba(239,68,68,.5);  box-shadow:0 0 0 1px rgba(239,68,68,.25),  0 0 12px rgba(239,68,68,.25) inset}
 
-  /* Section separation (connect tabs to lists visually) */
+  /* Lists section separation */
   .list-section{margin-top:6px;border-top:1px dashed var(--edge);padding-top:10px}
   .toolbar{display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;align-items:center;justify-content:space-between}
   .count-pill{font-size:12px;opacity:var(--muted)}
   .section-title{font-weight:600}
   .section-title.in{color:var(--green)} .section-title.out{color:var(--red)}
-
-  /* List & cards */
   .sr-list{display:flex;flex-direction:column;gap:10px}
+
+  /* Cards */
   .ao-tile{border:1px solid #223044;border-radius:14px;padding:12px;background:#121626}
   .row-top{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
-
-  /* Row 1: Label | Category (equal) */
   .row-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 
-  /* Bottom row: two columns — left (Cadence/Avg side-by-side), right (Monthly pill + Include) */
+  /* Bottom row: cadence/avg (left) and monthly+include (right); stacked so monthly sits below on narrow */
   .row-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;margin-top:10px}
-  .row-bottom.stacked{ grid-template-columns: 1fr; } /* Put monthly total on its own row under the cadence block */
+  .row-bottom.stacked{ grid-template-columns: 1fr; }
   .bottom-box{border:1px dashed var(--edge);border-radius:12px;padding:10px;background:rgba(255,255,255,.02)}
   .cadence-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
   .monthly-pill{border:1px solid var(--edge);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
     border-radius:16px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
   .amount-chip{font-weight:700}
   .amount-chip.green{color:var(--green)} .amount-chip.red{color:var(--red)}
   .include-wrap{display:flex;align-items:center;gap:8px;white-space:nowrap}
 
-  @media (max-width: 680px){
-    .totals-row{grid-template-columns:1fr}
-    /* Keep net-grid two columns even on mobile to satisfy design —
-       ensure no overflow by letting text wrap; boxes already flexible. */
+  /* Keep no x-overflow on small screens without collapsing Energy/Ember row */
+  @media (max-width: 480px){
+    .sr-tabs{gap:6px}
+    .dw-row{gap:8px}
+    .totals-row{gap:8px}
   }
   `;
   const style=document.createElement('style');
@@ -335,7 +371,7 @@ function buildRowUI(group, kind){
   const kindTag = el('div','sr-sub muted', kind==='inflow' ? 'Energy' : 'Ember');
   top.append(left, kindTag);
 
-  // Row 1: Label | Category (equal)
+  // Row 1: Label | Category (equal width)
   const label = document.createElement('input'); label.className='ao-input';
   label.placeholder = kind==='inflow' ? 'Label (e.g., Salary)' : 'Label (e.g., Rent)'; label.value = group.name || '';
   const category = document.createElement('select'); category.className='ao-select';
@@ -348,11 +384,8 @@ function buildRowUI(group, kind){
   const catWrap = el('div','',`<label class="sr-sub">Category</label>`); catWrap.append(category);
   grid.append(labWrap, catWrap);
 
-  // Bottom: Left (Cadence + Avg side-by-side), Right (Monthly + Include)
-  // const bottom = el('div','row-bottom');
-  // NEW: single-column stack so Monthly appears under the cadence details
+  // Bottom: cadence/avg (left) and monthly+include (right); stacked so monthly sits below cadence details
   const bottom = el('div','row-bottom stacked');
-
 
   const cadenceBlock = el('div','bottom-box','');
   const cGrid = el('div','cadence-grid','');
@@ -397,21 +430,12 @@ function renderContinuousSticky(stickyHost, analysis){
 
   const summary = document.createElement('div'); summary.className='sr-summary';
 
-  // 1) Energy/Ember (side by side)
-  const totalsRow = el('div','totals-row','');
-  const energyBox = el('div','kbox','<div>Energy Source</div><div id="srKpiEnergy" class="kval green">£0/mo</div>');
-  const emberBox  = el('div','kbox','<div>Emberward</div><div id="srKpiEmber" class="kval red">£0/mo</div>');
-  totalsRow.append(energyBox, emberBox);
-
-  // 2) Progress bar
-  const bar = el('div','bar'); const fill = el('div','pos'); bar.append(fill);
-
-  // 3) Anchor row
+  // 1) Anchor row (TOP)
   const anchorBox = el('div','kbox','');
   const anchorRow = el('div','anchor-row','');
-  const anchorLbl = el('div','sr-sub','Anchor date (last 30d):');
+  const anchorLbl = el('div','sr-sub','Anchor date:');
   const anchorSelect = document.createElement('select'); anchorSelect.className='ao-select';
-  anchorSelect.append(new Option('Auto (latest strong inflow)',''));
+  anchorSelect.append(new Option('Auto (last strong inflow)',''));
   (analysis.anchorDates||[]).forEach(dStr=>{
     const [y,m,d]=dStr.split('-').map(Number);
     const disp = new Date(y,m-1,d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
@@ -420,18 +444,60 @@ function renderContinuousSticky(stickyHost, analysis){
   anchorRow.append(anchorLbl, anchorSelect);
   anchorBox.append(anchorRow);
 
-  // 4) Net grid (left spans two rows; right stack Daily/Weekly)
-  const netGrid = el('div','net-grid','');
-  const netBox = el('div','kbox net-left','<div>Net per month</div><div id="srKpiNet" class="kval">£0/mo</div>');
-  const rightStack = el('div','right-stack','');
-  const dailyBox  = el('div','kbox','Daily: £0');
-  const weeklyBox = el('div','kbox','Weekly: £0');
-  rightStack.append(dailyBox, weeklyBox);
-  netGrid.append(netBox, rightStack);
+  // 2) Energy/Ember totals (always side-by-side)
+  const totalsRow = el('div','totals-row','');
+  const energyBox = el('div','kbox','<div>Energy Source</div><div id="srKpiEnergy" class="kval green">£0/mo</div>');
+  const emberBox  = el('div','kbox','<div>Emberward</div><div id="srKpiEmber" class="kval red">£0/mo</div>');
+  totalsRow.append(energyBox, emberBox);
 
-  summary.append(totalsRow, bar, anchorBox, netGrid);
+  // 3) Bar
+  const bar = el('div','bar'); const fill = el('div','pos'); bar.append(fill);
 
-  // Tabs
+  // 4) Net monthly (single row)
+  const netRow = el('div','net-row','');
+
+  const netBox = el('div','kbox net-box clickable','');
+  netBox.setAttribute('role','button');
+  netBox.setAttribute('tabindex','0');
+  netBox.innerHTML = `
+    <div class="net-content">
+      <div class="net-label sr-sub">Monthly</div>
+      <div id="srKpiNet" class="kval">£0/mo</div>
+    </div>
+    <div class="net-right">
+      <span class="chev" aria-hidden="true">▾</span>
+    </div>
+  `;
+
+  if (SR_NET_INLINE){
+    netBox.classList.add('inline')
+  }
+  netRow.append(netBox);
+
+
+  // 5) Daily/Weekly (hidden until net tapped)
+  const dwWrap = el('div','dw-wrap','');
+  const dwRow = el('div','dw-row','');
+  const dailyBox  = el('div','kbox','<div class="sr-sub">Daily</div><div id="srDailyVal" class="kval">£0</div>');
+  const weeklyBox = el('div','kbox','<div class="sr-sub">Weekly</div><div id="srWeeklyVal" class="kval">£0</div>');
+  dwRow.append(dailyBox, weeklyBox);
+  dwWrap.append(dwRow);
+
+  // Toggle behavior
+  netBox.addEventListener('click', ()=>{
+    const isOpen = dwWrap.classList.toggle('open');
+    netBox.classList.toggle('expanded', isOpen);
+    netBox.setAttribute('aria-expanded', String(isOpen));
+  });
+  netBox.setAttribute('role','button');
+  netBox.setAttribute('tabindex','0');
+  netBox.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); netBox.click(); }
+  });
+
+  summary.append(anchorBox, totalsRow, bar, netRow, dwWrap);
+
+  // Tabs (unchanged)
   const tabs = el('div','sr-tabs','');
   const tabIn  = el('button','tab in active', 'Energy Source');
   const tabOut = el('button','tab out',        'Emberward');
@@ -440,7 +506,9 @@ function renderContinuousSticky(stickyHost, analysis){
   stickyHost.append(summary, tabs);
 
   return {
-    tabIn, tabOut, fill, anchorSelect, dailyBox, weeklyBox
+    tabIn, tabOut, fill, anchorSelect,
+    setDaily: v => { const el=document.getElementById('srDailyVal'); if (el) el.textContent = v; },
+    setWeekly: v => { const el=document.getElementById('srWeeklyVal'); if (el) el.textContent = v; },
   };
 }
 
@@ -478,8 +546,8 @@ function renderContinuousPhase(bodyHost, analysis){
   // Toolbars
   const toolIn  = document.createElement('div');
   const toolOut = document.createElement('div');
-  addListControls(toolIn,  inRows,  'Source (inflows)', 'in',  () => updateSummary());
-  addListControls(toolOut, outRows, 'Ember (foundation outflows)', 'out', () => updateSummary());
+  addListControls(toolIn,  inRows,  'Inflows', 'in',  () => updateSummary());
+  addListControls(toolOut, outRows, 'Outflows', 'out', () => updateSummary());
 
   // Summary updater
   function updateSummary(){
@@ -494,26 +562,31 @@ function renderContinuousPhase(bodyHost, analysis){
     stickyApi.fill.style.width = pct + '%'; stickyApi.fill.className = (incMo - outMo >= 0) ? 'pos' : 'neg';
     const netDaily  = Number(((incMo - outMo)/MONTHLY_MULT.daily).toFixed(2));
     const netWeekly = Number(((incMo - outMo)/MONTHLY_MULT.weekly).toFixed(2));
-    stickyApi.dailyBox.textContent  = `Daily: ${GBP(netDaily)}`;
-    stickyApi.weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
+    stickyApi.setDaily(GBP(netDaily));
+    stickyApi.setWeekly(GBP(netWeekly));
   }
   [...inRows, ...outRows].forEach(r => r.include.addEventListener('change', updateSummary));
 
   function show(kind){
-    stickyApi.tabIn.classList.toggle('active', kind==='in');
-    stickyApi.tabOut.classList.toggle('active', kind==='out');
+    const tabIn  = document.querySelector('.sr-tabs .in');
+    const tabOut = document.querySelector('.sr-tabs .out');
+    tabIn .classList.toggle('active', kind==='in');
+    tabOut.classList.toggle('active', kind==='out');
     listWrap.innerHTML='';
     if (kind==='in'){ listWrap.append(toolIn);  inRows .forEach(r=>listWrap.append(r.node)); }
     else            { listWrap.append(toolOut); outRows.forEach(r=>listWrap.append(r.node)); }
     updateSummary();
   }
-  stickyApi.tabIn.onclick  = ()=> show('in');
-  stickyApi.tabOut.onclick = ()=> show('out');
+  const tabs = sticky.querySelector('.sr-tabs');
+  const [tabInBtn, tabOutBtn] = tabs.querySelectorAll('button');
+  tabInBtn.onclick  = ()=> show('in');
+  tabOutBtn.onclick = ()=> show('out');
   show('in');
 
   return {
     collectSelections: ()=>{
-      const anchorTs = stickyApi.anchorSelect.value ? Number(stickyApi.anchorSelect.value) : null;
+      const anchorSelect = sticky.querySelector('.ao-select');
+      const anchorTs = anchorSelect && anchorSelect.value ? Number(anchorSelect.value) : null;
       return { mode:"continuous", anchorTs, inflowRows: inRows.map(r=>r.collect()), emberRows: outRows.map(r=>r.collect()) };
     }
   };
@@ -545,7 +618,7 @@ export async function openSmartReviewOverlay(){
   top.innerHTML = `
     <div id="srTopInner">
       <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <h2 style="margin:0">Smart Review</h2>
+        <h2 style="margin:0">Energy Menu</h2>
         <div style="display:flex;gap:8px">
           <button id="pill-cont" class="pill active">Continuous</button>
           <button id="pill-fin"  class="pill">Finite</button>
