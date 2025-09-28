@@ -88,6 +88,7 @@ export async function connectTrueLayerAccount() {
 
   const { verifier, challenge } = await makePkce();
   sessionStorage.setItem('tl_code_verifier', verifier);
+  localStorage.setItem('tl_code_verifier', verifier);
 
   const authUrl =
     `https://auth.truelayer-sandbox.com/?response_type=code&client_id=${clientId}` +
