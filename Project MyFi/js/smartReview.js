@@ -82,18 +82,55 @@ function ensureStyles(){
   .bar .pos{background:linear-gradient(90deg,#22c55e,#06b6d4)}
   .bar .neg{background:linear-gradient(90deg,#ef4444,#f59e0b)}
 
-  /* Net monthly as its own single row below bar */
-  .net-row{display:grid;grid-template-columns:1fr;gap:10px}
-  .net-box{cursor:pointer; user-select:none; display:flex;flex-direction:column;justify-content:center;min-height:72px}
-  /* --- Tap affordance for Net --- */
-  .net-box{position:relative; display:flex; align-items:center; justify-content:space-between; gap:10px;}
-  .net-box.clickable{cursor:pointer; border:1px solid var(--edge);}
-  .net-box.clickable:hover{box-shadow:0 0 0 1px rgba(255,255,255,.06) inset;}
-  .net-box:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:12px;}
+  /* Net monthly row (stays a single row under the bar) */
+  .net-row{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
 
-  .net-right{display:flex; align-items:center; gap:8px}
-  .chev{opacity:.7; transition:transform .2s ease}
-  .net-box.expanded .chev{transform:rotate(180deg)}
+  /* Compact, single-line box with chevron aligned to the right */
+  .net-box{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    min-height:64px;              /* a touch slimmer than before */
+    padding:10px 12px;
+    border:1px solid var(--edge);
+    border-radius:12px;
+    background:var(--panel);
+    cursor:pointer;
+    user-select:none;
+  }
+  .net-box:hover{ box-shadow:0 0 0 1px rgba(255,255,255,.06) inset; }
+  .net-box:focus-visible{ outline:2px solid var(--blue); outline-offset:2px; }
+
+  /* Left side: label above value */
+  .net-content{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .net-label{ font-size:12px; opacity:.85; }
+  #srKpiNet{ font-weight:700; }
+
+  /* Right side: small inline chevron, no extra vertical space */
+  .net-right{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:12px;  /* slight breathing room from value */
+  }
+  .chev{
+    line-height:1;
+    font-size:0.95em;
+    opacity:.7;
+    transition:transform .2s ease;
+  }
+  .net-box.expanded .chev{ transform:rotate(180deg); }
+
 
   /* Net: stacked vs inline switch */
   .net-content{display:flex; flex-direction:column}
@@ -463,10 +500,9 @@ function renderContinuousSticky(stickyHost, analysis){
     <div class="net-content">
       <div class="net-label sr-sub">Monthly</div>
       <div id="srKpiNet" class="kval">£0/mo</div>
-    </div>
-    <div class="net-right">
+
       <span class="chev" aria-hidden="true">▾</span>
-    </div>
+  
   `;
 
   if (SR_NET_INLINE){
@@ -698,3 +734,10 @@ export function maybeOpenSmartReviewOnLoad(){
     openSmartReviewOverlay().catch(console.error);
   }
 }
+
+// Adapter export for the Energy Menu router
+export function openEnergyVerified(/* uid optional */) {
+  // openSmartReviewOverlay comes from this file's implementation
+  return openSmartReviewOverlay();
+}
+
