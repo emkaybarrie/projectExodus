@@ -193,10 +193,10 @@ attachQuickMenu('settings-btn', () =>
 );
 
 // Left (Energy) → real Finances menu items
-attachQuickMenu('left-btn', () =>
-  pick(window.MyFiFinancesMenu, ['connectBank', 'smartReview','income','expenses']), 
-  { menuTitle: 'Energy Source' } // or 'Finances'
-);
+// attachQuickMenu('left-btn', () =>
+//   pick(window.MyFiFinancesMenu, ['connectBank', 'smartReview','income','expenses']), 
+//   { menuTitle: 'Energy Source' } // or 'Finances'
+// );
 
 // Center (Essence) → real Essence menu items
 attachQuickMenu('essence-btn', () =>

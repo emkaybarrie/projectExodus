@@ -16,6 +16,8 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { maybeStartVitalsTour} from "./vitalsTour.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { openEnergyMenu } from "../../energy-menu.js"; // adjust relative path
+
 // match your deployed region for callables
 const functions = getFunctions(undefined, "europe-west2");
 
@@ -307,6 +309,26 @@ export function autoInitAddSpendButton() {
     });
   }
 }
+
+// Stub - Social button
+// after you load energy-menu.js on the page (see script tags below), this will exist:
+// /js/hud/modules/vitals.js (or wherever your module lives)
+
+
+export function autoInitAddEnergyButton() {
+  const btn = document.getElementById("left-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      await openEnergyMenu();
+    } catch (err) {
+      console.error("Failed to open Energy Menu:", err);
+    }
+  });
+}
+
+
 
 // Stub - Social button
 export function autoInitAddSocialButton() {
