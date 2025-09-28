@@ -2,221 +2,86 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Linking...</title>
+  <title>Linking…</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    /* Minimal full-screen overlay */
-    #syncOverlay {
-      position: fixed; inset: 0;
-      background: #0b0b0f; color: #fff;
-      display: none; /* shown after token exchange succeeds */
-      align-items: center; justify-content: center;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      z-index: 9999;
-    }
-    .box { width: min(520px, 90vw); border: 1px solid #1f2937; border-radius: 16px;
-           padding: 20px 22px; background: #11131a; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-    h1 { margin: 0 0 12px; font-size: 20px; }
-    p  { margin: 0 0 16px; opacity: .8; font-size: 14px; }
-    ul { list-style: none; padding: 0; margin: 12px 0 0; }
-    li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid #1f2937; }
-    li:first-child { border-top: none; }
-    .badge { width: 10px; height: 10px; border-radius: 50%; background: #4b5563; }
-    .pending  .badge { background: #4b5563; }
-    .running  .badge { background: #f59e0b; }
-    .done     .badge { background: #10b981; }
-    .fail     .badge { background: #ef4444; }
-    .label { flex: 1; font-size: 14px; }
-    .hint  { opacity: .7; font-size: 12px; }
-    .bar { height: 6px; background: #1f2937; border-radius: 999px; margin-top: 14px; overflow: hidden; }
-    .bar > div { height: 100%; width: 0%; background: linear-gradient(90deg,#22c55e,#06b6d4); transition: width .2s ease; }
-    .actions { margin-top: 14px; display: flex; gap: 10px; }
-    button { appearance: none; background: #1f2937; color: #fff; border: 1px solid #374151;
-             padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 14px; }
-    button.primary { background: #10b981; border-color: #10b981; color: #0b0b0f; }
-    button:disabled { opacity: .6; cursor: not-allowed; }
 
-    /* Inline banner for stub mode */
-    .stub-banner{
-      max-width:780px;margin:12px auto 8px;padding:10px 12px;border:1px dashed #9CA3AF;border-radius:10px;
-      background: rgba(55,65,81,.25); color:#fff; display:none;
+  <style>
+    :root{
+      --bg:#0f1118; --panel:#111827; --edge:#1f2937; --ink:#fff;
+      --muted:.85; --green:#10b981; --amber:#f59e0b; --red:#ef4444;
     }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    /* Full-screen overlay */
+    #syncOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999}
+    .box{width:min(560px,92vw);border:1px solid var(--edge);border-radius:16px;
+      padding:18px 20px;background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 10px;font-size:20px}
+    p{margin:0 0 14px;opacity:.9;font-size:14px}
+    .disclosure{font-size:12px;opacity:.9;border:1px solid var(--edge);border-radius:12px;padding:10px;background:rgba(255,255,255,.03)}
+    .disclosure a{color:#c7d2fe;text-decoration:none}
+    .disclosure a:hover{text-decoration:underline}
+
+    .bar{height:6px;background:var(--edge);border-radius:999px;margin:12px 0;overflow:hidden}
+    .bar>div{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#06b6d4);transition:width .2s ease}
+
+    ul{list-style:none;padding:0;margin:10px 0 0}
+    li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--edge)}
+    li:first-child{border-top:none}
+    .badge{width:10px;height:10px;border-radius:50%;background:#4b5563}
+    .pending .badge{background:#4b5563}
+    .running .badge{background:var(--amber)}
+    .done .badge{background:var(--green)}
+    .fail .badge{background:var(--red)}
+    .label{flex:1;font-size:14px}
+    .hint{opacity:.8;font-size:12px}
+
+    .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    button{appearance:none;background:#1f2937;color:#fff;border:1px solid #374151;
+      padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+    button.primary{background:var(--green);border-color:var(--green);color:#0b0b0f}
+    button:disabled{opacity:.6;cursor:not-allowed}
+
+    .error{border:1px solid rgba(239,68,68,.6);background:rgba(239,68,68,.1);color:#fecaca;
+      padding:10px;border-radius:10px;margin-top:10px;display:none}
+    .powered-by-tl{position:fixed;inset:auto 12px 10px auto;opacity:.8;font-size:12px}
+    .powered-by-tl img{vertical-align:-3px;margin-left:6px}
   </style>
 
+  <!-- Optional TL CSS you already use -->
   <link rel="stylesheet" href="./css/truelayer.css" />
 </head>
 <body>
 
-<!-- Disclosure -->
+  <div id="syncOverlay" aria-live="polite">
+    <div class="box">
+      <h1>Linking your bank…</h1>
 
+      <section id="tl-disclosure" class="disclosure">
+        We connect via <strong>TrueLayer</strong> and act as their <em>agent</em> to access your data with your consent.
+        <div id="legal-links" style="margin-top:6px"></div>
+      </section>
 
-<div id="syncOverlay">
-  <div class="box">
-    <h1>Linking your bank…</h1>
-    <section id="tl-disclosure"> We connect via <strong>TrueLayer</strong> and act as their <em>agent</em> to access your data with your consent.
-    <div id="legal-links"></div>
-  </section>
-    <p id="syncStatus">Getting everything ready.</p>
+      <p id="syncStatus">Getting everything ready.</p>
 
-    <div class="bar"><div id="progressFill"></div></div>
+      <div class="bar"><div id="progressFill"></div></div>
 
-    <ul id="stepsList"></ul>
+      <ul id="stepsList" aria-label="Data fetch steps"></ul>
 
-    <div class="actions">
-      <button id="retryBtn" style="display:none">Retry failed step</button>
-      <button id="continueBtn" class="primary" style="display:none">Continue</button>
+      <div class="error" id="errorBox"></div>
+
+      <div class="actions">
+        <button id="restartBtn" style="display:none">Restart connection</button>
+        <button id="retryBtn" style="display:none">Retry failed step</button>
+        <button id="continueBtn" class="primary" style="display:none">Continue</button>
+      </div>
     </div>
   </div>
-</div>
 
-<footer class="powered-by-tl">
-  Powered by <img src="./assets/truelayer/truelayer-logo.jpg" alt="TrueLayer" height="16" style="vertical-align:-3px;margin-left:6px;">
-</footer>
+  <footer class="powered-by-tl">
+    Powered by <img src="./assets/truelayer/truelayer-logo.jpg" alt="TrueLayer" height="16">
+  </footer>
 
-<script type="module">
-  import { auth } from './js/core/auth.js';
-  import { triggerTrueLayerFetch, renderLegalLinks } from './js/core/truelayer.js';
-  import { openSmartReviewOverlay, showSmartReviewAfterTrueLayer } from './js/smartreview.js';
-
-  // Render legal links
-  const legalHost = document.getElementById('legal-links');
-  if (legalHost) legalHost.innerHTML = renderLegalLinks();
-
-  // Wait for Firebase auth (prevents getIdToken on null)
-  async function waitForAuthUser(timeoutMs = 8000) {
-    if (auth.currentUser) return auth.currentUser;
-    return new Promise((resolve) => {
-      let settled = false;
-      const t = setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, timeoutMs);
-      const unsub = auth.onAuthStateChanged
-        ? auth.onAuthStateChanged((u) => {
-            if (!settled) { settled = true; clearTimeout(t); unsub(); resolve(u || null); }
-          })
-        : () => resolve(null);
-    });
-  }
-
-  // Progress overlay wiring
-  const overlay = document.getElementById('syncOverlay');
-  const stepsList = document.getElementById('stepsList');
-  const statusEl  = document.getElementById('syncStatus');
-  const fill      = document.getElementById('progressFill');
-  const retryBtn  = document.getElementById('retryBtn');
-  const continueBtn = document.getElementById('continueBtn');
-  const stubBanner = document.getElementById('stubBanner');
-
-  const steps = [
-    { key: 'Accounts',       label: 'Accounts' },
-    { key: 'Cards',          label: 'Cards' },
-    { key: 'Transactions',   label: 'Transactions' },
-    { key: 'DirectDebits',   label: 'Direct Debits' },
-    { key: 'StandingOrders', label: 'Standing Orders' },
-  ];
-  function renderSteps() {
-    stepsList.innerHTML = '';
-    steps.forEach((s, i) => {
-      const li = document.createElement('li');
-      li.id = `step-${i}`;
-      li.className = 'pending';
-      li.innerHTML = `
-        <span class="badge"></span>
-        <span class="label">${s.label}</span>
-        <span class="hint" id="hint-${i}">Queued</span>
-      `;
-      stepsList.appendChild(li);
-    });
-  }
-  function setStepState(i, state, hint) {
-    const li = document.getElementById(`step-${i}`);
-    const hintEl = document.getElementById(`hint-${i}`);
-    if (!li) return;
-    li.className = state;
-    if (hintEl) hintEl.textContent = hint || (
-      state === 'running' ? 'Fetching…' :
-      state === 'done'    ? 'Done' :
-      state === 'fail'    ? 'Failed' : 'Queued'
-    );
-    const doneCount = steps.filter((_, idx) => {
-      const node = document.getElementById(`step-${idx}`);
-      return node && (node.className === 'done' || node.className === 'fail');
-    }).length;
-    const pct = Math.round((doneCount / steps.length) * 100);
-    fill.style.width = pct + '%';
-  }
-
-  // Full sync, then Smart Review. On any failure → stub Smart Review.
-  async function runSync() {
-    overlay.style.display = 'flex';
-    renderSteps();
-    statusEl.textContent = 'Syncing your bank data…';
-
-    for (let i = 0; i < steps.length; i++) {
-      setStepState(i, 'running');
-      try {
-        await triggerTrueLayerFetch(steps[i].key);
-        setStepState(i, 'done');
-      } catch (err) {
-        console.error(`Step ${steps[i].label} failed`, err);
-        setStepState(i, 'fail', 'Failed');
-        statusEl.textContent = `Something failed on "${steps[i].label}".`;
-        stubBanner.style.display = 'block';
-         overlay.style.display = 'none'
-         window.location.href = 'dashboard.html';
-        return;
-      }
-    }
-
-    // All steps succeeded: run REAL Smart Review (will fall back to stub if needed)
-     overlay.style.display = 'none'
-    showSmartReviewAfterTrueLayer();     // <— sets flag & navigates to dashboard (or opens if already there)
-    window.location.href = 'dashboard.html';
-    return;
-  }
-
-  // ---------------- Main flow ----------------
-  (async () => {
-    const p = new URLSearchParams(location.search);
-    const code = p.get('code');
-    const uid  = p.get('state');
-
-    if (!(code && uid)) {
-      console.error('Missing code or state in redirect URL.');
-      return;
-    }
-
-    const user = await waitForAuthUser(8000);
-    if (!user) {
-      console.warn('User not signed in; cannot exchange token safely.');
-      return;
-    }
-
-    // Exchange code → tokens (backend must verify Firebase ID token + PKCE)
-    const saved = sessionStorage.getItem('tl_redirect_uri');
-    const redirect_uri = saved || (location.origin + location.pathname);
-    const code_verifier = sessionStorage.getItem('tl_code_verifier') || '';
-    const idToken = await user.getIdToken();
-
-    console.log('Posting to exchangeToken:', { code, uid, redirect_uri });
-
-    try {
-      const r = await fetch('https://exchangetoken-frxqsvlhwq-nw.a.run.app', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-        body: JSON.stringify({ code, uid, redirect_uri, code_verifier })
-      });
-      const raw = await r.text();
-      let data; try { data = JSON.parse(raw); } catch { data = { error: 'non_json', raw }; }
-      if (!r.ok || data?.error || data?.success === false) {
-        throw Object.assign(new Error('token_exchange_failed'), { details: data, status: r.status });
-      }
-    } catch (e) {
-      console.error('Token exchange failed', e.details || e.message);
-      return;
-    }
-
-    // Success → fetch sequence, then run Smart Review
-    await runSync();
-  })();
-</script>
+  <script type="module" src="./js/callback.js"></script>
 </body>
 </html>
