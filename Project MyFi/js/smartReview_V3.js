@@ -1,11 +1,8 @@
-// smartreview.js — Smart Review overlay (frontend) — v6
-// - Mobile-safe (no horizontal scroll)
-// - Anchor label + dropdown on same row
-// - Net (monthly) spans 2 rows on the left; Daily (top-right) + Weekly (bottom-right)
-// - Tabs fill full width (two equal buttons)
-// - Group row: Label | Category (equal width); bottom row Cadence | Avg | Monthly | Include (right)
-// - Live summary totals; select/unselect-all per tab; unique anchor dates
-// - Stub + endpoint flags preserved; recompute trigger preserved
+// smartreview.js — Smart Review overlay (frontend) — v5 (layout polish)
+// - Summary sits flush under mode pills
+// - “Net per month” on its own row (between Energy/Ember and Daily/Weekly)
+// - Row shows “Avg (per cadence)” (left) + “Monthly (normalised)” (right), same row
+// - Lists scroll; summary + tabs pinned; amounts colour-coded; live totals
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -22,7 +19,7 @@ const SR_CFG = {
   callRecompute:     true,
   devWriteRailsStub: true,
 
-  // Endpoints (used when flags above are true)
+  // Endpoints (only used when flags above are true)
   endpoints: {
     analyzeUrl:    "https://smartreview-analyze-frxqsvlhwq-nw.a.run.app",
     saveUrl:       "https://smartreview-save-frxqsvlhwq-nw.a.run.app",
@@ -42,8 +39,8 @@ const SR_CFG = {
   incomeCategories: ["Salary","Bonus","Stipend","Pension","Other"],
   emberCategories:  ["Shelter","Energy","Internet","Insurance","Council Tax","Loan","Phone","Other"],
 
-  // Telemetry (no-op by default)
-  onTelemetry: (_evt,_payload)=>{},
+  // UI / telemetry
+  onTelemetry: (eventName, payload)=>{ /* console.log("[SR]", eventName, payload); */ },
   showConfidenceBadges: false,
 };
 
@@ -58,11 +55,10 @@ function ensureStyles(){
   if (document.getElementById('sr-styles')) return;
   const css = `
   #srOverlay{position:fixed;inset:0;background:rgba(6,8,12,.88);backdrop-filter:saturate(120%) blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;}
-  #srWrap{width:min(1120px,94vw);max-height:94vh;display:flex;flex-direction:column;border:1px solid #273142;border-radius:16px;background:#0f1118;color:#fff;box-shadow:0 20px 80px rgba(0,0,0,.5);overflow-x:hidden;max-width:100vw;}
-  #srWrap *{box-sizing:border-box;min-width:0}
+  #srWrap{width:min(1120px,94vw);max-height:94vh;display:flex;flex-direction:column;border:1px solid #273142;border-radius:16px;background:#0f1118;color:#fff;box-shadow:0 20px 80px rgba(0,0,0,.5)}
   #srTop{position:sticky;top:0;z-index:3;background:#0f1118;border-bottom:1px solid #1f2937}
   #srTopInner{padding:16px}
-  #srBody{flex:1;min-height:0;overflow:auto;padding:0 16px 12px 16px;overflow-x:hidden}
+  #srBody{flex:1;min-height:0;overflow:auto;padding:0 16px 12px 16px}
   .sr-actions{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid #1f2937;background:#0f1118;position:sticky;bottom:0;z-index:2}
   #srTop h2{margin:0 0 8px;font-size:20px}
   .pill{padding:6px 10px;border-radius:999px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
@@ -70,7 +66,10 @@ function ensureStyles(){
 
   /* Summary block (flush to pills) */
   .sr-summary{margin-top:8px}
-  .sr-row-1{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+  .sr-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+  .sr-row-1 .kbox{display:flex;gap:8px;align-items:center}
+  .sr-row-2{margin-top:8px}
+  .sr-row-3{margin-top:8px;display:flex;gap:12px;align-items:center}
   .sr-right{display:grid;gap:8px}
   .bar{height:16px;border-radius:12px;background:#1f2937;overflow:hidden}
   .bar>div{height:100%;width:0%}
@@ -80,29 +79,10 @@ function ensureStyles(){
   .green{color:#10b981} .red{color:#ef4444} .muted{opacity:.8}
   .sr-sub{font-size:12px;opacity:.85}
 
-  /* Anchor label + select on one row */
-  .anchor-box{
-    display:grid;
-    grid-template-columns: 1fr auto;
-    gap:8px;
-    align-items:center;
-  }
+  .anchor-box{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
 
-  /* Net grid: 2 columns × 2 rows; left spans two rows */
-  .sr-netgrid{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
-    gap: 8px;
-    margin-top:8px;
-  }
-  .sr-netgrid .netBox   { grid-column:1; grid-row:1 / span 2; }
-  .sr-netgrid .dailyBox { grid-column:2; grid-row:1; }
-  .sr-netgrid .weeklyBox{ grid-column:2; grid-row:2; }
-
-  /* Tabs fill full width, two equal buttons */
-  .sr-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
-  .tab{padding:6px 10px;border:1px solid #2a3a55;border-radius:8px;background:#0d1220;color:#fff;text-align:center}
+  .sr-tabs{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+  .tab{padding:6px 10px;border:1px solid #2a3a55;border-radius:8px;background:#0d1220;color:#fff}
   .tab.active{outline:2px solid #3b82f6}
 
   .toolbar{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap;align-items:center;justify-content:space-between}
@@ -111,33 +91,22 @@ function ensureStyles(){
   .sr-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
   .ao-tile{border:1px solid #223044;border-radius:12px;padding:10px;background:#121626}
   .row-top{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
-  .ao-input,.ao-select{width:100%;max-width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
+  .ao-input,.ao-select{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
 
-  /* Row 1: Label | Category (equal) */
-  .row-grid{
-    display:grid;
-    grid-template-columns: 1fr 1fr;
-    gap:8px;
-    margin-top:8px;
-    grid-auto-rows:auto;
-    align-items:end;
-  }
-  /* Bottom row: Cadence | Avg | Monthly | Include (right) */
-  .row-line{
-    display:grid;
-    grid-template-columns: auto 1fr 1fr auto;
-    gap:8px;
-    margin-top:8px;
-    align-items:end;
-  }
+  /* Row grid:
+     Row 1: Label (2fr) | Category (1fr) | Include (auto)
+     Row 2: Cadence (left) | Avg per cadence (middle) | Monthly (right) */
+  .row-grid{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-top:8px;grid-auto-rows:auto;align-items:end}
+  .row-line{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;margin-top:8px;align-items:end}
+
 
   .amount-chip{font-weight:700}
   .amount-chip.green{color:#10b981}
   .amount-chip.red{color:#ef4444}
-  .amount-chip.neutral{color:#fff}
 
   @media (max-width: 640px){
-    .sr-row-1{grid-template-columns:1fr}
+    .sr-row{grid-template-columns:1fr}
+    .anchor-box{justify-content:flex-start}
   }
   `;
   const style=document.createElement('style');
@@ -303,7 +272,7 @@ function buildGroups(processed, monthsGroup){
   const inflow = items.filter(i=>i.kind==='inflow').sort((a,b)=>b.confidence-a.confidence);
   const ember  = items.filter(i=>i.kind==='ember') .sort((a,b)=>b.confidence-a.confidence);
 
-  // Unique anchor dates (confidence + amount gated, last 30d)
+  // Unique anchor date candidates (confidence + amount gated)
   const confByName = new Map(inflow.map(i=>[i.name, i.confidence]));
   const dateSet = new Set();
   const thirtyDaysAgo = Date.now() - 30*DAYS;
@@ -440,13 +409,16 @@ function buildRowUI(group, kind){
   const monthlyVal = Number(((group.representative || 0) * MONTHLY_MULT[group.cadence || 'monthly']).toFixed(2));
   const avgPerCadence = `${GBP(group.representative || 0)} ${cadenceUnitLabel(group.cadence || 'monthly')}`;
 
-  // Row 1 (Label | Category) equal widths
+  // Grid
   const grid = el('div','row-grid');
+
+  // Row 1
   const labWrap = el('div','',`<label class="sr-sub">Label</label>`);    labWrap.append(label);
   const catWrap = el('div','',`<label class="sr-sub">Category</label>`); catWrap.append(category);
-  grid.append(labWrap, catWrap);
+  const incWrap = el('div','',`<label class="sr-sub">Include</label>`);  incWrap.append(include);
+  grid.append(labWrap, catWrap, incWrap);
 
-  // Bottom row: Cadence | Avg | Monthly | Include (right)
+  // Row 2: Cadence (left) | Avg per cadence (middle) | Monthly normalised (right)
   const line2 = el('div','row-line');
 
   const cadenceCell = el('div','', `
@@ -455,8 +427,8 @@ function buildRowUI(group, kind){
   `);
 
   const avgCell = el('div','', `
-    <label class="sr-sub">Avg</label>
-    <div class="amount-chip neutral">${avgPerCadence}</div>
+    <label class="sr-sub">Avg (${group.cadence || 'monthly'})</label>
+    <div class="amount-chip ${kind==='inflow'?'green':'red'}">${avgPerCadence}</div>
   `);
 
   const monthlyCell = el('div','', `
@@ -464,11 +436,9 @@ function buildRowUI(group, kind){
     <div class="amount-chip ${kind==='inflow'?'green':'red'}">${GBP(monthlyVal)}/mo</div>
   `);
 
-  const includeCell = el('div','',`<label class="sr-sub">Include</label>`);
-  includeCell.append(include);
-
-  line2.append(cadenceCell, avgCell, monthlyCell, includeCell);
+  line2.append(cadenceCell, avgCell, monthlyCell);
   grid.append(line2);
+
 
   row.append(top, grid);
 
@@ -496,13 +466,13 @@ function buildRowUI(group, kind){
 function renderContinuousPhase(bodyHost, analysis){
   bodyHost.innerHTML = '';
 
-  // Sticky summary (flush to pills area)
-  const summary = document.createElement('div'); summary.className='sr-summary';
+  // Sticky TOP (title + pills live outside)
+  const summary = document.createElement('div');
+  summary.className = 'sr-summary';
 
-  // Row 1: Energy/Ember left; bar + anchor right
-  const row1 = el('div','sr-row-1');
+  // Row 1: Energy/Ember on left; right column with bar + anchor
+  const row1 = el('div','sr-row sr-row-1');
 
-  // Two KPI tiles side-by-side (equal width)
   const totals = document.createElement('div');
   const k1 = el('div','kbox'); k1.innerHTML = `<div>Energy Source</div><div id="srKpiEnergy" class="green">£0/mo</div>`;
   const k2 = el('div','kbox'); k2.innerHTML = `<div>Emberward</div><div id="srKpiEmber"  class="red">£0/mo</div>`;
@@ -511,7 +481,6 @@ function renderContinuousPhase(bodyHost, analysis){
   const rightCol = el('div','sr-right');
   const bar = el('div','bar'); const fill = el('div','pos'); bar.append(fill);
 
-  // Anchor (label left, select right)
   const anchorWrap = el('div','anchor-box');
   const anchorLabel = el('div','sr-sub','Anchor date (last 30d):');
   const anchorSelect = document.createElement('select'); anchorSelect.className='ao-select';
@@ -526,22 +495,27 @@ function renderContinuousPhase(bodyHost, analysis){
   rightCol.append(bar, anchorWrap);
   row1.append(totals, rightCol);
 
-  // Net + Daily/Weekly grid
-  const netGrid = el('div','sr-netgrid');
-  const netBox   = el('div','kbox netBox');   netBox.innerHTML   = `<div>Net per month</div><div id="srKpiNet">£0/mo</div>`;
-  const dailyBox = el('div','kbox dailyBox','Daily: £0');        // top-right
-  const weeklyBox= el('div','kbox weeklyBox','Weekly: £0');       // bottom-right
-  netGrid.append(netBox, dailyBox, weeklyBox);
+  // Row 2: Net per month (its own row)
+  const row2 = el('div','sr-row sr-row-2');
+  const netBox = el('div','kbox'); netBox.style.gridColumn = '1 / -1';
+  netBox.innerHTML = `<div>Net per month</div><div id="srKpiNet">£0/mo</div>`;
+  row2.append(netBox);
 
-  summary.append(row1, netGrid);
+  // Row 3: Daily + Weekly (same row)
+  const row3 = el('div','sr-row-3');
+  const dailyBox  = el('div','kbox','Daily: £0');
+  const weeklyBox = el('div','kbox','Weekly: £0');
+  row3.append(dailyBox, weeklyBox);
 
-  // Tabs (full width, equal halves)
+  summary.append(row1, row2, row3);
+
+  // Tabs (pinned with summary)
   const tabs = el('div','sr-tabs');
   const tabIn  = el('button','tab active', 'Energy Source');
   const tabOut = el('button','tab',         'Emberward');
   tabs.append(tabIn, tabOut);
 
-  // Inject summary + tabs into sticky top for flush layout
+  // Insert sticky area into top container (so it stays flush to pills)
   const topInner = document.getElementById('srTopInner');
   topInner.append(summary, tabs);
 
@@ -583,7 +557,9 @@ function renderContinuousPhase(bodyHost, analysis){
   }
 
   // Change handlers
-  [...inRows, ...outRows].forEach(r => r.include.addEventListener('change', updateSummary));
+  [...inRows, ...outRows].forEach(r => {
+    r.include.addEventListener('change', updateSummary);
+  });
 
   function show(kind){
     tabIn.classList.toggle('active', kind==='in');
