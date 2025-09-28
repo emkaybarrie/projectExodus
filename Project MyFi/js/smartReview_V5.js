@@ -1,8 +1,6 @@
-// smartreview.js — Smart Review overlay (frontend) — v8
-// Fixes: net layout (side-by-side), coloured Energy/Ember tabs (subtle aura),
-// card bottom-row two-column (Cadence/Avg left; Monthly+Include right),
-// label+category same row, dedicated sticky region with independent
-// Continuous vs Finite header content, mobile-friendly (no x-scroll).
+// smartreview.js — Smart Review overlay (frontend) — v7
+// Fixes: no colour on mode pills, single tab set, net/daily/weekly alignment,
+// label+category same row, card bottom row tidy, mobile no x-overflow.
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -58,7 +56,7 @@ function ensureStyles(){
   .pill{padding:6px 12px;border-radius:999px;border:1px solid #2a3a55;background:var(--chip);color:var(--ink)}
   .pill.active{outline:2px solid var(--blue)}
 
-  /* Summary layout (sticky region content) */
+  /* Summary layout */
   .sr-summary{display:flex;flex-direction:column;gap:10px;margin-top:6px}
   .totals-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .kbox{border-radius:12px;padding:10px 12px;background:var(--panel);border:1px solid var(--edge);min-width:0}
@@ -71,19 +69,18 @@ function ensureStyles(){
   .anchor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
   .ao-select,.ao-input{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
 
-  /* Net grid: Net (left spans 2 rows) + right stack (Daily, Weekly) — always 2 columns */
+  /* Net grid: Net (left spans 2 rows) + right stack (Daily, Weekly) */
   .net-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch}
-  .net-left{display:flex;flex-direction:column;justify-content:center;min-height:96px;grid-row:1 / span 2}
+  .net-left{display:flex;flex-direction:column;justify-content:center;min-height:96px}
   .right-stack{display:grid;grid-template-rows:1fr 1fr;gap:10px}
 
-  /* Tabs for lists (single set, full width) with subtle aura when active */
+  /* Tabs for lists (single set, full width) */
   .sr-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
-  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:var(--ink);text-align:center;transition:box-shadow .15s ease,border-color .15s ease}
-  .tab.in.active{border-color:rgba(16,185,129,.5); box-shadow:0 0 0 1px rgba(16,185,129,.25), 0 0 12px rgba(16,185,129,.25) inset}
-  .tab.out.active{border-color:rgba(239,68,68,.5);  box-shadow:0 0 0 1px rgba(239,68,68,.25),  0 0 12px rgba(239,68,68,.25) inset}
+  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:var(--ink);text-align:center}
+  .tab.active{border-color:#334155; box-shadow:0 0 0 2px rgba(255,255,255,.08) inset}
 
-  /* Section separation (connect tabs to lists visually) */
-  .list-section{margin-top:6px;border-top:1px dashed var(--edge);padding-top:10px}
+  /* Section separation */
+  .list-section{margin-top:6px;border-top:1px dashed var(--edge);padding-top:8px}
   .toolbar{display:flex;gap:8px;margin:6px 0;flex-wrap:wrap;align-items:center;justify-content:space-between}
   .count-pill{font-size:12px;opacity:var(--muted)}
   .section-title{font-weight:600}
@@ -93,15 +90,9 @@ function ensureStyles(){
   .sr-list{display:flex;flex-direction:column;gap:10px}
   .ao-tile{border:1px solid #223044;border-radius:14px;padding:12px;background:#121626}
   .row-top{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px}
-
-  /* Row 1: Label | Category (equal) */
   .row-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-
-  /* Bottom row: two columns — left (Cadence/Avg side-by-side), right (Monthly pill + Include) */
-  .row-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:stretch;margin-top:10px}
-  .row-bottom.stacked{ grid-template-columns: 1fr; } /* Put monthly total on its own row under the cadence block */
+  .row-bottom{display:grid;grid-template-columns:2fr 1fr;gap:10px;align-items:stretch;margin-top:10px}
   .bottom-box{border:1px dashed var(--edge);border-radius:12px;padding:10px;background:rgba(255,255,255,.02)}
-  .cadence-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .monthly-pill{border:1px solid var(--edge);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
     border-radius:16px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
   .amount-chip{font-weight:700}
@@ -110,8 +101,9 @@ function ensureStyles(){
 
   @media (max-width: 680px){
     .totals-row{grid-template-columns:1fr}
-    /* Keep net-grid two columns even on mobile to satisfy design —
-       ensure no overflow by letting text wrap; boxes already flexible. */
+    .net-grid{grid-template-columns:1fr}
+    .right-stack{grid-template-rows:auto;grid-auto-rows:1fr}
+    .row-bottom{grid-template-columns:1fr}
   }
   `;
   const style=document.createElement('style');
@@ -335,7 +327,7 @@ function buildRowUI(group, kind){
   const kindTag = el('div','sr-sub muted', kind==='inflow' ? 'Energy' : 'Ember');
   top.append(left, kindTag);
 
-  // Row 1: Label | Category (equal)
+  // Row 1: Label | Category  (equal width)
   const label = document.createElement('input'); label.className='ao-input';
   label.placeholder = kind==='inflow' ? 'Label (e.g., Salary)' : 'Label (e.g., Rent)'; label.value = group.name || '';
   const category = document.createElement('select'); category.className='ao-select';
@@ -348,18 +340,14 @@ function buildRowUI(group, kind){
   const catWrap = el('div','',`<label class="sr-sub">Category</label>`); catWrap.append(category);
   grid.append(labWrap, catWrap);
 
-  // Bottom: Left (Cadence + Avg side-by-side), Right (Monthly + Include)
-  // const bottom = el('div','row-bottom');
-  // NEW: single-column stack so Monthly appears under the cadence details
-  const bottom = el('div','row-bottom stacked');
-
+  // Bottom: Left cadence/avg (avg in white), Right monthly pill + Include at far right
+  const bottom = el('div','row-bottom');
 
   const cadenceBlock = el('div','bottom-box','');
-  const cGrid = el('div','cadence-grid','');
-  const cLeft = el('div','', `<div class="sr-sub">Cadence</div><div style="font-weight:700">${(group.cadence||'monthly')[0].toUpperCase()+(group.cadence||'monthly').slice(1)}</div>`);
-  const cRight= el('div','', `<div class="sr-sub">Avg Amount</div><div style="font-weight:700;color:#fff">${GBP(group.representative||0)} ${cadenceUnitLabel(group.cadence||'monthly')}</div>`);
-  cGrid.append(cLeft, cRight);
-  cadenceBlock.append(cGrid);
+  const cadTitle = el('div','', `<strong>Cadence: ${(group.cadence||'monthly')[0].toUpperCase()+(group.cadence||'monthly').slice(1)}</strong>`);
+  const avgLine  = el('div','', `<div class="sr-sub" style="margin-top:6px">Avg:</div>
+                                 <div style="font-weight:700;color:#fff">${GBP(group.representative||0)} ${cadenceUnitLabel(group.cadence||'monthly')}</div>`);
+  cadenceBlock.append(cadTitle, avgLine);
 
   const monthlyVal = Number(((group.representative||0) * MONTHLY_MULT[group.cadence||'monthly']).toFixed(2));
   const monthlyBox = el('div','monthly-pill','');
@@ -370,7 +358,6 @@ function buildRowUI(group, kind){
   monthlyBox.append(leftCol, incWrap);
 
   bottom.append(cadenceBlock, monthlyBox);
-
   row.append(top, grid, bottom);
 
   return {
@@ -391,22 +378,23 @@ function buildRowUI(group, kind){
   };
 }
 
-// ───────────────────────────────── STICKY HEADERS ─────────────────────────────────
-function renderContinuousSticky(stickyHost, analysis){
-  stickyHost.innerHTML = '';
+// ───────────────────────────────── PHASE: CONTINUOUS ─────────────────────────────────
+function renderContinuousPhase(bodyHost, analysis){
+  bodyHost.innerHTML = '';
 
+  // Summary (pinned under header)
   const summary = document.createElement('div'); summary.className='sr-summary';
 
-  // 1) Energy/Ember (side by side)
+  // 1) Energy/Ember (side by side, full width)
   const totalsRow = el('div','totals-row','');
   const energyBox = el('div','kbox','<div>Energy Source</div><div id="srKpiEnergy" class="kval green">£0/mo</div>');
   const emberBox  = el('div','kbox','<div>Emberward</div><div id="srKpiEmber" class="kval red">£0/mo</div>');
   totalsRow.append(energyBox, emberBox);
 
-  // 2) Progress bar
+  // 2) Progress bar (full width)
   const bar = el('div','bar'); const fill = el('div','pos'); bar.append(fill);
 
-  // 3) Anchor row
+  // 3) Anchor row (label left, dropdown right)
   const anchorBox = el('div','kbox','');
   const anchorRow = el('div','anchor-row','');
   const anchorLbl = el('div','sr-sub','Anchor date (last 30d):');
@@ -420,50 +408,28 @@ function renderContinuousSticky(stickyHost, analysis){
   anchorRow.append(anchorLbl, anchorSelect);
   anchorBox.append(anchorRow);
 
-  // 4) Net grid (left spans two rows; right stack Daily/Weekly)
+  // 4) Net grid (Net spans two rows on left; right shows Daily then Weekly)
   const netGrid = el('div','net-grid','');
   const netBox = el('div','kbox net-left','<div>Net per month</div><div id="srKpiNet" class="kval">£0/mo</div>');
+  netBox.style.textAlign = 'left';
   const rightStack = el('div','right-stack','');
   const dailyBox  = el('div','kbox','Daily: £0');
   const weeklyBox = el('div','kbox','Weekly: £0');
   rightStack.append(dailyBox, weeklyBox);
+  // place net on left spanning two rows; grid handles span automatically with rightStack
   netGrid.append(netBox, rightStack);
 
   summary.append(totalsRow, bar, anchorBox, netGrid);
 
-  // Tabs
+  // SINGLE set of tabs (pinned, below summary)
   const tabs = el('div','sr-tabs','');
-  const tabIn  = el('button','tab in active', 'Energy Source');
-  const tabOut = el('button','tab out',        'Emberward');
+  const tabIn  = el('button','tab active', 'Energy Source');
+  const tabOut = el('button','tab',        'Emberward');
   tabs.append(tabIn, tabOut);
 
-  stickyHost.append(summary, tabs);
-
-  return {
-    tabIn, tabOut, fill, anchorSelect, dailyBox, weeklyBox
-  };
-}
-
-function renderFiniteSticky(stickyHost){
-  stickyHost.innerHTML = '';
-  const wrap = document.createElement('div'); wrap.className='sr-summary';
-  const box = el('div','kbox', `
-    <div><strong>Finite mode</strong></div>
-    <div class="sr-sub" style="margin-top:6px">
-      Seed, duration, and replenishment controls will appear here (placeholder).
-    </div>
-  `);
-  wrap.append(box);
-  stickyHost.append(wrap);
-}
-
-// ───────────────────────────────── PHASE: CONTINUOUS ─────────────────────────────────
-function renderContinuousPhase(bodyHost, analysis){
-  bodyHost.innerHTML = '';
-
-  // Sticky content (under the header title/pills)
-  const sticky = document.getElementById('srSticky');
-  const stickyApi = renderContinuousSticky(sticky, analysis);
+  // Mount pinned content into header
+  const topInner = document.getElementById('srTopInner');
+  topInner.append(summary, tabs);
 
   // Section + list
   const section = el('div','list-section','');
@@ -491,29 +457,29 @@ function renderContinuousPhase(bodyHost, analysis){
     document.getElementById('srKpiEmber') .textContent = GBP(outMo) + '/mo';
     document.getElementById('srKpiNet')   .textContent = GBP(incMo - outMo) + '/mo';
     const pct = Math.max(0, Math.min(100, incMo? ((incMo-outMo)/incMo*100):0));
-    stickyApi.fill.style.width = pct + '%'; stickyApi.fill.className = (incMo - outMo >= 0) ? 'pos' : 'neg';
+    fill.style.width = pct + '%'; fill.className = (incMo - outMo >= 0) ? 'pos' : 'neg';
     const netDaily  = Number(((incMo - outMo)/MONTHLY_MULT.daily).toFixed(2));
     const netWeekly = Number(((incMo - outMo)/MONTHLY_MULT.weekly).toFixed(2));
-    stickyApi.dailyBox.textContent  = `Daily: ${GBP(netDaily)}`;
-    stickyApi.weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
+    dailyBox.textContent  = `Daily: ${GBP(netDaily)}`;
+    weeklyBox.textContent = `Weekly: ${GBP(netWeekly)}`;
   }
   [...inRows, ...outRows].forEach(r => r.include.addEventListener('change', updateSummary));
 
   function show(kind){
-    stickyApi.tabIn.classList.toggle('active', kind==='in');
-    stickyApi.tabOut.classList.toggle('active', kind==='out');
+    tabIn.classList.toggle('active', kind==='in');
+    tabOut.classList.toggle('active', kind==='out');
     listWrap.innerHTML='';
     if (kind==='in'){ listWrap.append(toolIn);  inRows .forEach(r=>listWrap.append(r.node)); }
     else            { listWrap.append(toolOut); outRows.forEach(r=>listWrap.append(r.node)); }
     updateSummary();
   }
-  stickyApi.tabIn.onclick  = ()=> show('in');
-  stickyApi.tabOut.onclick = ()=> show('out');
+  tabIn.onclick = ()=> show('in');
+  tabOut.onclick= ()=> show('out');
   show('in');
 
   return {
     collectSelections: ()=>{
-      const anchorTs = stickyApi.anchorSelect.value ? Number(stickyApi.anchorSelect.value) : null;
+      const anchorTs = anchorSelect.value ? Number(anchorSelect.value) : null;
       return { mode:"continuous", anchorTs, inflowRows: inRows.map(r=>r.collect()), emberRows: outRows.map(r=>r.collect()) };
     }
   };
@@ -522,15 +488,8 @@ function renderContinuousPhase(bodyHost, analysis){
 // ───────────────────────────────── PHASE: FINITE (placeholder) ─────────────────────────────────
 function renderFinitePhase(bodyHost){
   bodyHost.innerHTML='';
-  const sticky = document.getElementById('srSticky');
-  renderFiniteSticky(sticky);
-
-  const card = el('div','ao-tile', `
-    <h3 style="margin:0 0 8px;">Finite mode</h3>
-    <p class="sr-sub">Seed/duration/replenishment screen will live here (placeholder).</p>
-  `);
+  const card = el('div','ao-tile', `<h3 style="margin:0 0 8px;">Finite mode</h3><p class="sr-sub">Seed/duration/replenishment screen will live here (placeholder).</p>`);
   bodyHost.append(card);
-
   return { collectSelections: ()=>({ mode:"finite", anchorTs:null, inflowRows:[], emberRows:[] }) };
 }
 
@@ -551,7 +510,6 @@ export async function openSmartReviewOverlay(){
           <button id="pill-fin"  class="pill">Finite</button>
         </div>
       </div>
-      <div id="srSticky"></div>
     </div>
   `;
   const body = document.createElement('div'); body.id='srBody';
