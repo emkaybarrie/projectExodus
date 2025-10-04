@@ -582,12 +582,17 @@ function repaintEngravingLabels(){
 }
 function setSurplusPill(el, daysNow, daysAfter){
   const pill = el.pill; if (!pill) return;
+  // We also need the BAR element to toggle the faint surplus backdrop
+  const barEl = el.fill?.closest?.('.bar') || null;
+
   const isCore = (getPrimaryMode()==='core');
   const anyNow = isCore && (Number(daysNow||0) > 0);
   const anyAf  = isCore && (Number(daysAfter||0)> 0);
   if (!anyNow && !anyAf){
     pill.style.display="none"; pill.textContent="";
     pill.classList.remove("with-next","pill-up","pill-down");
+    // No surplus backdrop in Focus or when there’s no surplus
+    if (barEl) barEl.classList.remove('has-surplus');
     return;
   }
   pill.style.display="inline-flex"; pill.classList.remove("pill-up","pill-down");
@@ -598,6 +603,10 @@ function setSurplusPill(el, daysNow, daysAfter){
   } else {
     pill.textContent = txt(daysNow); pill.classList.remove("with-next");
   }
+
+  // Toggle the faint surplus backdrop on the bar itself.
+  // Show it in Core when there is any surplus now (daysNow > 0).
+  if (barEl) barEl.classList.toggle('has-surplus', isCore && Number(daysNow||0) > 0);
 }
 function formatNum(n){ return (Math.round(n)||0).toLocaleString('en-GB'); }
 function setVitalsTotals(currentTotal, maxTotal){
@@ -1147,44 +1156,182 @@ export function autoInitUpdateLog(){
 }
 
 // History 
-export function autoInitHistoryButtons(){
-  const btn1=document.getElementById('btn-expand-update');
-  const btn2=document.getElementById('btn-expand-locked');
-  const open = ()=>{
-    const user=getAuth().currentUser; if(!user) return; const uid=user.uid;
-    (async ()=>{
-      const wrap=document.createElement('div'); wrap.style.padding='8px';
-      const list=document.createElement('ul'); list.style.listStyle='none'; list.style.margin='0'; list.style.padding='0';
-      wrap.appendChild(list);
-      const ds = await resolveDataSources(uid); const col=collection(db, ds.txCollectionPath);
-      const qy=query(col, orderBy('dateMs','desc'), limit(50));
-      const snap=await getDocs(qy);
-      list.innerHTML = snap.docs.map(d=>{
-        const x=d.data()||{}; const n=x?.transactionData?.description||'Transaction';
-        const amt=Number(x.amount ?? x.amountMajor ?? 0); const sign=amt>=0?'+':'−';
-        const abs=Math.abs(amt).toFixed(2);
-        const when=x.dateMs?new Date(x.dateMs).toLocaleString():'';
-        const type=amt>=0?'income':'spend';
-        return `<li class="tx-row ${type}">
-                  <div class="ul-row">
-                    <div class="ul-main">
-                      <strong>${n}</strong>
-                      <div class="ul-meta">${sign}£${abs} • ${when}</div>
-                    </div>
-                  </div>
-                </li>`;
-      }).join('');
-      // Simple overlay
-      const modal=document.createElement('div'); modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
-      const card=document.createElement('div'); card.style.cssText='width:min(720px,92vw);max-height:80vh;overflow:auto;background:#0f1118;color:#fff;border:1px solid #2a3a55;border-radius:12px;padding:12px';
-      const close=document.createElement('button'); close.className='btn'; close.textContent='Close'; close.style.marginTop='10px';
-      close.onclick=()=>modal.remove();
-      card.append(wrap, close); modal.append(card); document.body.appendChild(modal);
-    })();
-  };
-  if (btn1) btn1.addEventListener('click', open);
-  if (btn2) btn2.addEventListener('click', open);
+export function autoInitHistoryButtons() {
+  const btn = document.getElementById('btn-expand-update');
+  if (btn) btn.addEventListener('click', () => openHistoryFor_energy());
 }
+
+// ───────────────────────────── History helpers (energy-vitals compatible)
+// Friendly label from the resolved tx collection path
+function friendlySourceLabelFromTxPath(path) {
+  return (String(path || '').endsWith('/verified')) ? 'Verified' : 'Manual Entry';
+}
+
+// Resolve context once: tx collection, label, and sources to include
+async function getHistoryContext(uid) {
+  const ds = await resolveDataSources(uid);
+  const txPath = ds?.txCollectionPath || `players/${uid}/classifiedTransactions`;
+  const sourceLabel = friendlySourceLabelFromTxPath(txPath);
+
+  // Keep contributions visible in both modes; prefer base consistent with legacy
+  const sources = txPath.endsWith('/verified')
+    ? ['truelayer', 'stripe', 'manual_bank']
+    : ['manual', 'stripe', 'manual_bank'];
+
+  return { txPath, sourceLabel, sources };
+}
+
+// Row renderer (unchanged)
+function renderTxRow(tx) {
+  const name = tx?.transactionData?.description || 'Transaction';
+  const amt  = Number(tx.amount || 0);
+  const sign = amt >= 0 ? '+' : '−';
+  const abs  = Math.abs(amt).toFixed(2);
+  const when = tx?.dateMs ? new Date(tx.dateMs).toLocaleString() : '';
+  const type = amt >= 0 ? 'income' : 'spend';
+  return `
+    <li class="tx-row ${type}">
+      <div class="ul-row">
+        <div class="ul-main">
+          <strong>${name}</strong>
+          <div class="ul-meta">${sign}£${abs} • ${when}</div>
+        </div>
+      </div>
+    </li>
+  `;
+}
+
+// Menu definition: uses resolved tx collection + safe source filter
+function historyMenuDef_energy({ uid, txPath, sourceLabel, sources }) {
+  return {
+    label: 'All Activity',
+    title: `All Activity — ${sourceLabel}`,
+    render() {
+      const wrap = document.createElement('div');
+
+      const controls = document.createElement('div');
+      controls.style.display = 'grid';
+      controls.style.gridTemplateColumns = '1fr auto';
+      controls.style.gap = '8px';
+      controls.style.marginBottom = '8px';
+      controls.innerHTML = `
+        <input id="histSearch" class="input" placeholder="Search description…" />
+        <select id="histType" class="input">
+          <option value="">All types</option>
+          <option value="income">Income</option>
+          <option value="spend">Expenses</option>
+        </select>
+      `;
+
+      const list = document.createElement('ul');
+      list.id = 'histList';
+      list.style.listStyle = 'none';
+      list.style.padding = '0';
+      list.style.margin = '0';
+
+      const more = document.createElement('button');
+      more.className = 'btn';
+      more.textContent = 'Load more';
+      more.style.marginTop = '10px';
+
+      wrap.append(controls, list, more);
+
+      const col = collection(getFirestore(), txPath);
+      let last = null;
+      let loading = false;
+      let done = false;
+      let cache = [];
+
+      // Detect if 'source' field exists at all (cheap heuristic: first page without filter)
+      async function collectionHasSourceField() {
+        const test = await getDocs(query(col, orderBy('dateMs', 'desc'), limit(5)));
+        let seen = false;
+        test.forEach(d => { if ((d.data() || {}).source != null) seen = true; });
+        return seen;
+      }
+
+      let useSourceFilter = false;
+      (async () => { useSourceFilter = await collectionHasSourceField(); })();
+
+      async function fetchPage() {
+        if (loading || done) return;
+        loading = true;
+
+        let qy = query(col, orderBy('dateMs', 'desc'), limit(50));
+        if (useSourceFilter) qy = query(qy, where('source', 'in', sources));
+        if (last) qy = query(qy, startAfter(last));
+
+        const snap = await getDocs(qy);
+        if (!snap.size) {
+          done = true;
+          more.disabled = true;
+          if (!cache.length) list.innerHTML = `<li class="ul-meta" style="opacity:.7">No transactions found.</li>`;
+          loading = false;
+          return;
+        }
+
+        const next = [];
+        snap.forEach(d => {
+          const x = d.data();
+          next.push({
+            id: d.id,
+            amount: Number(x.amount || x.amountMajor || 0),
+            dateMs: x.dateMs || x.postedAtMs || x?.transactionData?.entryDate?.toMillis?.() || 0,
+            transactionData: { description: x?.transactionData?.description || '' }
+          });
+        });
+
+        cache = cache.concat(next);
+        last = snap.docs[snap.docs.length - 1];
+        renderFiltered();
+        loading = false;
+      }
+
+      function renderFiltered() {
+        const term = (document.getElementById('histSearch').value || '').toLowerCase().trim();
+        const tsel = (document.getElementById('histType').value || '').toLowerCase();
+        const filtered = cache.filter(tx => {
+          const matchTerm = !term || tx.transactionData.description.toLowerCase().includes(term);
+          const matchType = !tsel || (tsel === 'income' ? tx.amount >= 0 : tx.amount < 0);
+          return matchTerm && matchType;
+        });
+        list.innerHTML = filtered.map(renderTxRow).join('');
+      }
+
+      wrap.addEventListener('input', (e) => { if (e.target.id === 'histSearch') renderFiltered(); });
+      wrap.addEventListener('change', (e) => { if (e.target.id === 'histType') renderFiltered(); });
+
+      fetchPage();
+      more.addEventListener('click', fetchPage);
+
+      return [wrap];
+    },
+    footer() {
+      const b = document.createElement('button');
+      b.className = 'btn';
+      b.textContent = 'Close';
+      b.addEventListener('click', () => window.MyFiModal.close());
+      return [b];
+    }
+  };
+}
+
+function openHistoryFor_energy() {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) return;
+  const uid = user.uid;
+
+  (async () => {
+    const ctx = await getHistoryContext(uid); // { txPath, sourceLabel, sources }
+    const def = historyMenuDef_energy({ uid, ...ctx });
+    const menu = { history: def };
+    window.MyFiModal.setMenu(menu);
+    window.MyFiModal.open('history', { variant: 'single', menuTitle: 'Activity Log' });
+  })();
+}
+
+
 
 // ───────────────────────── Dashboard helpers & buttons ──────────────────────
 export async function refreshVitals(){
