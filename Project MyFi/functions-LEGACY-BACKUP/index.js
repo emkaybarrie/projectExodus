@@ -313,10 +313,6 @@ exports.backfillAliasLower = onRequest({ region: 'europe-west2' }, async (req, r
   }
 });
 
-
-
-
-
 /**
  * ====================================================================
  *  TRUE LAYER: TOKEN EXCHANGE
@@ -343,7 +339,6 @@ const allowCors = (handler) => async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(204).end();
   return handler(req, res);
 };
-
 
 exports.nukeTrueLayerCanonical = onRequest({ region: 'europe-west2', timeoutSeconds: 540 }, allowCors(async (req, res) => {
   try {
@@ -382,7 +377,6 @@ exports.nukeTrueLayerCanonical = onRequest({ region: 'europe-west2', timeoutSeco
   }
 }));
 
-
 // ---- TrueLayer base URLs (switchable) ----
 const TL_AUTH_BASE  = 'https://auth.truelayer-sandbox.com';
 const TL_API_BASE   = 'https://api.truelayer-sandbox.com';
@@ -406,543 +400,11 @@ function tlTokenRef(uid) {
   return db.doc(`players/${uid}/financialData_TRUELAYER/token`);
 }
 
-// ---- Persist tokens atomically ----
-async function saveTokens(uid, payload) {
-  const nowMs = Date.now();
-  const expiresIn = Number(payload.expires_in || 0);
-  const expiresAt = nowMs + expiresIn * 1000;
-  const doc = {
-    access_token: payload.access_token,
-    refresh_token: payload.refresh_token || null,
-    scope: payload.scope || null,
-    token_type: payload.token_type || 'Bearer',
-    expires_in: expiresIn,
-    expires_at: expiresAt,      // ms since epoch
-    created_at: nowMs,
-    updated_at: nowMs,
-  };
-  await tlTokenRef(uid).set(doc, { merge: true });
-  return doc;
-}
-
-
-// CONFIDENTIAL variant — includes client_secret
-exports.exchangeToken = onRequest({
-  region: 'europe-west2',
-  secrets: [TRUELAYER_CLIENT_ID, TRUELAYER_CLIENT_SECRET],
-}, async (req, res) => {
-  corsHandler(req, res, async () => {
-    if (req.method === 'OPTIONS') return res.status(204).send('');
-
-    try {
-      // Require Firebase ID token → derive uid (prevents spoofing)
-      const uid = await requireUidFromAuth(req);
-
-      const { code, redirect_uri, code_verifier } = req.body || {};
-      if (!code || !redirect_uri || !code_verifier) {
-        return res.status(400).json({
-          error: 'missing_params',
-          details: {
-            hasCode: !!code,
-            hasRedirectUri: !!redirect_uri,
-            hasCodeVerifier: !!code_verifier
-          }
-        });
-      }
-
-      const params = new URLSearchParams();
-      params.append('grant_type', 'authorization_code');
-      params.append('client_id', TRUELAYER_CLIENT_ID.value());
-      params.append('client_secret', TRUELAYER_CLIENT_SECRET.value()); // confidential apps require this
-      params.append('redirect_uri', redirect_uri);
-      params.append('code', code);
-      params.append('code_verifier', code_verifier); // PKCE still required
-
-      console.log('[TL] exchange (CONFIDENTIAL) client_id=', TRUELAYER_CLIENT_ID.value(),
-                  'redirect=', redirect_uri, 'hasVerifier=', !!code_verifier,
-                  'hasSecret=', !!TRUELAYER_CLIENT_SECRET.value());
-
-      const response = await axios.post(
-        `${TL_AUTH_BASE}/connect/token`,
-        params.toString(),
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-      );
-
-      const saved = await saveTokens(uid, response.data);
-      return res.status(200).json({ success: true, expires_at: saved.expires_at });
-    } catch (err) {
-      const status  = err.status || err.response?.status || 500;
-      const details = err.response?.data || err.message;
-      console.error('Token exchange failed:', status, details);
-      return res.status(status).json({ error: 'token_exchange_failed', details });
-    }
-  });
-});
-
-
-
 /**
  * ====================================================================
  *  TRUE LAYER: HELPERS (paths, normalisers)
  * ====================================================================
  */
-
-const EXPIRY_SKEW_SEC = 60; // refresh a minute early
-
-async function refreshTrueLayerToken(uid) {
-  const snap = await tlTokenRef(uid).get();
-  if (!snap.exists) throw Object.assign(new Error('no_token'), { status: 401 });
-  const cur = snap.data() || {};
-  if (!cur.refresh_token) throw Object.assign(new Error('no_refresh_token'), { status: 401 });
-
-  const params = new URLSearchParams();
-  params.append('grant_type', 'refresh_token');
-  params.append('client_id', TRUELAYER_CLIENT_ID.value());
-  params.append('refresh_token', cur.refresh_token);
-
-  const response = await axios.post(
-    `${TL_AUTH_BASE}/connect/token`,
-    params.toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
-  );
-
-  return await saveTokens(uid, response.data);
-}
-
-async function getValidAccessToken(uid) {
-  const snap = await tlTokenRef(uid).get();
-  if (!snap.exists) throw Object.assign(new Error('no_token'), { status: 401 });
-  const t = snap.data();
-  const now = Date.now();
-  const skewMs = EXPIRY_SKEW_SEC * 1000;
-  const isExpiring = !t.expires_at || (t.expires_at - now) <= skewMs;
-
-  if (isExpiring) {
-    const refreshed = await refreshTrueLayerToken(uid);
-    return refreshed.access_token;
-  }
-  return t.access_token;
-}
-
-async function tlGet(uid, relativePath, config = {}) {
-  const url = `${TL_API_BASE}${relativePath}`;
-  let token = await getValidAccessToken(uid);
-
-  try {
-    const res = await axios.get(url, {
-      ...config,
-      headers: { ...(config.headers || {}), Authorization: `Bearer ${token}` }
-    });
-    return res.data;
-  } catch (err) {
-    const status = err.response?.status;
-    if (status === 401) {
-      // refresh and retry once
-      token = (await refreshTrueLayerToken(uid)).access_token;
-      const res2 = await axios.get(url, {
-        ...config,
-        headers: { ...(config.headers || {}), Authorization: `Bearer ${token}` }
-      });
-      return res2.data;
-    }
-    throw err;
-  }
-}
-
-
-
-// Keep your existing aggregate cache writes for compatibility.
-// These functions ALSO trigger fan-out into per-account/card subcollections.
-// Keep your aggregate cache writes for compatibility (unchanged externally)
-const fetchFromTrueLayer = async (uid, urlPath, storeKey) => {
-  const data = await tlGet(uid, urlPath);
-
-  await db.doc(`players/${uid}/financialData_TRUELAYER/${storeKey}`).set({
-    data,
-    lastUpdated: Date.now(),
-  }, { merge: true });
-
-  return data;
-};
-
-
-const createFetchFunction = (path, key) =>
-  onRequest({ region: 'europe-west2' }, async (req, res) => {
-    corsHandler(req, res, async () => {
-      try {
-        const uid = await requireUidFromAuth(req);
-        const data = await fetchFromTrueLayer(uid, path, key);
-        if (key === 'accounts') await upsertAccounts(uid, data);
-        if (key === 'cards')    await upsertCards(uid, data);
-        res.status(200).json({ success: true, data });
-      } catch (err) {
-        const status = err.status || err.response?.status || 500;
-        console.error(`[${key}] Fetch failed:`, err.response?.data || err.message);
-        res.status(status).json({ error: 'Fetch failed', details: err.message });
-      }
-    });
-  });
-
-// Paths that match your screenshot layout:
-// financialData_TRUELAYER has documents named 'accounts', 'cards', etc.
-// We add subcollections under those docs: 'items', then per-item subcollections.
-const tlPaths = {
-  accountsRootDoc: (uid) => db.doc(`players/${uid}/financialData_TRUELAYER/accounts`),
-  accountItemDoc:  (uid, accountId) => db.doc(`players/${uid}/financialData_TRUELAYER/accounts/items/${accountId}`),
-  accountTx:       (uid, accountId, txnId) => db.doc(`players/${uid}/financialData_TRUELAYER/accounts/items/${accountId}/transactions/${txnId}`),
-  accountDD:       (uid, accountId, ddId)  => db.doc(`players/${uid}/financialData_TRUELAYER/accounts/items/${accountId}/direct_debits/${ddId}`),
-  accountSO:       (uid, accountId, soId)  => db.doc(`players/${uid}/financialData_TRUELAYER/accounts/items/${accountId}/standing_orders/${soId}`),
-
-  cardsRootDoc:    (uid) => db.doc(`players/${uid}/financialData_TRUELAYER/cards`),
-  cardItemDoc:     (uid, cardId) => db.doc(`players/${uid}/financialData_TRUELAYER/cards/items/${cardId}`),
-  cardTx:          (uid, cardId, txnId) => db.doc(`players/${uid}/financialData_TRUELAYER/cards/items/${cardId}/transactions/${txnId}`),
-};
-
-const toMinor = (amt) => Math.round(Number(amt || 0) * 100);
-const firstTs = (obj, keys) => {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v) return admin.firestore.Timestamp.fromDate(new Date(v));
-  }
-  return null;
-};
-const safeId = (rawId, fallback = '') =>
-  (String(rawId || fallback) || `${Date.now()}`).replace(/[^\w\-:.]/g, '_');
-
-// -----------------------------------------------------------------------------
-// TL → Canonical ingestion helpers (idempotent, calc-start aware)
-// -----------------------------------------------------------------------------
-
-function canonicalIdFromTL(kind /* 'account' | 'card' */, parentId, txnId) {
-  const p = String(parentId || '').replace(/[^\w\-:.]/g, '_');
-  const t = String(txnId   || '').replace(/[^\w\-:.]/g, '_');
-  return (kind === 'card') ? `tl_card_${p}__${t}` : `tl_acc_${p}__${t}`;
-}
-
-function mapTLTxnToCanonical({ kind, parentId, txn }) {
-  const now = Date.now();
-  const postedAtTs = txn.postedAt || null; // firestore.Timestamp from our upsert
-  const dateMs = postedAtTs && typeof postedAtTs.toMillis === 'function'
-    ? postedAtTs.toMillis()
-    : now;
-
-  const amountMinor = (typeof txn.amountMinor === 'number')
-    ? txn.amountMinor
-    : Math.round(Number(txn.raw?.amount || 0) * 100);
-
-  // NOTE: canonical uses signed major units; TL amounts are already signed.
-  const amount = Number((amountMinor || 0) / 100);
-
-  const description = txn.description || txn.raw?.description || '';
-  const merchantName = txn.merchantName || txn.raw?.merchant_name || null;
-  const currency = txn.currency || txn.raw?.currency || 'GBP';
-  const providerStatus = txn.status || txn.raw?.status || null;
-  const transactionId = txn.transactionId || txn.raw?.transaction_id || 'unknown';
-  const txTypeUpper = String(txn.txType || txn.raw?.transaction_type || '').toUpperCase();
-  const isTransferCandidate =
-   Boolean(txn.isTransferCandidate) ||
-   txTypeUpper.includes('TRANSFER') ||
-   /transfer/i.test(description || '');
-
-  // We set suggestedPool only; tag/provisionalTag are added ONLY if missing on the canonical doc.
-  const ghostWindowMs = 2 * 60 * 60 * 1000; // 2h
-  const addedMs = now;
-
-  const canonical = {
-    amount,                 // signed major units
-    dateMs,
-    source: 'truelayer',
-    status: 'pending',      // locker will confirm later
-    addedMs,
-    ghostWindowMs,
-    ghostExpiryMs: addedMs + ghostWindowMs,
-    rulesVersion: 'v1',
-    suggestedPool: 'stamina', // default suggestion if no rule yet
-    sourceSubtype: isTransferCandidate ? 'transfer' : null,
-    isTransferCandidate: !!isTransferCandidate,
-    transactionData: {
-      description,
-      merchantName,
-      currency,
-      providerStatus,
-      entryDate: admin.firestore.Timestamp.fromMillis(dateMs),
-    },
-    providerRef: {
-      provider: 'truelayer',
-      kind,                    // 'account' | 'card'
-      parentId,
-      transactionId
-    },
-  };
-
-  return canonical;
-}
-
-// Ingest a single TL txn doc into canonical, with calc-start filtering and no tag override
-async function ingestOneTrueLayerTxn(db, {
-  uid, kind /* 'account' | 'card' */, parentId, txnId, txnData
-}) {
-  // 1) calc-start (reuse your helpers already in this file)
-  const calcStartMs = await getPayCycleStartMsServer(db, uid);
-
-
-  const postedAtMs = txnData?.postedAt?.toMillis
-    ? txnData.postedAt.toMillis()
-    : (txnData?.raw?.timestamp ? (new Date(txnData.raw.timestamp)).getTime() : 0);
-
-  if (!(postedAtMs >= calcStartMs)) {
-    // below calc-start → ignore
-    return { skipped: true, reason: 'before_calc_start' };
-  }
-
-  const canonicalId = canonicalIdFromTL(kind, parentId, txnId);
-  const canonicalRef = db.doc(`players/${uid}/classifiedTransactions/${canonicalId}`);
-
-  // 2) Build payload
-  const payload = mapTLTxnToCanonical({ kind, parentId, txn: txnData });
-
-  // 3) Non-destructive merge:
-  //    - if tag or provisionalTag already exist (manual/user action), do NOT overwrite
-  //    - if status is confirmed, do NOT revert to pending
-  const cur = await canonicalRef.get();
-  if (cur.exists) {
-    const d = cur.data() || {};
-    if (d?.tag)         delete payload.tag;
-    if (d?.provisionalTag) delete payload.provisionalTag;
-    if (d?.status === 'confirmed') delete payload.status;
-    if (d?.suggestedPool) delete payload.suggestedPool; // keep earlier suggestion
-  } else {
-    // On first write we could seed a provisionalTag if you later add rules.
-    // For now, we only set suggestedPool.
-  }
-
-  await canonicalRef.set(payload, { merge: true });
-  return { ok: true, canonicalId };
-}
-
-/**
- * ====================================================================
- *  TRUE LAYER: FAN-OUT UPSERTS
- * ====================================================================
- */
-async function upsertAccounts(uid, accountsPayload) {
-  const results = accountsPayload?.results || [];
-  const now = FieldValue.serverTimestamp();
-
-  await tlPaths.accountsRootDoc(uid).set({ updatedAt: now }, { merge: true });
-
-  const batch = db.batch();
-  for (const acc of results) {
-    const accountId = safeId(acc.account_id, acc.resource_id || acc.iban || acc.account_number);
-    const ref = tlPaths.accountItemDoc(uid, accountId);
-    batch.set(ref, {
-      provider: 'truelayer',
-      accountId,
-      displayName: acc.display_name || acc.name || null,
-      type: acc.account_type || acc.type || null,
-      currency: acc.currency || 'GBP',
-      sync: { status: 'ok', lastSyncedAt: null, cursor: null, updatedAt: now },
-      raw: acc,
-      updatedAt: now,
-      createdAt: now,
-    }, { merge: true });
-  }
-  await batch.commit();
-}
-
-async function upsertCards(uid, cardsPayload) {
-  const results = cardsPayload?.results || [];
-  const now = FieldValue.serverTimestamp();
-
-  await tlPaths.cardsRootDoc(uid).set({ updatedAt: now }, { merge: true });
-
-  const batch = db.batch();
-  for (const c of results) {
-    const cardId = safeId(c.card_id || c.id);
-    const ref = tlPaths.cardItemDoc(uid, cardId);
-    batch.set(ref, {
-      provider: 'truelayer',
-      cardId,
-      displayName: c.display_name || c.name || null,
-      currency: c.currency || 'GBP',
-      sync: { status: 'ok', lastSyncedAt: null, cursor: null, updatedAt: now },
-      raw: c,
-      updatedAt: now,
-      createdAt: now,
-    }, { merge: true });
-  }
-  await batch.commit();
-}
-
-async function upsertTransactionsForAccount(uid, accountId, txns = []) {
-  const now = FieldValue.serverTimestamp();
-  const batch = db.batch();
-
-  for (const t of txns) {
-    const txnId = safeId(t.transaction_id, `${t.timestamp || t.posted || ''}:${t.amount}:${t.description || ''}`);
-    const txType = String(t.transaction_type || t.type || '').toUpperCase();
-    const cats   = Array.isArray(t.categories) ? t.categories : [];
-    const isTransfer = txType.includes('TRANSFER') || cats.some(c => String(c).toUpperCase().includes('TRANSFER'));
-
-    const ref = tlPaths.accountTx(uid, accountId, txnId);
-    batch.set(ref, {
-      provider: 'truelayer',
-      accountId,
-      transactionId: txnId,
-      status: t.status || t.transaction_type || null,
-      postedAt: firstTs(t, ['timestamp','posted','booked']),
-      description: t.description || null,
-      merchantName: t.merchant_name || null,
-      amountMinor: toMinor(t.amount),
-      currency: t.currency || 'GBP',
-      runningBalanceMinor: t.running_balance ? toMinor(t.running_balance.amount) : null,
-      categories: t.categories || null,
-      txType,                   // e.g. "TRANSFER", "CARD_PAYMENT", ...
-      isTransferCandidate: isTransfer,
-      raw: t,
-      updatedAt: now,
-      createdAt: now,
-    }, { merge: true });
-  }
-  await batch.commit();
-
-  await tlPaths.accountItemDoc(uid, accountId).set({
-    sync: { status: 'ok', lastSyncedAt: now, updatedAt: now }
-  }, { merge: true });
-}
-
-async function upsertDirectDebitsForAccount(uid, accountId, dds = []) {
-  const now = FieldValue.serverTimestamp();
-  const batch = db.batch();
-
-  for (const d of dds) {
-    const ddId = safeId(d.direct_debit_id || d.mandate_id, `${d.mandate_reference || d.reference || 'dd'}:${d.name || ''}`);
-    const ref = tlPaths.accountDD(uid, accountId, ddId);
-    batch.set(ref, {
-      provider: 'truelayer',
-      accountId,
-      directDebitId: ddId,
-      name: d.name || null,
-      reference: d.mandate_reference || d.reference || null,
-      status: d.status || null,
-      lastPaymentAt: firstTs(d, ['last_payment_at','last_payment_date']),
-      raw: d,
-      updatedAt: now,
-      createdAt: now,
-    }, { merge: true });
-  }
-  await batch.commit();
-
-  await tlPaths.accountItemDoc(uid, accountId).set({
-    sync: { status: 'ok', lastSyncedAt: now, updatedAt: now }
-  }, { merge: true });
-}
-
-async function upsertStandingOrdersForAccount(uid, accountId, sos = []) {
-  const now = FieldValue.serverTimestamp();
-  const batch = db.batch();
-
-  for (const s of sos) {
-    const soId = safeId(s.standing_order_id, `${s.next_payment_date || ''}:${s.reference || ''}`);
-    const ref = tlPaths.accountSO(uid, accountId, soId);
-    batch.set(ref, {
-      provider: 'truelayer',
-      accountId,
-      standingOrderId: soId,
-      reference: s.reference || null,
-      status: s.status || null,
-      amountMinor: toMinor(s.amount),
-      currency: s.currency || 'GBP',
-      schedule: {
-        interval: s.interval || s.frequency || null,
-        day: s.day_of_month || s.day || null,
-        nextAt: firstTs(s, ['next_payment_date','next_payment_at']),
-      },
-      raw: s,
-      updatedAt: now,
-      createdAt: now,
-    }, { merge: true });
-  }
-  await batch.commit();
-
-  await tlPaths.accountItemDoc(uid, accountId).set({
-    sync: { status: 'ok', lastSyncedAt: now, updatedAt: now }
-  }, { merge: true });
-}
-
-/**
- * ====================================================================
- *  TRUE LAYER: PER-ACCOUNT FETCH (fan-out + keep aggregate)
- * ====================================================================
- */
-async function fetchPerAccountAndUpsert(uid, subPath, kind) {
-  // 1) list accounts
-  const accountsRes = await tlGet(uid, `/data/v1/accounts`);
-  await upsertAccounts(uid, accountsRes); // fan-out
-
-  const results = {};
-  for (const acc of (accountsRes.results || [])) {
-    const accountIdRaw = acc.account_id;
-    const accountId = safeId(accountIdRaw);
-
-    // 2) fetch subresource per account
-    const url = `/data/v1/accounts/${accountIdRaw}/${subPath}`;
-    let items = [];
-    try {
-      const payload = await tlGet(uid, url);
-      items = payload.results || [];
-    } catch (err) {
-      console.warn(`[${kind}] Failed for account ${accountId}:`, err.response?.data || err.message);
-    }
-
-    // 3) fan-out
-    if (kind === 'transactions') {
-      await upsertTransactionsForAccount(uid, accountId, items);
-    } else if (kind === 'direct_debits') {
-      await upsertDirectDebitsForAccount(uid, accountId, items);
-    } else if (kind === 'standing_orders') {
-      await upsertStandingOrdersForAccount(uid, accountId, items);
-    }
-
-    results[accountId] = items;
-  }
-
-  // 4) keep aggregate
-  await db.doc(`players/${uid}/financialData_TRUELAYER/${kind}`).set({
-    data: results,
-    lastUpdated: Date.now(),
-  }, { merge: true });
-
-  return results;
-}
-
-
-const createPerAccountFunction = (subPath, key) =>
-  onRequest({ region: 'europe-west2' }, async (req, res) => {
-    corsHandler(req, res, async () => {
-      try {
-        const uid = await requireUidFromAuth(req);
-        const data = await fetchPerAccountAndUpsert(uid, subPath, key);
-        res.status(200).json({ success: true, data });
-      } catch (err) {
-        const status = err.status || err.response?.status || 500;
-        console.error(`[${key}] Fetch failed:`, err.response?.data || err.message);
-        res.status(status).json({ error: 'Fetch failed', details: err.message });
-      }
-    });
-  });
-
-
-/**
- * ====================================================================
- *  TRUE LAYER: EXPORTS (names preserved)
- * ====================================================================
- */
-exports.fetchAccounts       = createFetchFunction('/data/v1/accounts', 'accounts'); // also fan-outs
-exports.fetchCards          = createFetchFunction('/data/v1/cards', 'cards');       // also fan-outs
-exports.fetchTransactions   = createPerAccountFunction('transactions', 'transactions');
-exports.fetchDirectDebits   = createPerAccountFunction('direct_debits', 'direct_debits');
-exports.fetchStandingOrders = createPerAccountFunction('standing_orders', 'standing_orders');
 
 // POST /revokeTrueLayer  (Authorization: Bearer <idToken>)
 exports.revokeTrueLayer = onRequest({ region: 'europe-west2' }, async (req, res) => {
@@ -1010,126 +472,6 @@ exports.disconnectTrueLayer = onRequest({ region: 'europe-west2' }, async (req, 
 // Debug ping
 exports.testPing = onRequest({ region: 'europe-west2' }, (req, res) => {
   res.send('Backend running fine!');
-});
-
-// -----------------------------------------------------------------------------
-// Realtime ingestion: TL → classifiedTransactions (idempotent, calc-start aware)
-// -----------------------------------------------------------------------------
-exports.ingestTL_AccountTxn = onDocumentWritten({
-  region: 'europe-west2',
-  document: 'players/{uid}/financialData_TRUELAYER/accounts/items/{accountId}/transactions/{txnId}',
-}, async (event) => {
-  const after = event.data?.after;
-  if (!after || !after.exists) return; // ignore deletes
-  const uid = event.params.uid;
-  const accountId = event.params.accountId;
-  const txnId = event.params.txnId;
-  const data = after.data() || {};
-  try {
-    await ingestOneTrueLayerTxn(db, {
-      uid, kind: 'account', parentId: accountId, txnId, txnData: data
-    });
-  } catch (e) {
-    console.error('ingestTL_AccountTxn error', { uid, accountId, txnId, e: e?.message });
-  }
-});
-
-exports.ingestTL_CardTxn = onDocumentWritten({
-  region: 'europe-west2',
-  document: 'players/{uid}/financialData_TRUELAYER/cards/items/{cardId}/transactions/{txnId}',
-}, async (event) => {
-  const after = event.data?.after;
-  if (!after || !after.exists) return;
-  const uid = event.params.uid;
-  const cardId = event.params.cardId;
-  const txnId = event.params.txnId;
-  const data = after.data() || {};
-  try {
-    await ingestOneTrueLayerTxn(db, {
-      uid, kind: 'card', parentId: cardId, txnId, txnData: data
-    });
-  } catch (e) {
-    console.error('ingestTL_CardTxn error', { uid, cardId, txnId, e: e?.message });
-  }
-});
-
-// -----------------------------------------------------------------------------
-// Backfill HTTPS: process TL transaction subcollections incrementally by watermark
-//   GET .../ingestTrueLayerBackfill?uid=...&sinceMs=... (optional)
-// -----------------------------------------------------------------------------
-exports.ingestTrueLayerBackfill = onRequest({ region: 'europe-west2' }, async (req, res) => {
-  corsHandler(req, res, async () => {
-    try {
-      const uid = String(req.query.uid || '').trim();
-      const sinceMsQ = Number(req.query.sinceMs || 0);
-      if (!uid) return res.status(400).json({ error: 'Missing uid' });
-
-      // calc-start
-      const calcStartMs = await getPayCycleStartMsServer(db, uid);
-
-
-      // helper: process any /items/* doc’s /transactions subcollection
-      async function backfillFor(kind /* 'account'|'card' */) {
-        const root = (kind === 'card')
-          ? db.collection(`players/${uid}/financialData_TRUELAYER/cards/items`)
-          : db.collection(`players/${uid}/financialData_TRUELAYER/accounts/items`);
-
-        const itemsSnap = await root.get();
-        let processed = 0, skipped = 0;
-
-        for (const itemDoc of itemsSnap.docs) {
-          const item = itemDoc.data() || {};
-          const sync = item.sync || {};
-          const watermarkMs = Number(sync.ingestWatermarkMs || 0);
-          const since = Math.max(calcStartMs, watermarkMs, sinceMsQ);
-
-          const txCol = itemDoc.ref.collection('transactions');
-          let q = txCol.orderBy('postedAt').where('postedAt', '>=', admin.firestore.Timestamp.fromMillis(since));
-          let last = null;
-          let loopGuard = 0;
-
-          while (loopGuard++ < 1000) {
-            let q2 = q.limit(400);
-            if (last) q2 = q2.startAfter(last);
-            const snap = await q2.get();
-            if (snap.empty) break;
-
-            for (const txDoc of snap.docs) {
-              const d = txDoc.data() || {};
-              const txId = txDoc.id;
-              const postedAtMs = d?.postedAt?.toMillis ? d.postedAt.toMillis() : 0;
-              if (!(postedAtMs >= calcStartMs)) { skipped++; continue; }
-
-              await ingestOneTrueLayerTxn(db, {
-                uid, kind, parentId: itemDoc.id, txnId: txId, txnData: d
-              });
-              processed++;
-            }
-
-            last = snap.docs[snap.docs.length - 1];
-            // advance watermark
-            const lastMs = snap.docs[snap.docs.length - 1]?.data()?.postedAt?.toMillis?.() || since;
-            await itemDoc.ref.set({ sync: { ...sync, ingestWatermarkMs: lastMs, updatedAt: FieldValue.serverTimestamp() } }, { merge: true });
-          }
-        }
-        return { processed, skipped };
-      }
-
-      const a = await backfillFor('account');
-      const c = await backfillFor('card');
-
-      return res.status(200).json({
-        ok: true,
-        calcStartMs,
-        sinceMs: sinceMsQ || null,
-        accounts: a,
-        cards: c
-      });
-    } catch (e) {
-      console.error('ingestTrueLayerBackfill error', e?.message);
-      res.status(500).json({ error: 'ingest_failed', details: e?.message });
-    }
-  });
 });
 
 /**
@@ -1435,7 +777,6 @@ const MODE_SPEND_FACTOR = {
   relaxed: 0.70,
   standard: 0.80,
   focused: 0.90,
-  true: 0.80, // fallback; not used for seeding in true mode
 };
 // --- Pay-cycle helpers (NEW) ----------------------------------------------
 // read lastPayDateMs saved by welcome.js
@@ -1510,9 +851,7 @@ async function elapsedDaysUntilServer(db, uid, untilMs = Date.now()) {
   return Math.max(0, (untilMs - cycleStartMs) / MS_PER_DAY);
 }
 
-
 // Seeding/eligibility helpers
-
 function anchorsFromSnapshot(curDoc, mode, payCycleStartMs, rebaseKey=null) {
   const prev = (curDoc && curDoc.seedAnchor) || {};
   const prevStart = Number(prev.payCycleStartMs || 0);
@@ -1526,8 +865,6 @@ function anchorsFromSnapshot(curDoc, mode, payCycleStartMs, rebaseKey=null) {
 
   return { changed, prev, next: { payCycleStartMs, vitalsMode: nextMode, rebaseKey } };
 }
-
-
 
 // signed seedOffset builder (same as before), now returning the new anchor too
 async function buildSeedOffsetServer(db, uid, pools, mode) {
@@ -1559,13 +896,7 @@ async function buildSeedOffsetServer(db, uid, pools, mode) {
 }
 
 
-// computeSeedCurrentsAllServer(db, uid, pools, mode, startMs, { p=0.6 }):
-// Full set (Health, Mana, Stamina, Essence) seeding snapshot used elsewhere. Original behavior:
-// Max for each pool = regenBaseline * daysAccruedSinceMonthStart.
-// Safe: Mana/Stamina/Essence current start at a small “day-fraction” floor (or 1+fraction if not day 1). Health starts at accrued max.
-// Standard: Mana/Stamina/Essence start at day-1 floors (or 0 after day 1) plus a share of residual disposable (R = (m+s+e)*daysAccrued*(1-p)), capped by accrued max. Health starts at accrued max.
-// Full-pools seeding (used elsewhere)
-// Full-pools seeding (updated per your spec, with Essence based on current month progress)
+// computeSeedCurrentsAllServer
 async function computeSeedCurrentsAllServer(db, uid, pools, mode) {
   // Baselines
   const h1 = Number(pools?.health?.regenBaseline   || 0);
@@ -1633,9 +964,6 @@ function differs(a, b) {
   const pa = pick(A), pb = pick(B);
   return JSON.stringify(pa) !== JSON.stringify(pb);
 }
-
-
-
 
 // Main recomputation
 // updateVitalsPoolsServer(db, uid):
@@ -1956,8 +1284,6 @@ async function removeFlattenDocsForWindow(db, uid, cycleStartMs, anchorMs) {
   if (!batch._ops || !batch._ops.length) return;
   await batch.commit();
 }
-
-
 
 // -----------------------------------------------------------------------------
 // Maintenance: recompute per-stream usage and immediately refresh vitals

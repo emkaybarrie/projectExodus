@@ -16,8 +16,17 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { maybeStartVitalsTour} from "./vitalsTour.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+import { openEnergyMenu } from "./energy-menu.js"; // adjust relative path
+
 // match your deployed region for callables
 const functions = getFunctions(undefined, "europe-west2");
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Constants
+   ──────────────────────────────────────────────────────────────────────────── */
+const MS_PER_DAY = 86_400_000;
+const CORE_DAYS  = 30.44; // All-Time cycle
+const CORE_LABEL = "Current"; // change to "Core" if preferred
 
 export async function refreshVitals() {
   const fn = httpsCallable(functions, "vitals_getSnapshot");
@@ -49,8 +58,6 @@ export async function getEssenceAvailableMonthlyFromHUD(uid) {
     const res = await fn();
     return Number(res?.data?.available || 0);
   } catch {
-    // fallback to previous local logic if the callable isn't deployed yet
-    // (leaving your existing local implementation in place below is fine)
     return 0;
   }
 }
@@ -86,15 +93,12 @@ let unsubPlayer = null;
 
 function collapseActionsIfNeeded() {
   if (!titleEl || !actionsEl) return;
-  // start expanded
   actionsEl.classList.remove('is-collapsed');
-  // measure overflow
   const overflows = titleEl.scrollWidth > titleEl.clientWidth;
   const tinyScreen = window.innerWidth < 420;
   const nameLen = (titleEl.textContent || '').length;
   const shouldCollapse = overflows || (tinyScreen && nameLen >= COLLAPSE_LEN_HINT);
   actionsEl.classList.toggle('is-collapsed', shouldCollapse);
-  // reflect sandwich presence
   if (moreBtn) moreBtn.style.display = actionsEl.classList.contains('is-collapsed') ? 'inline-flex' : 'none';
 }
 
@@ -107,7 +111,6 @@ function wireMoreMenu() {
       moreMenu.hidden = isOpen;
       moreBtn.setAttribute('aria-expanded', String(!isOpen));
     });
-    // proxy clicks back to the original buttons (no regression)
     moreMenu.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-proxy]');
       if (!btn) return;
@@ -117,7 +120,6 @@ function wireMoreMenu() {
       moreMenu.hidden = true;
       moreBtn.setAttribute('aria-expanded', 'false');
     });
-    // close on outside click
     document.addEventListener('click', (e) => {
       if (!moreMenu.hidden && !moreMenu.contains(e.target) && e.target !== moreBtn) {
         moreMenu.hidden = true;
@@ -137,16 +139,13 @@ export async function startAliasListener(uid) {
     const raw = (snap.exists() && typeof snap.data().alias === "string")
       ? snap.data().alias.trim()
       : "";
-    // UI cap to avoid absurdly long names; full value still shown in title tooltip
     const capped = raw.length > MAX_ALIAS_LEN ? raw.slice(0, MAX_ALIAS_LEN) : raw;
     titleEl.textContent = capped || DEFAULT_TITLE;
     titleEl.title = raw || DEFAULT_TITLE;
 
-    // length-based step downs
     titleEl.classList.toggle('is-gt10', (capped.length > 10));
     titleEl.classList.toggle('is-gt12', (capped.length > 12));
 
-    // collapse if needed after paint
     requestAnimationFrame(collapseActionsIfNeeded);
   }, (err) => {
     console.warn("Alias listener error:", err);
@@ -154,7 +153,6 @@ export async function startAliasListener(uid) {
     requestAnimationFrame(collapseActionsIfNeeded);
   });
 
-  // re-evaluate on resize
   window.addEventListener('resize', () => requestAnimationFrame(collapseActionsIfNeeded));
 }
 
@@ -184,35 +182,94 @@ export async function startLevelListener(uid) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   View mode helpers
+   View mode helpers  (core vs focus; Focus = Daily | Weekly only)
    ──────────────────────────────────────────────────────────────────────────── */
-const VIEW_MODES   = ["daily", "weekly", "monthly"];
-const VIEW_FACTORS = { daily: 1, weekly: 7, monthly: 30.44 };
+const VIEW_MODES   = ["daily", "weekly"];        // no monthly in Focus
+const VIEW_FACTORS = { daily: 1, weekly: 7 };
 
+// Human-facing labels while keeping internal keys stable
+const MODE_DISPLAY_LABEL = {
+  daily: "Today",
+  weekly: "This Week",
+  core:   CORE_LABEL, // "All-Time" by default
+};
+function displayLabelFor(mode) {
+  return MODE_DISPLAY_LABEL[String(mode).toLowerCase()] || mode;
+}
+
+// Primary context: "core" (All-Time 30.44) vs "focus" (daily/weekly)
+function getPrimaryMode() {
+  return localStorage.getItem("vitals:primary") || "core";
+}
+function setPrimaryMode(next) {
+  const v = (next === "core" || next === "focus") ? next : "core";
+  localStorage.setItem("vitals:primary", v);
+  repaintEngravingLabels();
+  window.dispatchEvent(new CustomEvent("vitals:primary", { detail: { primary: v }}));
+}
+
+// Focus sub-mode persistence
 export function getViewMode() {
-  return localStorage.getItem("vitals:viewMode") || "daily";
+  const primary = getPrimaryMode();
+  if (primary === "core") return "core";
+  const raw = localStorage.getItem("vitals:viewMode") || "daily";
+  // Gracefully coerce any legacy 'monthly' to 'weekly'
+  return (raw === "monthly") ? "weekly" : raw;
 }
 export function setViewMode(mode) {
   const next = VIEW_MODES.includes(mode) ? mode : "daily";
   localStorage.setItem("vitals:viewMode", next);
+  setPrimaryMode("focus");
 
-// Update the engravings tooltip instead of the left button
   const engrave = document.getElementById("mode-engrave");
   if (engrave) {
-    engrave.title = `View mode: ${next} — tap a rune to change`;
+    engrave.title = `View mode: ${displayLabelFor(next)} — tap a rune to change`;
   }
 
-  // Notify listeners + refresh UI
+  repaintEngravingLabels();
+
   window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: next }}));
   refreshBarGrids();
   updateModeEngrave(next);
 }
 export function cycleViewMode() {
-  const i = VIEW_MODES.indexOf(getViewMode());
-  setViewMode(VIEW_MODES[(i + 1) % VIEW_MODES.length]);
+  const current = getViewMode();
+  setViewMode(current === "daily" ? "weekly" : "daily");
 }
 
+/* Label writer for the two engraving buttons */
+function ucfirst(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
 
+/* Write visible labels into the two rune buttons */
+function repaintEngravingLabels() {
+  const coreBtn  = document.getElementById("engrave-core");
+  const focusBtn = document.getElementById("engrave-focus");
+
+  // Make sure legacy CSS hooks are present
+  if (coreBtn && !coreBtn.classList.contains("mode-btn"))  coreBtn.classList.add("mode-btn");
+  if (focusBtn && !focusBtn.classList.contains("mode-btn")) focusBtn.classList.add("mode-btn");
+
+  if (coreBtn) {
+    coreBtn.textContent  = MODE_DISPLAY_LABEL.core;
+    coreBtn.dataset.mode = "core";
+    coreBtn.setAttribute("aria-label", MODE_DISPLAY_LABEL.core);
+  }
+  if (focusBtn) {
+    const vm = getViewMode(); // daily|weekly (or 'core' if primary=core)
+    if (vm === "core") {
+      // When primary is 'core', leave focus button showing last focus mode
+      const raw = localStorage.getItem("vitals:viewMode") || "daily";
+      const coerced = (raw === "monthly") ? "weekly" : raw;
+      focusBtn.textContent  = `Focus: ${displayLabelFor(coerced)}`;
+      focusBtn.dataset.mode = coerced;
+      focusBtn.setAttribute("aria-label", `Focus: ${displayLabelFor(coerced)}`);
+    } else {
+      focusBtn.textContent  = `Focus: ${displayLabelFor(vm)}`;
+      focusBtn.dataset.mode = vm; // keep real key for CSS selectors
+      focusBtn.setAttribute("aria-label", `Focus: ${displayLabelFor(vm)}`);
+    }
+  }
+}
 
 /* ────────────────────────────────────────────────────────────────────────────
    Firestore normalizers
@@ -224,7 +281,7 @@ function normalizeTxn(docSnap) {
     amount: Number(d?.amount ?? 0), // negative = spend; positive = income
     dateMs: d?.dateMs ?? Date.now(),
     status: d?.status || "pending",
-    source: d?.source ?? null,   // <-- ADDED: expose source for filtering
+    source: d?.source ?? null,
     ghostExpiryMs: d?.ghostExpiryMs ?? 0,
     addedMs: d?.addedMs ?? d?.dateMs ?? Date.now(),
     provisionalTag: { pool: d?.provisionalTag?.pool ?? null, setAtMs: d?.provisionalTag?.setAtMs ?? null },
@@ -242,7 +299,6 @@ function normalizeTxn(docSnap) {
 //  Add Transaction
 
 export function autoInitAddSpendButton() {
-  // NEW: "Add Spend" — opens the Add Transaction modal directly
   const addBtn = document.getElementById('btn-add-spend');
   if (addBtn) {
     addBtn.addEventListener('click', (e) => {
@@ -252,29 +308,40 @@ export function autoInitAddSpendButton() {
       });
     });
   }
-
-
-
 }
 
 // Stub - Social button
+// after you load energy-menu.js on the page (see script tags below), this will exist:
+// /js/hud/modules/vitals.js (or wherever your module lives)
+
+
+export function autoInitAddEnergyButton() {
+  const btn = document.getElementById("left-btn");
+  if (!btn) return;
+  btn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      await openEnergyMenu();
+    } catch (err) {
+      console.error("Failed to open Energy Menu:", err);
+    }
+  });
+}
+
+
+
+// Stub - Social button
 export function autoInitAddSocialButton() {
-  // NEW: "Add Spend" — opens the Add Transaction modal directly
   const btn = document.getElementById('right-btn');
   if (btn) {
     btn.addEventListener('click', (e) => {
       e.preventDefault(); 
-      // Open Menu Page
       window.MyFiModal.openChildItem(window.MyFiSocialMenu, 'home', { 
           menuTitle: 'Social' 
       });
-
     });
   }
-
-
 }
-
 
 /* ────────────────────────────────────────────────────────────────────────────
    History modal (unchanged)
@@ -284,9 +351,7 @@ function friendlySourceLabel(mode) {
 }
 async function getHistorySourceFilter(uid) {
   const mode = await getVitalsMode(uid);
-  // Base source by mode (stream-aware)
   const base = (mode === 'true') ? 'truelayer' : 'manual';
-  // Always include contributions (mode-agnostic)
   const sources = [base, 'stripe', 'manual_bank'];
   return { mode, sources };
 }
@@ -450,7 +515,6 @@ async function getVitalsMode(uid) {
   return 'standard';
 }
 
-
 /* ────────────────────────────────────────────────────────────────────────────
    2) Static HUD paint — seed before first spend; truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
@@ -462,10 +526,13 @@ export async function loadVitalsToHUD(uid) {
   const cur = snap.data() || {};
   const pools = cur.pools || {};
   const elements = getVitalsElements();
-  const factor = VIEW_FACTORS[getViewMode()];
-  // Enable regen-rate peeking for this snapshot
-  installRatePeekHandlers(elements, pools, getViewMode());
 
+  // Resolve factor: treat "core" as monthly (30.44)
+  const vm = getViewMode();
+  const factor = (vm === 'core') ? CORE_DAYS : VIEW_FACTORS[vm];
+
+  // Enable regen-rate peeking for this snapshot
+  installRatePeekHandlers(elements, pools, vm === 'core' ? 'core' : vm);
 
   // Use server-provided timing + mode/carry/seed
   const days    = Number(cur.elapsedDays || 0);
@@ -483,7 +550,6 @@ export async function loadVitalsToHUD(uid) {
 
     const T = Math.max(0, (Number(v.regenCurrent || 0) * days) - ((Number(v.spentToDate || 0)) + carryFor(pool)));
     const rNow = cap > 0 ? ((T % cap) + cap) % cap : 0;
-    const sNow = cap > 0 ? Math.floor(T / cap) : 0;
 
     const pct = cap > 0 ? (rNow / cap) * 100 : 0;
     el.fill.style.width = `${pct}%`;
@@ -491,7 +557,11 @@ export async function loadVitalsToHUD(uid) {
     const showRate = el.value.classList.contains('is-rate');
     const rateText = el.value.__rateText || normalText;
     el.value.innerText = showRate ? rateText : normalText;
-    setSurplusPill(el, sNow, sNow);
+
+    // Core pill shows *surplus days beyond a 30.44-day cycle*.
+    const daily = Number(v.regenBaseline || 0);
+    const surplusNowDays = (daily > 0) ? Math.floor(Math.max(0, (T - cap)) / daily) : 0;
+    setSurplusPill(el, surplusNowDays, surplusNowDays);
 
     if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
       sumCurrent += rNow;
@@ -512,7 +582,6 @@ export async function loadVitalsToHUD(uid) {
    3) Animated HUD — truth uses calc-start + carry
    ──────────────────────────────────────────────────────────────────────────── */
 
-
 export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const db = getFirestore();
   const snap = await getDoc(doc(db, `players/${uid}/cashflowData/current`));
@@ -523,38 +592,39 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const elements = getVitalsElements();
   ensureGridLayers(elements);
   ensureReclaimLayers(elements);
-  // Wire regen-rate peeking (uses server-provided pools)
-  installRatePeekHandlers(elements, pools, getViewMode());
-
+  {
+    const vm = getViewMode();
+    installRatePeekHandlers(elements, pools, vm === 'core' ? 'core' : vm);
+  }
 
   const days0   = Number(cur.elapsedDays || 0);
   const mode    = String(cur.mode || 'standard').toLowerCase();
 
   const seedOffset = cur.seedOffset || cur.seedCarry || {}; // legacy fallback
   const carryFor = (pool) => (mode === 'true' ? 0 : Number(seedOffset?.[pool] || 0));
+  
+
 
   // STREAM-AWARE: only track pending tx from the active stream
   const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
 
-  // Authoritative truth T at t0; animation is client-side smoothing only.
+  // Truth at t0
   const truth = {};
   const regenPerSec = {};
   for (const pool of Object.keys(pools)) {
     const v = pools[pool];
-
     truth[pool] = Math.max(
       0,
       (Number(v.regenCurrent || 0) * days0) - ((Number(v.spentToDate || 0)) + carryFor(pool))
     );
-    // per-sec from daily
     regenPerSec[pool] = Number(v.regenCurrent || 0) * (timeMultiplier / 86_400);
   }
 
   // Bind the debounced locker to this user
   __triggerLockSoon = debounce(async () => {
     try {
-      await lockExpiredOrOverflow(uid, 50); // server confirms due + overflow
-      await refreshVitals();                // pull fresh snapshot for HUD + logs
+      await lockExpiredOrOverflow(uid, 50);
+      await refreshVitals();
     } catch (e) {
       console.warn("lock/refresh failed:", e);
     }
@@ -565,10 +635,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   const pendingQ = query(
     collection(db, `players/${uid}/classifiedTransactions`),
     where("status", "==", "pending"),
-    where("source", "==", desiredSource) // <— only active stream
+    where("source", "==", desiredSource)
   );
   onSnapshot(pendingQ, (shot) => {
-    const now = Date.now();
     pendingTx = shot.docs.map(d => {
       const x = d.data() || {};
       return {
@@ -581,8 +650,6 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
         transactionData: { description: x?.transactionData?.description || '' },
       };
     });
-    // If you want to hide already-expired ghosts locally, add:
-    // .filter(tx => now < tx.ghostExpiryMs);
   });
 
   window.addEventListener("vitals:locked", (e) => {
@@ -592,17 +659,82 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     }
   });
 
-  let viewMode = getViewMode();
+  let viewMode = getViewMode(); // 'core' or Focus mode
 
+  // ── Focus window caching (so we don’t query Firestore every animation frame)
+  let focusSpend = { health:0, mana:0, stamina:0, essence:0 };
+  let focusStart = 0, focusEnd = 0, focusDays = 1, lastFetchMs = 0;
+
+  function getFocusPeriodBounds(mode /* 'daily' | 'weekly' */) {
+    const now = new Date();
+    let start, end;
+    const m = String(mode).toLowerCase();
+    if (m === 'daily') {
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      end   = start + MS_PER_DAY;
+    } else { // weekly
+      const dow = (now.getDay() + 6) % 7; // 0=Mon
+      const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+      start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()).getTime();
+      end   = start + 7*MS_PER_DAY;
+    }
+    return [start, end];
+  }
+
+
+  async function fetchConfirmedSpendInRange(startMs, endMs) {
+    const col = collection(db, `players/${uid}/classifiedTransactions`);
+    const qy = query(
+      col,
+      where("status", "==", "confirmed"),
+      where("source", "==", desiredSource),
+      where("dateMs", ">=", startMs),
+      where("dateMs", "<",  endMs),
+      orderBy("dateMs", "asc")
+    );
+    const snap = await getDocs(qy);
+    const sums = { health:0, mana:0, stamina:0, essence:0 };
+    snap.forEach(d => {
+      const x = d.data() || {};
+      const alloc = x.appliedAllocation || {};
+      sums.health  += Number(alloc.health  || 0);
+      sums.mana    += Number(alloc.mana    || 0);
+      sums.stamina += Number(alloc.stamina || 0);
+      sums.essence += Number(alloc.essence || 0);
+    });
+    return {
+      health:  Number(sums.health.toFixed(2)),
+      mana:    Number(sums.mana.toFixed(2)),
+      stamina: Number(sums.stamina.toFixed(2)),
+      essence: Number(sums.essence.toFixed(2)),
+    };
+  }
+
+  async function refreshFocusCacheIfNeeded() {
+    if (viewMode === 'core') return;
+    const [s, e] = getFocusPeriodBounds(viewMode);
+    const stale = (Date.now() - lastFetchMs) > 15000 || s !== focusStart || e !== focusEnd;
+    if (!stale) return;
+    focusStart = s; focusEnd = e;
+    focusDays = Math.max(1, (e - s) / MS_PER_DAY);
+    focusSpend = await fetchConfirmedSpendInRange(s, e);
+    lastFetchMs = Date.now();
+    repaintEngravingLabels(); // keep "Focus: X" label feeling live
+  }
+
+  // Background refresh for Focus period numbers
+  setInterval(() => { refreshFocusCacheIfNeeded(); }, 5000);
+  await refreshFocusCacheIfNeeded();
+
+  // Ghost preview helpers (unchanged)
   function allocateSpendAcrossPools(spend, intent, availTruth) {
     const out = { health:0, mana:0, stamina:0, essence:0 };
     if (spend <= 0) return out;
-
     if (intent === "mana") {
       const toMana = Math.min(spend, Math.max(0, availTruth.mana));
       if (toMana > 0) { out.mana += toMana; availTruth.mana -= toMana; }
       const leftover = spend - toMana;
-      if (leftover > 0) out.health += leftover; // overflow→health (parity)
+      if (leftover > 0) out.health += leftover;
       return out;
     }
     const toStamina = Math.min(spend, Math.max(0, availTruth.stamina));
@@ -656,18 +788,15 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
     if (last === null) last = ts;
     const dt = (ts - last) / 1000; last = ts;
 
-    // Animate truth by regen
     for (const p of Object.keys(truth)) {
       truth[p] = Math.max(0, truth[p] + regenPerSec[p] * dt);
     }
 
-    // Ghost preview application
     const availTruth = { ...truth };
     let pendingTotals = { health:0, mana:0, stamina:0, essence:0 };
     const now = Date.now();
     const ordered = [...pendingTx].sort((a,b)=>a.dateMs - b.dateMs);
 
-    // (A) live countdown tick (emit once per second)
     window.__myfi_lastTickSec ??= 0;
     const sec = Math.floor(now / 1000);
     if (sec !== window.__myfi_lastTickSec) {
@@ -679,15 +808,11 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       window.dispatchEvent(new CustomEvent("tx:expiry-tick", { detail: { ticks } }));
     }
 
-    // (B) compute preview + detect expiry
     let hasLocalExpiry = false;
     for (const tx of ordered) {
       const ttl = (tx.ghostExpiryMs - now);
-      if (ttl <= 0) {
-        hasLocalExpiry = true; // crossed 0: ask server to confirm asap
-        continue;              // exclude from preview immediately
-      }
-      if (tx.amount >= 0) continue; // only spending affects ghosts
+      if (ttl <= 0) { hasLocalExpiry = true; continue; }
+      if (tx.amount >= 0) continue;
       const spend  = Math.abs(tx.amount);
       const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
       const split  = allocateSpendAcrossPools(spend, intent, availTruth);
@@ -699,57 +824,114 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
       };
     }
 
-    // (C) trigger server lock + refresh if any expired just now
     if (hasLocalExpiry && __triggerLockSoon) __triggerLockSoon();
 
-    const factor = VIEW_FACTORS[viewMode];
+    const vmLocal = viewMode;
+
+    // Focus view: make sure spend cache is fresh-ish
+    if (vmLocal !== 'core') { refreshFocusCacheIfNeeded(); }
+
     let sumCurrent = 0;
     let sumMax = 0;
 
     for (const pool of Object.keys(pools)) {
       const el = elements[pool]; if (!el) continue;
       const v  = pools[pool];
-      const cap = (Number(v.regenBaseline || 0)) * factor || 0;
 
-      const T = truth[pool];
-      const L = pendingTotals[pool] || 0;
+      if (vmLocal === 'core') {
+        // All-Time core – 30.44 model + pills + ghost overlay
+        const cap = (Number(v.regenBaseline || 0)) * CORE_DAYS || 0;
+        const T = truth[pool];
+        const L = pendingTotals[pool] || 0;
 
-      const proj = applyRemainderFirst(T, cap, L);
+        const proj = applyRemainderFirst(T, cap, L);
 
-      const useProjected = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
-      const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
-      el.fill.style.width = `${pct}%`;
+        const useProjected = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+        const pct = cap > 0 ? ((useProjected ? proj.rAfter : proj.rNow) / cap) * 100 : 0;
+        el.fill.style.width = `${pct}%`;
 
-      const normalText = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
-      const showRate = el.value.classList.contains('is-rate');
-      const rateText = el.value.__rateText || normalText;
-      el.value.innerText = showRate ? rateText : normalText;
-      enableGhostOverlaySoon();
+        const normalText = `${proj.rAfter.toFixed(2)} / ${cap.toFixed(2)}`;
+        const showRate = el.value.classList.contains('is-rate');
+        const rateText = el.value.__rateText || normalText;
+        el.value.innerText = showRate ? rateText : normalText;
+        enableGhostOverlaySoon();
 
-      setSurplusPill(el, proj.sNow, proj.sAfter);
+        const daily = Number(v.regenBaseline || 0);
+        const T_now   = (proj.sNow   * cap) + proj.rNow;
+        const T_after = (proj.sAfter * cap) + proj.rAfter;
+        const surplusNowDays   = daily > 0 ? Math.floor(Math.max(0, (T_now   - cap)) / daily) : 0;
+        const surplusAfterDays = daily > 0 ? Math.floor(Math.max(0, (T_after - cap)) / daily) : 0;
+        setSurplusPill(el, surplusNowDays, surplusAfterDays);
 
-      const barEl = el.fill.closest('.bar');
-      const reclaimEl = barEl.querySelector('.bar-reclaim');
+        const barEl = el.fill.closest('.bar');
+        const reclaimEl = barEl.querySelector('.bar-reclaim');
+        const showGhost = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
+        if (showGhost) {
+          reclaimEl.style.left    = `${Math.max(0, Math.min(100, proj.ghostLeftPct)).toFixed(2)}%`;
+          reclaimEl.style.width   = `${Math.max(0, Math.min(100, proj.ghostWidthPct)).toFixed(2)}%`;
+          reclaimEl.style.opacity = '1';
+        } else {
+          reclaimEl.style.opacity = '0';
+          reclaimEl.style.width   = '0%';
+        }
 
-      const showGhost = allowGhostOverlay && cap > 0 && L > 0.0001 && proj.ghostWidthPct > 0.01;
-
-      if (showGhost) {
-        reclaimEl.style.left    = `${Math.max(0, Math.min(100, proj.ghostLeftPct)).toFixed(2)}%`;
-        reclaimEl.style.width   = `${Math.max(0, Math.min(100, proj.ghostWidthPct)).toFixed(2)}%`;
-        reclaimEl.style.opacity = '1';
+        if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+          sumCurrent += useProjected ? proj.rAfter : proj.rNow;
+          sumMax     += cap;
+        }
       } else {
-        reclaimEl.style.opacity = '0';
-        reclaimEl.style.width   = '0%';
+        // Focus (Daily/Weekly/Monthly)
+        const daysInPeriod = focusDays || VIEW_FACTORS[vmLocal];
+        const cap   = (Number(v.regenBaseline || 0)) * daysInPeriod || 0;
+        const spent = Number(focusSpend?.[pool] || 0);
+
+        // Remaining before ghosts
+        let current = cap - spent;
+        if (!Number.isFinite(current)) current = 0;
+        current = Math.max(0, Math.min(cap, current));
+
+        const pct = cap > 0 ? (current / cap) * 100 : 0;
+        el.fill.style.width = `${pct}%`;
+
+        const normalText = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
+        const showRate = el.value.classList.contains('is-rate');
+        const rateText = el.value.__rateText || normalText;
+        el.value.innerText = showRate ? rateText : normalText;
+
+        // Hide pills in Focus
+        setSurplusPill(el, 0, 0);
+
+        // SHOW reclaim overlay in Focus (simple clip – no wrap)
+        const barEl = el.fill.closest('.bar');
+        const reclaimEl = barEl.querySelector('.bar-reclaim');
+        if (reclaimEl) {
+          const L = Math.max(0, Number(pendingTotals[pool] || 0));
+          if (cap > 0 && L > 0.0001 && current > 0.0001) {
+            // amount of current that would be eaten by pending
+            const eat = Math.min(L, current);
+            const leftPct  = ((current - eat) / cap) * 100;
+            const widthPct = (eat / cap) * 100;
+            reclaimEl.style.left    = `${Math.max(0, Math.min(100, leftPct)).toFixed(2)}%`;
+            reclaimEl.style.width   = `${Math.max(0, Math.min(100, widthPct)).toFixed(2)}%`;
+            reclaimEl.style.opacity = '1';
+          } else {
+            reclaimEl.style.opacity = '0';
+            reclaimEl.style.width   = '0%';
+          }
+        }
+
+        if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
+          sumCurrent += current;
+          sumMax     += cap;
+        }
+
       }
 
+      // Trend colouring (shared)
+      const barEl = el.fill.closest('.bar');
       barEl.classList.remove("overspending","underspending");
       if (v.trend === "overspending")  barEl.classList.add("overspending");
       if (v.trend === "underspending") barEl.classList.add("underspending");
-
-      if (pool === 'health' || pool === 'mana' || pool === 'stamina') {
-        sumCurrent += useProjected ? proj.rAfter : proj.rNow;
-        sumMax     += cap;
-      }
     }
 
     setVitalsTotals(sumCurrent, sumMax);
@@ -758,13 +940,23 @@ export async function initVitalsHUD(uid, timeMultiplier = 1) {
   requestAnimationFrame(frame);
 
   window.addEventListener("vitals:viewmode", (e) => {
-    const next = e?.detail?.mode || "daily";
-    viewMode = VIEW_MODES.includes(next) ? next : "daily";
-    allowGhostOverlay = false;          // re-gate overlay for new caps
+    const raw = e?.detail?.mode || "daily";
+    viewMode = (raw === 'core' || VIEW_MODES.includes(raw)) ? raw : "daily";
+    allowGhostOverlay = false;
     enableGhostOverlaySoon();
     refreshBarGrids();
-    // NEW: keep regen-rate peek text in sync with the new mode
-    updateRatePeekTexts(elements, pools, viewMode);
+    updateRatePeekTexts(elements, pools, viewMode === 'core' ? 'core' : viewMode);
+    repaintEngravingLabels();
+    // Refresh focus window immediately when switching into focus
+    if (viewMode !== 'core') { lastFetchMs = 0; refreshFocusCacheIfNeeded(); }
+  });
+
+  window.addEventListener("vitals:primary", () => {
+    const vmNow = getViewMode();
+    refreshBarGrids();
+    updateRatePeekTexts(elements, pools, vmNow === 'core' ? 'core' : vmNow);
+    repaintEngravingLabels();
+    if (vmNow !== 'core') { lastFetchMs = 0; refreshFocusCacheIfNeeded(); }
   });
 
   // Vitals Tour remains unchanged
@@ -783,7 +975,6 @@ export function listenUpdateLogPending(uid, cb) {
     limit(5)
   );
   return onSnapshot(qy, (snap) => {
-    // const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
     const items = snap.docs.map(normalizeTxn);
     cb(items);
   });
@@ -805,7 +996,6 @@ export function listenRecentlyConfirmed(uid, lookbackMs = 24 * 60 * 60 * 1000, c
     limit(5)
   );
   return onSnapshot(qy, (snap) => {
-    // const items = snap.docs.map(d => ({ id: d.id, ...normalizeTxn(d) }));
     const items = snap.docs.map(normalizeTxn);
     cb(items);
   });
@@ -942,10 +1132,8 @@ export function autoInitUpdateLog() {
     if (!user) return;
     const uid = user.uid;
 
-    // BEGIN stream filter: choose list source by vitals mode
     const mode = await getVitalsMode(uid); // relaxed|standard|focused|true
     const desiredSource = (mode === 'true') ? 'truelayer' : 'manual';
-    // END stream filter
 
     function setActiveButtons(li, pool) {
       const buttons = li.querySelectorAll(".tag-btn");
@@ -957,7 +1145,6 @@ export function autoInitUpdateLog() {
 
     if (listEl) {
       listenUpdateLogPending(uid, (items) => {
-        // Allow active stream AND contributions from any provider
         const allowed = new Set([desiredSource, "stripe", "manual_bank"]);
         const filtered = items.filter(x => allowed.has(x.source));
 
@@ -973,10 +1160,8 @@ export function autoInitUpdateLog() {
           const li = document.createElement("li");
           li.setAttribute('data-tx', tx.id);
 
-          // STEP 2: treat contributions as read-only (Essence-only)
           const isContribution = (tx.source === "stripe" || tx.source === "manual_bank");
 
-          // STEP 3: guard countdown when no ghostExpiryMs present
           const nowMs    = Date.now();
           const hasTTL   = Number.isFinite(Number(tx.ghostExpiryMs));
           const secsLeft = hasTTL ? Math.max(0, Math.floor((Number(tx.ghostExpiryMs) - nowMs) / 1000)) : 0;
@@ -986,7 +1171,6 @@ export function autoInitUpdateLog() {
           const name = tx.transactionData?.description || "Transaction";
           const amt  = Number(tx.amount).toFixed(2);
 
-          // For non-contribution pendings, show tag buttons as before
           const tag = tx.provisionalTag?.pool ?? "stamina";
           const actionsHtml = isContribution
             ? `
@@ -996,13 +1180,11 @@ export function autoInitUpdateLog() {
             `
             : `
               <div class="ul-actions two">
-                <!-- SWAPPED ORDER + SHORT LABELS -->
                 <button class="tag-btn" data-pool="mana"     title="Mana"     aria-label="Mana">M</button>
                 <button class="tag-btn" data-pool="stamina"  title="Stamina"  aria-label="Stamina">S</button>
               </div>
             `;
 
-          // Keep countdown span (even for contributions) so tick handler is robust
           li.innerHTML = `
             <div class="ul-row">
               <div class="ul-main">
@@ -1015,7 +1197,6 @@ export function autoInitUpdateLog() {
             </div>
           `;
 
-          // Only wire tag buttons for NON-contribution pending items
           if (!isContribution) {
             setActiveButtons(li, tag);
             li.querySelectorAll(".tag-btn").forEach(btn => {
@@ -1038,7 +1219,6 @@ export function autoInitUpdateLog() {
         });
       });
 
-      // Live countdown updates for pending rows
       window.addEventListener("tx:expiry-tick", (e) => {
         const ticks = e?.detail?.ticks || [];
         for (const { id, seconds } of ticks) {
@@ -1056,7 +1236,6 @@ export function autoInitUpdateLog() {
 
     if (recentEl) {
       listenRecentlyConfirmed(uid, 24 * 60 * 60 * 1000, (items) => {
-        // Allow active stream AND contributions from any provider
         const allowed = new Set([desiredSource, 'stripe', 'manual_bank']);
         const filtered = items.filter(x => allowed.has(x.source));
 
@@ -1113,7 +1292,6 @@ export function autoInitUpdateLog() {
   });
 }
 
-
 /* ────────────────────────────────────────────────────────────────────────────
    DOM helpers
    ──────────────────────────────────────────────────────────────────────────── */
@@ -1131,16 +1309,41 @@ function getVitalsElements() {
   return map;
 }
 
-function setSurplusPill(el, countNow, countAfter) {
+// ── Surplus pill style toggle: "days" => "+11"; "dwm" => "+1M +2W +1D"
+const SURPLUS_PILL_STYLE = "days";
+function formatSurplusDWM(daysFloat) {
+  const M_AVG = CORE_DAYS;
+  let whole = Math.max(0, Math.floor(daysFloat));
+  const M = Math.floor(whole / M_AVG); whole -= Math.floor(M * M_AVG);
+  const W = Math.floor(whole / 7);     whole -= W * 7;
+  const D = Math.floor(whole);
+  const parts = [];
+  if (M > 0) parts.push(`+${M}M`);
+  if (W > 0) parts.push(`+${W}W`);
+  if (D > 0 || parts.length === 0) parts.push(`+${D}D`);
+  return parts.join(' ');
+}
+function surplusText(daysFloat) {
+  if (SURPLUS_PILL_STYLE === "dwm") return formatSurplusDWM(daysFloat);
+  return `+${Math.max(0, Math.floor(daysFloat))}`;
+}
+
+// UPDATED: expects *days* numbers; only shows in Core
+function setSurplusPill(el, daysNow, daysAfter) {
   const pill = el.pill; if (!pill) return;
+
+  const isCore = (getPrimaryMode() === 'core');
 
   const barEl = pill.closest('.bar');
   if (barEl) {
-    barEl.classList.toggle('has-surplus', (countAfter || 0) > 0);
+    const anyAfter = isCore && (Number(daysAfter || 0) > 0);
+    barEl.classList.toggle('has-surplus', anyAfter);
   }
 
-  const shouldShow = (countNow || 0) > 0 || (countAfter || 0) > 0;
-  if (!shouldShow) {
+  const anyNow   = isCore && (Number(daysNow   || 0) > 0);
+  const anyAfter = isCore && (Number(daysAfter || 0) > 0);
+
+  if (!anyNow && !anyAfter) {
     pill.style.display = "none";
     pill.textContent = "";
     pill.classList.remove("with-next","pill-up","pill-down");
@@ -1148,15 +1351,17 @@ function setSurplusPill(el, countNow, countAfter) {
   }
 
   pill.style.display = "inline-flex";
-
   pill.classList.remove("pill-up","pill-down");
-  if (typeof countAfter === "number" && typeof countNow === "number" && countAfter !== countNow) {
-    if (countAfter > countNow) pill.classList.add("pill-up");
-    else                       pill.classList.add("pill-down");
-    pill.textContent = `×${Math.max(0,countNow)} → ×${Math.max(0,countAfter)}`;
+
+  const nowTxt = surplusText(daysNow);
+  const aftTxt = surplusText(daysAfter);
+
+  if (isCore && typeof daysAfter === "number" && typeof daysNow === "number" && daysAfter !== daysNow) {
+    if (daysAfter > daysNow) pill.classList.add("pill-up"); else pill.classList.add("pill-down");
+    pill.textContent = `${nowTxt} → ${aftTxt}`;
     pill.classList.add("with-next");
   } else {
-    pill.textContent = `×${Math.max(0,countNow)}`;
+    pill.textContent = nowTxt;
     pill.classList.remove("with-next");
   }
 }
@@ -1172,7 +1377,8 @@ function ensureReclaimLayers(elements) {
   }
 }
 function ensureGridLayers(elements) {
-  const days = VIEW_FACTORS[getViewMode()];
+  const vm = getViewMode();
+  const days = (vm === 'core') ? CORE_DAYS : VIEW_FACTORS[vm];
   for (const p of Object.keys(elements)) {
     const bar = elements[p]?.fill?.closest('.bar'); if (!bar) continue;
     let grid = bar.querySelector('.bar-grid');
@@ -1193,6 +1399,8 @@ function paintBarGrid(gridEl, days) {
   }
 }
 function refreshBarGrids() {
+  const vm = getViewMode();
+  const days = (vm === 'core') ? CORE_DAYS : VIEW_FACTORS[vm];
   const pools = ["health","mana","stamina","essence"];
   for (const p of pools) {
     const root = document.querySelector(`#vital-${p}`);
@@ -1203,17 +1411,23 @@ function refreshBarGrids() {
       grid = document.createElement('div'); grid.className = 'bar-grid';
       const fill = bar.querySelector('.bar-fill'); bar.insertBefore(grid, fill);
     }
-    paintBarGrid(grid, VIEW_FACTORS[getViewMode()]);
+    paintBarGrid(grid, days);
   }
 }
+/* Toggle the ‘is-active’ class exactly how legacy CSS expects */
 function updateModeEngrave(mode = getViewMode()){
-  const row = document.getElementById('mode-engrave'); if (!row) return;
+  const coreBtn  = document.getElementById('engrave-core');
+  const focusBtn = document.getElementById('engrave-focus');
+  if (!coreBtn || !focusBtn) return;
+
   const key = String(mode).toLowerCase();
-  row.querySelectorAll('.mode-btn').forEach(btn => {
-    const is = btn.dataset.mode === key;
-    btn.classList.toggle('is-active', is);
-    btn.setAttribute('aria-selected', is ? 'true' : 'false');
-  });
+  const isCore = (key === 'core');
+
+  // Set data-mode on focus to the current submode so your CSS tint works
+  if (!isCore) focusBtn.dataset.mode = key;
+
+  coreBtn.classList.toggle('is-active', isCore);
+  focusBtn.classList.toggle('is-active', !isCore);
 }
 
 function formatNum(n){ return (Math.round(n)||0).toLocaleString('en-GB'); }
@@ -1235,17 +1449,15 @@ function setVitalsTotals(currentTotal, maxTotal){
 function rateTextForMode(regenCurrentPerDay, mode = getViewMode()) {
   const perDay = Number(regenCurrentPerDay || 0);
   switch (String(mode).toLowerCase()) {
-    case 'daily':   return `+${(perDay/24).toFixed(2)}/hr`;   // show hourly
-    case 'weekly':  return `+${(perDay).toFixed(2)}/day`;     // show daily
-    case 'monthly': return `+${(perDay*7).toFixed(2)}/wk`;    // show weekly
+    case 'daily':   return `+${(perDay/24).toFixed(2)}/hr`;
+    case 'weekly':  return `+${(perDay).toFixed(2)}/day`;
+    case 'core':    return `+${(perDay*7).toFixed(2)}/wk`;
     default:        return `+${(perDay/24).toFixed(2)}/hr`;
   }
 }
 
 /**
  * Compute and stash rate texts on each bar-value, and wire hover/tap to peek them.
- * - Desktop: on pointerenter we swap to rate; pointerleave restores.
- * - Mobile: on touchstart/click we show rate for ~1.5s then restore.
  */
 function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
   const POOLS = Object.keys(pools || {});
@@ -1254,18 +1466,15 @@ function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
     const v  = pools[p] || {};
     const rate = rateTextForMode(v.regenCurrent, mode);
 
-    // Stash originals + computed alt
     el.value.__origText = el.value.textContent;
     el.value.__rateText = rate;
-    el.value.title = `Regen: ${rate}`;  // native tooltip on desktop
+    el.value.title = `Regen: ${rate}`;
 
-    // Guard: only wire once
     if (el.value.__rateWired) continue;
     el.value.__rateWired = true;
 
     const bar = el.value.closest('.bar');
 
-    // swap helpers
     const show = () => {
       if (!el.value) return;
       el.value.textContent = el.value.__rateText;
@@ -1277,13 +1486,11 @@ function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
       el.value.classList.remove('is-rate');
     };
 
-    // Desktop hover/focus
     bar.addEventListener('pointerenter', show);
     bar.addEventListener('pointerleave', hide);
     bar.addEventListener('focusin', show);
     bar.addEventListener('focusout', hide);
 
-    // Mobile quick peek (tap)
     let tapTimer = null;
     bar.addEventListener('click', () => {
       show();
@@ -1298,60 +1505,73 @@ function installRatePeekHandlers(elements, pools, mode = getViewMode()) {
   }
 }
 
-/** Recompute texts when the view mode changes (e.g., Daily→Weekly). */
 function updateRatePeekTexts(elements, pools, mode = getViewMode()) {
   for (const p of Object.keys(pools || {})) {
     const el = elements[p]; if (!el?.value) continue;
     const v  = pools[p] || {};
     el.value.__rateText = rateTextForMode(v.regenCurrent, mode);
-    // keep title in sync too
     el.value.title = `Regen: ${el.value.__rateText}`;
-    // if the user is currently peeking, refresh the visible text
     if (el.value.classList.contains('is-rate')) {
       el.value.textContent = el.value.__rateText;
     }
   }
 }
 
-
-
-
-
 /* ────────────────────────────────────────────────────────────────────────────
    Mode UI wiring
    ──────────────────────────────────────────────────────────────────────────── */
-(function () {
-  const run = () => {
+// (function () {
+//   const run = () => {
+//     // Ensure labels and classes are present from the start
+//     repaintEngravingLabels();
 
-    const engrave = document.getElementById("mode-engrave");
-    if (engrave) {
+//     const engrave = document.getElementById("mode-engrave");
+//     if (engrave) {
+//       const vm = getViewMode();
+//       const titleLabel = (vm === 'core') ? MODE_DISPLAY_LABEL.core : displayLabelFor(vm);
+//       engrave.title = `View mode: ${titleLabel} — tap a rune to change`;
+//     }
 
-        // reflect current mode in tooltip
-      engrave.title = `View mode: ${getViewMode()} — tap a rune to change`;
+//     const coreBtn  = document.getElementById("engrave-core");
+//     const focusBtn = document.getElementById("engrave-focus");
 
-      engrave.addEventListener("click", (ev) => {
-        const b = ev.target.closest(".mode-btn");
-        if (!b || !engrave.contains(b)) return;
-        const mode = b.dataset.mode;
-        if (mode) setViewMode(mode);
-      });
-      engrave.addEventListener("keydown", (ev) => {
-        if (ev.key !== "Enter" && ev.key !== " ") return;
-        const b = ev.target.closest(".mode-btn");
-        if (!b || !engrave.contains(b)) return;
-        ev.preventDefault();
-        const mode = b.dataset.mode;
-        if (mode) setViewMode(mode);
-      });
-    }
+//     if (coreBtn && !coreBtn.__wired) {
+//       coreBtn.__wired = true;
+//       coreBtn.addEventListener("click", () => {
+//         setPrimaryMode("core");
+//         window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: "core" }}));
+//         refreshBarGrids();
+//         updateModeEngrave("core");
+//         repaintEngravingLabels();
+//       });
+//       coreBtn.title = "All-Time (30.44-day cycle)";
+//     }
 
-    refreshBarGrids();
-    updateModeEngrave(getViewMode());
-  };
+//     if (focusBtn && !focusBtn.__wired) {
+//       focusBtn.__wired = true;
+//       focusBtn.addEventListener("click", () => {
+//         if (getPrimaryMode() === "core") {
+//           setPrimaryMode("focus");
+//           const vm2 = getViewMode(); // coerced daily|weekly
+//           window.dispatchEvent(new CustomEvent("vitals:viewmode", { detail: { mode: vm2 }}));
+//           updateModeEngrave(vm2);
+//         } else {
+//           cycleViewMode(); // toggles daily ↔ weekly
+//         }
+//         refreshBarGrids();
+//         repaintEngravingLabels();
+//       });
+//       const vm2 = getViewMode();
+//       focusBtn.title = `Focus (${displayLabelFor(vm2)}) — tap to cycle`;
+//     }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run, { once: true });
-  } else {
-    run();
-  }
-})();
+//     refreshBarGrids();
+//     updateModeEngrave(getViewMode());
+//   };
+
+//   if (document.readyState === "loading") {
+//     document.addEventListener("DOMContentLoaded", run, { once: true });
+//   } else {
+//     run();
+//   }
+// })();

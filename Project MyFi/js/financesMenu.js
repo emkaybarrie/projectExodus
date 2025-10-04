@@ -3,8 +3,8 @@
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
 import { auth, db } from './core/auth.js';
 import { initHUD } from './hud/hud.js';
-import { connectTrueLayerAccount, ensureTlConsentDialog } from './core/truelayer.js';
-import { openSmartReviewOverlay } from './smartReview.js'
+import { connectTrueLayerAccount, ensureTlConsentDialog } from '../energy/truelayer.js';
+// import { openSmartReviewOverlay } from '../energy/energy-verified.js'
 import {
   updateIncome, updateCoreExpenses, getDailyIncome, getDailyCoreExpenses
 } from './data/cashflowData.js';

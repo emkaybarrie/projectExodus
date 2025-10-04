@@ -8,7 +8,7 @@ import {
   startAliasListener,
   startLevelListener,
   
-} from "./modules/vitals.js";
+} from "../../energy/energy-vitals.js";
 
 export async function initHUD() {
   const userId = auth.currentUser.uid;

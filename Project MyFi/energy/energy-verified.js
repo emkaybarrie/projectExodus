@@ -1,4 +1,4 @@
-// smartreview.js — Smart Review overlay (frontend) — v9
+// energy-verified.js — Smart Review overlay (frontend) — v9
 // Changes (vs v8):
 // - Anchor row moved directly under the Title/Mode pills (top of sticky summary)
 // - Energy/Ember totals stay side-by-side on a single row (even width; on all breakpoints)
@@ -7,13 +7,15 @@
 // - Tap/click Net monthly row to toggle Daily/Weekly sliding in/out from below (animated)
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDocs, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, getDocs, collection, updateDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import  { openEnergyMenu, scopeCSS } from "./energy-menu.js"
+import { initHUD } from "../js/hud/hud.js";
 
 // ───────────────────────────────── CONFIG ─────────────────────────────────
 const SR_CFG = {
   useBackendAnalyze: false,
   useBackendSave:    false,
-  callRecompute:     true,
+  callRecompute:     false,
   devWriteRailsStub: true,
   endpoints: {
     analyzeUrl:   "https://smartreview-analyze-frxqsvlhwq-nw.a.run.app",
@@ -24,9 +26,9 @@ const SR_CFG = {
   lookbackMonthsGroup: 12,
   minOccurrences: 2,
   minConfidenceForAnchor: 0.25,
-  minAnchorAmountMajor: 20,
-  incomeCategories: ["Salary","Bonus","Stipend","Pension","Other"],
-  emberCategories:  ["Shelter","Energy","Internet","Insurance","Council Tax","Loan","Phone","Other"],
+  minAnchorAmountMajor: 50,
+  incomeCategories: ["Salary","Bonus","Pension", "Rental", "Investment","Other"],
+  emberCategories:  ["Shelter","Bills","Transport", "Groceries","Debts","Tax","Other"],
   onTelemetry: (evt, payload)=>{ /* console.log('[SR]', evt, payload); */ },
   showConfidenceBadges: false,
 };
@@ -36,10 +38,18 @@ const MONTHLY_MULT = { monthly:1, weekly:52/12, fortnightly:26/12, quarterly:4/1
 const GBP = n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
 
 let SR_NET_INLINE = true
+let SR_CREDIT_MODE = "essence" ; // 'essence' , 'allocate', 'health'
 
 // ───────────────────────────────── STYLE ─────────────────────────────────
 function ensureStyles(){
-  if (document.getElementById('sr-styles')) return;
+  const STYLE_ID = 'em-styles';      // for verified menu use: 'sr-styles'
+  const OVERLAY_ID = 'emOverlay';    // for verified menu use: 'srOverlay'
+
+  // 1) Remove any previous copy (prevents stale/duplicated rules)
+  const prev = document.getElementById(STYLE_ID);
+  if (prev) prev.remove();
+
+  // 2) Build (or fetch) your CSS as usual
   const css = `
   :root{
     --bg:#0f1118; --panel:#111827; --edge:#1f2937; --ink:#fff;
@@ -48,7 +58,7 @@ function ensureStyles(){
   }
   *{box-sizing:border-box}
   html,body{max-width:100%;overflow-x:hidden}
-  #srOverlay{position:fixed;inset:0;background:rgba(6,8,12,.88);
+  #emOverlay{position:fixed;inset:0;background:rgba(6,8,12,.88);
     backdrop-filter:saturate(120%) blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center}
   #srWrap{width:min(1120px,94vw);max-height:94vh;display:flex;flex-direction:column;
     border:1px solid #273142;border-radius:16px;background:var(--bg);color:var(--ink);
@@ -188,8 +198,8 @@ function ensureStyles(){
   }
   `;
   const style=document.createElement('style');
-  style.id='sr-styles';
-  style.textContent=css;
+  style.id=STYLE_ID;
+  style.textContent=scopeCSS(css, OVERLAY_ID);
   document.head.appendChild(style);
 }
 
@@ -267,7 +277,7 @@ function buildGroups(processed, monthsGroup){
     const amount = Number(x.amount ?? x.amountMajor ?? 0);
     const td = x.transactionData || {};
     const name = normName(td.description || td.merchantName || x.label || x.counterparty || '');
-    return { ts:x.ts, amt:amount, name };
+    return { id: x.id, ts:x.ts, amt:amount, name };
   }).filter(t => Number.isFinite(t.ts) && t.ts>=cutoff);
 
   const groups = new Map();
@@ -275,7 +285,7 @@ function buildGroups(processed, monthsGroup){
     const kind = t.amt>=0 ? 'inflow' : 'ember';
     const key = `${t.name}|${kind}`;
     if (!groups.has(key)) groups.set(key, { name:t.name, kind, occ:[] });
-    groups.get(key).occ.push({ ts:t.ts, amt:Math.abs(t.amt) });
+    groups.get(key).occ.push({ ts:t.ts, amt:Math.abs(t.amt), id:t.id });
   }
   for (const g of groups.values()){
     g.occ.sort((a,b)=>a.ts-b.ts);
@@ -296,7 +306,8 @@ function buildGroups(processed, monthsGroup){
       id: g.name + '|' + (g.kind==='inflow'?'in':'out'),
       name: g.name, kind: g.kind, cadence:best.cadence,
       representative: Number((best.rep||0).toFixed(2)),
-      txCount: g.occ.length, confidence: Math.min(1, best.fit)
+      txCount: g.occ.length, confidence: Math.min(1, best.fit),
+      txIds: g.occ.map(o=>o.id).filter(Boolean)  // keep source processedTransactions IDs
     });
   }
 
@@ -323,54 +334,90 @@ async function analyzeClient(uid){
 }
 
 // ───────────────────────────────── SAVE ─────────────────────────────────
-async function saveSelections({ mode, anchorTs, inflowRows, emberRows }){
-  const user = getAuth().currentUser; if (!user) throw new Error("Not signed in");
-  const idToken = await user.getIdToken(); const uid = user.uid; const db = getFirestore();
+async function saveSelections({ mode, anchorTs, inflowRows, emberRows, creditMode }) {
+  const user = getAuth().currentUser; 
+  if (!user) throw new Error("Not signed in");
+  const idToken = await user.getIdToken(); 
+  const uid = user.uid; 
+  const db = getFirestore();
 
-  const ins  = inflowRows.filter(x=>x.include);
-  const outs = emberRows .filter(x=>x.include);
+  const ins  = inflowRows.filter(x => x.include);
+  const outs = emberRows.filter(x => x.include);
 
-  const incomeMo = ins.reduce((s,x)=>s+(x.monthly||0),0);
-  const emberMo  = outs.reduce((s,x)=>s+(x.monthly||0),0);
-  const incCats = {}; ins .forEach(x=> incCats[x.category||x.label] = (incCats[x.category||x.label]||0) + (x.monthly||0));
-  const outCats = {}; outs.forEach(x=> outCats[x.category||x.label] = (outCats[x.category||x.label]||0) + (x.monthly||0));
+  const incomeMo = ins.reduce((s, x) => s + (x.monthly || 0), 0);
+  const emberMo  = outs.reduce((s, x) => s + (x.monthly || 0), 0);
+  const incCats = {}; 
+  ins.forEach(x => { incCats[x.category || x.label] = (incCats[x.category || x.label] || 0) + (x.monthly || 0); });
+  const outCats = {}; 
+  outs.forEach(x => { outCats[x.category || x.label] = (outCats[x.category || x.label] || 0) + (x.monthly || 0); });
 
-  if (SR_CFG.useBackendSave){
+  if (SR_CFG.useBackendSave) {
     const res = await fetch(SR_CFG.endpoints.saveUrl, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json", Authorization:"Bearer "+idToken },
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + idToken },
       body: JSON.stringify({
         mode, anchorMs: anchorTs || null,
-        inflow:{ totalMonthly: incomeMo, categories: incCats, selections: ins },
-        ember: { totalMonthly: emberMo,  categories: outCats, selections: outs },
-        client:{ userAgent: navigator.userAgent, ts: Date.now() }
+        inflow: { totalMonthly: incomeMo, categories: incCats, selections: ins },
+        ember:  { totalMonthly: emberMo,  categories: outCats, selections: outs },
+        client: { userAgent: navigator.userAgent, ts: Date.now() }
       })
     });
-    const json = await res.json().catch(()=>({}));
+    const json = await res.json().catch(() => ({}));
     if (!res.ok || json?.error) throw new Error(json?.error || "save_failed");
-  } else if (SR_CFG.devWriteRailsStub){
-    const now=Date.now();
-    await setDoc(doc(db, `players/${uid}/cashflowData/verified`), {
-      itemised_inflow:  { total: Number(incomeMo.toFixed(2)),  categories: incCats,  cadence:"monthly", updatedAt: now },
-      itemised_outflow: { total: Number(emberMo.toFixed(2)),   categories: outCats, cadence:"monthly", updatedAt: now },
-      anchorMs: anchorTs || null, updatedAt: now
-    }, { merge:true });
-    await setDoc(doc(db, `players/${uid}/cashflowData/active`), {
-      mode: mode==="finite" ? "finite" : "continuous", cadence:"monthly",
-      inflow:{ total: Number(incomeMo.toFixed(2)), categories: incCats },
-      outflow:{ total: Number(emberMo.toFixed(2)), categories: outCats },
+
+  } else if (SR_CFG.devWriteRailsStub) {
+    // Progress UI
+    showApplyProgress();
+    updateApplyProgress(5);
+
+    const now = Date.now();
+    const payload = {
+      energyMode: mode === "finite" ? "finite" : "continuous", 
+      creditMode: creditMode || 'essence',
+      cadence: "monthly",
+      inflow:  { total: Number(incomeMo.toFixed(2)), itemised: incCats },
+      outflow: { total: Number(emberMo.toFixed(2)), itemised: outCats },
+      netflow: Number(incomeMo.toFixed(2) - emberMo.toFixed(2)).toFixed(2),
+      payCycleAnchorMs: anchorTs || null, 
       updatedAt: now
-    }, { merge:true });
+    };
+
+    await setDoc(doc(db, `players/${uid}/financialData/cashflowData/verified/core`), payload, { merge: true });
+    updateApplyProgress(15);
+
+    // Active Recompute Stub
+    await setModeToVerified();
+    const tMode = await getTransactionMode();
+    payload.transactionMode = tMode;
+    await setDoc(doc(db, `players/${uid}/financialData/cashflowData`), payload, { merge: true });
+    updateApplyProgress(30);
+
+    // Stub Processed Txn Classification updates:
+    try {
+      await stubApplyClassificationsByIds(uid, { inflowRows, emberRows }, (done, total) => {
+        const pct = 30 + (done / Math.max(1, total)) * 65; // progress from 30→90
+        updateApplyProgress(pct);
+      });
+    } catch (e) {
+      console.warn("Stub classification failed:", e?.message || e);
+    }
+    
+    updateApplyProgress(100);
+    setTimeout(hideApplyProgress, 400);
   }
 
-  if (SR_CFG.callRecompute){
-    try{
-      const res = await fetch(SR_CFG.endpoints.recomputeUrl, { method:"POST", headers:{ Authorization:"Bearer "+idToken }});
-      if (!res.ok) console.warn("recompute failed", await res.json().catch(()=>({})));
-    }catch(e){ console.warn("recompute error", e?.message||e); }
+  if (SR_CFG.callRecompute) {
+    try {
+      const res = await fetch(SR_CFG.endpoints.recomputeUrl, { method: "POST", headers: { Authorization: "Bearer " + idToken } });
+      if (!res.ok) console.warn("recompute failed", await res.json().catch(() => ({})));
+    } catch (e) {
+      console.warn("recompute error", e?.message || e);
+    }
   }
-  SR_CFG.onTelemetry("save_ok",{ mode, incomeMo, emberMo, anchorTs });
+
+  SR_CFG.onTelemetry("save_ok", { mode, incomeMo, emberMo, anchorTs });
 }
+
 
 // ───────────────────────────────── LIST CONTROLS ─────────────────────────────────
 function addListControls(host, rows, labelText, tone /* 'in'|'out' */, onChange){
@@ -435,7 +482,8 @@ function buildRowUI(group, kind){
   const monthlyBox = el('div','monthly-pill','');
   const leftCol = el('div','', `<div class="sr-sub">Monthly Total</div><div class="amount-chip ${kind==='inflow'?'green':'red'}">${GBP(monthlyVal)}/mo</div>`);
   const include = document.createElement('input'); include.type='checkbox';
-  include.checked = (kind==='inflow') ? suggestInclude(group.name) : true;
+  // include.checked = (kind==='inflow') ? suggestInclude(group.name) : true;
+  include.checked = (kind==='inflow') ? true : true;
   const incWrap = el('label','include-wrap','Include'); incWrap.prepend(include);
   monthlyBox.append(leftCol, incWrap);
 
@@ -455,7 +503,8 @@ function buildRowUI(group, kind){
       representative: Number(group.representative || 0),
       monthly: monthlyVal,
       include: include.checked,
-      classAs: kind
+      classAs: kind,
+      txIds: group.txIds || [] // pass through IDs
     }),
     setIncluded: (on)=>{ include.checked=!!on; include.dispatchEvent(new Event('change')); }
   };
@@ -480,6 +529,24 @@ function renderContinuousSticky(stickyHost, analysis){
   });
   anchorRow.append(anchorLbl, anchorSelect);
   anchorBox.append(anchorRow);
+
+  // Credit mode
+  // Credit Mode (parity with unverified)
+  const cmRow = el('div','anchor-row','');
+  const cmLbl = el('div','sr-sub','Credit mode:');
+  const cmSel = document.createElement('select');
+  cmSel.className = 'ao-select';
+  cmSel.id = 'srCreditMode';
+  ['essence','allocate','health'].forEach(opt=>{
+    const o=document.createElement('option');
+    o.value=opt; o.textContent = opt[0].toUpperCase()+opt.slice(1);
+    cmSel.append(o);
+  });
+  cmSel.value = SR_CREDIT_MODE;
+  cmSel.addEventListener('change', ()=>{ SR_CREDIT_MODE = cmSel.value; });
+  cmRow.append(cmLbl, cmSel);
+  anchorBox.append(cmRow);
+
 
   // 2) Energy/Ember totals (always side-by-side)
   const totalsRow = el('div','totals-row','');
@@ -623,7 +690,9 @@ function renderContinuousPhase(bodyHost, analysis){
     collectSelections: ()=>{
       const anchorSelect = sticky.querySelector('.ao-select');
       const anchorTs = anchorSelect && anchorSelect.value ? Number(anchorSelect.value) : null;
-      return { mode:"continuous", anchorTs, inflowRows: inRows.map(r=>r.collect()), emberRows: outRows.map(r=>r.collect()) };
+      return { mode:"continuous", anchorTs, inflowRows: inRows.map(r=>r.collect()), emberRows: outRows.map(r=>r.collect()),
+        creditMode: (document.getElementById('srCreditMode')?.value || SR_CREDIT_MODE || 'essence')
+       };
     }
   };
 }
@@ -647,15 +716,16 @@ function renderFinitePhase(bodyHost){
 export async function openSmartReviewOverlay(){
   ensureStyles();
 
-  const overlay = document.createElement('div'); overlay.id='srOverlay';
+  const overlay = document.createElement('div'); overlay.id='emOverlay';
   const wrap = document.createElement('section'); wrap.id='srWrap';
 
   const top = document.createElement('div'); top.id='srTop';
   top.innerHTML = `
     <div id="srTopInner">
       <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <h2 style="margin:0">Energy Menu</h2>
-        <div style="display:flex;gap:8px">
+        <h2 style="margin:0">Energy</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="btnConnect" class="pill btnPrimary">Disconnect bank</button>
           <button id="pill-cont" class="pill active">Continuous</button>
           <button id="pill-fin"  class="pill">Finite</button>
         </div>
@@ -671,13 +741,22 @@ export async function openSmartReviewOverlay(){
   `;
   wrap.append(top, body, actions); overlay.append(wrap); document.body.appendChild(overlay);
 
+  // refs
   const back = actions.querySelector('#srBack');
   const apply= actions.querySelector('#srApply');
+
+  const btnConnect = top.querySelector("#btnConnect");
   const pillC= top.querySelector('#pill-cont');
   const pillF= top.querySelector('#pill-fin');
 
+  // state
   let mode='continuous';
   let phaseApi={ collectSelections: ()=>({ mode, anchorTs:null, inflowRows:[], emberRows:[] }) };
+
+  // Connection Button
+  btnConnect.onclick = ()=>{
+    disconnectBank(overlay)
+  };
 
   async function setMode(m){
     mode=m; pillC.classList.toggle('active', m==='continuous'); pillF.classList.toggle('active', m==='finite');
@@ -686,6 +765,7 @@ export async function openSmartReviewOverlay(){
     body.innerHTML = `<div class="ao-tile">Analysing your transactions…</div>`;
     try{
       const uid = getAuth().currentUser?.uid; if (!uid) throw new Error("Not signed in");
+      await readVerifiedCoreCreditMode(uid);
       let analysis=null;
       if (SR_CFG.useBackendAnalyze){
         const idToken = await getAuth().currentUser.getIdToken();
@@ -705,7 +785,12 @@ export async function openSmartReviewOverlay(){
   pillC.onclick = ()=> setMode('continuous');
   pillF.onclick = ()=> setMode('finite');
 
-  back.onclick = ()=>{ overlay.remove(); window.dispatchEvent(new CustomEvent('smartReview:closed')); };
+  back.onclick = ()=>{ 
+    overlay.remove(); 
+    document.getElementById('sr-styles')?.remove();
+    window.dispatchEvent(new CustomEvent("energyMenu:closed"));
+    window.dispatchEvent(new CustomEvent('smartReview:closed')); 
+  };
 
   apply.onclick = async ()=>{
     try{
@@ -719,7 +804,11 @@ export async function openSmartReviewOverlay(){
         }
       }
       await saveSelections(state);
-      overlay.remove();
+      await initHUD()
+      overlay.remove(); 
+      document.getElementById('sr-styles')?.remove();
+      window.dispatchEvent(new CustomEvent("energyMenu:closed"));
+      window.dispatchEvent(new CustomEvent('smartReview:closed'));
       window.dispatchEvent(new CustomEvent('cashflow:updated', { detail:{ source:'smartReview' } }));
     }catch(e){ alert("Could not save your Smart Review. " + (e?.message||e)); }
   };
@@ -731,6 +820,7 @@ export function showSmartReviewAfterTrueLayer(){ localStorage.setItem('showSmart
 export function maybeOpenSmartReviewOnLoad(){
   if (localStorage.getItem('showSmartReviewOnce') === '1'){
     localStorage.removeItem('showSmartReviewOnce');
+    setModeToVerified()
     openSmartReviewOverlay().catch(console.error);
   }
 }
@@ -740,4 +830,187 @@ export function openEnergyVerified(/* uid optional */) {
   // openSmartReviewOverlay comes from this file's implementation
   return openSmartReviewOverlay();
 }
+
+// ----------------------- STUBS / In Progress functions -----------------------------
+export async function setModeToVerified(){
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn("[EnergyMenu] No user logged in.");
+    return;
+  }
+  const uid = user.uid;
+
+  const db = getFirestore();
+  await setDoc(doc(db, `players/${uid}`), {
+    transactionMode: "verified",
+  }, { merge:true });
+}
+
+export async function getTransactionMode(){
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn("[EnergyMenu] No user logged in.");
+    return;
+  }
+  const uid = user.uid;
+
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, "players", uid));
+  let mode = null
+  mode = snap.exists() ? snap.data()?.transactionMode : null;
+
+  return mode
+}
+
+export async function disconnectBank(overlay) {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn("[EnergyMenu] No user logged in.");
+    return;
+  }
+  const uid = user.uid;
+  const db = getFirestore();
+
+  // Check if mode is not already unverified
+  const snap = await getDoc(doc(db, "players", uid));
+  let mode = "verified"
+  mode = snap.exists() ? snap.data()?.transactionMode : "verified";
+
+  if (mode === "verified"){
+    // Player asked to select if they just want to revoke access and switch mode, or also purge (placheolder for now)
+
+  }
+
+  await setDoc(doc(db, `players/${uid}`), {
+    transactionMode: "unverified",
+  }, { merge:true });
+
+  // Switch to energy-unverified / re-open energy-menu after doc update
+  // Close overlay and re-open
+    overlay.remove(); 
+    document.getElementById('sr-styles')?.remove();
+    window.dispatchEvent(new CustomEvent("energyMenu:closed"));
+    window.dispatchEvent(new CustomEvent('smartReview:closed'));
+  openEnergyMenu()
+}
+
+async function readVerifiedCoreCreditMode(uid){
+  const db = getFirestore();
+  try{
+    const snap = await getDoc(doc(db, `players/${uid}/financialData/cashflowData/verified/core`));
+    if (snap.exists()){
+      const data = snap.data() || {};
+      if (data.creditMode) SR_CREDIT_MODE = String(data.creditMode);
+    }
+  }catch(e){ /* silent */ }
+}
+
+
+// ────────────────────────── STUB: apply classifications by txId ──────────────────────────
+// Expects rows as built by this file (with row.txIds). Uses writeBatch for speed.
+async function stubApplyClassificationsByIds(uid, { inflowRows = [], emberRows = [] }, onProgress /* (done,total) */) {
+  const db = getFirestore();
+
+  // Build flat list of { txId, update }
+  const updates = [];
+
+  // Included inflows → classification=coreInflow
+  for (const r of inflowRows) {
+    const desired = r.include ? 'coreInflow' : null;
+    const label = r.label || r.name || 'Other';
+    const ids = Array.isArray(r.txIds) ? r.txIds : [];
+    for (const txId of ids) {
+      if (!txId) continue;
+      if (desired) {
+        updates.push({ txId, data: { classification: desired, groupLabel: label } });
+      } else {
+        updates.push({ txId, data: { classification: deleteField(), groupLabel: deleteField() } });
+      }
+    }
+  }
+
+  // Included outflows → classification=coreOutflow (else clear)
+  for (const r of emberRows) {
+    const desired = r.include ? 'coreOutflow' : null;
+    const label = r.label || r.name || 'Other';
+    const ids = Array.isArray(r.txIds) ? r.txIds : [];
+    for (const txId of ids) {
+      if (!txId) continue;
+      if (desired) {
+        updates.push({ txId, data: { classification: desired, groupLabel: label } });
+      } else {
+        updates.push({ txId, data: { classification: deleteField(), groupLabel: deleteField() } });
+      }
+    }
+  }
+
+  if (!updates.length) {
+    onProgress?.(1, 1);
+    return;
+  }
+
+  // Batch in chunks of 500 (Firestore limit)
+  const BATCH_LIMIT = 500;
+  let done = 0;
+  const total = updates.length;
+
+  while (done < total) {
+    const batch = writeBatch(db);
+    const slice = updates.slice(done, done + BATCH_LIMIT);
+    for (const u of slice) {
+      const ref = doc(db, `players/${uid}/financialData/processedTransactions/verified`, u.txId);
+      batch.update(ref, u.data);
+    }
+    await batch.commit();
+    done += slice.length;
+    onProgress?.(done, total);
+  }
+}
+
+// ───────────────────────────────── PROGRESS UI (stub) ─────────────────────────────────
+function showApplyProgress() {
+  let wrap = document.getElementById('srProgressWrap');
+  if (wrap) return wrap;
+
+  wrap = document.createElement('div');
+  wrap.id = 'srProgressWrap';
+  wrap.style.position = 'fixed';
+  wrap.style.inset = '0';
+  wrap.style.background = 'rgba(0,0,0,.35)';
+  wrap.style.zIndex = '10000';
+  wrap.style.display = 'flex';
+  wrap.style.alignItems = 'center';
+  wrap.style.justifyContent = 'center';
+  wrap.innerHTML = `
+    <div style="width:min(420px,84vw);padding:14px;border-radius:12px;border:1px solid #2a3a55;background:#0f1118;color:#fff;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong>Applying selections…</strong>
+        <span id="srProgressPct" style="opacity:.9">0%</span>
+      </div>
+      <div style="height:8px;background:#1f2937;border-radius:999px;overflow:hidden">
+        <div id="srProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#06b6d4)"></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  return wrap;
+}
+function updateApplyProgress(pct) {
+  const bar = document.getElementById('srProgressBar');
+  const txt = document.getElementById('srProgressPct');
+  if (bar) bar.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+  if (txt) txt.textContent = `${Math.max(0, Math.min(100, Math.round(pct)))}%`;
+}
+function hideApplyProgress() {
+  const wrap = document.getElementById('srProgressWrap');
+  if (wrap) wrap.remove();
+}
+
+
+
+
+
 

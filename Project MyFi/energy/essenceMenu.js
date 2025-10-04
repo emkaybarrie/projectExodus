@@ -9,8 +9,8 @@ import {
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable/*, connectFunctionsEmulator*/ } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getEssenceAvailableMonthlyFromHUD } from './hud/modules/vitals.js';
-import { showToast } from './core/toast.js';
+import { getEssenceAvailableMonthlyFromHUD } from './vitals.js';
+import { showToast } from '../js/core/toast.js';
 
 (function () {
   const { helper, field, select, primary, cancel, danger, inlineError, setError, btnOpenItem, btnOpenMenu } = window.MyFiUI;

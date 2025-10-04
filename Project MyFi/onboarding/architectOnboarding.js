@@ -13,7 +13,7 @@ import { VO, PROMPT, INFO } from "./architectCopy.js";
 // Optional: TrueLayer connector (kept disabled by default)
 let connectTrueLayerAccount = null;
 try {
-  const tl = await import('../js/core/truelayer.js');
+  const tl = await import('../energy/truelayer.js');
   connectTrueLayerAccount = tl?.connectTrueLayerAccount || null;
 } catch {}
 

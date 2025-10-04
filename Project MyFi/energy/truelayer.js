@@ -1,7 +1,7 @@
 // js/core/truelayer.js - CLIENT SIDE
 // Centralised TrueLayer client helpers + RICH Smart Review UI (with stub fallback).
 
-import { auth } from "./auth.js";
+import { auth } from "../js/core/auth.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc
@@ -77,7 +77,7 @@ export async function connectTrueLayerAccount() {
   const clientId = "sandbox-projectmyfi-f89485";
 
   // Build the clean callback URL beside the current page (no query string)
-  const rawRedirect = new URL('callback.html', window.location.href);
+  const rawRedirect = new URL('energy/callback.html', window.location.href);
   rawRedirect.search = '';
   sessionStorage.setItem('tl_redirect_uri', rawRedirect.toString());
 

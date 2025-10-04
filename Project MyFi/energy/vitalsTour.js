@@ -1,7 +1,7 @@
 // js/vitalsTour.js
 // Firestore‑first Vitals tour, event‑gated behind Splash & Welcome.
 
-import { startTour } from '../../core/tour.js';
+import { startTour } from '../js/core/tour.js';
 import {
   getFirestore, doc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
