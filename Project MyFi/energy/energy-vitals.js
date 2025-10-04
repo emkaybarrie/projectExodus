@@ -24,7 +24,7 @@
 // ───────────────────────────────── Imports ─────────────────────────────────
 import {
   getFirestore, doc, getDoc, setDoc, collection, getDocs,
-  query, where, orderBy, limit, onSnapshot, updateDoc
+  query, where, orderBy, limit, onSnapshot, updateDoc, deleteDoc, startAfter
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { openEnergyMenu } from "./energy-menu.js";
@@ -972,9 +972,10 @@ function normalizeTxn(d){
     }
   };
 }
-export function listenUpdateLogPending(uid, cb, txCollectionPath){
+export async function listenUpdateLogPending(uid, cb, txCollectionPath){
+  const path = txCollectionPath || (await resolveDataSources(uid)).txCollectionPath;
   const qy = query(
-    collection(db, txCollectionPath),
+    collection(db, path),
     where("status","==","pending"),
     orderBy("dateMs","desc"),
     limit(5)
@@ -1119,7 +1120,7 @@ export function autoInitUpdateLog(){
             });
           });
         });
-      });
+      }, ds.txCollectionPath);
 
       // lightweight countdown tick (bus below updates empty payload; keep for future)
       window.addEventListener("tx:expiry-tick",(e)=>{
@@ -1443,3 +1444,15 @@ export function autoInitAddSpendButton(){
     run();
   }
 })();
+
+// Exports - Public
+export async function initHUD(uid){
+  // If caller didn’t pass uid, use current user
+  const u = uid || (getAuth().currentUser && getAuth().currentUser.uid);
+  if (!u) return;
+  startAliasListener(u);
+  startLevelListener(u);
+  await refreshVitals();     // server snapshot
+  initVitalsHUD(u, 1);       // animated HUD
+}
+

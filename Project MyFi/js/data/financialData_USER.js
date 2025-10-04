@@ -25,7 +25,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 
 const db = getFirestore();
 const auth = getAuth();
-const targetCollection = "financialData_USER";
+const targetCollection = "financialSourceData_UNVERIFIED";
 
 // Read server-computed anchor if present; fallback to today
 async function getAnchorMs(uid) {
@@ -121,7 +121,7 @@ export async function addTransaction(data) {
     },
   };
 
-  await setDoc(doc(db, "players", user.uid, "classifiedTransactions", txnID), classified);
+  await setDoc(doc(db, "players", user.uid, "financialData", 'processedTransactions', 'unverified', txnID), classified);
 }
 
 

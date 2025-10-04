@@ -7,7 +7,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ensureTlConsentDialog, connectTrueLayerAccount } from "./truelayer.js";
 import { openEnergyMenu, scopeCSS } from "./energy-menu.js";
-import { initHUD } from "../js/hud/hud.js";
+import { initHUD } from "./energy-vitals.js";
 
 // ─────────────────────────── CONFIG ───────────────────────────
 const CFG = {

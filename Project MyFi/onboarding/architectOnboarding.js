@@ -428,7 +428,6 @@ function renderInputs6(){
   const finish = btnAccent('Enter the Crucible', async ()=>{
     try{ await persistAndFinish(); }catch(e){ return showErr('Could not save now.'); }
     closeOverlay(); hideStage();
-    //try{ await initHUD(); }catch{}
     if (location.pathname.toLowerCase().includes('/onboarding/')){
       window.location.replace('../dashboard.html');
     }

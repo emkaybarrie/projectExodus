@@ -148,7 +148,7 @@ window.MyFiShowIOSInstallModal = MyFiShowIOSInstallModal;
 import { app, auth, db, fns as functions } from './core/auth.js';
 import { getDoc, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import playerDataManager from "./playerDataManager.js";
-import { initHUD } from "./hud/hud.js";
+import { initHUD } from "../energy/energy-vitals.js";
 import { createSplash } from './splash.js';
 
 import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";

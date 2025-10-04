@@ -9,7 +9,7 @@
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, updateDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import  { openEnergyMenu, scopeCSS } from "./energy-menu.js"
-import { initHUD } from "../js/hud/hud.js";
+import { initHUD } from "./energy-vitals.js";
 
 // ───────────────────────────────── CONFIG ─────────────────────────────────
 const SR_CFG = {
