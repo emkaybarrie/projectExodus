@@ -55,6 +55,7 @@ function ensureStyles(){
   .anchor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
   .ao-input,.ao-select{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
 
+  
   .net-row{display:grid;grid-template-columns:1fr;gap:10px}
   .net-box{position:relative; display:flex; align-items:center; justify-content:space-between;
            padding:10px 12px; border-radius:12px; background:#111827; border:1px solid #1f2937; cursor:pointer;}
@@ -67,8 +68,9 @@ function ensureStyles(){
   .net-collapsible-inner{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
   .kval-sm{font-weight:700}
 
-  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 2px}
-  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:#fff;text-align:center}
+  /* Tabs (single set, subtle aura on active) */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
+  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:var(--ink);text-align:center;transition:box-shadow .15s ease,border-color .15s ease}
   .tab.in.active{border-color:rgba(16,185,129,.5); box-shadow:0 0 0 1px rgba(16,185,129,.25), 0 0 12px rgba(16,185,129,.25) inset}
   .tab.out.active{border-color:rgba(239,68,68,.5);  box-shadow:0 0 0 1px rgba(239,68,68,.25),  0 0 12px rgba(239,68,68,.25) inset}
 

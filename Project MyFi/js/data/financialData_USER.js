@@ -40,6 +40,15 @@ async function getAnchorMs(uid) {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(); // today
 }
 
+async function getActiveCreditMode(uid){
+  try{
+    const snap = await getDoc(doc(db, `players/${uid}/financialData/cashflowData`));
+    const cm = String(snap.data()?.creditMode || 'essence').toLowerCase();
+    return (['essence','allocate','health'].includes(cm)) ? cm : 'essence';
+  }catch(_){ return 'essence'; }
+}
+
+
 
 /**
  * addTransaction(data)
@@ -92,7 +101,14 @@ export async function addTransaction(data) {
 
   // 7) Classified (pending → ghost → lock)
   const addedMs = nowMs;
-  const ghostWindowMs = 1 * 60 * 60 * 1000; // 1h
+  const ghostWindowMs = 1 * 60 * 60 * 10 //00; // 1h
+
+  const isCredit = amount > 0;
+  let creditModeOverride = null;
+  if (isCredit){
+    creditModeOverride = await getActiveCreditMode(user.uid); // default from player setting
+  }
+
 
   const classified = {
     amount: Number(amount),
@@ -106,11 +122,23 @@ export async function addTransaction(data) {
     ghostExpiryMs: addedMs + ghostWindowMs,
     autoLockReason: null,
 
-    provisionalTag: {
-      pool: data.txPool && data.txPool !== "" ? data.txPool : null,
-      setAtMs: data.txPool && data.txPool !== "" ? addedMs : null,
-    },
+    // If the user selected a pool explicitly for a debit, keep it.
+    // For credits, use essence/health by default (overrideable later).
+    provisionalTag: (() => {
+      if (isCredit){
+        if (creditModeOverride === 'essence') return { pool: 'essence', setAtMs: addedMs };
+        if (creditModeOverride === 'health')  return { pool: 'health',  setAtMs: addedMs };
+        // allocate mode credits need an intent pool; default stamina if none picked
+        const p = data.txPool && data.txPool !== "" ? data.txPool : 'stamina';
+        return { pool: p, setAtMs: addedMs };
+      } else {
+        const p = data.txPool && data.txPool !== "" ? data.txPool : null;
+        return { pool: p, setAtMs: p ? addedMs : null };
+      }
+    })(),
     tag: { pool: null, setAtMs: null },
+
+    creditModeOverride: isCredit ? creditModeOverride : null,  // <— NEW
 
     suggestedPool: null,
     rulesVersion: "v1",

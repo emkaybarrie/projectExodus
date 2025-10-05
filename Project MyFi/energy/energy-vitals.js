@@ -143,10 +143,10 @@ async function readAllocations(db, uid){
     const snap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
     if (snap.exists()){
       const d = snap.data() || {};
-      const health  = safeNum(d.healthAllocation, 0.34);
-      const mana    = safeNum(d.manaAllocation,   0.33);
-      const stamina = safeNum(d.staminaAllocation,0.33);
-      const essence = safeNum(d.essenceAllocation,0.0); // can be zero safely
+      const health  = safeNum(d.healthAllocation, 0.3);
+      const mana    = safeNum(d.manaAllocation,   0.3);
+      const stamina = safeNum(d.staminaAllocation,0.3);
+      const essence = safeNum(d.essenceAllocation,0.1); // can be zero safely
       const sum = Math.max(1e-9, health+mana+stamina+essence);
       return {
         health:  health/sum,
@@ -156,7 +156,7 @@ async function readAllocations(db, uid){
       };
     }
   }catch(_){}
-  return { health:0.34, mana:0.33, stamina:0.33, essence:0.0 };
+  return { health:0.3, mana:0.3, stamina:0.3, essence:0.1 };
 }
 
 // ───────────────────────────────── Intent allocation ────────────────────────
@@ -227,16 +227,21 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
 
     // Credits
     if (amt > 0){
+      const txOverride = String(tx.creditModeOverride || '').toLowerCase();
+      const effMode = (txOverride === 'essence' || txOverride === 'health' || txOverride === 'allocate')
+        ? txOverride
+        : creditMode;
+
       if (status === 'pending') {
-        totals.pending.creditEssence += amt;
+        if (effMode === 'essence') totals.pending.creditEssence += amt;
       } else if (inWindow) {
-        if (creditMode === 'essence'){
+        if (effMode === 'essence'){
           totals.all.essence += amt;
           if (when >= sevenWindowStart) totals.last7.essence += amt;
-        } else if (creditMode === 'allocate'){
+        } else if (effMode === 'allocate'){
           const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
           applyAllocatedCredit(amt, intent, when);
-        } else if (creditMode === 'health'){
+        } else if (effMode === 'health'){
           totals.all.health -= amt;
           if (when >= sevenWindowStart) totals.last7.health -= amt;
         }
@@ -374,20 +379,27 @@ export async function recomputeVitalsGatewayStub(uid){
     const spent   = safeNum(usage.all[k], 0);
 
     // Credits: only accrue to Essence in "essence" mode; otherwise credits offset spends upstream
-    let credit = 0;
-    if (creditMode === 'essence' && k === 'essence'){
-      credit = safeNum(usage.all.essence, 0);
-    }
+    // let credit = 0;
+    // if (creditMode === 'essence' && k === 'essence'){
+    //   credit = safeNum(usage.all.essence, 0);
+    // }
+
+    // Credits: usage.* already reflects final per-tx modes.
+    // Essence credits should always add to the Essence pool here,
+    // regardless of the global creditMode.
+    const credit = (k === 'essence') ? safeNum(usage.all.essence, 0) : 0;
 
     // Truth since anchor
     const T = (daily * days) - spent + credit;
     const { rNow, sNow } = wrapIntoCap(T, cap);
 
     // Pending preview (ghost)
+    // const pendDebit   = (k === 'essence') ? 0 : safeNum(usage.pending[k], 0);
+    // const pendCreditE = (creditMode === 'essence' && k === 'essence')
+    //   ? safeNum(usage.pending.creditEssence, 0)
+    //   : 0;
     const pendDebit   = (k === 'essence') ? 0 : safeNum(usage.pending[k], 0);
-    const pendCreditE = (creditMode === 'essence' && k === 'essence')
-      ? safeNum(usage.pending.creditEssence, 0)
-      : 0;
+    const pendCreditE = (k === 'essence') ? safeNum(usage.pending.creditEssence, 0) : 0;
 
     return {
       max:           Number(cap.toFixed(2)),
@@ -892,12 +904,57 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
 
         if (pool!=='essence'){ sumCurrent += (useProjected?proj.rAfter:proj.rNow); sumMax += cap; }
       } else {
-        const daysIn = Math.max(1, (getViewMode()==='daily'?1:7));
-        const cap = Math.max(0, daily * daysIn);
-        const spent = Number(focusSpend?.[pool] || 0);
-        let current = Math.max(0, Math.min(cap, cap - spent));
-        const pct = cap>0 ? (current/cap)*100 : 0;
+        // -------- Focus (Today / This Week) --------
+        const daysIn = (getViewMode() === 'daily') ? 1 : 7;
+
+        // 1) Build per-pool caps and base current from confirmed spend only
+        const capMap = {};
+        const baseCurrent = {};
+        for (const poolName of Object.keys(pools)) {
+          const daily = Number((pools[poolName]?.regenDaily ?? pools[poolName]?.regenCurrent) || 0);
+          const cap   = Math.max(0, daily * daysIn);
+          const spent = Number(focusSpend?.[poolName] || 0); // confirmed only (from cache)
+          const cur   = Math.max(0, Math.min(cap, cap - spent));
+          capMap[poolName]     = cap;
+          baseCurrent[poolName] = cur;
+        }
+
+        // 2) Project PENDING debits across pools ONCE (global availability),
+        //    so overflow only happens when the *origin* pool is exhausted.
+        const availFocus = {
+          health:  baseCurrent.health  || 0,
+          mana:    baseCurrent.mana    || 0,
+          stamina: baseCurrent.stamina || 0,
+          essence: 0
+        };
+        const LsplitFocus = { health:0, mana:0, stamina:0, essence:0 };
+
+        for (const tx of ordered) {
+          if (tx.ghostExpiryMs && tx.ghostExpiryMs <= now) continue;
+          if (tx.amount >= 0) continue; // credits not previewed in Focus
+
+          // NEW: only include if pending date is inside Focus window
+          if (!(tx.dateMs >= focusStart && tx.dateMs < focusEnd)) continue;
+
+          const spend  = Math.abs(tx.amount);
+          const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
+          const part   = allocateSpendAcrossPools(spend, (intent === 'mana') ? 'mana' : 'stamina', availFocus);
+          LsplitFocus.health  += Number(part.health  || 0);
+          LsplitFocus.mana    += Number(part.mana    || 0);
+          LsplitFocus.stamina += Number(part.stamina || 0);
+          // essence stays 0 for spends
+        }
+
+        // 3) Paint each pool using (cap - confirmed - pendingAllocated)
+        const el = elements[pool]; if (!el) continue;
+        const cap = capMap[pool] || 0;
+        const currentBeforePending = baseCurrent[pool] || 0;
+        const pendingEat = Math.min(LsplitFocus[pool] || 0, currentBeforePending);
+        const current = Math.max(0, currentBeforePending - pendingEat);
+
+        const pct = cap > 0 ? (current / cap) * 100 : 0;
         el.fill.style.width = `${pct}%`;
+
         const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
         if (!el.value.__origText) el.value.__origText = el.value.textContent;
         el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
@@ -905,27 +962,21 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
         // Hide surplus pills in Focus
         setSurplusPill(el, 0, 0);
 
-        // Simple reclaim preview in Focus (clip current only)
-        const barEl = el.fill.closest('.bar'); const reclaimEl = barEl?.querySelector('.bar-reclaim');
-        if (reclaimEl){
-          let availFocus = { health:current, mana: (pool==='mana')?current:0, stamina:(pool==='stamina')?current:0, essence:0 };
-          let Lpool = 0;
-          for (const tx of ordered){
-            if (tx.ghostExpiryMs && tx.ghostExpiryMs <= now) continue;
-            if (tx.amount >= 0) continue;
-            const spend = Math.abs(tx.amount);
-            const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
-            const part = allocateSpendAcrossPools(spend, intent==='mana'?'mana':'stamina', { ...availFocus });
-            Lpool += Number(part[pool] || 0);
-          }
-          if (cap>0 && Lpool>0.0001 && current>0.0001){
-            const eat = Math.min(Lpool, current);
-            reclaimEl.style.left  = `${Math.max(0,Math.min(100, ((current-eat)/cap)*100)).toFixed(2)}%`;
-            reclaimEl.style.width = `${Math.max(0,Math.min(100, (eat/cap)*100)).toFixed(2)}%`;
+        // Reclaim overlay in Focus reflects pending "eat" of current
+        const barEl = el.fill.closest('.bar');
+        const reclaimEl = barEl?.querySelector('.bar-reclaim');
+        if (reclaimEl) {
+          if (cap > 0 && pendingEat > 0.0001 && currentBeforePending > 0.0001) {
+            reclaimEl.style.left  = `${Math.max(0, Math.min(100, ((currentBeforePending - pendingEat) / cap) * 100)).toFixed(2)}%`;
+            reclaimEl.style.width = `${Math.max(0, Math.min(100, (pendingEat / cap) * 100)).toFixed(2)}%`;
             reclaimEl.style.opacity = '1';
-          } else { reclaimEl.style.opacity='0'; reclaimEl.style.width='0%'; }
+          } else {
+            reclaimEl.style.opacity = '0';
+            reclaimEl.style.width = '0%';
+          }
         }
-        if (pool!=='essence'){ sumCurrent+=current; sumMax+=cap; }
+
+        if (pool !== 'essence') { sumCurrent += current; sumMax += cap; }
       }
 
       // Trend tint
@@ -1014,74 +1065,162 @@ function onLongPress(targetEl, startCb){
 }
 // ───────────────────────── UI: Events Log + History Modal ───────────────────
 // Events Logs
+
 export function autoInitUpdateLog(){
   const listEl   = document.querySelector("#update-log-list");
   const recentEl = document.querySelector("#recently-locked-list");
   if (!listEl && !recentEl) return;
-  const auth = getAuth();
-  onAuthStateChanged(auth,async (user) => {
-    if (!user) return; const uid=user.uid;
 
-    const ds = await resolveDataSources(uid); const col=collection(db, ds.txCollectionPath);
-    function setActiveButtons(li,pool){
-      const buttons=li.querySelectorAll(".tag-btn");
-      buttons.forEach(b=>{ 
-        b.classList.remove("active","stamina","mana"); 
-        if (b.dataset.pool===pool) b.classList.add("active",pool);
-      }, ds.txCollectionPath);
+  const auth = getAuth();
+  const db   = getFirestore();
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) return;
+    const uid = user.uid;
+
+    // Active bindings we’ll tear down on mode change
+    let unsubPending = null;
+    let unsubRecent  = null;
+    let tickHandler  = null;
+    let curTxPath    = null;
+    let lockTimer    = null; 
+
+    // Helper: cleanly remove all current listeners
+    function detachAll(){
+      try { unsubPending?.(); } catch {}
+      try { unsubRecent?.(); }  catch {}
+      if (tickHandler) {
+        window.removeEventListener("tx:expiry-tick", tickHandler);
+        tickHandler = null;
+      }
+
+      if (lockTimer){ clearInterval(lockTimer); lockTimer = null; }
+      unsubPending = unsubRecent = null;
     }
 
-    if (listEl){
-      (async ()=>{ const { txCollectionPath } = await resolveDataSources(uid); })();
-      resolveDataSources(uid).then(ds=>{
-      listenUpdateLogPending(uid,(items)=>{
-        listEl.innerHTML="";
-        if (!items.length){ const li=document.createElement("li"); li.textContent="Nothing pending — nice!"; listEl.appendChild(li); return; }
-        items.forEach(tx=>{
-          const li=document.createElement("li"); li.setAttribute('data-tx',tx.id);
-          const nowMs=Date.now(); const ttl=Number(tx.ghostExpiryMs||0); const secsLeft = ttl>nowMs ? Math.floor((ttl-nowMs)/1000) : 0;
-          const minLeft=Math.floor(secsLeft/60); const secLeft=secsLeft%60;
-          const name=tx.transactionData?.description||"Transaction";
-          const amt = Number(tx.amount).toFixed(2);
-          const tag = tx.provisionalTag?.pool ?? "stamina";
-          const actionsHtml = `
-            <div class="ul-actions two">
-              <button class="tag-btn" data-pool="mana"    title="Mana"    aria-label="Mana">M</button>
-              <button class="tag-btn" data-pool="stamina" title="Stamina" aria-label="Stamina">S</button>
-            </div>`;
+    // Helper: per-row tagging buttons class state
+    function setActiveButtons(li, pool){
+      const buttons = li.querySelectorAll(".tag-btn");
+      buttons.forEach((b) => {
+        b.classList.remove("active","stamina","mana");
+        if (b.dataset.pool === pool) b.classList.add("active", pool);
+      });
+    }
+
+    // Attach (or reattach) all listeners for a given txPath
+    async function attachFor(txPath){
+      detachAll();
+      curTxPath = txPath;
+
+      // Fresh placeholders so the UI never shows stale results
+      if (listEl)   listEl.innerHTML   = `<li class="ul-meta">Loading transactions…</li>`;
+      if (recentEl) recentEl.innerHTML = `<li class="ul-meta">Loading recent locks…</li>`;
+
+      // 1) PENDING (with pool tagging + inline editor)
+      unsubPending = await listenUpdateLogPending(uid, (items) => {
+        listEl.innerHTML = "";
+        if (!items.length){
+          const li = document.createElement("li");
+          li.textContent = "Nothing pending — nice!";
+          listEl.appendChild(li);
+          return;
+        }
+
+        items.forEach((tx) => {
+          const li = document.createElement("li");
+          li.setAttribute("data-tx", tx.id);
+
+          // Countdown
+          const nowMs  = Date.now();
+          const ttl    = Number(tx.ghostExpiryMs || 0);
+          const secs   = ttl > nowMs ? Math.floor((ttl - nowMs) / 1000) : 0;
+          const mLeft  = Math.floor(secs / 60);
+          const sLeft  = secs % 60;
+
+          // Render (unchanged structure)
+          const name = tx.transactionData?.description || "Transaction";
+          const amt  = Number(tx.amount).toFixed(2);
+          const tag  = tx.provisionalTag?.pool ?? "stamina";
+
+          const isCredit = Number(tx.amount) > 0;
+          let actionsHtml = '';
+          if (isCredit){
+            // Credit → toggle Essence / Health
+            const eff = String(tx.creditModeOverride || '').toLowerCase();
+            const active = (eff==='essence' || eff==='health') ? eff : 'essence'; // fallback
+            actionsHtml = `
+              <div class="ul-actions two">
+                <button class="tag-btn" data-credit="essence" title="Essence (credit to Essence)" aria-label="Essence">E</button>
+                <button class="tag-btn" data-credit="health"  title="Health (reduce Health spend)" aria-label="Health">H</button>
+              </div>`;
+          } else {
+            // Debit → Mana / Stamina (unchanged)
+            actionsHtml = `
+              <div class="ul-actions two">
+                <button class="tag-btn" data-pool="mana"    title="Mana"    aria-label="Mana">M</button>
+                <button class="tag-btn" data-pool="stamina" title="Stamina" aria-label="Stamina">S</button>
+              </div>`;
+          }
+
           li.innerHTML = `
             <div class="ul-row">
               <div class="ul-main">
                 <strong>${name}</strong>
-                <div class="ul-meta">£${amt} • <span class="countdown">${minLeft}m ${secLeft}s</span> • ${tag}</div>
+                <div class="ul-meta">£${amt} • <span class="countdown">${mLeft}m ${sLeft}s</span> • ${tag}</div>
               </div>
               ${actionsHtml}
             </div>`;
-          setActiveButtons(li, tag);
-          li.querySelectorAll(".tag-btn").forEach(btn=>{
-            btn.addEventListener("click", async ()=>{
-              const pool=btn.getAttribute("data-pool"); setActiveButtons(li,pool); await setProvisionalTag(uid, tx.id, pool);
+
+          // Pool tag buttons (no regression)
+          if (isCredit){
+            const setActive = (mode)=>{
+              li.querySelectorAll('.tag-btn').forEach(b=>b.classList.remove('active','essence','health'));
+              const btn = li.querySelector(`.tag-btn[data-credit="${mode}"]`);
+              if (btn){ btn.classList.add('active', mode); }
+            };
+            // initial
+            const current = (String(tx.creditModeOverride || '').toLowerCase()) || 'essence';
+            setActive(current);
+
+            li.querySelectorAll('.tag-btn').forEach(btn=>{
+              btn.addEventListener('click', async ()=>{
+                const mode = btn.getAttribute('data-credit'); // 'essence' | 'health'
+                setActive(mode);
+                await setCreditModeOverride(uid, tx.id, mode);
+              });
             });
-          });
-          listEl.appendChild(li);
-          // Inline editor on long-press (description & amount; delete)
-          onLongPress(li, ()=>{
-            const existing = li.querySelector('.ul-editor'); if(existing) return;
-            li.classList.add('is-editing');
-            const main = li.querySelector('.ul-main');
-            const actions = li.querySelector('.ul-actions'); if(actions) actions.style.display='none';
-            const editor = document.createElement('div'); editor.className='ul-editor';
-            const name = tx.transactionData?.description || 'Transaction';
-            const amt = Number(tx.amount).toFixed(2);
+          } else {
+            // existing debit M/S logic (unchanged)
+            setActiveButtons(li, tx.provisionalTag?.pool ?? 'stamina');
+            li.querySelectorAll(".tag-btn").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const pool = btn.getAttribute("data-pool");
+                setActiveButtons(li, pool);
+                await setProvisionalTag(uid, tx.id, pool);
+              });
+            });
+          }
+
+          // Inline editor (no regression)
+          onLongPress(li, () => {
+            const existing = li.querySelector(".ul-editor"); if (existing) return;
+            li.classList.add("is-editing");
+            const main = li.querySelector(".ul-main");
+            const actions = li.querySelector(".ul-actions"); if (actions) actions.style.display = "none";
+
+            const editor = document.createElement("div");
+            editor.className = "ul-editor";
+            const name0 = tx.transactionData?.description || "Transaction";
+            const amt0  = Number(tx.amount).toFixed(2);
             editor.innerHTML = `
               <div class="ul-edit-fields">
                 <label class="ul-edit-row">
                   <span class="ul-edit-label">Description</span>
-                  <input class="ul-edit-input" type="text" value="${name.replace(/"/g,'&quot;')}" />
+                  <input class="ul-edit-input" type="text" value="${name0.replace(/"/g,'&quot;')}" />
                 </label>
                 <label class="ul-edit-row">
                   <span class="ul-edit-label">Amount (£)</span>
-                  <input class="ul-edit-input" type="number" step="0.01" inputmode="decimal" value="${amt}" />
+                  <input class="ul-edit-input" type="number" step="0.01" inputmode="decimal" value="${amt0}" />
                 </label>
               </div>
               <div class="ul-edit-actions">
@@ -1089,72 +1228,126 @@ export function autoInitUpdateLog(){
                 <button class="btn-cancel">Cancel</button>
                 <button class="btn-delete">Delete</button>
               </div>`;
-            editor.style.marginTop='0.5rem';
+            editor.style.marginTop = "0.5rem";
             main.appendChild(editor);
-            const [descInput, amtInput] = editor.querySelectorAll('.ul-edit-input');
-            const btnSave = editor.querySelector('.btn-save');
-            const btnCancel = editor.querySelector('.btn-cancel');
-            const btnDelete = editor.querySelector('.btn-delete');
-            const cleanup = ()=>{ editor.remove(); li.classList.remove('is-editing'); if(actions) actions.style.display=''; };
 
-            btnCancel.addEventListener('click', cleanup);
-            btnSave.addEventListener('click', async ()=>{
+            const [descInput, amtInput] = editor.querySelectorAll(".ul-edit-input");
+            const btnSave   = editor.querySelector(".btn-save");
+            const btnCancel = editor.querySelector(".btn-cancel");
+            const btnDelete = editor.querySelector(".btn-delete");
+
+            const cleanup = () => { editor.remove(); li.classList.remove("is-editing"); if (actions) actions.style.display = ""; };
+
+            btnCancel.addEventListener("click", cleanup);
+            btnSave.addEventListener("click", async () => {
               try{
-                const path = CURRENT_TX_COLLECTION_PATH || (await resolveDataSources(uid)).txCollectionPath;
-                const ref = doc(db, `${path}/${tx.id}`);
-                const newDesc = String(descInput.value||'').slice(0,120);
+                const path = curTxPath || (await resolveDataSources(uid)).txCollectionPath;
+                const ref  = doc(db, `${path}/${tx.id}`);
+                const newDesc = String(descInput.value || "").slice(0,120);
                 const newAmt  = Number(amtInput.value);
                 await updateDoc(ref, {
-                  transactionData: { ...(tx.transactionData||{}), description:newDesc },
-                  amount: isFinite(newAmt)? newAmt : tx.amount
+                  transactionData: { ...(tx.transactionData || {}), description: newDesc },
+                  amount: isFinite(newAmt) ? newAmt : tx.amount
                 });
                 cleanup();
-              }catch(e){ console.warn('Inline save failed', e); }
+              }catch(e){ console.warn("Inline save failed", e); }
             });
-            btnDelete.addEventListener('click', async ()=>{
+            btnDelete.addEventListener("click", async () => {
               try{
-                const path = CURRENT_TX_COLLECTION_PATH || (await resolveDataSources(uid)).txCollectionPath;
+                const path = curTxPath || (await resolveDataSources(uid)).txCollectionPath;
                 await deleteDoc(doc(db, `${path}/${tx.id}`));
                 cleanup();
-              }catch(e){ console.warn('Inline delete failed', e); }
+              }catch(e){ console.warn("Inline delete failed", e); }
             });
           });
+
+          listEl.appendChild(li);
         });
-      }, ds.txCollectionPath);
+      }, txPath);
 
-      // lightweight countdown tick (bus below updates empty payload; keep for future)
-      window.addEventListener("tx:expiry-tick",(e)=>{
-        const ticks=e?.detail?.ticks||[]; for (const {id,seconds} of ticks){
-          const row=listEl?.querySelector(`li[data-tx="${id}"]`); if (!row) continue;
-          const span=row.querySelector(".countdown"); if (!span) continue;
-          const s=Math.max(0,Number(seconds)||0); const m=Math.floor(s/60); const r=s%60; span.textContent=`${m}m ${r}s`;
+      // 2) RECENTLY CONFIRMED (no regression)
+      unsubRecent = listenRecentlyConfirmed(uid, 24*60*60*1000, (items) => {
+        recentEl.innerHTML = "";
+        if (!items.length){
+          const li = document.createElement("li");
+          li.textContent = "No recent locks.";
+          recentEl.appendChild(li);
+          return;
         }
-      }, ds.txCollectionPath); });
-    }
-
-    if (recentEl){
-      listenRecentlyConfirmed(uid, 24*60*60*1000, (items)=>{
-        recentEl.innerHTML="";
-        if (!items.length){ const li=document.createElement("li"); li.textContent="No recent locks."; recentEl.appendChild(li); return; }
-        items.forEach(tx=>{
-          const li=document.createElement("li");
-          const name=tx.transactionData?.description||"Transaction";
-          const amt = Number(tx.amount).toFixed(2);
-          const when = tx.tag?.setAtMs ? new Date(tx.tag.setAtMs).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
-          const intentPool = tx.tag?.pool ?? tx.provisionalTag?.pool ?? "stamina";
+        items.forEach((tx) => {
+          const li   = document.createElement("li");
+          const name = tx.transactionData?.description || "Transaction";
+          const amt  = Number(tx.amount).toFixed(2);
+          const when = tx.tag?.setAtMs
+            ? new Date(tx.tag.setAtMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : "";
+          const pool = tx.tag?.pool ?? tx.provisionalTag?.pool ?? "stamina";
           li.innerHTML = `
             <div class="ul-row">
               <div class="ul-main">
                 <strong>${name}</strong>
-                <div class="ul-meta">£${amt} • ${when} <span class="badge ${intentPool}">${intentPool}</span></div>
+                <div class="ul-meta">£${amt} • ${when} <span class="badge ${pool}">${pool}</span></div>
               </div>
             </div>`;
           recentEl.appendChild(li);
         });
-      }, ds.txCollectionPath); 
-    };
+      }, txPath);
+
+      // 3) Countdown tick (no regression) — add & clean on reattach
+      tickHandler = (e) => {
+        const ticks = e?.detail?.ticks || [];
+        for (const { id, seconds } of ticks){
+          const row  = listEl?.querySelector(`li[data-tx="${id}"]`); if (!row) continue;
+          const span = row.querySelector(".countdown"); if (!span) continue;
+          const s = Math.max(0, Number(seconds) || 0);
+          const m = Math.floor(s / 60); const r = s % 60;
+          span.textContent = `${m}m ${r}s`;
+        }
+      };
+      window.addEventListener("tx:expiry-tick", tickHandler);
+
+      // Kick the locker once now, then every 20s (simple, backend-pivotable)
+      try { await lockExpiredOrOverflow(uid, 50); } catch {}
+      lockTimer = setInterval(() => {
+        lockExpiredOrOverflow(uid, 50).catch(()=>{});
+      }, 20_000);
+    }
+
+    // Player-mode watcher: re-resolve tx path and reattach listeners live
+    const playerRef = doc(db, "players", uid);
+    onSnapshot(playerRef, async (snap) => {
+      const ds = await resolveDataSources(uid);
+      const nextTxPath = ds?.txCollectionPath;
+      if (!nextTxPath) return;
+
+      // Only flip if the path actually changes (prevents thrash)
+      if (nextTxPath !== curTxPath){
+        await attachFor(nextTxPath);
+      }
+    });
+
+    // Initial attach on first resolve
+    (async () => {
+      const ds = await resolveDataSources(uid);
+      if (ds?.txCollectionPath) await attachFor(ds.txCollectionPath);
+    })();
   });
 }
+
+// Event Logs Helpers
+export async function setCreditModeOverride(uid, txId, mode){
+  const path = CURRENT_TX_COLLECTION_PATH || (await resolveDataSources(uid)).txCollectionPath;
+  await updateDoc(doc(db, `${path}/${txId}`), {
+    creditModeOverride: (mode === 'essence' || mode === 'health') ? mode : null,
+    provisionalTag: (mode === 'essence'
+      ? { pool:'essence', setAtMs: Date.now() }
+      : mode === 'health'
+        ? { pool:'health', setAtMs: Date.now() }
+        : null)
+  });
+}
+
+
 
 // History 
 export function autoInitHistoryButtons() {
@@ -1344,7 +1537,91 @@ export async function refreshVitals(){
     return {};
   }
 }
-export async function lockExpiredOrOverflow(uid, queueCap = 50){ return { locked: 0 }; }
+
+// Local fallback: confirm expired and enforce queueCap if backend can't
+async function sweepLocalExpiredAndOverflow(uid, queueCap = 50){
+  const { txCollectionPath } = await resolveDataSources(uid);
+  if (!txCollectionPath) return { locked: 0 };
+
+  const now = Date.now();
+  const col = collection(db, txCollectionPath);
+  const snap = await getDocs(query(col, where("status","==","pending")));
+
+  // Load player credit mode for credits without override
+  let creditMode = 'essence';
+  try{
+    const cfg = await getDoc(doc(db, CURRENT_CASHFLOW_DOC_PATH || `players/${uid}/financialData/cashflowData`));
+    creditMode = String(cfg.data()?.creditMode || 'essence').toLowerCase();
+  }catch{}
+
+  const pend = [];
+  snap.forEach(d=>{
+    const x = d.data()||{};
+    pend.push({
+      id: d.id,
+      amount: Number(x.amount ?? x.amountMajor ?? 0),
+      dateMs: Number(x.dateMs ?? x.postedAtMs ?? x.transactionData?.entryDate?.toMillis?.() ?? 0),
+      addedMs: Number(x.addedMs ?? 0),
+      ghostExpiryMs: Number(x.ghostExpiryMs ?? 0),
+      provisionalTag: x.provisionalTag || null,
+      tag: x.tag || null,
+      creditModeOverride: String(x.creditModeOverride || '').toLowerCase(),
+      suggestedPool: x.suggestedPool || null,
+    });
+  });
+
+  // 1) Expired first
+  const toLock = pend.filter(x => x.ghostExpiryMs && x.ghostExpiryMs <= now);
+
+  // 2) Overflow next (oldest by dateMs; fallback addedMs)
+  const remain = pend.filter(x => !toLock.find(t => t.id === x.id));
+  const overflow = Math.max(0, pend.length - queueCap - toLock.length);
+  if (overflow > 0){
+    remain.sort((a,b) => (a.dateMs||a.addedMs) - (b.dateMs||b.addedMs));
+    toLock.push(...remain.slice(0, overflow));
+  }
+
+  // Apply locks
+  const ops = toLock.map(tx=>{
+    const isCredit = tx.amount > 0;
+    let pool;
+    if (isCredit){
+      const eff = (tx.creditModeOverride==='essence'||tx.creditModeOverride==='health'||tx.creditModeOverride==='allocate')
+        ? tx.creditModeOverride
+        : creditMode;
+      pool = (eff==='health') ? 'health'
+          : (eff==='essence') ? 'essence'
+          : (tx.tag?.pool || tx.provisionalTag?.pool || 'stamina'); // allocate
+    } else {
+      pool = tx.provisionalTag?.pool || tx.suggestedPool || 'stamina';
+    }
+    return updateDoc(doc(db, `${txCollectionPath}/${tx.id}`), {
+      status: 'confirmed',
+      tag: { pool, setAtMs: now },
+      provisionalTag: null,
+      autoLockReason: 'client_fallback'
+    });
+  });
+
+  if (ops.length) await Promise.allSettled(ops);
+  return { locked: toLock.length };
+}
+
+// Public forwarder: backend first, then local fallback
+export async function lockExpiredOrOverflow(uid, queueCap = 50){
+  let locked = 0;
+  try{
+    const be = await lockExpiredOrOverflow_BE(uid, queueCap);
+    locked += Number(be?.locked || 0);
+  }catch{}
+  try{
+    const fe = await sweepLocalExpiredAndOverflow(uid, queueCap);
+    locked += Number(fe?.locked || 0);
+  }catch{}
+  return { locked };
+}
+
+
 export async function getEssenceAvailableMonthlyFromHUD(uid){ return 0; }
 
 export function autoInitAddEnergyButton(){
@@ -1367,11 +1644,54 @@ export function autoInitAddSocialButton() {
     });
   }
 }
+
 export function autoInitAddSpendButton(){
-  const addBtn=document.getElementById('btn-add-spend');
-  if (addBtn) addBtn.addEventListener('click',(e)=>{
-    e.preventDefault();
-    window.MyFiModal?.openChildItem?.(window.MyFiFinancesMenu,'addTransaction',{menuTitle:'Add Transaction'});
+  const addBtn = document.getElementById('btn-add-spend');
+  if (!addBtn) return;
+
+  // Start fully hidden & inert (in case auth is slow)
+  const hideBtn = () => {
+    addBtn.hidden = true;
+    addBtn.disabled = true;
+    addBtn.tabIndex = -1;
+  };
+  const showBtn = () => {
+    addBtn.hidden = false;
+    addBtn.disabled = false;
+    addBtn.tabIndex = 0;
+  };
+  hideBtn();
+
+  const auth = getAuth();
+
+  // Wire the click handler once
+  if (!addBtn.__wired) {
+    addBtn.__wired = true;
+    addBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // Only act if visible/enabled
+      if (addBtn.hidden || addBtn.disabled) return;
+      window.MyFiModal?.openChildItem?.(
+        window.MyFiFinancesMenu,
+        'addTransaction',
+        { menuTitle: 'Add Transaction' }
+      );
+    });
+  }
+
+  // Keep a single live subscription per session
+  onAuthStateChanged(auth, (user) => {
+    // Cleanup prior watcher if any
+    addBtn.__unsub?.(); addBtn.__unsub = null;
+
+    if (!user) { hideBtn(); return; }
+
+    const playerRef = doc(getFirestore(), 'players', user.uid);
+    addBtn.__unsub = onSnapshot(playerRef, (snap) => {
+      const tMode = String(snap.data()?.transactionMode || 'unverified').toLowerCase();
+      const isUnverified = (tMode === 'unverified');
+      if (isUnverified) showBtn(); else hideBtn();
+    }, () => hideBtn());
   });
 }
 
