@@ -186,37 +186,32 @@ function resolveCreditMode(configDoc){
 }
 
 // ─────────────────────────────── Non-core usage ingest ──────────────────────
-// Reads processedTransactions and returns in-window totals (spends & credits split)
+// Reads processedTransactions and returns in-window totals
 async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', txCollectionPath){
   const base = collection(db, txCollectionPath);
   const shot = await getDocs(base);
 
-  const zeroPools = () => ({ health:0, mana:0, stamina:0, essence:0 });
-
+  // NOTE: pending is now a single signed delta per pool.
+  // Debits are negative; credits are positive. No Essence special-casing.
   const totals = {
-    all:    { spends: zeroPools(), credits: zeroPools() },   // window: ≥ anchor
-    last7:  { spends: zeroPools(), credits: zeroPools() },   // last 7d (clamped to window)
-    pending: zeroPools()                                     // signed preview (unchanged)
+    all:    { health:0, mana:0, stamina:0, essence:0 },   // window: ≥ anchor
+    last7:  { health:0, mana:0, stamina:0, essence:0 },   // last 7d (clamped to window)
+    pending:{ health:0, mana:0, stamina:0, essence:0 }    // signed preview
   };
 
   const sevenAgo = Date.now() - 7*MS_PER_DAY;
   const sevenWindowStart = Math.max(Number(windowStartMs||0), sevenAgo);
 
-  function add(obj, k, v){ obj[k] = Number((Number(obj[k]||0) + Number(v||0)).toFixed(2)); }
-
   function applyAllocatedCredit(amount, intent, when){
     const avail = { health: Infinity, mana: Infinity, stamina: Infinity, essence: 0 };
     const split = allocateSpendAcrossPools(amount, intent==='mana'?'mana':'stamina', avail);
-    const B = totals.all.credits;
-    add(B,'health',  split.health  || 0);
-    add(B,'mana',    split.mana    || 0);
-    add(B,'stamina', split.stamina || 0);
-    if (when >= sevenWindowStart){
-      const C = totals.last7.credits;
-      add(C,'health',  split.health  || 0);
-      add(C,'mana',    split.mana    || 0);
-      add(C,'stamina', split.stamina || 0);
-    }
+    const apply = (bucket)=>{
+      bucket.health  -= Number(split.health  || 0);
+      bucket.mana    -= Number(split.mana    || 0);
+      bucket.stamina -= Number(split.stamina || 0);
+    };
+    apply(totals.all);
+    if (when >= sevenWindowStart) apply(totals.last7);
   }
 
   shot.forEach(d=>{
@@ -225,7 +220,8 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
     if (!amt) return;
 
     const cls = String(tx.classification || '').toLowerCase();
-    if (cls === 'coreinflow' || cls === 'coreoutflow') return;
+    const isCore = (cls === 'coreinflow' || cls === 'coreoutflow');
+    if (isCore) return;
 
     const status   = String(tx.status || 'confirmed').toLowerCase();
     const when     = safeNum(tx.dateMs ?? tx.postedAtMs ?? tx.transactionData?.entryDate?.toMillis?.(), 0);
@@ -235,28 +231,33 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
     if (amt > 0){
       const txOverride = String(tx.creditModeOverride || '').toLowerCase();
       const effMode = (txOverride === 'essence' || txOverride === 'health' || txOverride === 'allocate')
-        ? txOverride : creditMode;
+        ? txOverride
+        : creditMode;
 
-      if (status === 'pending'){
-        if (effMode === 'essence') add(totals.pending,'essence', amt);
-        else if (effMode === 'health') add(totals.pending,'health', amt);
-        else {
+      if (status === 'pending') {
+        // Signed +ve pendings
+        if (effMode === 'essence') {
+          totals.pending.essence += amt;
+        } else if (effMode === 'health') {
+          totals.pending.health  += amt;
+        } else { // allocate
           const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
           const split  = allocateSpendAcrossPools(amt, intent==='mana'?'mana':'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
-          add(totals.pending,'health',  split.health  || 0);
-          add(totals.pending,'mana',    split.mana    || 0);
-          add(totals.pending,'stamina', split.stamina || 0);
+          totals.pending.health  += Number(split.health  || 0);
+          totals.pending.mana    += Number(split.mana    || 0);
+          totals.pending.stamina += Number(split.stamina || 0);
         }
-      } else if (inWindow){
+      } else if (inWindow) {
+        // Confirmed credits: flow per mode into all/last7
         if (effMode === 'essence'){
-          add(totals.all.credits,'essence', amt);
-          if (when >= sevenWindowStart) add(totals.last7.credits,'essence', amt);
+          totals.all.essence += amt;
+          if (when >= sevenWindowStart) totals.last7.essence += amt;
         } else if (effMode === 'allocate'){
           const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
           applyAllocatedCredit(amt, intent, when);
         } else if (effMode === 'health'){
-          add(totals.all.credits,'health', amt);
-          if (when >= sevenWindowStart) add(totals.last7.credits,'health', amt);
+          totals.all.health -= amt;
+          if (when >= sevenWindowStart) totals.last7.health -= amt;
         }
       }
       return;
@@ -265,12 +266,13 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
     // DEBITS (amt < 0)
     const spend = Math.abs(amt);
 
-    if (status === 'pending'){
+    if (status === 'pending') {
+      // Signed −ve pendings
       const intent = tx?.provisionalTag?.pool || tx?.tag?.pool || 'stamina';
-      const alloc  = allocateSpendAcrossPools(spend, intent==='mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
-      add(totals.pending,'health',  -(alloc.health  || 0));
-      add(totals.pending,'mana',    -(alloc.mana    || 0));
-      add(totals.pending,'stamina', -(alloc.stamina || 0));
+      const alloc  = allocateSpendAcrossPools(spend, intent === 'mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
+      totals.pending.health  -= Number(alloc.health  || 0);
+      totals.pending.mana    -= Number(alloc.mana    || 0);
+      totals.pending.stamina -= Number(alloc.stamina || 0);
       return;
     }
 
@@ -278,37 +280,42 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
 
     // Confirmed: prefer appliedAllocation
     const applied = tx.appliedAllocation || null;
-    if (applied){
-      add(totals.all.spends,'health',  safeNum(applied.health,  0));
-      add(totals.all.spends,'mana',    safeNum(applied.mana,    0));
-      add(totals.all.spends,'stamina', safeNum(applied.stamina, 0));
-      add(totals.all.spends,'essence', safeNum(applied.essence, 0));
+    if (applied) {
+      totals.all.health  += safeNum(applied.health,  0);
+      totals.all.mana    += safeNum(applied.mana,    0);
+      totals.all.stamina += safeNum(applied.stamina, 0);
+      totals.all.essence += safeNum(applied.essence, 0);
       if (when >= sevenWindowStart){
-        add(totals.last7.spends,'health',  safeNum(applied.health,  0));
-        add(totals.last7.spends,'mana',    safeNum(applied.mana,    0));
-        add(totals.last7.spends,'stamina', safeNum(applied.stamina, 0));
-        add(totals.last7.spends,'essence', safeNum(applied.essence, 0));
+        totals.last7.health  += safeNum(applied.health,  0);
+        totals.last7.mana    += safeNum(applied.mana,    0);
+        totals.last7.stamina += safeNum(applied.stamina, 0);
+        totals.last7.essence += safeNum(applied.essence, 0);
       }
       return;
     }
 
     // Fallback split by intent
     const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
-    const alloc  = allocateSpendAcrossPools(spend, intent==='mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
+    const alloc  = allocateSpendAcrossPools(spend, intent === 'mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
 
-    add(totals.all.spends,'health',  alloc.health  || 0);
-    add(totals.all.spends,'mana',    alloc.mana    || 0);
-    add(totals.all.spends,'stamina', alloc.stamina || 0);
+    totals.all.health  += alloc.health  || 0;
+    totals.all.mana    += alloc.mana    || 0;
+    totals.all.stamina += alloc.stamina || 0;
+
     if (when >= sevenWindowStart){
-      add(totals.last7.spends,'health',  alloc.health  || 0);
-      add(totals.last7.spends,'mana',    alloc.mana    || 0);
-      add(totals.last7.spends,'stamina', alloc.stamina || 0);
+      totals.last7.health  += alloc.health  || 0;
+      totals.last7.mana    += alloc.mana    || 0;
+      totals.last7.stamina += alloc.stamina || 0;
     }
   });
 
+  for (const grp of [totals.all, totals.last7, totals.pending]){
+    for (const k of Object.keys(grp)){
+      grp[k] = Number(safeNum(grp[k],0).toFixed(2));
+    }
+  }
   return totals;
 }
-
 
 
 // ───────────────────────── Vitals Gateway recompute (stub) ──────────────────
@@ -360,15 +367,15 @@ export async function recomputeVitalsGatewayStub(uid){
   // Window: ≥ payCycleAnchorMs
   const usage = await readNonCoreUsage(db, uid, payCycleAnchorMs, creditMode, txCollectionPath);
 
-  // Nudge vs 7-day actuals — compare against spends only
+  // Nudge vs 7-day actuals
   function nudge(pool){
-    const base    = safeNum(regenBaseline[pool], 0);
-    const used7   = safeNum(usage.last7.spends?.[pool], 0);
-    const expect7 = Math.max(0, base * 7);
+    const base     = safeNum(regenBaseline[pool], 0);
+    const used7    = safeNum(usage.last7[pool], 0);
+    const expect7  = Math.max(0, base * 7);
     let trend = "on target";
     let current = base;
     if (expect7 > 0){
-      if (used7 > expect7 * 1.15)      { current = base * 0.95; trend = "overspending"; }
+      if (used7 > expect7 * 1.15) { current = base * 0.95; trend = "overspending"; }
       else if (used7 < expect7 * 0.80) { current = base * 1.05; trend = "underspending"; }
     }
     return { regenCurrent: Number(current.toFixed(2)), trend };
@@ -383,16 +390,18 @@ export async function recomputeVitalsGatewayStub(uid){
   function buildPool(k, nudgeObj){
     const daily = safeNum(nudgeObj.regenCurrent, 0);
     const cap   = Math.max(0, daily * AVG_MONTH_DAYS);
+    const spent = safeNum(usage.all[k], 0);
 
-    const spent  = safeNum(usage.all.spends?.[k],  0);   // debits allocated to this pool
-    const credit = safeNum(usage.all.credits?.[k], 0);   // credits routed to this pool
+    // usage.* already reflects the final per-tx credit modes.
+    // Credits to Essence increase Essence; health-mode credits reduce Health, etc.
+    const credit = (k === 'essence') ? safeNum(usage.all.essence, 0) : 0;
 
-    // Truth since anchor — identical logic for every pool
+    // Truth since anchor
     const T = (daily * days) - spent + credit;
     const { rNow, sNow } = wrapIntoCap(T, cap);
 
-    // Pending preview remains a signed delta per pool (unchanged shape)
-    const pendDelta = safeNum(usage.pending?.[k], 0);
+    // Pending preview: signed delta directly from usage.pending[k]
+    const pendDelta = safeNum(usage.pending[k], 0);
 
     return {
       max:           Number(cap.toFixed(2)),
@@ -1662,21 +1671,16 @@ async function sweepLocalExpiredAndOverflow(uid, queueCap = 50){
 }
 
 // Public forwarder: backend first, then local fallback
-export async function lockExpiredOrOverflow(uid, queueCap = 5){
+export async function lockExpiredOrOverflow(uid, queueCap = 50){
   let locked = 0;
-  // try{
-  //   const be = await lockExpiredOrOverflow_BE(uid, queueCap);
-  //   locked += Number(be?.locked || 0);
-  // }catch{}
+  try{
+    const be = await lockExpiredOrOverflow_BE(uid, queueCap);
+    locked += Number(be?.locked || 0);
+  }catch{}
   try{
     const fe = await sweepLocalExpiredAndOverflow(uid, queueCap);
     locked += Number(fe?.locked || 0);
   }catch{}
-
-  if (locked > 0) await recomputeVitalsGatewayStub(uid);
-  initVitalsHUD(uid)
-
-
   return { locked };
 }
 
