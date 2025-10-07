@@ -2,9 +2,9 @@
 // Standardised Finances menu with inline validation via MyFiUI.
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
 import { auth, db } from './core/auth.js';
-import { initHUD } from './hud/hud.js';
-import { connectTrueLayerAccount, ensureTlConsentDialog } from './core/truelayer.js';
-import { openSmartReviewOverlay } from './smartReview.js'
+import { initHUD } from '../energy/energy-vitals.js';
+import { connectTrueLayerAccount, ensureTlConsentDialog } from '../energy/truelayer.js';
+// import { openSmartReviewOverlay } from '../energy/energy-verified.js'
 import {
   updateIncome, updateCoreExpenses, getDailyIncome, getDailyCoreExpenses
 } from './data/cashflowData.js';
@@ -386,6 +386,42 @@ import {
         root.append(jumpRow);
 
         const desc = field('Description', 'text', 'txDesc', { placeholder: 'e.g. Groceries' });
+        
+        // Credit/Debit
+        // Segmented type: Debit | Credit (red/green)
+        const typeSeg = document.createElement('div');
+        typeSeg.className = 'field';
+        typeSeg.innerHTML = `
+          <style>
+            .seg { display:flex; gap:8px; }
+            .seg button{
+              flex:1; padding:8px 10px; border-radius:10px; border:1px solid #2a3a55;
+              background:#0d1220; color:#fff; cursor:pointer;
+            }
+            .seg button.active{ outline:2px solid rgba(59,130,246,.5); }
+            .seg .debit.active{ border-color: rgba(239,68,68,.5); box-shadow:0 0 0 1px rgba(239,68,68,.25), inset 0 0 12px rgba(239,68,68,.25) }
+            .seg .credit.active{ border-color: rgba(16,185,129,.5); box-shadow:0 0 0 1px rgba(16,185,129,.25), inset 0 0 12px rgba(16,185,129,.25) }
+          </style>
+          <label>Type</label>
+          <div class="seg">
+            <button type="button" id="txTypeDebit"  class="debit active">Debit (Expense)</button>
+            <button type="button" id="txTypeCredit" class="credit">Credit (Income)</button>
+          </div>
+          <input id="txType" type="hidden" value="debit" />
+        `;
+        const typeHidden = typeSeg.querySelector('#txType');
+        typeSeg.querySelector('#txTypeDebit').addEventListener('click', ()=>{
+          typeHidden.value = 'debit';
+          typeSeg.querySelector('#txTypeDebit').classList.add('active');
+          typeSeg.querySelector('#txTypeCredit').classList.remove('active');
+        });
+        typeSeg.querySelector('#txTypeCredit').addEventListener('click', ()=>{
+          typeHidden.value = 'credit';
+          typeSeg.querySelector('#txTypeCredit').classList.add('active');
+          typeSeg.querySelector('#txTypeDebit').classList.remove('active');
+        });
+        //
+        
         const amt = field('Amount', 'number', 'txAmount', { min: 0, step: '0.01', placeholder: 'e.g. 23.40' });
         //const type = select('Type', 'txType', [['debit', 'Expense'], ['credit', 'Income']]);
         const date = field('Date', 'date', 'txDate', {});
@@ -409,7 +445,7 @@ import {
         })();
 
 
-        root.append(desc, amt, date, pool, note); // Removed type until income type logic sorted
+        root.append(desc, typeSeg, amt, date, pool, note); // Removed type until income type logic sorted
         return [root];
       },
       footer() {

@@ -13,7 +13,7 @@ import { VO, PROMPT, INFO } from "./architectCopy.js";
 // Optional: TrueLayer connector (kept disabled by default)
 let connectTrueLayerAccount = null;
 try {
-  const tl = await import('../js/core/truelayer.js');
+  const tl = await import('../energy/truelayer.js');
   connectTrueLayerAccount = tl?.connectTrueLayerAccount || null;
 } catch {}
 
@@ -428,7 +428,6 @@ function renderInputs6(){
   const finish = btnAccent('Enter the Crucible', async ()=>{
     try{ await persistAndFinish(); }catch(e){ return showErr('Could not save now.'); }
     closeOverlay(); hideStage();
-    //try{ await initHUD(); }catch{}
     if (location.pathname.toLowerCase().includes('/onboarding/')){
       window.location.replace('../dashboard.html');
     }
@@ -495,11 +494,21 @@ async function persistAndFinish(){
   await setDoc(ref, payload, { merge: true });
 
   // Seed/merge auxiliary docs similar to your earlier flow
-  await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
-    essenceAllocation: Number((allocations.essenceAllocation ?? 0.1).toFixed(3)),
-    healthAllocation:  Number((allocations.healthAllocation  ?? 0.2).toFixed(3)),
-    manaAllocation:    Number((allocations.manaAllocation    ?? 0.3).toFixed(3)),
-    staminaAllocation: Number((allocations.staminaAllocation ?? 0.4).toFixed(3)),
+  // await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
+  //   essenceAllocation: Number((allocations.essenceAllocation ?? 0.1).toFixed(3)),
+  //   healthAllocation:  Number((allocations.healthAllocation  ?? 0.2).toFixed(3)),
+  //   manaAllocation:    Number((allocations.manaAllocation    ?? 0.3).toFixed(3)),
+  //   staminaAllocation: Number((allocations.staminaAllocation ?? 0.4).toFixed(3)),
+  // }, { merge: true });
+
+    await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), {
+      poolAllocations:{
+        essenceAllocation: Number((allocations.essenceAllocation ?? 0.1).toFixed(3)),
+        healthAllocation:  Number((allocations.healthAllocation  ?? 0.2).toFixed(3)),
+        manaAllocation:    Number((allocations.manaAllocation    ?? 0.3).toFixed(3)),
+        staminaAllocation: Number((allocations.staminaAllocation ?? 0.4).toFixed(3)),
+      }
+
   }, { merge: true });
 
 }

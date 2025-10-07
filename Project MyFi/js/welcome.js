@@ -5,7 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";
-import { initHUD } from "./hud/hud.js"; // same as your current flow
+import { initHUD } from "../energy/energy-vitals.js"; // same as your current flow
 
 const WELCOME_LS_KEY = 'myfi.welcome.v1.done';
 let WELCOME_OPEN = false; // re-entry guard

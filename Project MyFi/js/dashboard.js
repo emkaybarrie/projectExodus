@@ -148,7 +148,7 @@ window.MyFiShowIOSInstallModal = MyFiShowIOSInstallModal;
 import { app, auth, db, fns as functions } from './core/auth.js';
 import { getDoc, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import playerDataManager from "./playerDataManager.js";
-import { initHUD } from "./hud/hud.js";
+import { initHUD } from "../energy/energy-vitals.js";
 import { createSplash } from './splash.js';
 
 import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";
@@ -159,18 +159,20 @@ import { createRouter } from './navigation.js';
 // in dashboard.js (post onAuthStateChanged success)
 import { initQuestEngine } from "../quests/questEngine.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
-import { maybeOpenSmartReviewOnLoad } from './smartReview.js'
+import { maybeOpenSmartReviewOnLoad } from '../energy/energy-verified.js'
 
-import "./core/truelayer.js";
+import "../energy/truelayer.js";
 import "./modal.js";
 import "./ui/kit.js";
 import "./settingsMenu.js";
 import "./helpMenu.js";
 import "./financesMenu.js";
-import "./essenceMenu.js";
+import "../energy/essenceMenu.js";
 import "./socialMenu.js";
 import "./quickMenus.js";
 import "./musicManager.js"
+
+import "../energy/energy-menu.js"
 
 const shouldShowSplash = sessionStorage.getItem('showSplashNext') === '1';
 if (shouldShowSplash) sessionStorage.removeItem('showSplashNext');

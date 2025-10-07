@@ -1,9 +1,13 @@
 // energy-unverified.js — Unverified Energy Menu (unified inputs)
-// Adds: Anchor date picker in sticky summary (top), totals side-by-side on all
-// viewports. Keeps Net toggle + sticky tabs. Saves to cashflowData/unverified.
+// Preserves legacy UI & styling.
+// Adds: Credit Mode selector (essence | allocate | health), Anchor date,
+// writes to cashflowData/unverified/core + active cashflowData, and sets transactionMode=unverified.
 
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { ensureTlConsentDialog, connectTrueLayerAccount } from "./truelayer.js";
+import { openEnergyMenu, scopeCSS } from "./energy-menu.js";
+import { initHUD } from "./energy-vitals.js";
 
 // ─────────────────────────── CONFIG ───────────────────────────
 const CFG = {
@@ -14,13 +18,15 @@ const CFG = {
   expenseCats: [["shelter","Rent/Mortgage"],["bills","Bills & Utilities"],["groceries","Groceries"],
                 ["transport","Transport"],["debt","Debts"],["other","Other"]],
 };
-
 const GBP = (n)=> new Intl.NumberFormat("en-GB",{style:"currency",currency:CFG.currency}).format(Number(n)||0);
 const MONTHLY_MULT = { monthly:1, weekly:52/12, fortnightly:26/12, quarterly:4/12, yearly:1/12, daily:30.44 };
 
 // ─────────────────────────── STYLE ───────────────────────────
 function ensureStyles(){
-  if (document.getElementById("em-unv-styles")) return;
+  const STYLE_ID = 'em-styles';
+  const OVERLAY_ID = 'emOverlay';
+  const prev = document.getElementById(STYLE_ID);
+  if (prev) prev.remove();
   const css = `
   :root{ --bg:#0f1118; --panel:#111827; --edge:#1f2937; --ink:#fff;
          --muted:.85; --green:#10b981; --red:#ef4444; --blue:#3b82f6; --chip:#0d1220; }
@@ -38,20 +44,18 @@ function ensureStyles(){
   .pill.active{outline:2px solid var(--blue)}
   .btnPrimary{border-color:#3b82f6;background:#0f1b33}
 
-  /* Summary (sticky) */
   .summary{display:grid;gap:10px;margin-top:8px}
-  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px} /* ← always two columns */
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .kbox{border-radius:12px;padding:10px 12px;background:#111827;border:1px solid #1f2937;min-width:0}
   .kval{font-weight:700}
   .green{color:var(--green)} .red{color:var(--red)} .muted{opacity:.85}
   .bar{height:14px;border-radius:12px;background:var(--edge);overflow:hidden}
   .bar>div{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#06b6d4)}
 
-  /* Anchor row (label left, input right) */
   .anchor-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
   .ao-input,.ao-select{width:100%;padding:8px;border-radius:8px;border:1px solid #2a3a55;background:#0d1220;color:#fff}
 
-  /* Net monthly: tappable + slide reveal for Daily/Weekly */
+  
   .net-row{display:grid;grid-template-columns:1fr;gap:10px}
   .net-box{position:relative; display:flex; align-items:center; justify-content:space-between;
            padding:10px 12px; border-radius:12px; background:#111827; border:1px solid #1f2937; cursor:pointer;}
@@ -64,9 +68,9 @@ function ensureStyles(){
   .net-collapsible-inner{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
   .kval-sm{font-weight:700}
 
-  /* Tabs — pinned in sticky header */
-  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 2px}
-  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:#fff;text-align:center}
+  /* Tabs (single set, subtle aura on active) */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 6px}
+  .tab{padding:8px 10px;border:1px solid #2a3a55;border-radius:10px;background:var(--chip);color:var(--ink);text-align:center;transition:box-shadow .15s ease,border-color .15s ease}
   .tab.in.active{border-color:rgba(16,185,129,.5); box-shadow:0 0 0 1px rgba(16,185,129,.25), 0 0 12px rgba(16,185,129,.25) inset}
   .tab.out.active{border-color:rgba(239,68,68,.5);  box-shadow:0 0 0 1px rgba(239,68,68,.25),  0 0 12px rgba(239,68,68,.25) inset}
 
@@ -83,25 +87,30 @@ function ensureStyles(){
   @media (max-width:680px){
     .net-collapsible-inner{grid-template-columns:1fr}
   }
+  
+
   `;
-  const s=document.createElement("style"); s.id="em-unv-styles"; s.textContent=css; document.head.appendChild(s);
+  const style=document.createElement("style");
+  style.id=STYLE_ID;
+  style.textContent=scopeCSS(css, OVERLAY_ID);
+  document.head.appendChild(style);
 }
 function el(tag, cls, html){ const n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; }
 
 // ─────────────────────────── HELPERS ───────────────────────────
 const toMonthly = (a,c)=> (Number(a)||0) * (MONTHLY_MULT[c] || 1);
 const dailyFromMonthly = (m)=> m/30.44;
-
 function storeKey(uid, kind){ return `energy-unv:${uid}:${kind}`; } // kind: 'in' | 'out'
+
 async function readUnverified(uid){
   const db = getFirestore();
-  const snap = await getDoc(doc(db, `players/${uid}/cashflowData/unverified`));
+  const snap = await getDoc(doc(db, `players/${uid}/financialData/cashflowData/unverified/core`));
   return snap.exists() ? (snap.data() || {}) : null;
 }
 async function writeDailyAverages(uid, inflowMonthly, outflowMonthly){
   if(!CFG.enableDailyAveragesWrite) return;
   const db=getFirestore();
-  await setDoc(doc(db, `players/${uid}/cashflowData/dailyAverages`), {
+  await setDoc(doc(db, `players/${uid}/financialData/dailyAverages`), {
     income: Number(dailyFromMonthly(inflowMonthly).toFixed(2)),
     coreSpend: Number(dailyFromMonthly(outflowMonthly).toFixed(2)),
     updatedAt: Date.now()
@@ -226,20 +235,30 @@ function buildUnifiedCard(kind, onChange) {
 }
 
 // ─────────────────────────── SAVE ───────────────────────────
-async function saveUnverifiedDoc({ mode, anchorMs, inflowMonthly, outflowMonthly, inflowCatsMonthly, outflowCatsMonthly }){
+async function saveUnverifiedDoc({ mode, anchorMs, inflowMonthly, outflowMonthly, inflowCatsMonthly, outflowCatsMonthly, creditMode }){
   const user = getAuth().currentUser; if (!user) throw new Error("Not signed in");
   const uid = user.uid; const db = getFirestore();
 
-  await setDoc(doc(db, `players/${uid}/cashflowData/unverified`), {
-    mode: mode==="finite" ? "finite" : "continuous",
+  const payload = {
+    energyMode: mode==="finite" ? "finite" : "continuous",
+    creditMode: creditMode || 'essence',
     cadence: "monthly",
-    inflow:  { totalMonthly: Number(inflowMonthly.toFixed(2)),  categories: inflowCatsMonthly },
-    outflow: { totalMonthly: Number(outflowMonthly.toFixed(2)), categories: outflowCatsMonthly },
-    anchorMs: anchorMs ?? null,
+    inflow:  { total: Number(inflowMonthly.toFixed(2)),  itemised: inflowCatsMonthly },
+    outflow: { total: Number(outflowMonthly.toFixed(2)), itemised: outflowCatsMonthly },
+    netflow: Number(inflowMonthly - outflowMonthly).toFixed(2),
+    payCycleAnchorMs: anchorMs ?? null,
     updatedAt: Date.now()
-  }, { merge:true });
+  };
+
+  await setDoc(doc(db, `players/${uid}/financialData/cashflowData/unverified/core`), payload, { merge:true });
 
   await writeDailyAverages(uid, inflowMonthly, outflowMonthly);
+
+  // Active doc for gateway readers
+  await setModeToUnverified();
+  const tMode = await getTransactionMode();
+  payload.transactionMode = tMode;
+  await setDoc(doc(db, `players/${uid}/financialData/cashflowData`), payload, { merge: true });
 }
 
 // ─────────────────────────── MODAL ───────────────────────────
@@ -253,9 +272,9 @@ export async function openEnergyUnverified(){
   top.innerHTML = `
     <div id="emTopInner">
       <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <h2 style="margin:0">Energy Menu</h2>
+        <h2 style="margin:0">Energy</h2>
         <div style="display:flex;gap:8px;align-items:center">
-          <button id="btnConnect" class="pill btnPrimary">Connect your bank</button>
+          <button id="btnConnect" class="pill btnPrimary">Connect bank</button>
           <button id="pill-cont" class="pill active">Continuous</button>
           <button id="pill-fin"  class="pill">Finite</button>
         </div>
@@ -290,13 +309,14 @@ export async function openEnergyUnverified(){
   // state
   let mode = "continuous";
   let inCard, outCard;
-  let anchorMs = null; // ← new
+  let anchorMs = null;
+  let creditMode = "essence";
 
-  // ── Summary with Anchor + Net toggle
+  // ── Summary with Anchor + Credit Mode + Net toggle
   function buildSummary(){
     summaryHost.innerHTML = "";
 
-    // Anchor row (label left, date input right)
+    // Anchor
     const anchorBox = el("div","kbox","");
     const anchorRow = el("div","anchor-row","");
     const anchorLbl = el("div","muted","Anchor date:");
@@ -308,17 +328,31 @@ export async function openEnergyUnverified(){
     }
     date.addEventListener("change", ()=>{
       if (!date.value) { anchorMs = null; return; }
-      // yyyy-mm-dd -> ms (local)
       const [y,m,d] = date.value.split("-").map(Number);
       anchorMs = new Date(y, m-1, d).getTime();
     });
     anchorRow.append(anchorLbl, date);
     anchorBox.append(anchorRow);
 
+    // Credit Mode
+    const cmRow = el("div","anchor-row","");
+    const cmLbl = el("div","muted","Credit mode:");
+    const cmSel = document.createElement("select");
+    cmSel.className = "ao-select";
+    ["essence","allocate","health"].forEach(opt=>{
+      const o=document.createElement("option");
+      o.value=opt; o.textContent=opt[0].toUpperCase()+opt.slice(1);
+      cmSel.append(o);
+    });
+    cmSel.value=creditMode;
+    cmSel.addEventListener("change",()=>{ creditMode = cmSel.value; });
+    cmRow.append(cmLbl, cmSel);
+    anchorBox.append(cmRow);
+
     const inM  = inCard?.collectMonthly()?.totalMonthly || 0;
     const outM = outCard?.collectMonthly()?.totalMonthly || 0;
 
-    // Totals row (ALWAYS side-by-side)
+    // Totals
     const row1 = el("div","row","");
     row1.append(el("div","kbox",`<div>Energy Source</div><div class="kval green">${GBP(inM)}/mo</div>`));
     row1.append(el("div","kbox",`<div>Emberward</div><div class="kval red">${GBP(outM)}/mo</div>`));
@@ -328,7 +362,7 @@ export async function openEnergyUnverified(){
     const pct = Math.max(0, Math.min(100, inM ? ((inM-outM)/inM)*100 : 0));
     fill.style.width = pct + "%";
 
-    // Net (tappable)
+    // Net toggle
     const netRow = el("div","net-row","");
     const netBox = el("div","net-box","");
     const left = el("div","net-left","");
@@ -341,25 +375,22 @@ export async function openEnergyUnverified(){
     const daily = el("div","kbox",""); daily.innerHTML = `<div class="muted">Daily</div><div class="kval-sm">${GBP((inM-outM)/30.44)}</div>`;
     const weeky = el("div","kbox",""); weeky.innerHTML = `<div class="muted">Weekly</div><div class="kval-sm">${GBP((inM-outM)/(52/12))}</div>`;
     inner.append(daily, weeky); slide.append(inner);
-
-    function toggleNet(){
+    netBox.addEventListener("click", ()=>{
       const expanded = netBox.classList.toggle("expanded");
       slide.style.maxHeight = expanded ? inner.scrollHeight + "px" : "0px";
-    }
-    netBox.addEventListener("click", toggleNet);
+    });
     netRow.append(netBox, slide);
 
     summaryHost.append(anchorBox, row1, bar, netRow);
   }
 
-  // Rebuild summary whenever inputs change
+  // rebuild summary when cards change
   const onChange = ()=> buildSummary();
 
   function renderContinuous(){
     body.innerHTML = "";
-    tabsBar.style.display = ""; // show sticky tabs
+    tabsBar.style.display = "";
 
-    // Cards
     inCard  = buildUnifiedCard('in',  onChange);
     outCard = buildUnifiedCard('out', onChange);
 
@@ -372,7 +403,8 @@ export async function openEnergyUnverified(){
       const saved = await readUnverified(uid);
       if (saved?.inflow)  inCard.load(saved.inflow);
       if (saved?.outflow) outCard.load(saved.outflow);
-      if (saved?.anchorMs) anchorMs = Number(saved.anchorMs)||null;
+      if (saved?.payCycleAnchorMs) anchorMs = Number(saved.payCycleAnchorMs)||null;
+      if (saved?.creditMode) creditMode = saved.creditMode;
       buildSummary();
     }
 
@@ -403,7 +435,9 @@ export async function openEnergyUnverified(){
   }
 
   function setMode(m){
-    mode=m; pillCont.classList.toggle("active",m==='continuous'); pillFin.classList.toggle("active",m==='finite');
+    mode=m;
+    pillCont.classList.toggle("active",m==='continuous');
+    pillFin.classList.toggle("active",m==='finite');
     if (m==='finite') renderFinite(); else renderContinuous();
   }
   pillCont.onclick = ()=> setMode('continuous');
@@ -411,13 +445,24 @@ export async function openEnergyUnverified(){
   setMode('continuous');
 
   // Header buttons
-  top.querySelector("#btnConnect").onclick = ()=>{
-    if (typeof window.startTrueLayerConnect === "function") {
-      window.startTrueLayerConnect();
-    } else {
-      alert("Wire this button to your TrueLayer connect flow (window.startTrueLayerConnect).");
-    }
+  btnConnect.onclick = ()=>{
+    const dlg = ensureTlConsentDialog();
+    dlg.showModal();
+    const agree = dlg.querySelector('#tlAgree');
+    const onAgree = async (ev) => {
+      ev?.preventDefault?.();
+      try {
+        dlg.close();
+        await connectTrueLayerAccount();
+      } catch (e) {
+        console.warn('TrueLayer connect failed:', e);
+      } finally {
+        agree.removeEventListener('click', onAgree);
+      }
+    };
+    agree.addEventListener('click', onAgree);
   };
+
   btnClose.onclick = ()=> { overlay.remove(); window.dispatchEvent(new CustomEvent("energyMenu:closed")); };
 
   btnApply.onclick = async ()=>{
@@ -432,9 +477,11 @@ export async function openEnergyUnverified(){
         inflowMonthly: inMonthly.totalMonthly,
         outflowMonthly: outMonthly.totalMonthly,
         inflowCatsMonthly: inMonthly.categories,
-        outflowCatsMonthly: outMonthly.categories
+        outflowCatsMonthly: outMonthly.categories,
+        creditMode
       });
 
+      await initHUD()
       overlay.remove();
       window.dispatchEvent(new CustomEvent("cashflow:updated", { detail:{ source:"energy-unverified" }}));
     }catch(e){
@@ -443,4 +490,28 @@ export async function openEnergyUnverified(){
   };
 
   return true;
+}
+
+// ----------------------- STUBS / In Progress functions -----------------------------
+export async function setModeToUnverified(){
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) { console.warn("[EnergyMenu] No user logged in."); return; }
+  const uid = user.uid;
+
+  const db = getFirestore();
+  await setDoc(doc(db, `players/${uid}`), {
+    transactionMode: "unverified",
+  }, { merge:true });
+}
+
+export async function getTransactionMode(){
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) { console.warn("[EnergyMenu] No user logged in."); return; }
+  const uid = user.uid;
+
+  const db = getFirestore();
+  const snap = await getDoc(doc(db, "players", uid));
+  return snap.exists() ? snap.data()?.transactionMode : null;
 }

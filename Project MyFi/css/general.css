@@ -18,6 +18,10 @@
   user-select: text;
 }
 
+/* Ensure elements with the hidden attribute are actually hidden */
+[hidden] { display: none !important; }
+
+
 
 /* Music toggle button (inherits your existing .btn styles) */
 .music-btn {

@@ -1,7 +1,7 @@
 // js/callback.js
-import { auth } from './core/auth.js';
-import { triggerTrueLayerFetch, renderLegalLinks } from './core/truelayer.js';
-import { showSmartReviewAfterTrueLayer } from './smartReview.js';
+import { auth } from '../js/core/auth.js';
+import { triggerTrueLayerFetch, renderLegalLinks } from './truelayer.js';
+import { showSmartReviewAfterTrueLayer } from './energy-verified.js';
 
 // ----- DOM -----
 const overlay      = document.getElementById('syncOverlay');
@@ -177,13 +177,13 @@ async function main() {
     showSmartReviewAfterTrueLayer();
     window.location.href = 'dashboard.html';
   };
-  restartBtn.onclick = () => { window.location.href = 'connect.html'; };
+  restartBtn.onclick = () => { window.location.href = 'dashboard.html'; };
   retryBtn.onclick   = async () => { await main(); };
 
   if (ok) {
     overlay.style.display = 'none';
     showSmartReviewAfterTrueLayer();
-    window.location.href = 'dashboard.html';
+    window.location.href = '../dashboard.html';
   }
 }
 
