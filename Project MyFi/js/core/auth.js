@@ -73,20 +73,29 @@ export async function signupUser(data) {
     }, { merge: true });
 
     // 3) Seed auxiliary docs (unchanged)
-    await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
-      dCoreExpenses: Number(0),
-      dIncome: Number(0)
-    });
-    await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
-      essenceAllocation: Number(0.1),
-      healthAllocation: Number(0.1),
-      manaAllocation: Number(0.3),
-      staminaAllocation: Number(0.5),
-    });
-    await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
-      recentUsage:  { essence: 0, health: 0, mana: 0, stamina: 0 },
-      historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
-    });
+    // await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
+    //   dCoreExpenses: Number(0),
+    //   dIncome: Number(0)
+    // });
+    // await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), { // Legacy
+    //   essenceAllocation: Number(0.1),
+    //   healthAllocation: Number(0.1),
+    //   manaAllocation: Number(0.3),
+    //   staminaAllocation: Number(0.5),
+    // });
+
+    await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), { 
+      poolAllocations: {
+        essenceAllocation: Number(0.1),
+        healthAllocation: Number(0.1),
+        manaAllocation: Number(0.3),
+        staminaAllocation: Number(0.5),
+      }
+    }, { merge: true });
+    // await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
+    //   recentUsage:  { essence: 0, health: 0, mana: 0, stamina: 0 },
+    //   historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
+    // });
 
     // Capture Invite code if present (non-blocking)
     try {

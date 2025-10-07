@@ -43,32 +43,6 @@ const DEFAULT_TITLE = "VITALS";
 const MAX_ALIAS_LEN = 16;
 const COLLAPSE_LEN_HINT = 14;
 
-// ─────────────────────────────── Cycle constants & config ───────────────────
-const CYCLE_DAYS = AVG_MONTH_DAYS; // 30.44 — treat as the Cycle length
-
-function todayLocalKey(){
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-}
-
-// Read vitals config flags from cashflowData (with sensible defaults)
-function readVitalsFlags(A){
-  // Essence baseline on/off; default OFF
-  const essenceBaselineEnabled = !!A?.essenceBaselineEnabled;
-
-  // Redistribution vector for the would-be Essence share when baseline disabled
-  const R = A?.redistributionR || { h: 0.34, m: 0.33, s: 0.33 }; // must sum to 1
-
-  // Essence soft-cap mode for UI only: "MS" or "HMS"
-  const essenceSoftCapMode = (String(A?.essenceSoftCapMode||'HMS').toUpperCase()==='HMS') ? 'HMS':'MS';
-
-  // Overflow buffer in days of regen before counting as overflow to Essence
-  const overflowBufferDays = Number.isFinite(A?.overflowBufferDays) ? A.overflowBufferDays : 0;
-
-  return { essenceBaselineEnabled, R, essenceSoftCapMode, overflowBufferDays };
-}
-
-
 // ───────────────────────────────── Utilities ────────────────────────────────
 function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
 function safeNum(n, d=0){ n = Number(n); return Number.isFinite(n) ? n : d; }
@@ -81,16 +55,13 @@ function wrapIntoCap(T, cap){
   return { rNow: clamp(rNow, 0, cap), sNow };
 }
 
-// Resolve the cycle window start (anchor or 1st of current month)
-function resolveCycleStartMs(payCycleAnchorMs){
-  if (Number.isFinite(payCycleAnchorMs) && payCycleAnchorMs > 0) return payCycleAnchorMs;
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-}
-
-// Days strictly since cycle window start (anchor or 1st of month)
+// Days strictly since payCycleAnchorMs (fallback: 1st of current month)
 function daysSincePayCycleStart(payCycleAnchorMs){
-  const start = resolveCycleStartMs(payCycleAnchorMs);
+  if (Number.isFinite(payCycleAnchorMs) && payCycleAnchorMs > 0){
+    return Math.max(0, (Date.now() - payCycleAnchorMs) / MS_PER_DAY);
+  }
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   return Math.max(0, (Date.now() - start) / MS_PER_DAY);
 }
 
@@ -169,19 +140,13 @@ async function resolveDataSources(uid) {
 // ───────────────────────────────── Pool allocations ─────────────────────────
 async function readAllocations(db, uid){
   try{
-    //const snap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
-    const snap = await getDoc(doc(db, `players/${uid}/financialData/cashflowData`));
+    const snap = await getDoc(doc(db, `players/${uid}/cashflowData/poolAllocations`));
     if (snap.exists()){
       const d = snap.data() || {};
-      // const health  = safeNum(d.healthAllocation, 0.3);
-      // const mana    = safeNum(d.manaAllocation,   0.3);
-      // const stamina = safeNum(d.staminaAllocation,0.3);
-      // const essence = safeNum(d.essenceAllocation,0.1); // can be zero safely
-      
-      const health  = safeNum(d.poolAllocations.healthAllocation, 0.3);
-      const mana    = safeNum(d.poolAllocations.manaAllocation,   0.3);
-      const stamina = safeNum(d.poolAllocations.staminaAllocation,0.3);
-      const essence = safeNum(d.poolAllocations.essenceAllocation,0.1); // can be zero safely
+      const health  = safeNum(d.healthAllocation, 0.3);
+      const mana    = safeNum(d.manaAllocation,   0.3);
+      const stamina = safeNum(d.staminaAllocation,0.3);
+      const essence = safeNum(d.essenceAllocation,0.1); // can be zero safely
       const sum = Math.max(1e-9, health+mana+stamina+essence);
       return {
         health:  health/sum,
@@ -221,91 +186,79 @@ function resolveCreditMode(configDoc){
 }
 
 // ─────────────────────────────── Non-core usage ingest ──────────────────────
-// Reads processedTransactions and returns in-window totals (spends & credits split)
+// Reads verified processedTransactions /verified and returns in-window totals
 async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', txCollectionPath){
-  const base = collection(db, txCollectionPath);
+  const base = collection(db, txCollectionPath)
   const shot = await getDocs(base);
 
-  const zeroPools = () => ({ health:0, mana:0, stamina:0, essence:0 });
-
   const totals = {
-    all:    { spends: zeroPools(), credits: zeroPools() },   // window: ≥ anchor
-    last7:  { spends: zeroPools(), credits: zeroPools() },   // last 7d (clamped to window)
-    pending: zeroPools()                                     // signed preview (unchanged)
+    all:   { health:0, mana:0, stamina:0, essence:0 },   // window: ≥ anchor
+    last7: { health:0, mana:0, stamina:0, essence:0 },   // last 7d (clamped to window)
+    pending: { health:0, mana:0, stamina:0, essence:0, creditEssence:0 } // preview
   };
 
   const sevenAgo = Date.now() - 7*MS_PER_DAY;
   const sevenWindowStart = Math.max(Number(windowStartMs||0), sevenAgo);
 
-  function add(obj, k, v){ obj[k] = Number((Number(obj[k]||0) + Number(v||0)).toFixed(2)); }
-
   function applyAllocatedCredit(amount, intent, when){
     const avail = { health: Infinity, mana: Infinity, stamina: Infinity, essence: 0 };
     const split = allocateSpendAcrossPools(amount, intent==='mana'?'mana':'stamina', avail);
-    const B = totals.all.credits;
-    add(B,'health',  split.health  || 0);
-    add(B,'mana',    split.mana    || 0);
-    add(B,'stamina', split.stamina || 0);
-    if (when >= sevenWindowStart){
-      const C = totals.last7.credits;
-      add(C,'health',  split.health  || 0);
-      add(C,'mana',    split.mana    || 0);
-      add(C,'stamina', split.stamina || 0);
-    }
+    const apply = (bucket)=>{
+      bucket.health  -= Number(split.health  || 0);
+      bucket.mana    -= Number(split.mana    || 0);
+      bucket.stamina -= Number(split.stamina || 0);
+    };
+    apply(totals.all);
+    if (when >= sevenWindowStart) apply(totals.last7);
   }
 
   shot.forEach(d=>{
-    const tx  = d.data() || {};
+    const tx = d.data() || {};
     const amt = safeNum(tx.amount ?? tx.amountMajor ?? 0, 0);
     if (!amt) return;
 
     const cls = String(tx.classification || '').toLowerCase();
-    if (cls === 'coreinflow' || cls === 'coreoutflow') return;
+    const isCore = (cls === 'coreinflow' || cls === 'coreoutflow');
+    if (isCore) return;
 
-    const status   = String(tx.status || 'confirmed').toLowerCase();
-    const when     = safeNum(tx.dateMs ?? tx.postedAtMs ?? tx.transactionData?.entryDate?.toMillis?.(), 0);
+    const status = String(tx.status || 'confirmed').toLowerCase();
+    const when   = safeNum(tx.dateMs ?? tx.postedAtMs ?? tx.transactionData?.entryDate?.toMillis?.(), 0);
     const inWindow = (when >= Number(windowStartMs||0));
 
-    // CREDITS (amt > 0)
+    // Credits
     if (amt > 0){
       const txOverride = String(tx.creditModeOverride || '').toLowerCase();
       const effMode = (txOverride === 'essence' || txOverride === 'health' || txOverride === 'allocate')
-        ? txOverride : creditMode;
+        ? txOverride
+        : creditMode;
 
-      if (status === 'pending'){
-        if (effMode === 'essence') add(totals.pending,'essence', amt);
-        else if (effMode === 'health') add(totals.pending,'health', amt);
-        else {
-          const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
-          const split  = allocateSpendAcrossPools(amt, intent==='mana'?'mana':'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
-          add(totals.pending,'health',  split.health  || 0);
-          add(totals.pending,'mana',    split.mana    || 0);
-          add(totals.pending,'stamina', split.stamina || 0);
-        }
-      } else if (inWindow){
+      if (status === 'pending') {
+        if (effMode === 'essence') totals.pending.creditEssence += amt;
+      } else if (inWindow) {
         if (effMode === 'essence'){
-          add(totals.all.credits,'essence', amt);
-          if (when >= sevenWindowStart) add(totals.last7.credits,'essence', amt);
+          totals.all.essence += amt;
+          if (when >= sevenWindowStart) totals.last7.essence += amt;
         } else if (effMode === 'allocate'){
           const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
           applyAllocatedCredit(amt, intent, when);
         } else if (effMode === 'health'){
-          add(totals.all.credits,'health', amt);
-          if (when >= sevenWindowStart) add(totals.last7.credits,'health', amt);
+          totals.all.health -= amt;
+          if (when >= sevenWindowStart) totals.last7.health -= amt;
         }
       }
       return;
     }
 
-    // DEBITS (amt < 0)
+    // Debits
     const spend = Math.abs(amt);
 
-    if (status === 'pending'){
+    if (status === 'pending') {
       const intent = tx?.provisionalTag?.pool || tx?.tag?.pool || 'stamina';
-      const alloc  = allocateSpendAcrossPools(spend, intent==='mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
-      add(totals.pending,'health',  -(alloc.health  || 0));
-      add(totals.pending,'mana',    -(alloc.mana    || 0));
-      add(totals.pending,'stamina', -(alloc.stamina || 0));
+      const avail = { health: Infinity, mana: Infinity, stamina: Infinity, essence: 0 };
+      const alloc = allocateSpendAcrossPools(spend, intent === 'mana' ? 'mana' : 'stamina', avail);
+      totals.pending.health  += alloc.health  || 0;
+      totals.pending.mana    += alloc.mana    || 0;
+      totals.pending.stamina += alloc.stamina || 0;
       return;
     }
 
@@ -313,317 +266,178 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
 
     // Confirmed: prefer appliedAllocation
     const applied = tx.appliedAllocation || null;
-    if (applied){
-      add(totals.all.spends,'health',  safeNum(applied.health,  0));
-      add(totals.all.spends,'mana',    safeNum(applied.mana,    0));
-      add(totals.all.spends,'stamina', safeNum(applied.stamina, 0));
-      add(totals.all.spends,'essence', safeNum(applied.essence, 0));
+    if (applied) {
+      totals.all.health  += safeNum(applied.health, 0);
+      totals.all.mana    += safeNum(applied.mana,   0);
+      totals.all.stamina += safeNum(applied.stamina,0);
+      totals.all.essence += safeNum(applied.essence,0);
       if (when >= sevenWindowStart){
-        add(totals.last7.spends,'health',  safeNum(applied.health,  0));
-        add(totals.last7.spends,'mana',    safeNum(applied.mana,    0));
-        add(totals.last7.spends,'stamina', safeNum(applied.stamina, 0));
-        add(totals.last7.spends,'essence', safeNum(applied.essence, 0));
+        totals.last7.health  += safeNum(applied.health, 0);
+        totals.last7.mana    += safeNum(applied.mana,   0);
+        totals.last7.stamina += safeNum(applied.stamina,0);
+        totals.last7.essence += safeNum(applied.essence,0);
       }
       return;
     }
 
     // Fallback split by intent
     const intent = tx?.tag?.pool || tx?.provisionalTag?.pool || 'stamina';
-    const alloc  = allocateSpendAcrossPools(spend, intent==='mana' ? 'mana' : 'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
+    const avail = { health: Infinity, mana: Infinity, stamina: Infinity, essence: 0 };
+    const alloc = allocateSpendAcrossPools(spend, intent === 'mana' ? 'mana' : 'stamina', avail);
 
-    add(totals.all.spends,'health',  alloc.health  || 0);
-    add(totals.all.spends,'mana',    alloc.mana    || 0);
-    add(totals.all.spends,'stamina', alloc.stamina || 0);
+    totals.all.health  += alloc.health  || 0;
+    totals.all.mana    += alloc.mana    || 0;
+    totals.all.stamina += alloc.stamina || 0;
+
     if (when >= sevenWindowStart){
-      add(totals.last7.spends,'health',  alloc.health  || 0);
-      add(totals.last7.spends,'mana',    alloc.mana    || 0);
-      add(totals.last7.spends,'stamina', alloc.stamina || 0);
+      totals.last7.health  += alloc.health  || 0;
+      totals.last7.mana    += alloc.mana    || 0;
+      totals.last7.stamina += alloc.stamina || 0;
     }
   });
 
+  for (const grp of [totals.all, totals.last7, totals.pending]){
+    for (const k of Object.keys(grp)){
+      grp[k] = Number(safeNum(grp[k],0).toFixed(2));
+    }
+  }
   return totals;
 }
 
-
-
 // ───────────────────────── Vitals Gateway recompute (stub) ──────────────────
 export async function recomputeVitalsGatewayStub(uid){
-  const { cashflowDocPath, txCollectionPath } = await resolveDataSources(uid);
+  const { cashflowDocPath, txCollectionPath} = await resolveDataSources(uid)
+  
+  const activeRef = doc(db, cashflowDocPath)
+  const active = await getDoc(activeRef);
 
-  const activeRef = doc(db, cashflowDocPath);
-  const activeSnap = await getDoc(activeRef);
-
-  // Ensure gateway doc exists to read meta/escrow, etc.
-  const gatewayRef = doc(db, `players/${uid}/vitalsData/gateway`);
-  const priorGatewaySnap = await getDoc(gatewayRef);
-  const priorGateway = priorGatewaySnap.exists() ? (priorGatewaySnap.data()||{}) : {};
-
-  if (!activeSnap.exists()){
-    // Minimal bootstrap to keep callers happy
-    await setDoc(gatewayRef, {
+  if (!active.exists()){
+    await setDoc(doc(db, `players/${uid}/vitalsData/gateway`), {
       mode: "continuous",
       cadence: "monthly",
       payCycleAnchorMs: null,
       lastAnchorUpdateMs: null,
       core: { dailyIncome:0, dailyExpense:0, netDaily:0 },
       pools: {
-        health:{  max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,truthTotal:0,bankedDays:0,trend:"stable" },
-        mana:{    max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,truthTotal:0,bankedDays:0,trend:"stable" },
-        stamina:{ max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,truthTotal:0,bankedDays:0,trend:"stable" },
-        essence:{ max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,truthTotal:0,bankedDays:0,trend:"stable" },
-      },
-      meta: {
-        seededAtMs: priorGateway?.meta?.seededAtMs || null,
-        seedAnchorMs: priorGateway?.meta?.seedAnchorMs ?? null,
-        essenceSeedGrant: safeNum(priorGateway?.meta?.essenceSeedGrant, 0),
-        lastCrystallisedDay: priorGateway?.meta?.lastCrystallisedDay || null,
-        escrow: {
-          carry: priorGateway?.meta?.escrow?.carry || { total:0, bySource:{ health:0, mana:0, stamina:0 } },
-          bySourceToday: { health:0, mana:0, stamina:0 }
-        }
+        health:{ max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,sNow:0,truthTotal:0,pending:{debit:0,credit:0},trend:"stable" },
+        mana:{   max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,sNow:0,truthTotal:0,pending:{debit:0,credit:0},trend:"stable" },
+        stamina:{max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,sNow:0,truthTotal:0,pending:{debit:0,credit:0},trend:"stable" },
+        essence:{max:0,current:0,regenDaily:0,spentToDate:0,creditToDate:0,sNow:0,truthTotal:0,pending:{debit:0,credit:0},trend:"stable" },
       },
       updatedAt: Date.now()
     }, { merge:true });
     return;
   }
 
-  const A = activeSnap.data() || {};
+  const A = active.data() || {};
   const mode = String(A.energyMode || A.mode || 'continuous').toLowerCase();
   const creditMode = resolveCreditMode(A);
 
-  const { essenceBaselineEnabled, R, essenceSoftCapMode, overflowBufferDays } = readVitalsFlags(A);
-
-  const payCycleAnchorMs   = safeNum(A.payCycleAnchorMs ?? A.anchorMs, NaN);
-  const lastAnchorUpdateMs = safeNum(A.lastAnchorUpdateMs, NaN);
+  const payCycleAnchorMs  = safeNum(A.payCycleAnchorMs ?? A.anchorMs, NaN);
+  const lastAnchorUpdateMs= safeNum(A.lastAnchorUpdateMs, NaN);
 
   const incMo = safeNum(A?.inflow?.total ?? A?.inflow ?? 0, 0);
   const outMo = safeNum(A?.outflow?.total ?? A?.outflow ?? 0, 0);
-  const dailyIncome  = incMo / CYCLE_DAYS;
-  const dailyExpense = outMo / CYCLE_DAYS;
+  const dailyIncome  = incMo / AVG_MONTH_DAYS;
+  const dailyExpense = outMo / AVG_MONTH_DAYS;
   const netDaily     = dailyIncome - dailyExpense;
 
   const alloc = await readAllocations(db, uid);
-
-  // Base regen from allocations (per-day)
-  const baseRegen = {
+  const regenBaseline = {
     health:  Number((netDaily * alloc.health ).toFixed(2)),
     mana:    Number((netDaily * alloc.mana   ).toFixed(2)),
     stamina: Number((netDaily * alloc.stamina).toFixed(2)),
     essence: Number((netDaily * alloc.essence).toFixed(2)),
   };
 
-  // Apply redistribution of the would-be Essence share when baseline is disabled
-  let regenDaily = { ...baseRegen };
-  if (!essenceBaselineEnabled){
-    const e = Math.max(0, baseRegen.essence);
-    regenDaily.essence = 0;
-    regenDaily.health  = Number((regenDaily.health  + e * (R.h||0)).toFixed(2));
-    regenDaily.mana    = Number((regenDaily.mana    + e * (R.m||0)).toFixed(2));
-    regenDaily.stamina = Number((regenDaily.stamina + e * (R.s||0)).toFixed(2));
+  // Window: ≥ payCycleAnchorMs
+  const usage = await readNonCoreUsage(db, uid, payCycleAnchorMs, creditMode, txCollectionPath);
+
+  // Nudge vs 7-day actuals
+  function nudge(pool){
+    const base   = safeNum(regenBaseline[pool], 0);
+    const used7  = safeNum(usage.last7[pool], 0);
+    const expect7 = Math.max(0, base * 7);
+    let trend = "on target";
+    let current = base;
+    if (expect7 > 0){
+      if (used7 > expect7 * 1.15) { current = base * 0.95; trend = "overspending"; }
+      else if (used7 < expect7 * 0.80) { current = base * 1.05; trend = "underspending"; }
+    }
+    return { regenCurrent: Number(current.toFixed(2)), trend };
   }
+  const nH = nudge("health");
+  const nM = nudge("mana");
+  const nS = nudge("stamina");
+  const nE = nudge("essence");
 
-  // Static caps (baseline-only; unaffected by redistribution/nudge)
-  const cap = {
-    health:  Math.max(0, alloc.health  * netDaily * CYCLE_DAYS),
-    mana:    Math.max(0, alloc.mana    * netDaily * CYCLE_DAYS),
-    stamina: Math.max(0, alloc.stamina * netDaily * CYCLE_DAYS),
-    essence: 0 // Essence has no real cap; handled via soft-cap in UI only
-  };
-  Object.keys(cap).forEach(k=> cap[k] = Number(cap[k].toFixed(2)));
-
-  // Windowed usage since resolved start (anchor or 1st of month)
-  const windowStartMs = resolveCycleStartMs(payCycleAnchorMs);
-  const usage = await readNonCoreUsage(db, uid, windowStartMs, creditMode, txCollectionPath);
-
-  // Days since anchor (for truth accumulation)
   const days = daysSincePayCycleStart(payCycleAnchorMs);
 
-  // Optional simple trend via 7-day spend vs baseline (unchanged approach)
-  function trendFor(pool){
-    const base    = Math.max(0, regenDaily[pool]);
-    const used7   = safeNum(usage.last7.spends?.[pool], 0);
-    const expect7 = base * 7;
-    if (expect7 <= 0) return "stable";
-    if (used7 > expect7 * 1.15) return "overspending";
-    if (used7 < expect7 * 0.80) return "underspending";
-    return "on target";
-  }
+  function buildPool(k, nudgeObj){
+    const daily   = safeNum(nudgeObj.regenCurrent, 0);
+    const cap     = Math.max(0, daily * AVG_MONTH_DAYS);
+    const spent   = safeNum(usage.all[k], 0);
 
-  // Seeding (one-time at player start) — sticky unless EXPLICIT anchor changes.
-  // If no anchor is set, we tie the seed to `null` (not the 1st-of-month fallback).
-  let meta = priorGateway?.meta || {
-    seededAtMs: null,
-    seedAnchorMs: null,
-    essenceSeedGrant: 0,
-    lastCrystallisedDay: null,
-    escrow: { carry: { total:0, bySource:{ health:0, mana:0, stamina:0 } }, bySourceToday: { health:0, mana:0, stamina:0 } }
-  };
-  
-  // IMPORTANT: do NOT resolve fallback here. We only care about the *explicit* anchor.
-  const anchorForSeed =
-    (Number.isFinite(payCycleAnchorMs) && payCycleAnchorMs > 0) ? payCycleAnchorMs : null;
-  const anchorChanged = (meta.seedAnchorMs ?? null) !== anchorForSeed;
-  
-  // Use persisted grant unless we have never seeded or the explicit anchor changed.
-  let essenceSeedGrant = safeNum(meta.essenceSeedGrant, 0);
-  if (!meta.seededAtMs || anchorChanged || !Number.isFinite(essenceSeedGrant)) {
-    const msSpent = safeNum(usage.all.spends?.mana,0) + safeNum(usage.all.spends?.stamina,0);
-    const msCaps  = Math.max(0, cap.mana + cap.stamina);
-    essenceSeedGrant = Math.max(0, msCaps - msSpent);
-    meta.seededAtMs       = Date.now();
-    meta.seedAnchorMs     = anchorForSeed;             // may be null
-    meta.essenceSeedGrant = Number(essenceSeedGrant.toFixed(2));
-  }
-  
-  const capsNow = { ...cap };
-  const poolSeed = {
-    health:  capsNow.health, // full at start
-    mana:    0,
-    stamina: 0,
-    essence: Math.max(0, essenceSeedGrant),
-  };
+    // Credits: only accrue to Essence in "essence" mode; otherwise credits offset spends upstream
+    // let credit = 0;
+    // if (creditMode === 'essence' && k === 'essence'){
+    //   credit = safeNum(usage.all.essence, 0);
+    // }
 
-  // Crystalise yesterday’s escrow (1-day) into Essence on local day change
-  const priorDay = priorGateway?.meta?.lastCrystallisedDay || null;
-  const nowDay   = todayLocalKey();
-  let crystallisedToday = 0;
-  let carryEscrow = meta?.escrow?.carry || { total:0, bySource:{ health:0, mana:0, stamina:0 } };
+    // Credits: usage.* already reflects final per-tx modes.
+    // Essence credits should always add to the Essence pool here,
+    // regardless of the global creditMode.
+    const credit = (k === 'essence') ? safeNum(usage.all.essence, 0) : 0;
 
-  if (priorDay && priorDay !== nowDay){
-    // move carry (yesterday) into Essence
-    crystallisedToday = Math.max(0, Number(carryEscrow.total || 0));
-    carryEscrow = { total:0, bySource:{ health:0, mana:0, stamina:0 } };
-  }
+    // Truth since anchor
+    const T = (daily * days) - spent + credit;
+    const { rNow, sNow } = wrapIntoCap(T, cap);
 
-  // Truth totals (no wrap) and currents (clamped to cap)
-  const poolsOut = {};
-  const basePools = ["health","mana","stamina","essence"];
+    // Pending preview (ghost)
+    // const pendDebit   = (k === 'essence') ? 0 : safeNum(usage.pending[k], 0);
+    // const pendCreditE = (creditMode === 'essence' && k === 'essence')
+    //   ? safeNum(usage.pending.creditEssence, 0)
+    //   : 0;
+    const pendDebit   = (k === 'essence') ? 0 : safeNum(usage.pending[k], 0);
+    const pendCreditE = (k === 'essence') ? safeNum(usage.pending.creditEssence, 0) : 0;
 
-  // Essence credits include: confirmed credits to Essence + crystallisedToday + essenceSeedGrant
-  const essenceCreditsExtra = safeNum(usage.all.credits?.essence,0) + crystallisedToday;
-
-  for (const k of basePools){
-    const spent  = safeNum(usage.all.spends?.[k], 0);
-    const credit = (k === 'essence')
-      ? essenceCreditsExtra
-      : safeNum(usage.all.credits?.[k], 0);
-
-    // const T = Math.max(0, (regenDaily[k]||0) * days - spent + credit);  // no wrap
-    const T = Math.max(0, (poolSeed[k]||0) + (regenDaily[k]||0) * days - spent + credit); // no wrap + seeded start
-    const maxK = (k === 'essence') ? 0 : capsNow[k];
-    const current = (k === 'essence') ? T : clamp(T, 0, maxK);
-
-    poolsOut[k] = {
-      max:           Number(maxK.toFixed(2)),
-      current:       Number(current.toFixed(2)),
-      regenDaily:    Number((regenDaily[k]||0).toFixed(2)),
+    return {
+      max:           Number(cap.toFixed(2)),
+      current:       Number(rNow.toFixed(2)),
+      regenDaily:    Number(daily.toFixed(2)),
       spentToDate:   Number(spent.toFixed(2)),
       creditToDate:  Number(credit.toFixed(2)),
+      sNow:          Number(sNow),
       truthTotal:    Number(T.toFixed(2)),
-      bankedDays:    Number(priorGateway?.pools?.[k]?.bankedDays || 0), // updated below for H/M/S
-      trend:         trendFor(k)
+      pending: {
+        debit:  Number(pendDebit.toFixed(2)),
+        credit: Number(pendCreditE.toFixed(2)),
+        expiryMs: null
+      },
+      trend: nudgeObj.trend
     };
   }
-
-  // Overflow → today escrow; banked days (crystallised) counters (H/M/S only)
-  const bufferDays = Math.max(0, Number(overflowBufferDays||0));
-  const newBySource = { health:0, mana:0, stamina:0 };
-
-  ["health","mana","stamina"].forEach(k=>{
-    const capK   = poolsOut[k].max;
-    const rdK    = poolsOut[k].regenDaily;
-    const truthK = poolsOut[k].truthTotal;
-
-    const alreadyBankedAmt = 0; // keep simple client-side; backend can reconcile exacts if needed
-    const threshold = capK + bufferDays * rdK;
-    const overflowToday = Math.max(0, truthK - threshold) - alreadyBankedAmt;
-
-    if (overflowToday > 0){
-      newBySource[k] = Number(overflowToday.toFixed(2));
-    }
-
-    // banked days shown via crystallised days only; increment when crystallised
-    // we don’t change bankedDays here; it grows only when carry is crystallised
-  });
-
-  // Update carry using only the delta vs the last saved "level for today"
-  // If today’s overflow shrinks (due to spend), we decrease carry accordingly.
-  const prevBySourceToday =
-    (priorDay && priorDay !== nowDay)
-      ? { health:0, mana:0, stamina:0 } // day flipped: reset baseline
-      : (priorGateway?.meta?.escrow?.bySourceToday || { health:0, mana:0, stamina:0 });
-
-  const bySourceToday = {
-    health: Number(newBySource.health  || 0),
-    mana:   Number(newBySource.mana    || 0),
-    stamina:Number(newBySource.stamina || 0),
-  };
-
-  const delta = {
-    health: Number((bySourceToday.health  - Number(prevBySourceToday.health  || 0)).toFixed(2)),
-    mana:   Number((bySourceToday.mana    - Number(prevBySourceToday.mana    || 0)).toFixed(2)),
-    stamina:Number((bySourceToday.stamina - Number(prevBySourceToday.stamina || 0)).toFixed(2)),
-  };
-
-  // Apply signed delta and clamp per source to >= 0; recompute total from parts.
-  const nextCarryBySource = {
-    health: Number(Math.max(0, Number(carryEscrow.bySource?.health  || 0) + delta.health ).toFixed(2)),
-    mana:   Number(Math.max(0, Number(carryEscrow.bySource?.mana    || 0) + delta.mana   ).toFixed(2)),
-    stamina:Number(Math.max(0, Number(carryEscrow.bySource?.stamina || 0) + delta.stamina).toFixed(2)),
-  };
-  carryEscrow.bySource = nextCarryBySource;
-  carryEscrow.total    = Number((nextCarryBySource.health + nextCarryBySource.mana + nextCarryBySource.stamina).toFixed(2));
-
-  // If we just crystallised, convert that into bankedDays per pool (days = crystallised_by_pool / regenDaily_k)
-  if ((priorDay && priorDay !== nowDay) && (priorGateway?.meta?.escrow?.carry)){
-    const prevCarry = priorGateway.meta.escrow.carry;
-    ["health","mana","stamina"].forEach(k=>{
-      const rd = Math.max(0.0001, poolsOut[k].regenDaily);
-      const prevAmt = Number(prevCarry?.bySource?.[k] || 0);
-      const daysBankedInc = Math.floor(prevAmt / rd);
-      if (daysBankedInc > 0){
-        const prev = Number(priorGateway?.pools?.[k]?.bankedDays || 0);
-        poolsOut[k].bankedDays = prev + daysBankedInc;
-      }
-    });
-  }
-
-  // Essence soft-cap for UI (store derived so HUD can read)
-  const softCapEssence = (essenceSoftCapMode === 'HMS')
-    ? (poolsOut.health.max + poolsOut.mana.max + poolsOut.stamina.max)
-    : (poolsOut.mana.max + poolsOut.stamina.max);
-  const essenceUI = {
-    softCapMode: essenceSoftCapMode,
-    softCap: Number(softCapEssence.toFixed(2)),
-    escrowToday: bySourceToday, // level so far today (used by UI overlays)
-  };
 
   const payload = {
     mode,
     cadence: "monthly",
-    payCycleAnchorMs:   Number.isFinite(payCycleAnchorMs)   ? payCycleAnchorMs   : null,
-    lastAnchorUpdateMs: Number.isFinite(lastAnchorUpdateMs) ? lastAnchorUpdateMs : null,
+    payCycleAnchorMs:  Number.isFinite(payCycleAnchorMs)  ? payCycleAnchorMs  : null,
+    lastAnchorUpdateMs:Number.isFinite(lastAnchorUpdateMs)? lastAnchorUpdateMs: null,
     core: {
       dailyIncome:  Number(dailyIncome.toFixed(2)),
       dailyExpense: Number(dailyExpense.toFixed(2)),
       netDaily:     Number(netDaily.toFixed(2)),
     },
-    pools: poolsOut,
-    essenceUI,
-    meta: {
-      seededAtMs: meta.seededAtMs || null,
-      seedAnchorMs: meta?.seedAnchorMs ?? null,
-      essenceSeedGrant: meta?.essenceSeedGrant ?? 0,
-      lastCrystallisedDay: nowDay,
-      escrow: {
-        carry: carryEscrow,
-        bySourceToday // save today's *level* (not cumulative) for delta on next recompute
-      }
+    pools: {
+      health:  buildPool("health",  nH),
+      mana:    buildPool("mana",    nM),
+      stamina: buildPool("stamina", nS),
+      essence: buildPool("essence", nE),
     },
     updatedAt: Date.now()
   };
 
-  await setDoc(gatewayRef, payload, { merge:true });
+  await setDoc(doc(db, `players/${uid}/vitalsData/gateway`), payload, { merge:true });
 }
 
 // ────────────────────────────── Mode helpers (HUD) ──────────────────────────
@@ -867,87 +681,38 @@ export async function loadVitalsToHUD(uid){
   const elements = getVitalsElements();
   const pools = data.pools || {};
   const vm = getViewMode();
+  const factor = (vm === 'core') ? CORE_DAYS : VIEW_FACTORS[vm];
 
   installRatePeekHandlers(elements, pools, vm === 'core' ? 'core' : vm);
 
-  // >>> ADD: precompute Essence pill = sum of H/M/S banked days
-const essencePillDays =
-  Number(pools.health?.bankedDays || 0) +
-  Number(pools.mana?.bankedDays || 0) +
-  Number(pools.stamina?.bankedDays || 0);
-
-
   let sumCurrent = 0, sumMax = 0;
-
   for (const [pool, v] of Object.entries(pools)){
     const el = elements[pool]; if (!el) continue;
-
-    const cap   = Number(v.max || 0);          // static cap from gateway
-    const current = Number(v.current || 0);    // already clamped server-side (no wrap)
-
+    const daily = Number(v.regenDaily ?? v.regenCurrent ?? 0);
+    const cap   = Math.max(0, daily * factor);
+    const current = Math.max(0, Math.min(cap, Number(v.current||0)));  // gateway remainder
     const pct = cap>0 ? (current / cap) * 100 : 0;
     el.fill.style.width = `${pct}%`;
-    if (pool === 'essence') {
-      const softCap = Number(data.essenceUI?.softCap || 0);
-      // No pending feed in static paint; show current / softCap
-      el.value.innerText = softCap > 0
-        ? `${current.toFixed(2)} / ${softCap.toFixed(2)}`
-        : `${current.toFixed(2)}`;
-    } else {
-      el.value.innerText = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
-    }
+    el.value.innerText = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
 
-    // Trend class (unchanged)
+    // Surplus pill (days over cap): use truthTotal and daily
+    const truthTotal = Number(v.truthTotal || 0);
+    const daysOver = (vm==='core' && daily>0)
+      ? Math.floor(Math.max(0, (truthTotal - cap) / daily))
+      : 0;
+    setSurplusPill(el, daysOver, daysOver);
+
+    if (pool!=='essence'){ sumCurrent += current; sumMax += cap; }
+
+    // Trend class
     const barEl = el.fill.closest('.bar');
     barEl?.classList.remove("overspending","underspending");
     if (v.trend === "overspending")  barEl?.classList.add("overspending");
     if (v.trend === "underspending") barEl?.classList.add("underspending");
-
-    // Surplus pill: show crystallised banked days this Cycle (H/M/S only)
-    if (pool !== 'essence'){
-      const bankedDays = Number(v.bankedDays || 0);
-      setSurplusPill(el, bankedDays, bankedDays);
-      sumCurrent += current;
-      sumMax += cap;
-    } else {
-      // Essence overlay = escrowToday % of softCap (UI only)
-      const bar = el.fill.closest('.bar');
-      const reclaimEl = bar?.querySelector('.bar-reclaim');
-      const softCap = Number(data.essenceUI?.softCap || 0);
-      const escrowTodayTotal = Number((data?.essenceUI?.escrowToday?.health||0) + (data?.essenceUI?.escrowToday?.mana||0) + (data?.essenceUI?.escrowToday?.stamina||0));
-
-      if (reclaimEl){
-        if (escrowTodayTotal > 0){
-          if (softCap > 0){
-            const overlayPct = Math.min(100, (escrowTodayTotal / softCap) * 100);
-            const leftPct = Math.min(100, pct); // start overlay at current bar end
-            reclaimEl.classList.add('is-credit');
-            reclaimEl.style.left = `${leftPct.toFixed(2)}%`;
-            reclaimEl.style.width = `${overlayPct.toFixed(2)}%`;
-            reclaimEl.style.opacity = '1';
-          } else {
-            // self-scaled fallback (no soft cap)
-            reclaimEl.classList.add('is-credit');
-            reclaimEl.style.left = `${pct.toFixed(2)}%`;
-            reclaimEl.style.width = `15%`; // small visual hint (no unit basis)
-            reclaimEl.style.opacity = '1';
-          }
-        } else {
-          reclaimEl.style.opacity = '0';
-          reclaimEl.style.width = '0%';
-          reclaimEl.classList.remove('is-credit');
-        }
-      }
-
-      // Essence pill shows total banked days across H/M/S
-      setSurplusPill(el, essencePillDays, essencePillDays);
-    }
   }
-
   setVitalsTotals(sumCurrent, sumMax);
   refreshBarGrids();
 }
-
 
 // ─────────────────────────── Public: Animated HUD (ghosts) ──────────────────
 export async function initVitalsHUD(uid, timeMultiplier = 1){
@@ -955,87 +720,23 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
   // Opportunistic refresh for freshness
   try { await recomputeVitalsGatewayStub(uid); } catch {}
 
-  const data = await readGateway(uid); if (!data) return;
-  const { txCollectionPath } = await resolveDataSources(uid);
+    const data = await readGateway(uid); if (!data) return;
+    const { cashflowDocPath, txCollectionPath} = await resolveDataSources(uid)
 
   const elements = getVitalsElements();
   const pools = data.pools || {};
   ensureReclaimLayers(elements);
   { const vm = getViewMode(); installRatePeekHandlers(elements, pools, vm==='core'?'core':vm); }
 
-  // >>> ADD: Essence breakdown tap wiring (H/M/S gradient overlay)
-  (function wireEssenceBreakdown(){
-    const root = document.querySelector('#vital-essence .bar');
-    if (!root || root.__essenceWired) return;
-    root.__essenceWired = true;
-
-    let breakdownOn = false;
-
-    function applyGradient(reclaimEl){
-      const by = data?.essenceUI?.escrowToday || { health:0, mana:0, stamina:0 };
-      const h = Math.max(0, Number(by.health||0));
-      const m = Math.max(0, Number(by.mana||0));
-      const s = Math.max(0, Number(by.stamina||0));
-      const tot = h+m+s;
-      if (!tot){ reclaimEl.style.background = ''; return; }
-
-      const hp = (h/tot)*100, mp = (m/tot)*100, sp = (s/tot)*100;
-      // You likely already have CSS vars for pool colors; fallback to readable hues
-      const colH = 'var(--health-color, #ff6a6a)';
-      const colM = 'var(--mana-color, #6aa9ff)';
-      const colS = 'var(--stamina-color, #6aff9b)';
-      reclaimEl.style.background = `linear-gradient(90deg,
-        ${colH} 0% ${hp.toFixed(2)}%,
-        ${colM} ${hp.toFixed(2)}% ${(hp+mp).toFixed(2)}%,
-        ${colS} ${(hp+mp).toFixed(2)}% 100%
-      )`;
-    }
-
-    const HIDE_MS = 1500;   // match rate peek
-    let timer = null;
-
-    root.addEventListener('click', ()=>{
-      const reclaimEl = root.querySelector('.bar-reclaim');
-      if (!reclaimEl) return;
-
-      // toggle on
-      breakdownOn = !breakdownOn;
-      if (breakdownOn){
-        applyGradient(reclaimEl);
-        reclaimEl.classList.add('is-breakdown');
-
-        // auto-hide like rate peek
-        clearTimeout(timer);
-        timer = setTimeout(()=>{
-          breakdownOn = false;
-          reclaimEl.style.background = '';
-          reclaimEl.classList.remove('is-breakdown');
-        }, HIDE_MS);
-      } else {
-        // manual hide
-        clearTimeout(timer);
-        reclaimEl.style.background = '';
-        reclaimEl.classList.remove('is-breakdown');
-      }
-    }, {passive:true});
-
-  })();
-
-
-  // >>> ADD: essence pill (sum of H/M/S) for animated HUD too
-const essencePillDays =
-  Number(pools.health?.bankedDays || 0) +
-  Number(pools.mana?.bankedDays || 0) +
-  Number(pools.stamina?.bankedDays || 0);
-
-
-  // Truth/current start from gateway, regen per sec from regenDaily (animation only)
+  // Truth remainder starts from gateway.current; regen per sec from regenDaily
   const truth = {};
+  const truthTotal = {};
   const regenPerSec = {};
   for (const [pool, v] of Object.entries(pools)){
     const daily = Number(v.regenDaily ?? v.regenCurrent ?? 0);
-    truth[pool]      = Math.max(0, Number(v.current || 0));   // start at clamped current
-    regenPerSec[pool]= daily * (timeMultiplier / 86_400);     // animate remainder only
+    truth[pool] = Math.max(0, Number(v.current || 0));
+    truthTotal[pool] = Number(v.truthTotal || 0); // used only for pills baseline
+    regenPerSec[pool] = daily * (timeMultiplier / 86_400);
   }
 
   // Live pending (ghosts)
@@ -1052,7 +753,6 @@ const essencePillDays =
         ghostExpiryMs: Number(x.ghostExpiryMs ?? 0),
         provisionalTag: x.provisionalTag || null,
         suggestedPool:  x.suggestedPool  || null,
-        creditModeOverride: String(x.creditModeOverride || '').toLowerCase(),
         transactionData:{ description: x?.transactionData?.description || '' },
       };
     });
@@ -1107,26 +807,31 @@ const essencePillDays =
   setInterval(()=>{ refreshFocusCacheIfNeeded(); }, 5000);
   await refreshFocusCacheIfNeeded();
 
-  // Helper: project a pending delta against the current pool remainder with clamping (no wrap)
-  function clampGhostAddition(current, cap, deltaSigned){
-    const after = clamp(current + deltaSigned, 0, cap);
-    const add   = after - current;
-    const leftPct  = (deltaSigned >= 0) ? (current / (cap||1)) * 100 : (after / (cap||1)) * 100;
-    const widthPct = (cap>0) ? Math.abs(add / cap) * 100 : 0;
-    return { after, leftPct, widthPct, isCredit: deltaSigned >= 0 };
+  // Ghost overlay projection
+  function applyRemainderFirst(T, cap, L){
+    if (cap<=0) return { rNow:0, sNow:0, rAfter:0, sAfter:0, ghostLeftPct:0, ghostWidthPct:0 };
+    const sNow=Math.floor(T/cap); const rNow=T - sNow*cap;
+    if (L<=0.000001) return { rNow, sNow, rAfter:rNow, sAfter:sNow, ghostLeftPct:0, ghostWidthPct:0 };
+    if (L<=rNow){
+      const rAfter=rNow-L;
+      return { rNow, sNow, rAfter, sAfter:sNow, ghostLeftPct:(rAfter/cap)*100, ghostWidthPct:(L/cap)*100 };
+    }
+    let Lleft=L-rNow; let s=sNow; let r=0;
+    if (s>0){
+      const whole=Math.min(s, Math.floor(Lleft/cap));
+      if (whole>0){ s-=whole; Lleft-=whole*cap; }
+    }
+    if (Lleft>0 && s>0){ s-=1; r=cap; }
+    const rAfter=Math.max(0, r-Lleft);
+    return { rNow, sNow, rAfter, sAfter:s, ghostLeftPct:(rAfter/cap)*100, ghostWidthPct:((r-rAfter)/cap)*100 };
   }
 
   let last = null; let allowGhost = false; const enableGhostSoon=()=>{ if(!allowGhost) setTimeout(()=>allowGhost=true,60); };
 
-  // Core Animation Related Logic
   function frame(ts){
     if (last===null) last=ts; const dt=(ts-last)/1000; last=ts;
 
-    // Animate remainder up to cap (no wrap)
-    for (const p of Object.keys(truth)){
-      const capP = Number(pools[p]?.max || 0);
-      truth[p] = clamp(truth[p] + (regenPerSec[p]||0) * dt, 0, capP || (p==='essence' ? Number(pools[p]?.current||0) + 1e9 : 0));
-    }
+    for (const p of Object.keys(truth)) truth[p] = Math.max(0, truth[p] + (regenPerSec[p]||0) * dt);
 
     const now = Date.now();
     const ordered = [...pendingTx].sort((a,b)=>a.dateMs-b.dateMs);
@@ -1145,294 +850,136 @@ const essencePillDays =
     for (const pool of Object.keys(pools)){
       const el = elements[pool]; if (!el) continue;
       const v  = pools[pool] || {};
+      const daily = Number(v.regenDaily ?? v.regenCurrent ?? 0);
 
       if (vm==='core'){
-        // ───────── Core (Cycle) — static Cycle cap, no wraparound ─────────
-        const cap  = (pool === 'essence') ? 0 : Number(v.max || 0);  // Essence has no hard cap here
-        const Tnow = Number(v.truthTotal || 0);                      // gateway baseline truth (for pills only)
-        let current = (pool === 'essence') ? Number(v.current||0) : clamp(truth[pool], 0, cap);
+        const cap  = Math.max(0, daily * CORE_DAYS);
+        const T    = truth[pool];
 
-        // Build signed pending delta per pool (apply once, clamped)
-        // For a pending debit:
-        // Consume escrow from the matching pool first (e.g., stamina debit uses stamina escrow).
-        // Any remainder then subtracts from the pool itself (respecting cap/clamp).
-        // Any overflow beyond the intent’s pool continues per your “active rule” split (leftover → Health).
-        let delta = { health:0, mana:0, stamina:0, essence:0 };
-        let avail = { health: current, mana: (pools.mana? truth.mana:0), stamina: (pools.stamina? truth.stamina:0), essence: 0 };
-
-        // Create local, mutable escrow copies (so this is UI-only, not persisted)
-        const escCarry   = { ...(data?.meta?.escrow?.carry?.bySource || { health:0, mana:0, stamina:0 }) };
-        const escToday   = { ...(data?.essenceUI?.escrowToday || { health:0, mana:0, stamina:0 }) };
-        const escUsed    = { health:0, mana:0, stamina:0 }; // track drawdown by pool for Essence
-
-
+        // Ghost debits from pending
+        let avail = { ...truth };
+        let Lsplit = { health:0, mana:0, stamina:0, essence:0 };
         for (const tx of ordered){
           if (tx.ghostExpiryMs && tx.ghostExpiryMs <= now) continue;
-          const amt = Number(tx.amount || 0);
-          if (amt < 0){
-            const spend  = Math.abs(amt);
-            const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
-            const part   = allocateSpendAcrossPools(spend, intent==='mana'?'mana':'stamina', avail);
-            delta.health  -= Number(part.health  || 0);
-            delta.mana    -= Number(part.mana    || 0);
-            delta.stamina -= Number(part.stamina || 0);
-            // apply to avail (clamped later per pool)
-            avail.health  = Math.max(0, (avail.health  ||0) - (part.health  ||0));
-            avail.mana    = Math.max(0, (avail.mana    ||0) - (part.mana    ||0));
-            avail.stamina = Math.max(0, (avail.stamina ||0) - (part.stamina ||0));
-          } else if (amt > 0){
-            const eff  = String(tx.creditModeOverride || '').toLowerCase();
-            const mode = (eff==='essence'||eff==='health'||eff==='allocate') ? eff : 'essence';
-            if (mode === 'essence') {
-              delta.essence += amt;
-            } else if (mode === 'health') {
-              delta.health  += amt;
-              avail.health  = (avail.health||0) + amt;
-            } else {
-              const intent = tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina';
-              const split  = allocateSpendAcrossPools(amt, intent==='mana'?'mana':'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0 });
-              delta.health  += Number(split.health  || 0);
-              delta.mana    += Number(split.mana    || 0);
-              delta.stamina += Number(split.stamina || 0);
-              avail.health  = (avail.health||0) + (split.health  ||0);
-              avail.mana    = (avail.mana  ||0) + (split.mana    ||0);
-              avail.stamina = (avail.stamina||0)+ (split.stamina ||0);
-            }
-          }
+          if (tx.amount >= 0) continue; // credits not previewed in reclaim
+          const spend = Math.abs(tx.amount);
+          const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
+          const part = allocateSpendAcrossPools(spend, intent==='mana'?'mana':'stamina', avail);
+          Lsplit.health+=part.health||0; Lsplit.mana+=part.mana||0; Lsplit.stamina+=part.stamina||0;
+        }
+        const L = Lsplit[pool] || 0;
+        const proj = applyRemainderFirst(T, cap, L);
+
+        const useProjected = allowGhost && cap>0 && L>0.0001 && proj.ghostWidthPct>0.01;
+        const pct = cap>0 ? ((useProjected ? proj.rAfter : proj.rNow)/cap)*100 : 0;
+        el.fill.style.width = `${pct}%`;
+
+        const normalText = `${(useProjected?proj.rAfter:proj.rNow).toFixed(2)} / ${cap.toFixed(2)}`;
+        if (!el.value.__origText) el.value.__origText = el.value.textContent;
+        el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || normalText) : normalText;
+        enableGhostSoon();
+
+        // Reclaim overlay
+        const barEl = el.fill.closest('.bar');
+        const reclaimEl = barEl?.querySelector('.bar-reclaim');
+        const showGhost = allowGhost && cap>0 && L>0.0001 && proj.ghostWidthPct>0.01;
+        if (reclaimEl){
+          if (showGhost){
+            reclaimEl.style.left  = `${Math.max(0,Math.min(100,proj.ghostLeftPct)).toFixed(2)}%`;
+            reclaimEl.style.width = `${Math.max(0,Math.min(100,proj.ghostWidthPct)).toFixed(2)}%`;
+            reclaimEl.style.opacity = '1';
+          } else { reclaimEl.style.opacity='0'; reclaimEl.style.width='0%'; }
         }
 
-        // Ghost overlay and width calculation, clamped to cap (H/M/S only)
-        let showGhost=false, leftPct=0, widthPct=0, isCreditGhost=false;
-        if (pool !== 'essence' && cap > 0){
-          const d = Number(delta[pool] || 0);
-          if (Math.abs(d) > 0.0001){
-            const proj = clampGhostAddition(current, cap, d);
-            leftPct      = Math.max(0, Math.min(100, proj.leftPct));
-            widthPct     = Math.max(0, Math.min(100, proj.widthPct));
-            isCreditGhost= proj.isCredit;
-            current      = proj.after; // apply previewed value
-            showGhost    = allowGhost && widthPct > 0.01;
-          }
-        }
+        // Surplus pills (days over cap) — use original truthTotal baseline plus ghost preview
+        const T_now = (proj.sNow*cap) + proj.rNow;      // live truth remainder within CORE_DAYS cap cycles
+        const T_af  = (proj.sAfter*cap) + proj.rAfter;  // after pending
+        const baselineTruth = Number(v.truthTotal || 0); // monthly-basis truth since anchor
+        // Map baseline monthly truth to "core" window days: show days beyond one monthly cap
+        const monthlyCap = Math.max(0, daily * AVG_MONTH_DAYS);
+        const surplusNowDays = (daily>0) ? Math.floor(Math.max(0, (baselineTruth - monthlyCap) / daily)) : 0;
+        const afterTruth = baselineTruth - (useProjected ? (T_now - T_af) : 0); // best-effort nudge
+        const surplusAfDays  = (daily>0) ? Math.floor(Math.max(0, (afterTruth - monthlyCap) / daily)) : surplusNowDays;
+        setSurplusPill(el, surplusNowDays, surplusAfDays);
 
-        // Paint bar + value text
-        if (pool==='essence'){
-          const valNow  = Number(v.current || 0);
-          const carry   = Number(data?.meta?.escrow?.carry?.total || 0); // incoming escrow
-          const pend    = Number(delta.essence || 0);                    // pending credits to Essence
-          const softCap = Number(data?.essenceUI?.softCap || 0);
-          const effective = valNow + carry + pend;
-
-          // Fill = min(effective/softCap, 100%)
-          const pct = softCap > 0 ? Math.min(100, (effective / softCap) * 100) : 0;
-          el.fill.style.width = `${pct.toFixed(2)}%`;
-
-          // Text uses same effective value
-          el.value.textContent = softCap > 0
-            ? `${effective.toFixed(2)} / ${softCap.toFixed(2)}`
-            : `${effective.toFixed(2)}`;
-
-          enableGhostSoon();
-
-          // Essence: show today's escrow as overlay, anchored to end of the fill
-          const barEl = el.fill.closest('.bar');
-          const reclaimEl = barEl?.querySelector('.bar-reclaim');
-          if (reclaimEl){
-            const escrowTodayTotal =
-              Number((data?.essenceUI?.escrowToday?.health||0) +
-                    (data?.essenceUI?.escrowToday?.mana  ||0) +
-                    (data?.essenceUI?.escrowToday?.stamina||0));
-            if (softCap > 0 && escrowTodayTotal > 0){
-              const overlayPct = Math.min(100 - pct, (escrowTodayTotal / softCap) * 100);
-              reclaimEl.classList.add('is-credit');
-              reclaimEl.style.left   = `${pct.toFixed(2)}%`;
-              reclaimEl.style.width  = `${Math.max(0, overlayPct).toFixed(2)}%`;
-              reclaimEl.style.opacity= '1';
-            } else {
-              reclaimEl.style.opacity='0';
-              reclaimEl.style.width  ='0%';
-              reclaimEl.classList.remove('is-credit');
-            }
-          }
-        } else {
-          const pct = (cap>0 ? (current / cap) * 100 : 0);
-          el.fill.style.width = `${pct}%`;
-
-          const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
-          if (!el.value.__origText) el.value.__origText = el.value.textContent;
-          el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
-
-          enableGhostSoon();
-
-          // H/M/S overlay (ghost preview)
-          const barEl = el.fill.closest('.bar');
-          const reclaimEl = barEl?.querySelector('.bar-reclaim');
-          if (reclaimEl){
-            reclaimEl.classList.toggle('is-credit', !!(showGhost && isCreditGhost));
-            if (showGhost){
-              reclaimEl.style.left   = `${leftPct.toFixed(2)}%`;
-              reclaimEl.style.width  = `${widthPct.toFixed(2)}%`;
-              reclaimEl.style.opacity= '1';
-            } else {
-              reclaimEl.style.opacity='0';
-              reclaimEl.style.width  ='0%';
-              reclaimEl.classList.remove('is-credit');
-            }
-          }
-        }
-
-        // Surplus pills (Core): H/M/S show crystallised banked days; Essence uses sum of H/M/S
-        if (pool!=='essence'){
-          const bankedDays = Number(v.bankedDays || 0);
-          setSurplusPill(el, bankedDays, bankedDays);
-          sumCurrent += current;
-          sumMax += cap;
-        } else {
-          setSurplusPill(el, essencePillDays, essencePillDays);
-        }
-
+        if (pool!=='essence'){ sumCurrent += (useProjected?proj.rAfter:proj.rNow); sumMax += cap; }
       } else {
-        // ───────── Focus (Today / This Week) ─────────
+        // -------- Focus (Today / This Week) --------
         const daysIn = (getViewMode() === 'daily') ? 1 : 7;
 
-        // Cap for Focus: min(Cycle cap, regenDaily*daysIn), no wrap
+        // 1) Build per-pool caps and base current from confirmed spend only
         const capMap = {};
         const baseCurrent = {};
         for (const poolName of Object.keys(pools)) {
-          const capCycle = (poolName==='essence') ? 0 : Number(pools[poolName]?.max || 0);
-          const dailyP   = Number((pools[poolName]?.regenDaily ?? pools[poolName]?.regenCurrent) || 0);
-          const capP     = (poolName==='essence') ? 0 : Math.min(capCycle, Math.max(0, dailyP * daysIn));
-          const spentP   = Number(focusSpend?.[poolName] || 0); // confirmed only (from cache)
-          const curP     = (poolName==='essence') ? Number(pools[poolName]?.current||0) : clamp(capP - spentP, 0, capP);
-          capMap[poolName]      = capP;
-          baseCurrent[poolName] = curP;
+          const daily = Number((pools[poolName]?.regenDaily ?? pools[poolName]?.regenCurrent) || 0);
+          const cap   = Math.max(0, daily * daysIn);
+          const spent = Number(focusSpend?.[poolName] || 0); // confirmed only (from cache)
+          const cur   = Math.max(0, Math.min(cap, cap - spent));
+          capMap[poolName]     = cap;
+          baseCurrent[poolName] = cur;
         }
 
-        // PENDING projection in Focus (signed) once
+        // 2) Project PENDING debits across pools ONCE (global availability),
+        //    so overflow only happens when the *origin* pool is exhausted.
         const availFocus = {
           health:  baseCurrent.health  || 0,
           mana:    baseCurrent.mana    || 0,
           stamina: baseCurrent.stamina || 0,
           essence: 0
         };
-        const deltaFocus = { health:0, mana:0, stamina:0, essence:0 };
+        const LsplitFocus = { health:0, mana:0, stamina:0, essence:0 };
 
         for (const tx of ordered) {
           if (tx.ghostExpiryMs && tx.ghostExpiryMs <= now) continue;
-          if (!(tx.dateMs >= focusStart && tx.dateMs < focusEnd)) continue; // only include if inside Focus window
+          if (tx.amount >= 0) continue; // credits not previewed in Focus
 
-          const amt = Number(tx.amount || 0);
-          if (amt < 0){
-            const spend  = Math.abs(amt);
-            const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
-            const part   = allocateSpendAcrossPools(spend, (intent === 'mana') ? 'mana' : 'stamina', availFocus);
-            deltaFocus.health  -= Number(part.health  || 0);
-            deltaFocus.mana    -= Number(part.mana    || 0);
-            deltaFocus.stamina -= Number(part.stamina || 0);
-            availFocus.health  = Math.max(0, (availFocus.health  ||0) - (part.health  ||0));
-            availFocus.mana    = Math.max(0, (availFocus.mana    ||0) - (part.mana    ||0));
-            availFocus.stamina = Math.max(0, (availFocus.stamina ||0) - (part.stamina ||0));
-          } else if (amt > 0){
-            const eff  = String(tx.creditModeOverride || '').toLowerCase();
-            const mode = (eff==='essence'||eff==='health'||eff==='allocate') ? eff : 'essence';
-            if (mode === 'essence') {
-              deltaFocus.essence += amt;
-            } else if (mode === 'health') {
-              deltaFocus.health  += amt;
-              availFocus.health  = (availFocus.health||0) + amt;
-            } else {
-              const intent = tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina';
-              const split  = allocateSpendAcrossPools(amt, (intent==='mana')?'mana':'stamina', { health:Infinity, mana:Infinity, stamina:Infinity, essence:0});
-              deltaFocus.health  += Number(split.health  || 0);
-              deltaFocus.mana    += Number(split.mana    || 0);
-              deltaFocus.stamina += Number(split.stamina || 0);
-              availFocus.health  = (availFocus.health||0) + (split.health  ||0);
-              availFocus.mana    = (availFocus.mana  ||0) + (split.mana    ||0);
-              availFocus.stamina = (availFocus.stamina||0)+ (split.stamina ||0);
-            }
-          }
+          // NEW: only include if pending date is inside Focus window
+          if (!(tx.dateMs >= focusStart && tx.dateMs < focusEnd)) continue;
+
+          const spend  = Math.abs(tx.amount);
+          const intent = (tx?.provisionalTag?.pool || tx?.suggestedPool || 'stamina');
+          const part   = allocateSpendAcrossPools(spend, (intent === 'mana') ? 'mana' : 'stamina', availFocus);
+          LsplitFocus.health  += Number(part.health  || 0);
+          LsplitFocus.mana    += Number(part.mana    || 0);
+          LsplitFocus.stamina += Number(part.stamina || 0);
+          // essence stays 0 for spends
         }
 
-        // Paint each pool using base + signed delta (clamped)
+        // 3) Paint each pool using (cap - confirmed - pendingAllocated)
+        const el = elements[pool]; if (!el) continue;
         const cap = capMap[pool] || 0;
-        const before = baseCurrent[pool] || 0;
-        const d = Number(deltaFocus[pool] || 0);
+        const currentBeforePending = baseCurrent[pool] || 0;
+        const pendingEat = Math.min(LsplitFocus[pool] || 0, currentBeforePending);
+        const current = Math.max(0, currentBeforePending - pendingEat);
 
-        if (pool === 'essence') {
-          const softCap = Number(data?.essenceUI?.softCap || 0);
-          const vNow    = Number(pools[pool]?.current || 0);
-          const carry   = Number(data?.meta?.escrow?.carry?.total || 0);
-          const pend    = Number(deltaFocus.essence || 0);
+        const pct = cap > 0 ? (current / cap) * 100 : 0;
+        el.fill.style.width = `${pct}%`;
 
-          const effective = vNow + carry + pend;
-          const pct = softCap > 0 ? Math.min(100, (effective / softCap) * 100) : 0;
-
-          el.fill.style.width = `${pct.toFixed(2)}%`;
-
-          const txt = softCap > 0
-            ? `${effective.toFixed(2)} / ${softCap.toFixed(2)}`
-            : `${effective.toFixed(2)}`;
-          if (!el.value.__origText) el.value.__origText = el.value.textContent;
-          el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
-
-          // Overlay = today's escrow clamped to remaining width
-          const barEl = el.fill.closest('.bar');
-          const reclaimEl = barEl?.querySelector('.bar-reclaim');
-          if (reclaimEl) {
-            const escrowTodayTotal =
-              Number((data?.essenceUI?.escrowToday?.health||0) +
-                    (data?.essenceUI?.escrowToday?.mana  ||0) +
-                    (data?.essenceUI?.escrowToday?.stamina||0));
-            if (softCap > 0 && escrowTodayTotal > 0){
-              const overlayPct = Math.min(100 - pct, (escrowTodayTotal / softCap) * 100);
-              reclaimEl.classList.add('is-credit');
-              reclaimEl.style.left   = `${pct.toFixed(2)}%`;
-              reclaimEl.style.width  = `${Math.max(0, overlayPct).toFixed(2)}%`;
-              reclaimEl.style.opacity= '1';
-            } else {
-              reclaimEl.style.opacity='0';
-              reclaimEl.style.width  = '0%';
-              reclaimEl.classList.remove('is-credit');
-            }
-          }
-
-        } else {
-          const current = clamp(before + d, 0, cap);
-          const pct = cap > 0 ? (current / cap) * 100 : 0;
-          el.fill.style.width = `${pct}%`;
-
-          const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
-          if (!el.value.__origText) el.value.__origText = el.value.textContent;
-          el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
-
-          // Overlay in Focus: debit shrinks from right; credit extends to right (clamped)
-          const barEl = el.fill.closest('.bar');
-          const reclaimEl = barEl?.querySelector('.bar-reclaim');
-          if (reclaimEl) {
-            const mag = Math.min(Math.abs(d), cap);
-            if (cap > 0 && mag > 0.0001) {
-              const leftPct  = (d < 0) ? ((current / cap) * 100) : ((before / cap) * 100);
-              const widthPct = (mag / cap) * 100;
-              reclaimEl.classList.toggle('is-credit', d > 0);
-              reclaimEl.style.left   = `${Math.max(0, Math.min(100, leftPct)).toFixed(2)}%`;
-              reclaimEl.style.width  = `${Math.max(0, Math.min(100, widthPct)).toFixed(2)}%`;
-              reclaimEl.style.opacity= '1';
-            } else {
-              reclaimEl.style.opacity = '0';
-              reclaimEl.style.width   = '0%';
-              reclaimEl.classList.remove('is-credit');
-            }
-          }
-        }
+        const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
+        if (!el.value.__origText) el.value.__origText = el.value.textContent;
+        el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
 
         // Hide surplus pills in Focus
         setSurplusPill(el, 0, 0);
 
-        if (pool !== 'essence') { sumCurrent += clamp(before + d, 0, cap); sumMax += cap; }
+        // Reclaim overlay in Focus reflects pending "eat" of current
+        const barEl = el.fill.closest('.bar');
+        const reclaimEl = barEl?.querySelector('.bar-reclaim');
+        if (reclaimEl) {
+          if (cap > 0 && pendingEat > 0.0001 && currentBeforePending > 0.0001) {
+            reclaimEl.style.left  = `${Math.max(0, Math.min(100, ((currentBeforePending - pendingEat) / cap) * 100)).toFixed(2)}%`;
+            reclaimEl.style.width = `${Math.max(0, Math.min(100, (pendingEat / cap) * 100)).toFixed(2)}%`;
+            reclaimEl.style.opacity = '1';
+          } else {
+            reclaimEl.style.opacity = '0';
+            reclaimEl.style.width = '0%';
+          }
+        }
+
+        if (pool !== 'essence') { sumCurrent += current; sumMax += cap; }
       }
 
-
-      // Trend tint (unchanged)
+      // Trend tint
       const barEl = elements[pool]?.fill?.closest('.bar');
       barEl?.classList.remove("overspending","underspending");
       const trend = v.trend || "stable";
@@ -1459,8 +1006,6 @@ const essencePillDays =
     repaintEngravingLabels();
   });
 }
-
-
 
 // ───────────────────────── Update Log (pending / recent) ────────────────────
 function normalizeTxn(d){
@@ -1983,56 +1528,6 @@ function openHistoryFor_energy() {
 
 
 // ───────────────────────── Dashboard helpers & buttons ──────────────────────
-// >>> DEBUG ONLY — testing overflow & crystallisation
-export async function __debug_forceOverflow(uid, { health=0, mana=0, stamina=0 } = {}){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  const snap = await getDoc(ref); if (!snap.exists()) return;
-  const d = snap.data()||{};
-  const by = d?.meta?.escrow?.bySourceToday || { health:0, mana:0, stamina:0 };
-  const carry = d?.meta?.escrow?.carry || { total:0, bySource:{ health:0, mana:0, stamina:0 } };
-
-  const addH = Number(health||0), addM = Number(mana||0), addS = Number(stamina||0);
-  const inc = { health:addH, mana:addM, stamina:addS };
-  const tot = addH+addM+addS;
-
-  await setDoc(ref, {
-    meta: {
-      ...d.meta,
-      escrow: {
-        carry: {
-          total: Number((Number(carry.total||0) + tot).toFixed(2)),
-          bySource: {
-            health:  Number((Number(carry.bySource?.health||0)  + addH).toFixed(2)),
-            mana:    Number((Number(carry.bySource?.mana||0)    + addM).toFixed(2)),
-            stamina: Number((Number(carry.bySource?.stamina||0) + addS).toFixed(2)),
-          }
-        },
-        bySourceToday: {
-          health: Number((Number(by.health||0) + addH).toFixed(2)),
-          mana:   Number((Number(by.mana||0)   + addM).toFixed(2)),
-          stamina:Number((Number(by.stamina||0)+ addS).toFixed(2)),
-        }
-      }
-    }
-  }, { merge: true });
-}
-
-export async function __debug_forceCrystallise(uid){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  const snap = await getDoc(ref); if (!snap.exists()) return;
-  const d = snap.data()||{};
-  // Pretend day changed: move carry into Essence via recompute
-  await setDoc(ref, { meta: { ...d.meta, lastCrystallisedDay: 'force-prev' } }, { merge:true });
-  await recomputeVitalsGatewayStub(uid);
-}
-
-export async function __debug_seedReset(uid){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  await setDoc(ref, { meta: { seededAtMs: null } }, { merge:true });
-  await recomputeVitalsGatewayStub(uid);
-}
-
-
 export async function refreshVitals(){
   try{
     const u=getAuth().currentUser; if(!u) return {};
@@ -2113,21 +1608,16 @@ async function sweepLocalExpiredAndOverflow(uid, queueCap = 50){
 }
 
 // Public forwarder: backend first, then local fallback
-export async function lockExpiredOrOverflow(uid, queueCap = 5){
+export async function lockExpiredOrOverflow(uid, queueCap = 50){
   let locked = 0;
-  // try{
-  //   const be = await lockExpiredOrOverflow_BE(uid, queueCap);
-  //   locked += Number(be?.locked || 0);
-  // }catch{}
+  try{
+    const be = await lockExpiredOrOverflow_BE(uid, queueCap);
+    locked += Number(be?.locked || 0);
+  }catch{}
   try{
     const fe = await sweepLocalExpiredAndOverflow(uid, queueCap);
     locked += Number(fe?.locked || 0);
   }catch{}
-
-  if (locked > 0) await recomputeVitalsGatewayStub(uid);
-  initVitalsHUD(uid)
-
-
   return { locked };
 }
 
