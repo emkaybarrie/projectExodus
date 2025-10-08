@@ -343,6 +343,12 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 .bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
 @keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
 
+.bar.is-waking .bar-fill {
+  filter: drop-shadow(0 0 6px rgba(255, 218, 122, 0.6)) brightness(1.1);
+  transition: filter 160ms ease;
+}
+
+
 /* ========================================================================== */
    /* Mode engravings + Totals row */
 /* ========================================================================== */

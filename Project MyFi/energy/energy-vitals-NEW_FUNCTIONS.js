@@ -1,0 +1,173 @@
+// energy-vitals-NEW_FUNCTIONS.js
+// Lightweight, schema-safe helpers for wake regen animation and local snapshots.
+
+import {
+  getFirestore, doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+
+
+// Local snapshot key per user
+function keyFor(uid){ return `vitals:lastSeen:${uid}`; }
+
+// Extract the minimal snapshot we need from a gateway payload
+export function buildSnapshotFromGateway(gateway){
+  if (!gateway || !gateway.pools) return null;
+  const p = gateway.pools;
+  return {
+    ts: Date.now(),
+    pools: {
+      health:  { current: Number(p.health?.current||0),  max: Number(p.health?.max||0)  },
+      mana:    { current: Number(p.mana?.current||0),    max: Number(p.mana?.max||0)    },
+      stamina: { current: Number(p.stamina?.current||0), max: Number(p.stamina?.max||0) },
+      essence: { current: Number(p.essence?.current||0), max: 0 } // essence has no hard cap here
+    }
+  };
+}
+
+export function loadVitalsSnapshot(uid){
+  try{
+    const raw = localStorage.getItem(keyFor(uid));
+    if (!raw) return null;
+    const snap = JSON.parse(raw);
+    // sanity
+    if (!snap?.pools) return null;
+    return snap;
+  }catch{ return null; }
+}
+
+export function storeVitalsSnapshot(uid, gateway){
+  try{
+    const snap = buildSnapshotFromGateway(gateway);
+    if (!snap) return;
+    localStorage.setItem(keyFor(uid), JSON.stringify(snap));
+  }catch{}
+}
+
+// OPTIONAL remote snapshot (for cross-device)
+export async function loadVitalsSnapshotRemote(uid){
+  try{
+    const db = getFirestore();
+    const ref = doc(db, `players/${uid}/vitalsData/gateway`);
+    const snap = await getDoc(ref);
+    const d = snap.exists() ? (snap.data()||{}) : null;
+    const s = d?.meta?.lastClientSnapshot || null;
+    if (!s?.pools) return null;
+    return s;
+  }catch{ return null; }
+}
+
+export async function storeVitalsSnapshotRemote(uid, gateway){
+  try{
+    const db = getFirestore();
+    const ref = doc(db, `players/${uid}/vitalsData/gateway`);
+    const s = buildSnapshotFromGateway(gateway);
+    if (!s) return;
+    await setDoc(ref, { meta: { lastClientSnapshot: s } }, { merge: true });
+  }catch{}
+}
+
+// --- tweak: add a helper to toggle a glow class on .bar during tween
+function setBarsWaking(elements, on){
+  const pools = ['health','mana','stamina','essence'];
+  pools.forEach(k=>{
+    const bar = elements?.[k]?.fill?.closest?.('.bar');
+    if (!bar) return;
+    bar.classList.toggle('is-waking', !!on);
+  });
+}
+
+// Simple tween (cubic ease-out)
+function tween({ from, to, dur=900, step, done }){
+  const t0 = performance.now();
+  const d  = to - from;
+  function f(t){
+    const k = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - k, 3);
+    step(from + d * e);
+    if (k < 1) requestAnimationFrame(f); else done && done();
+  }
+  requestAnimationFrame(f);
+}
+
+// Format exactly like energy-vitals.js uses in HUD values
+function formatPair(current, cap){
+  return `${current.toFixed(2)} / ${cap.toFixed(2)}`;
+}
+
+
+
+// Drive the initial “between-logins” animation
+// elements: result of getVitalsElements() (passed in from main file)
+// prev: snapshot from loadVitalsSnapshot(uid) or null
+// curr: full gateway payload (from readGateway / recompute)
+// opts: { duration?: number } (900ms default)
+export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
+  const duration = Number(opts.duration || 900);
+  if (!elements || !curr?.pools) return;
+
+  // If we have no prior snapshot, just paint current values once (no animation)
+  const pools = ['health','mana','stamina','essence'];
+
+  // Build current targets from gateway
+  const target = {};
+  for (const k of pools){
+    const v = curr.pools[k] || {};
+    target[k] = { current: Number(v.current||0), max: Number(v.max||0) };
+  }
+
+  // If no previous snapshot, set bars to current silently and exit
+  if (!prev?.pools){
+    for (const k of pools){
+      const el = elements[k]; if (!el) continue;
+      const cur = target[k].current, cap = target[k].max;
+      const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
+      el.fill.style.width   = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
+      el.value.textContent  = (k==='essence' && cap===0)
+        ? `${cur.toFixed(2)}`
+        : formatPair(cur, cap);
+    }
+    return;
+  }
+
+    // Turn on glow
+  setBarsWaking(elements, true);
+
+  // Animate each pool from prev.current -> target.current, respecting cap
+  await new Promise((resolveAll) => {
+    let doneCount = 0;
+    const total   = pools.length;
+
+    pools.forEach((k)=>{
+      const el = elements[k]; if (!el) { if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } return; }
+      const from   = Number(prev.pools[k]?.current || 0);
+      const to     = Number(target[k].current || 0);
+      const cap    = Number(target[k].max || 0);
+
+      // No movement
+      if (Math.abs(to - from) < 1e-6){
+        const pct0 = cap > 0 ? (to / cap) * 100 : (k==='essence' ? 0 : 0);
+        el.fill.style.width  = `${Math.max(0, Math.min(100, pct0)).toFixed(2)}%`;
+        el.value.textContent = (k==='essence' && cap===0)
+          ? `${to.toFixed(2)}`
+          : formatPair(to, cap);
+        if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); }
+        return;
+      }
+
+      // Single tween from -> to (down or up). Keep it simple and readable.
+      tween({
+        from, to, dur: duration,
+        step: (v)=>{
+          const cur = Math.max(0, v);
+          const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
+          el.fill.style.width  = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
+          el.value.textContent = (k==='essence' && cap===0)
+            ? `${cur.toFixed(2)}`
+            : formatPair(cur, cap);
+        },
+        done: ()=>{ if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } }
+      });
+    });
+  });
+}

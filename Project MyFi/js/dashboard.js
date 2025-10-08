@@ -177,6 +177,10 @@ import "../energy/energy-menu.js"
 const shouldShowSplash = sessionStorage.getItem('showSplashNext') === '1';
 if (shouldShowSplash) sessionStorage.removeItem('showSplashNext');
 
+// expose splash state so HUD can defer wake animation
+window.__MYFI_SPLASH_ACTIVE = !!shouldShowSplash;
+
+
 // NEW: tell the music manager to defer playback until splash finishes
 window.__MYFI_DEFER_MUSIC = shouldShowSplash;
 
@@ -264,10 +268,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (shouldShowSplash) {
       createSplash({ minDuration: 2500, until: vitalsPromise, allowSkip: false });
       await vitalsPromise; await waitForEvent('splash:done');
+      await waitForEvent('splash:done');
+      // mark splash as finished so HUD wake tween can run now
+      window.__MYFI_SPLASH_ACTIVE = false;
 
     } else {
       document.querySelector('.app-root')?.classList.add('app-show');
       await vitalsPromise;
+      await waitForEvent('splash:done');
+      // mark splash as finished so HUD wake tween can run now
+      window.__MYFI_SPLASH_ACTIVE = false;
     }
 
     // ✅ Show welcome exactly once, after splash is done and HUD is ready

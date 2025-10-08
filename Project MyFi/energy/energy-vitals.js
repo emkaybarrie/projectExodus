@@ -30,6 +30,15 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { openEnergyMenu } from "./energy-menu.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
+import {
+  loadVitalsSnapshot,
+  storeVitalsSnapshot,
+  loadVitalsSnapshotRemote,   
+  storeVitalsSnapshotRemote,    
+  runWakeRegenAnimation,
+} from "./energy-vitals-NEW_FUNCTIONS.js";
+
+
 
 // ───────────────────────────────── Constants ────────────────────────────────
 const MS_PER_DAY     = 86_400_000;
@@ -42,6 +51,9 @@ const VIEW_FACTORS= { daily:1, weekly:7 };
 const DEFAULT_TITLE = "VITALS";
 const MAX_ALIAS_LEN = 16;
 const COLLAPSE_LEN_HINT = 14;
+
+// HUD readiness flag so refreshers can no-op or do a static paint before init
+let __HUD_READY = false;
 
 // ─────────────────────────────── Cycle constants & config ───────────────────
 const CYCLE_DAYS = AVG_MONTH_DAYS; // 30.44 — treat as the Cycle length
@@ -715,8 +727,8 @@ export async function startAliasListener(uid){
     const raw = (snap.exists() && typeof snap.data().alias === "string") ? snap.data().alias.trim() : "";
     const capped = raw.length > MAX_ALIAS_LEN ? raw.slice(0,MAX_ALIAS_LEN) : raw;
     if (titleEl){ titleEl.textContent = capped || DEFAULT_TITLE; titleEl.title = raw || DEFAULT_TITLE;
-    titleEl.classList.toggle('is-gt10', (capped.length > 10));
-    titleEl.classList.toggle('is-gt12', (capped.length > 12)); }
+    titleEl.classList.toggle('is-gt10', (capped.length > 8));
+    titleEl.classList.toggle('is-gt12', (capped.length > 10)); }
     requestAnimationFrame(collapseActionsIfNeeded);
   },()=>{ if (titleEl){ titleEl.textContent = DEFAULT_TITLE; } requestAnimationFrame(collapseActionsIfNeeded); });
   window.addEventListener('resize', ()=>requestAnimationFrame(collapseActionsIfNeeded));
@@ -959,18 +971,21 @@ const essencePillDays =
   refreshBarGrids();
 }
 
-
 // ─────────────────────────── Public: Animated HUD (ghosts) ──────────────────
+
 export async function initVitalsHUD(uid, timeMultiplier = 1){
+
+
 
   // Opportunistic refresh for freshness
   try { await recomputeVitalsGatewayStub(uid); } catch {}
 
-  const data = await readGateway(uid); if (!data) return;
+  let data = await readGateway(uid); if (!data) return;
   const { txCollectionPath } = await resolveDataSources(uid);
 
   const elements = getVitalsElements();
-  const pools = data.pools || {};
+  let pools = data.pools || {};
+
   ensureReclaimLayers(elements);
   { const vm = getViewMode(); installRatePeekHandlers(elements, pools, vm==='core'?'core':vm); }
 
@@ -1034,11 +1049,10 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
 
 
   // >>> ADD: essence pill (sum of H/M/S) for animated HUD too
-const essencePillDays =
-  Number(pools.health?.bankedDays || 0) +
-  Number(pools.mana?.bankedDays || 0) +
-  Number(pools.stamina?.bankedDays || 0);
-
+  let essencePillDays =
+    Number(pools.health?.bankedDays || 0) +
+    Number(pools.mana?.bankedDays || 0) +
+    Number(pools.stamina?.bankedDays || 0);
 
   // Truth/current start from gateway, regen per sec from regenDaily (animation only)
   const truth = {};
@@ -1128,6 +1142,41 @@ const essencePillDays =
   }
 
   let last = null; let allowGhost = false; const enableGhostSoon=()=>{ if(!allowGhost) setTimeout(()=>allowGhost=true,60); };
+
+  // One-time hydrator: lets us refresh the running HUD with new gateway data
+  if (!window.__vitalsRefreshWired) {
+    window.__vitalsRefreshWired = true;
+    window.addEventListener('vitals:refresh', (e) => {
+      const fresh = e?.detail?.data;
+      if (!fresh) return;
+
+      // swap in the latest gateway snapshot
+      data  = fresh;
+      pools = data.pools || {};
+
+      // recompute essence pill days
+      essencePillDays =
+        Number(pools.health?.bankedDays || 0) +
+        Number(pools.mana?.bankedDays   || 0) +
+        Number(pools.stamina?.bankedDays|| 0);
+
+      // reset animation baselines from new data (mutate existing objects)
+      for (const [pool, v] of Object.entries(pools)) {
+        const daily = Number(v.regenDaily ?? v.regenCurrent ?? 0);
+        truth[pool]       = Math.max(0, Number(v.current || 0));
+        regenPerSec[pool] = daily * (timeMultiplier / 86_400);
+      }
+
+      // force the focus cache to refresh on next frame tick
+      try { lastFetchMs = 0; } catch {}
+
+      // keep UI helpers in sync
+      const vmNow = getViewMode();
+      updateRatePeekTexts(getVitalsElements(), pools, vmNow==='core' ? 'core' : vmNow);
+      ensureReclaimLayers(getVitalsElements());
+      repaintEngravingLabels();
+    });
+  }
 
   // Core Animation Related Logic
   function frame(ts){
@@ -1532,7 +1581,33 @@ const essencePillDays =
     setVitalsTotals(sumCurrent, sumMax);
     requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
+
+  __HUD_READY = true;
+
+  // Helper: run the wake tween (from last snapshot → current gateway) then start loop
+  const runWakeThenStart = async () => {
+    try {
+      const u = (getAuth().currentUser && getAuth().currentUser.uid) || uid;
+      const prev = loadVitalsSnapshot(u) || await loadVitalsSnapshotRemote(u) || null;
+      // Tween paints the bars to current (with glow); if no prev, it paints once without tween
+      await runWakeRegenAnimation(elements, prev, data, { duration: 2900 });
+      // Persist snapshot for next session/device
+      try { storeVitalsSnapshot(u, data); } catch {}
+      try { await storeVitalsSnapshotRemote(u, data); } catch {}
+    } catch (e) {
+      console.warn("Wake regen animation failed (non-fatal):", e);
+    }
+    // Now start the live loop (ghost overlays, focus mode, etc.)
+    requestAnimationFrame(frame);
+  };
+
+  // Defer until splash is done, or run immediately if no splash
+  if (window.__MYFI_SPLASH_ACTIVE) {
+    window.addEventListener('splash:done', () => { runWakeThenStart(); }, { once: true });
+  } else {
+    await runWakeThenStart();
+  }
+
 
   window.addEventListener("vitals:viewmode", (e)=>{
     const raw = e?.detail?.mode || "daily";
@@ -1548,6 +1623,35 @@ const essencePillDays =
     repaintEngravingLabels();
   });
 }
+
+// Public: recompute gateway (optional) and refresh the live HUD without re-init
+export async function refreshVitalsHUD(uid, { recompute = true } = {}) {
+  try {
+    if (recompute) await recomputeVitalsGatewayStub(uid);
+  } catch {}
+
+  const fresh = await readGateway(uid);
+  if (!fresh) return;
+
+  // If HUD hasn't been initialised yet, do a safe static paint and bail.
+  if (!__HUD_READY) {
+    await loadVitalsToHUD(uid);
+    return;
+  }
+
+  // Hydrate the running HUD (handled by the listener inside initVitalsHUD)
+  window.dispatchEvent(new CustomEvent('vitals:refresh', { detail: { data: fresh } }));
+
+  // Persist new snapshot so next wake anim is accurate (both local & remote)
+  try {
+    const u = (getAuth().currentUser && getAuth().currentUser.uid) || uid;
+    storeVitalsSnapshot(u, fresh);
+    await storeVitalsSnapshotRemote(u, fresh);
+  } catch {}
+
+
+}
+
 
 
 
@@ -2281,9 +2385,7 @@ export async function lockExpiredOrOverflow(uid, queueCap = 5){
     locked += Number(fe?.locked || 0);
   }catch{}
 
-  if (locked > 0) await recomputeVitalsGatewayStub(uid);
-  initVitalsHUD(uid)
-
+  if (locked > 0) await refreshVitalsHUD(getAuth().currentUser.uid, { recompute: true });
 
   return { locked };
 }
