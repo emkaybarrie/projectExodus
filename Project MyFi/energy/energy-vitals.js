@@ -1590,7 +1590,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
       const u = (getAuth().currentUser && getAuth().currentUser.uid) || uid;
       const prev = loadVitalsSnapshot(u) || await loadVitalsSnapshotRemote(u) || null;
       // Tween paints the bars to current (with glow); if no prev, it paints once without tween
-      await runWakeRegenAnimation(elements, prev, data, { duration: 20900 });
+      await runWakeRegenAnimation(elements, prev, data, { duration: 2900 });
       // Persist snapshot for next session/device
       try { storeVitalsSnapshot(u, data); } catch {}
       try { await storeVitalsSnapshotRemote(u, data); } catch {}
