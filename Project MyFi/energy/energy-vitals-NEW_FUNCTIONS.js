@@ -77,6 +77,19 @@ function setBarsWaking(elements, on){
   });
 }
 
+// Per-bar glow: on('pos'|'neg') or off(null)
+function setBarGlow(el, dir /* 'pos' | 'neg' | null */){
+  const bar = el?.fill?.closest?.('.bar');
+  if (!bar) return;
+  bar.classList.remove('is-waking', 'is-waking--pos', 'is-waking--neg');
+  if (!dir) return;
+  bar.classList.add('is-waking', dir === 'pos' ? 'is-waking--pos' : 'is-waking--neg');
+}
+
+// clamp helper used in step painting
+function clamp01(x){ return Math.max(0, Math.min(1, x)); }
+
+
 // Simple tween (cubic ease-out)
 function tween({ from, to, dur=900, step, done }){
   const t0 = performance.now();
@@ -102,11 +115,80 @@ function formatPair(current, cap){
 // prev: snapshot from loadVitalsSnapshot(uid) or null
 // curr: full gateway payload (from readGateway / recompute)
 // opts: { duration?: number } (900ms default)
+// export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
+//   const duration = Number(opts.duration || 900);
+//   if (!elements || !curr?.pools) return;
+
+//   // If we have no prior snapshot, just paint current values once (no animation)
+//   const pools = ['health','mana','stamina','essence'];
+
+//   // Build current targets from gateway
+//   const target = {};
+//   for (const k of pools){
+//     const v = curr.pools[k] || {};
+//     target[k] = { current: Number(v.current||0), max: Number(v.max||0) };
+//   }
+
+//   // If no previous snapshot, set bars to current silently and exit
+//   if (!prev?.pools){
+//     for (const k of pools){
+//       const el = elements[k]; if (!el) continue;
+//       const cur = target[k].current, cap = target[k].max;
+//       const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
+//       el.fill.style.width   = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
+//       el.value.textContent  = (k==='essence' && cap===0)
+//         ? `${cur.toFixed(2)}`
+//         : formatPair(cur, cap);
+//     }
+//     return;
+//   }
+
+//     // Turn on glow
+//   setBarsWaking(elements, true);
+
+//   // Animate each pool from prev.current -> target.current, respecting cap
+//   await new Promise((resolveAll) => {
+//     let doneCount = 0;
+//     const total   = pools.length;
+
+//     pools.forEach((k)=>{
+//       const el = elements[k]; if (!el) { if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } return; }
+//       const from   = Number(prev.pools[k]?.current || 0);
+//       const to     = Number(target[k].current || 0);
+//       const cap    = Number(target[k].max || 0);
+
+//       // No movement
+//       if (Math.abs(to - from) < 1e-6){
+//         const pct0 = cap > 0 ? (to / cap) * 100 : (k==='essence' ? 0 : 0);
+//         el.fill.style.width  = `${Math.max(0, Math.min(100, pct0)).toFixed(2)}%`;
+//         el.value.textContent = (k==='essence' && cap===0)
+//           ? `${to.toFixed(2)}`
+//           : formatPair(to, cap);
+//         if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); }
+//         return;
+//       }
+
+//       // Single tween from -> to (down or up). Keep it simple and readable.
+//       tween({
+//         from, to, dur: duration,
+//         step: (v)=>{
+//           const cur = Math.max(0, v);
+//           const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
+//           el.fill.style.width  = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
+//           el.value.textContent = (k==='essence' && cap===0)
+//             ? `${cur.toFixed(2)}`
+//             : formatPair(cur, cap);
+//         },
+//         done: ()=>{ if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } }
+//       });
+//     });
+//   });
+// }
+
 export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
   const duration = Number(opts.duration || 900);
   if (!elements || !curr?.pools) return;
 
-  // If we have no prior snapshot, just paint current values once (no animation)
   const pools = ['health','mana','stamina','essence'];
 
   // Build current targets from gateway
@@ -116,58 +198,85 @@ export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
     target[k] = { current: Number(v.current||0), max: Number(v.max||0) };
   }
 
-  // If no previous snapshot, set bars to current silently and exit
+  // If no previous snapshot, paint once (no tween, no glow)
   if (!prev?.pools){
     for (const k of pools){
       const el = elements[k]; if (!el) continue;
-      const cur = target[k].current, cap = target[k].max;
-      const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
-      el.fill.style.width   = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
-      el.value.textContent  = (k==='essence' && cap===0)
-        ? `${cur.toFixed(2)}`
-        : formatPair(cur, cap);
+      const cur = Number(target[k].current || 0);
+      const cap = Number(target[k].max || 0);
+
+      if (k === 'essence' || cap <= 0){
+        // Essence has no hard cap in this phase; keep fill as-is, set text only
+        el.value.textContent = `${cur.toFixed(2)}`;
+      } else {
+        const pct = clamp01(cur / cap) * 100;
+        el.fill.style.width  = `${pct.toFixed(2)}%`;
+        el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
+      }
     }
     return;
   }
 
-    // Turn on glow
-  setBarsWaking(elements, true);
-
-  // Animate each pool from prev.current -> target.current, respecting cap
+  // Otherwise, per-bar tween from prev -> curr (net movement), with sign-aware glow
   await new Promise((resolveAll) => {
     let doneCount = 0;
     const total   = pools.length;
+    const EPS = 1e-6;
 
     pools.forEach((k)=>{
-      const el = elements[k]; if (!el) { if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } return; }
-      const from   = Number(prev.pools[k]?.current || 0);
-      const to     = Number(target[k].current || 0);
-      const cap    = Number(target[k].max || 0);
+      const el = elements[k];
+      if (!el){ if(++doneCount===total) resolveAll(); return; }
 
-      // No movement
-      if (Math.abs(to - from) < 1e-6){
-        const pct0 = cap > 0 ? (to / cap) * 100 : (k==='essence' ? 0 : 0);
-        el.fill.style.width  = `${Math.max(0, Math.min(100, pct0)).toFixed(2)}%`;
-        el.value.textContent = (k==='essence' && cap===0)
-          ? `${to.toFixed(2)}`
-          : formatPair(to, cap);
-        if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); }
+      const cap = Number(target[k].max || 0);
+
+      const fromRaw = Number(prev.pools?.[k]?.current || 0);
+      const toRaw   = Number(target[k].current || 0);
+
+      // Effective (visible) value: clamp H/M/S to cap; Essence unbounded here
+      const eff = (val) => (k==='essence' || cap<=0) ? Math.max(0, val) : Math.max(0, Math.min(cap, val));
+      const fromEff = eff(fromRaw);
+      const toEff   = eff(toRaw);
+
+      const delta = toEff - fromEff;
+      const moved = Math.abs(delta) >= EPS;
+
+      if (!moved){
+        // No visible change → paint once, no glow
+        if (k === 'essence' || cap <= 0){
+          el.value.textContent = `${toEff.toFixed(2)}`;
+        } else {
+          const pct = clamp01(toEff / cap) * 100;
+          el.fill.style.width  = `${pct.toFixed(2)}%`;
+          el.value.textContent = `${toEff.toFixed(2)} / ${cap.toFixed(2)}`;
+        }
+        if(++doneCount===total) resolveAll();
         return;
       }
 
-      // Single tween from -> to (down or up). Keep it simple and readable.
+      // Visible movement → animate once with sign-aware glow
+      setBarGlow(el, delta > 0 ? 'pos' : 'neg');
+
       tween({
-        from, to, dur: duration,
+        from: fromEff,
+        to:   toEff,
+        dur:  duration,
         step: (v)=>{
           const cur = Math.max(0, v);
-          const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
-          el.fill.style.width  = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
-          el.value.textContent = (k==='essence' && cap===0)
-            ? `${cur.toFixed(2)}`
-            : formatPair(cur, cap);
+          if (k === 'essence' || cap <= 0){
+            // Don’t fake a width for essence here; just update value
+            el.value.textContent = `${cur.toFixed(2)}`;
+          } else {
+            const pct = clamp01(cur / cap) * 100;
+            el.fill.style.width  = `${pct.toFixed(2)}%`;
+            el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
+          }
         },
-        done: ()=>{ if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } }
+        done: ()=>{
+          setBarGlow(el, null);
+          if(++doneCount===total) resolveAll();
+        }
       });
     });
   });
 }
+
