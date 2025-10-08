@@ -36,8 +36,10 @@ import {
   loadVitalsSnapshotRemote,   
   storeVitalsSnapshotRemote,    
   runWakeRegenAnimation,
+
+  initEmberwardFrame,
   
-  initEmberwardFrame 
+  initSummaryModal, openSummaryFromGateway , openSummaryModal, buildSummaryFromHUDFallback
 } from "./energy-vitals-NEW_FUNCTIONS.js";
 
 
@@ -2550,5 +2552,20 @@ export async function initHUD(uid){
     shape: 'inherit',  // or 'round' if you later switch to a circular portrait
     maxRatio: 1.0      // clamp intensity at 100% (adjust if you want >100% to still scale)
   });
+
+  initSummaryModal();
+  const portraitHost = document.querySelector('.portrait-wrapper');
+if (portraitHost && !portraitHost.__sumWired) {
+  portraitHost.__sumWired = true;
+  portraitHost.addEventListener('click', () => {
+    openSummaryFromGateway(uid), { passive: true }
+
+    // For now, pull a quick snapshot from what’s on-screen.
+    // We’ll replace this with real gateway-derived stats in the next step.
+    // const data = buildSummaryFromHUDFallback();
+    // openSummaryModal(data);
+  }, { passive: true });
+}
+
 }
 

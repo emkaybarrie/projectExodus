@@ -678,3 +678,73 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   50%  { box-shadow: 0 0 16px #c084fc, 0 0 32px rgba(192,132,252,.8), inset 0 0 6px rgba(255,255,255,.15); }
   100% { box-shadow: 0 0 8px #a855f7, 0 0 12px rgba(168,85,247,.5), inset 0 0 3px rgba(255,255,255,.1); }
 }
+
+/* 
+NEw FEATURES CSS  - SUMMARY MODAL
+*/
+/* Summary Modal (matches your glass / dark style) */
+.summary-overlay {
+  position: fixed; inset: 0;
+  display: none; place-items: center;
+  background: rgba(10,12,20,.55);
+  backdrop-filter: blur(8px) saturate(120%);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.summary-overlay.is-open { opacity: 1; }
+
+.summary-card {
+  width: min(520px, 92vw);
+  max-height: 86vh; overflow: auto;
+  background: linear-gradient(180deg, rgba(22,24,40,.94), rgba(16,18,30,.96));
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  color: #f0e6d2;
+}
+
+.summary-card__hd {
+  position: sticky; top: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(16,18,30,.96), rgba(16,18,30,.96));
+  z-index: 1;
+}
+.summary-card__hd h3 {
+  margin: 0; font-family: 'Cinzel', serif; letter-spacing: .02em;
+  font-size: 1.05rem;
+}
+
+.summary-close {
+  width: 34px; height: 34px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  color: #f0e6d2; cursor: pointer;
+}
+.summary-close:hover { background: rgba(255,255,255,.10); }
+
+.summary-card__body { padding: 10px 12px 12px; display: grid; gap: 12px; }
+
+.summary-sec h4 {
+  margin: 0 0 6px; font-size: .95rem;
+  font-family: 'Cinzel', serif;
+  opacity: .9;
+  text-shadow: 0 1px 0 rgba(0,0,0,.55);
+}
+.summary-rows { display: grid; gap: 6px; }
+
+.summary-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 12px;
+  padding: 8px 10px; border-radius: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.summary-row__label { opacity: .85; }
+.summary-row__value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.summary-row__value .hint { opacity: .7; margin-left: 8px; font-size: .9em; }
+.summary-row__value .sep { opacity: .6; margin: 0 .25rem; }
+
+.net.pos { color: #9ef7c0; text-shadow: 0 0 8px rgba(120,255,180,.25); }
+.net.neg { color: #ff9e9e; text-shadow: 0 0 8px rgba(255,60,60,.2); }

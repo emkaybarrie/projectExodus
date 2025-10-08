@@ -353,3 +353,260 @@ export function initEmberwardFrame(uid, { shape='inherit', maxRatio=1.0 } = {}){
   return () => { try{ unsub?.(); }catch{} };
 }
 
+
+// --------------
+// Stats Summary Modal
+// ------------
+// energy/summary-modal.js
+// Minimal, style-matching Summary Modal (UI-only).
+// API: initSummaryModal(); openSummaryModal(data); closeSummaryModal();
+
+let __summaryMounted = false;
+
+function el(tag, cls, html) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+
+function ensureModalDOM() {
+  if (__summaryMounted) return;
+
+  const overlay = el('div', 'summary-overlay', `
+    <div class="summary-card" role="dialog" aria-modal="true" aria-labelledby="summaryTitle">
+      <div class="summary-card__hd">
+        <h3 id="summaryTitle">Daily Summary</h3>
+        <button class="summary-close" aria-label="Close">✕</button>
+      </div>
+
+      <div class="summary-card__body">
+        <!-- Sections are intentionally simple & easy to extend -->
+        <section class="summary-sec" id="sum-daily">
+          <h4>Daily</h4>
+          <div class="summary-rows"></div>
+        </section>
+
+        <section class="summary-sec" id="sum-cycle">
+          <h4>Cycle</h4>
+          <div class="summary-rows"></div>
+        </section>
+
+        <section class="summary-sec" id="sum-essence">
+          <h4>Essence</h4>
+          <div class="summary-rows"></div>
+        </section>
+      </div>
+    </div>
+  `);
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSummaryModal();
+  });
+  overlay.querySelector('.summary-close')?.addEventListener('click', closeSummaryModal);
+  __summaryMounted = true;
+}
+
+export function initSummaryModal() {
+  ensureModalDOM();
+}
+
+export function closeSummaryModal() {
+  const o = document.querySelector('.summary-overlay');
+  if (!o) return;
+  o.classList.remove('is-open');
+  setTimeout(() => { o.style.display = 'none'; }, 160);
+}
+
+function rowHTML(label, value, hint='') {
+  const hintHtml = hint ? `<span class="hint">${hint}</span>` : '';
+  return `
+    <div class="summary-row">
+      <div class="summary-row__label">${label}</div>
+      <div class="summary-row__value">${value} ${hintHtml}</div>
+    </div>
+  `;
+}
+
+/**
+ * data (all optional; strings or numbers):
+ * {
+ *   dailyIncome, dailyExpense, netDaily,
+ *   cyclePct, cycleDaysIn, cycleDaysTotal,
+ *   essenceNow, essenceSoftCap, crystalisedToday
+ * }
+ */
+export function openSummaryModal(data = {}) {
+  ensureModalDOM();
+  const o = document.querySelector('.summary-overlay');
+  if (!o) return;
+
+  // DAILY
+  const daily = o.querySelector('#sum-daily .summary-rows');
+  daily.innerHTML = [
+    rowHTML('Income', fmt(data.dailyIncome)),
+    rowHTML('Expense', fmt(data.dailyExpense)),
+    rowHTML('Net / day', tagNet(fmt(data.netDaily)))
+  ].join('');
+
+  // CYCLE
+  const cycle = o.querySelector('#sum-cycle .summary-rows');
+  const pct = isFiniteNum(data.cyclePct) ? `${Number(data.cyclePct).toFixed(0)}%` : '—';
+  cycle.innerHTML = [
+    rowHTML('Progress', pct, `${fmt(data.cycleDaysIn)} / ${fmt(data.cycleDaysTotal)} days`)
+  ].join('');
+
+  // ESSENCE
+  const ess = o.querySelector('#sum-essence .summary-rows');
+  const hasSoft = isFiniteNum(data.essenceSoftCap) && Number(data.essenceSoftCap) > 0;
+
+  const essenceRows = [
+    rowHTML('Current', hasSoft
+      ? `${fmt(data.essenceNow)} <span class="sep">/</span> ${fmt(data.essenceSoftCap)}`
+      : fmt(data.essenceNow))
+  ];
+
+  // Optional: show escrow generated today if present
+  if (isFiniteNum(data.escrowToday) && Number(data.escrowToday) > 0) {
+    essenceRows.push(rowHTML('Escrow (today)', fmt(data.escrowToday)));
+  }
+
+  // Keep the old line if you still want a placeholder:
+  if (isFiniteNum(data.crystalisedToday) && Number(data.crystalisedToday) > 0) {
+    essenceRows.push(rowHTML('Crystallised today', fmt(data.crystalisedToday)));
+  }
+
+  ess.innerHTML = essenceRows.join('');
+
+  o.style.display = 'grid';
+  requestAnimationFrame(() => o.classList.add('is-open'));
+}
+
+/* -------- helpers (local) -------- */
+function isFiniteNum(n){ return Number.isFinite(Number(n)); }
+function fmt(n) {
+  if (!isFiniteNum(n)) return '—';
+  const x = Number(n);
+  return (Math.abs(x) >= 1000) ? Math.round(x).toLocaleString('en-GB') : x.toFixed(2);
+}
+function tagNet(html) {
+  const x = Number(String(html).replace(/[,]/g,''));
+  if (!Number.isFinite(x)) return html;
+  const cls = x > 0 ? 'pos' : (x < 0 ? 'neg' : '');
+  return `<span class="net ${cls}">${html}</span>`;
+}
+
+/* -------- Optional: quick HUD scrape for demo -------- */
+/**
+ * Reads visible numbers from your HUD to provide a "good enough" summary
+ * when you don't want to plumb gateway data yet.
+ */
+export function buildSummaryFromHUDFallback() {
+  // Daily: infer from rate peek text if available, else 0s
+  const getRate = (id) => {
+    const val = document.querySelector(`#vital-${id} .bar-value`);
+    const txt = val?.__rateText || ''; // we set this in your HUD wiring
+    const m = /([+-]?\d+(\.\d+)?)\/(hr|day|wk)/i.exec(txt || '');
+    return m ? Number(m[1]) : 0;
+  };
+  const healthRate = getRate('health');
+  const manaRate = getRate('mana');
+  const staminaRate = getRate('stamina');
+  const essenceRate = getRate('essence');
+  // best-effort for daily net = sum of per-day equivalents
+  const toPerDay = (r) => {
+    const val = Number(r||0);
+    // __rateText is +x/hr for daily mode by default in your code
+    // multiply by 24 for a rough per-day
+    return val * 24;
+  };
+  const netDaily = toPerDay(healthRate) + toPerDay(manaRate) + toPerDay(staminaRate) + toPerDay(essenceRate);
+
+  // Essence current / soft-cap (from text your HUD prints)
+  const essVal = document.querySelector('#vital-essence .bar-value')?.textContent || '';
+  const mm = /([0-9.,]+)\s*\/\s*([0-9.,]+)/.exec(essVal);
+  const essenceNow = mm ? Number(mm[1].replace(/,/g,'')) : Number(essVal.replace(/,/g,'')) || 0;
+  const essenceSoftCap = mm ? Number(mm[2].replace(/,/g,'')) : 0;
+
+  return {
+    dailyIncome: NaN,                // not scraped; you’ll wire in later
+    dailyExpense: NaN,               // not scraped; you’ll wire in later
+    netDaily,
+    cyclePct: NaN,                   // wire later (needs anchor math)
+    cycleDaysIn: NaN,
+    cycleDaysTotal: NaN,
+    essenceNow,
+    essenceSoftCap,
+    crystalisedToday: 0              // wire later (escrow carry delta)
+  };
+}
+
+// ---- Real data hook (Firestore gateway) ----
+
+export async function openSummaryFromGateway(uid) {
+  try {
+    const db  = getFirestore();
+    const ref = doc(db, `players/${uid}/vitalsData/gateway`);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      // fallback to HUD scrape if gateway not ready
+      return openSummaryModal(buildSummaryFromHUDFallback());
+    }
+
+    const g = snap.data() || {};
+    const core = g.core || {};
+    const pools = g.pools || {};
+    const essenceUI = g.essenceUI || {};
+    const meta = g.meta || {};
+
+    // Daily (already computed server-side)
+    const dailyIncome  = Number(core.dailyIncome  || 0);
+    const dailyExpense = Number(core.dailyExpense || 0);
+    const netDaily     = Number(core.netDaily     || 0);
+
+    // Cycle progress — anchor or 1st of month fallback
+    const MS_DAY = 86_400_000;
+    const CYCLE_DAYS = 30.44;
+    const anchorMs = Number.isFinite(g.payCycleAnchorMs) && g.payCycleAnchorMs > 0
+      ? g.payCycleAnchorMs
+      : new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+
+    const daysIn = Math.max(0, (Date.now() - anchorMs) / MS_DAY);
+    const cyclePct = Math.max(0, Math.min(100, (daysIn / CYCLE_DAYS) * 100));
+
+    // Essence
+    const essenceNow     = Number(pools.essence?.current || 0);
+    const essenceSoftCap = Number(essenceUI.softCap || 0);
+
+    // Optional: escrow generated today (UI concept)
+    const escrowToday = Math.max(
+      0,
+      Number(essenceUI?.escrowToday?.health || 0) +
+      Number(essenceUI?.escrowToday?.mana   || 0) +
+      Number(essenceUI?.escrowToday?.stamina|| 0)
+    );
+
+    // You can also surface meta.lastCrystallisedDay if you want later.
+    openSummaryModal({
+      dailyIncome,
+      dailyExpense,
+      netDaily,
+      cyclePct,
+      cycleDaysIn: daysIn,
+      cycleDaysTotal: CYCLE_DAYS,
+      essenceNow,
+      essenceSoftCap,
+      // we don’t track “crystallised today” as a scalar right now;
+      // pass escrowToday to show as an extra line in the Essence section.
+      escrowToday
+    });
+
+  } catch (e) {
+    console.warn('[summary] openSummaryFromGateway failed', e);
+    // graceful fallback
+    openSummaryModal(buildSummaryFromHUDFallback());
+  }
+}
+
+
