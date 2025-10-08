@@ -190,6 +190,8 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 
 .portrait-wrapper {
   position: relative;
+  overflow: visible;
+  isolation: isolate;
   width: 120px;
   height: 110px;
   flex-shrink: 0;
@@ -214,6 +216,57 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   line-height: 1;
   z-index: 2;
 }
+
+/* ─────────── Emberward Portrait Glow (simple, reliable) ─────────── */
+
+
+.portrait-wrapper .emberward-frame {
+  position: absolute;
+  inset: -0.5px;                     /* slightly larger than portrait */
+  border-radius: inherit;          /* match portrait shape */
+  pointer-events: none;
+  z-index: 1;                     /* above portrait */
+  opacity: 0;                      /* default hidden */
+  transition: opacity 0.4s ease;
+
+    /* NEW: hook for JS-driven intensity 0..1 */
+  --i: var(--ember-intensity, 0);
+}
+
+/* When Emberward is active (golden glow) */
+.portrait-wrapper.is-ember-on .emberward-frame {
+ opacity: calc(0.45 + 0.55 * var(--i));
+  /* sizes + alphas scale with --i */
+  box-shadow:
+    0 0 calc(6px + 10px * var(--i))  calc(1px + 1px * var(--i))  rgba(255,215,100, calc(0.35 + 0.40 * var(--i))),
+    0 0 calc(14px + 14px * var(--i)) calc(4px + 4px * var(--i)) rgba(255,190, 70, calc(0.25 + 0.35 * var(--i))),
+    inset 0 0 calc(3px + 3px * var(--i))                           rgba(255,230,150, calc(0.30 + 0.30 * var(--i)));
+  animation: emberGlow calc(3s - 1.6s * var(--i)) ease-in-out infinite;
+}
+
+/* When Emberward is inactive (subtle grey ring) */
+.portrait-wrapper.is-ember-off .emberward-frame {
+  opacity: 1;
+  box-shadow:
+    0 0 3px 1px rgba(160,160,170,0.4),
+    inset 0 0 2px rgba(200,200,210,0.3);
+}
+
+@keyframes emberGlow {
+  0%,100% { box-shadow:
+    0 0 4px 1px rgba(255,215,100,0.75),
+    0 0 8px 3px rgba(255,190,70,0.45),
+    inset 0 0 2px rgba(255,230,150,0.5);
+  }
+  50% { box-shadow:
+    0 0 7px 2px rgba(255,230,120,0.85),
+    0 0 12px 4px rgba(255,200,80,0.55),
+    inset 0 0 3px rgba(255,240,180,0.6);
+  }
+}
+
+
+
 
 /* ========================================================================== */
    /* Vitals bars (layout + layers) */

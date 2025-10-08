@@ -2,7 +2,7 @@
 // Lightweight, schema-safe helpers for wake regen animation and local snapshots.
 
 import {
-  getFirestore, doc, getDoc, setDoc
+  getFirestore, doc, getDoc, setDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
@@ -278,5 +278,78 @@ export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
       });
     });
   });
+}
+
+
+// ----------------------- 
+// Emberward UI
+// -------------
+// energy/emberward-frame.js
+
+// Reuse the same active doc path your HUD already uses
+// See energy-vitals.js resolveDataSources() → cashflowDocPath. :contentReference[oaicite:1]{index=1}
+
+function clamp(v, a=0, b=1){ return Math.max(a, Math.min(b, v)); }
+
+function ensureFrame(host){
+  if (!host) return null;
+  let frame = host.querySelector('.emberward-frame');
+  if (!frame){
+    frame = document.createElement('div');
+    frame.className = 'emberward-frame';
+    host.appendChild(frame);
+  }
+  return frame;
+}
+
+/**
+ * shape: 'inherit' | 'round'  (default 'inherit' = match current portrait shape)
+ * maxRatio: cap for intensity mapping (e.g., 1.0 = 100% ember vs income)
+ */
+export function initEmberwardFrame(uid, { shape='inherit', maxRatio=1.0 } = {}){
+  const host = document.querySelector('.portrait-wrapper');
+  if (!host) return () => {};
+
+  // optional shape toggle
+  if (shape === 'round') host.classList.add('round'); else host.classList.remove('round');
+
+  const frame = ensureFrame(host);
+  const db = getFirestore();
+  const ref = doc(db, `players/${uid}/financialData/cashflowData`);
+
+  // One-off initial paint then live updates
+  let unsub = onSnapshot(ref, snap => apply(snap?.data()||{}), () => { /* silent */ });
+
+  async function apply(A){
+    // Compatible with both verified/unverified writers (they merge into the active doc):
+    // inflow.total / outflow.total (monthly) are written here. :contentReference[oaicite:2]{index=2}
+    const inc = Number(A?.inflow?.total ?? A?.inflow ?? 0);
+    const out = Number(A?.outflow?.total ?? A?.outflow ?? 0);
+
+    console.log(inc)
+    console.log(out)
+
+    const hasEmber = out > 0;
+    const intensity = hasEmber && inc > 0 ? clamp(out / inc, 0, maxRatio) / maxRatio : 0;
+    console.log(hasEmber, intensity)
+
+    host.classList.toggle('is-ember-on', hasEmber);
+    host.classList.toggle('is-ember-off', !hasEmber);
+
+    // Drive the flame strength
+    frame.style.setProperty('--ember-intensity', String(intensity));
+
+    console.log(frame)
+  }
+
+  // Expose a tiny helper to flick shape later without re-init
+  window.MyFiEmberwardUI = {
+    setShape(mode /* 'inherit' | 'round' */){
+      if (mode === 'round') host.classList.add('round');
+      else host.classList.remove('round');
+    }
+  };
+
+  return () => { try{ unsub?.(); }catch{} };
 }
 

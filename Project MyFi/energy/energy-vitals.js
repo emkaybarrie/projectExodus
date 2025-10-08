@@ -36,6 +36,8 @@ import {
   loadVitalsSnapshotRemote,   
   storeVitalsSnapshotRemote,    
   runWakeRegenAnimation,
+  
+  initEmberwardFrame 
 } from "./energy-vitals-NEW_FUNCTIONS.js";
 
 
@@ -2543,5 +2545,10 @@ export async function initHUD(uid){
   startLevelListener(u);
   await refreshVitals();     // server snapshot
   initVitalsHUD(u, 1);       // animated HUD
+
+  const stopEmberward = initEmberwardFrame(uid, {
+    shape: 'inherit',  // or 'round' if you later switch to a circular portrait
+    maxRatio: 1.0      // clamp intensity at 100% (adjust if you want >100% to still scale)
+  });
 }
 
