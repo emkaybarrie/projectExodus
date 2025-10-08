@@ -9,7 +9,7 @@
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, getDocs, collection, updateDoc, writeBatch, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import  { openEnergyMenu, scopeCSS } from "./energy-menu.js"
-import { initHUD } from "./energy-vitals.js";
+import { refreshVitalsHUD } from "./energy-vitals.js";
 
 // ───────────────────────────────── CONFIG ─────────────────────────────────
 const SR_CFG = {
@@ -804,7 +804,7 @@ export async function openSmartReviewOverlay(){
         }
       }
       await saveSelections(state);
-      await initHUD()
+      await refreshVitalsHUD(getAuth().currentUser.uid, { recompute: true });
       overlay.remove(); 
       document.getElementById('sr-styles')?.remove();
       window.dispatchEvent(new CustomEvent("energyMenu:closed"));
