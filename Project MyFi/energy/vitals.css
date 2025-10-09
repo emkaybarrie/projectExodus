@@ -759,8 +759,8 @@ NEw FEATURES CSS  - SUMMARY MODAL
   --bar-h-health:   var(--bar-h);
   --bar-h-mana:     var(--bar-h);
   --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   26px;   /* keep thin */
-  --bar-h-essence:  38px;   /* match shield */
+  --bar-h-shield:   38px;   /* keep thin */
+  --bar-h-essence:  26px;   /* match shield */
 
   /* Vertical rhythm */
   --bar-gap: 8px;

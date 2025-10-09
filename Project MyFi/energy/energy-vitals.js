@@ -757,22 +757,51 @@ function getVitalsElements(){
   }
   return map;
 }
-function paintBarGrid(gridEl, days){
-  const needed = Math.max(0, (days|0)-1); gridEl.innerHTML='';
-  for (let i=1;i<=needed;i++){
-    const line=document.createElement('div');
-    line.className='grid-line';
-    line.style.left=((i/days)*100).toFixed(4)+'%';
+function paintBarGrid(gridEl, totalDays, tickEveryDays = 1){
+  gridEl.innerHTML = '';
+
+  // number of interior ticks (exclude the right edge at 100%)
+  const tickCount = Math.floor(totalDays / tickEveryDays);
+
+  for (let i = 1; i <= tickCount; i++){
+    const leftPct = (i * tickEveryDays / totalDays) * 100;
+    if (leftPct >= 100) break;          // avoid a line on the far right border
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    line.style.left = leftPct.toFixed(4) + '%';
     gridEl.appendChild(line);
   }
 }
 function refreshBarGrids(){
-  const vm = getViewMode(); const days = (vm==='core')? CORE_DAYS : VIEW_FACTORS[vm];
-  const pools = ["health","mana","stamina","essence"];
+  const vm = getViewMode();
+
+  // Decide total span and tick spacing
+  let totalDays, tickEvery;
+  if (vm === 'core') {
+    totalDays = CORE_DAYS;  // your cycle length (e.g., 28/30/31)
+    tickEvery = 7;          // weeks
+  } else if (vm === 'weekly') {          // "Focus: This Week"
+    totalDays = 7;
+    tickEvery = 1;          // days
+  } else {
+    // fallback for other focus modes (keep your prior behavior)
+    totalDays = VIEW_FACTORS[vm] || 7;
+    tickEvery = 1;
+  }
+
+  const pools = ["health","mana","stamina","shield","essence"];
   for (const p of pools){
-    const root = document.querySelector(`#vital-${p}`); const bar = root?.querySelector('.bar'); if(!bar) continue;
-    let grid = bar.querySelector('.bar-grid'); if (!grid){ grid=document.createElement('div'); grid.className='bar-grid'; bar.insertBefore(grid, bar.querySelector('.bar-fill')); }
-    paintBarGrid(grid, days);
+    const root = document.querySelector(`#vital-${p}`);
+    const bar  = root?.querySelector('.bar');
+    if (!bar) continue;
+
+    let grid = bar.querySelector('.bar-grid');
+    if (!grid){
+      grid = document.createElement('div');
+      grid.className = 'bar-grid';
+      bar.insertBefore(grid, bar.querySelector('.bar-fill'));
+    }
+    paintBarGrid(grid, totalDays, tickEvery);
   }
 }
 function updateModeEngrave(mode = getViewMode()){
@@ -879,6 +908,21 @@ function ensureReclaimLayers(elements){
   }
 }
 
+// Sum of daily regen for H/M/S (used as the "one day of energy" budget)
+function getDailyHMS(data){
+  const p = data?.pools || {};
+  const h = Number(p.health?.regenDaily ?? p.health?.regenCurrent ?? 0);
+  const m = Number(p.mana?.regenDaily   ?? p.mana?.regenCurrent   ?? 0);
+  const s = Number(p.stamina?.regenDaily?? p.stamina?.regenCurrent?? 0);
+  return Math.max(0, h + m + s);
+}
+
+// Compute "days worth" from a carry amount
+function shieldDaysFromCarry(carry, data){
+  const denom = getDailyHMS(data);
+  if (denom <= 0.0001) return 0;       // avoid div-by-zero; treat as 0 days
+  return Math.floor(Math.max(0, Number(carry||0)) / denom);
+}
 
 
 
@@ -1353,12 +1397,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
         // Paint bar + value text
         if (pool==='essence'){
           const valNow  = Number(v.current || 0);
-          //const carryBefore = Number(data?.meta?.escrow?.carry?.total || 0);
-          //const carryDrawn  = Number((escUsed.health + escUsed.mana + escUsed.stamina).toFixed(2));
-          //const carry = Math.max(0, Number((carryBefore - carryDrawn).toFixed(2))); // incoming escrow
-          //const pend    = Number(delta.essence || 0);                    // pending credits to Essence
+          const pend    = Number(delta.essence || 0);                    // pending credits to Essence
           const softCap = Number(data?.essenceUI?.softCap || 0);
-          const effective = valNow //+ carry + pend;
+          const effective = valNow + pend //+ carry + pend;
 
           // Fill = min(effective/softCap, 100%)
           const pct = softCap > 0 ? Math.min(100, (effective / softCap) * 100) : 0;
@@ -1375,18 +1416,9 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
           const barEl = el.fill.closest('.bar');
           const reclaimEl = barEl?.querySelector('.bar-reclaim');
           if (reclaimEl){
-            const escrowTodayTotal = Number((escToday.health||0) + (escToday.mana||0) + (escToday.stamina||0));
-            if (softCap > 0 && escrowTodayTotal > 0){
-              const overlayPct = Math.min(100 - pct, (escrowTodayTotal / softCap) * 100);
-              reclaimEl.classList.add('is-credit');
-              reclaimEl.style.left   = `${pct.toFixed(2)}%`;
-              reclaimEl.style.width  = `${Math.max(0, overlayPct).toFixed(2)}%`;
-              reclaimEl.style.opacity= '1';
-            } else {
-              reclaimEl.style.opacity='0';
-              reclaimEl.style.width  ='0%';
-              reclaimEl.classList.remove('is-credit');
-            }
+            reclaimEl.style.opacity='0'; 
+            reclaimEl.style.width='0%'; 
+            reclaimEl.classList.remove('is-credit');
           }
         } else {
           const pct = (cap>0 ? (current / cap) * 100 : 0);
@@ -1417,12 +1449,11 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
 
         // Surplus pills (Core): H/M/S show crystallised banked days; Essence uses sum of H/M/S
         if (pool!=='essence'){
-          const bankedDays = Number(v.bankedDays || 0);
-          setSurplusPill(el, bankedDays, bankedDays);
+          setSurplusPill(el, 0, 0);
           sumCurrent += current;
           sumMax += cap;
         } else {
-          setSurplusPill(el, essencePillDays, essencePillDays);
+          setSurplusPill(el, 0, 0);
         }
 
       } else {
@@ -1616,35 +1647,32 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
     {
       const el = elements.shield;
       if (el){
-        const softCap = Number(data?.essenceUI?.softCap || 0);
+        const cap = Number(((data.pools.health?.max||0) + (data.pools.mana?.max||0) + (data.pools.stamina?.max||0)).toFixed(2));
         const carryBefore = Number(data?.meta?.escrow?.carry?.total || 0);
-
+        
         // Use your existing escUsed accumulator if available; else fall back to 0
         const used = (typeof escUsed === 'object')
           ? Number((escUsed.health + escUsed.mana + escUsed.stamina).toFixed(2))
           : 0;
 
         const carry = Math.max(0, Number((carryBefore - used).toFixed(2)));
-        const today = Number((data?.essenceUI?.escrowToday?.health||0) +
-                            (data?.essenceUI?.escrowToday?.mana||0) +
-                            (data?.essenceUI?.escrowToday?.stamina||0));
-
-        const basePct = softCap > 0 ? Math.min(100, (carry / softCap) * 100) : 0;
+        const basePct = cap > 0 ? Math.min(100, (carry / cap) * 100) : 0;
         el.fill.style.width = `${basePct.toFixed(2)}%`;
 
-        el.value.textContent = softCap > 0
-          ? `${carry.toFixed(2)} / ${softCap.toFixed(2)}`
+        el.value.textContent = cap > 0
+          ? `${carry.toFixed(2)} / ${cap.toFixed(2)}`
           : `${carry.toFixed(2)}`;
 
         const rec = el.fill.closest('.bar')?.querySelector('.bar-reclaim');
-        if (rec && softCap > 0 && today > 0){
-          const ovPct = Math.max(0, Math.min(100 - basePct, (today / softCap) * 100));
-          rec.style.left   = `${basePct.toFixed(2)}%`;
-          rec.style.width  = `${ovPct.toFixed(2)}%`;
-          rec.style.opacity= '1';
-        } else if (rec){
-          rec.style.opacity='0'; rec.style.width='0%';
+        if (rec){
+          rec.style.opacity='0';
+          rec.style.width='0%';
+          rec.classList.remove('is-credit','is-breakdown');
         }
+
+        // NEW: Shield pill = days from *live* carry (after pending drawdown)
+        const days = shieldDaysFromCarry(carry, data);
+        setSurplusPill(el, days, days);
       }
     }
 
