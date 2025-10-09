@@ -924,6 +924,74 @@ function shieldDaysFromCarry(carry, data){
   return Math.floor(Math.max(0, Number(carry||0)) / denom);
 }
 
+function installShieldBreakdown(getData){
+  const bar = document.querySelector('#vital-shield .bar');
+  if (!bar || bar.__shieldBreakdownWired) return;
+  bar.__shieldBreakdownWired = true;
+
+  const fill = bar.querySelector('.bar-fill');
+  if (!fill) return;
+
+  // Create dedicated overlay inside the fill so it clips & matches shape
+  const overlay = document.createElement('div');
+  overlay.className = 'shield-breakdown';
+  fill.appendChild(overlay);
+
+  const HIDE_MS = 1500;
+  let timer = null;
+  let isOn = false;
+
+  function paint(d){
+    // composition of the *carry* (energy shield total)
+    const by = d?.meta?.escrow?.carry?.bySource || { health:0, mana:0, stamina:0 };
+    const h = Math.max(0, +by.health  || 0);
+    const m = Math.max(0, +by.mana    || 0);
+    const s = Math.max(0, +by.stamina || 0);
+    const tot = h + m + s;
+    if (!tot){
+      overlay.style.opacity = '0';
+      overlay.classList.remove('is-visible');
+      return;
+    }
+
+    const hp = (h / tot) * 100;
+    const mp = (m / tot) * 100;
+    // NOTE: right segment is whatever remains for stamina.
+    overlay.style.background = `linear-gradient(90deg,
+      var(--health-color, #7f1d1d) 0% ${hp.toFixed(2)}%,
+      var(--mana-color,   #164e63) ${hp.toFixed(2)}% ${(hp+mp).toFixed(2)}%,
+      var(--stamina-color,#14532d) ${(hp+mp).toFixed(2)}% 100%
+    )`;
+  }
+
+  function show(){
+    paint(getData());
+    overlay.classList.add('is-visible');
+    clearTimeout(timer);
+    timer = setTimeout(hide, HIDE_MS);
+    isOn = true;
+  }
+  function hide(){
+    overlay.classList.remove('is-visible');
+    isOn = false;
+  }
+
+  // Toggle on tap
+  bar.addEventListener('click', () => (isOn ? hide() : show()), { passive:true });
+
+  // Keep correct if gateway refreshes while visible
+  window.addEventListener('vitals:refresh', (e)=>{
+    if (!isOn) return;
+    paint(e?.detail?.data || getData());
+  });
+
+  // Hide on mode switches / primary toggle for consistency
+  window.addEventListener('vitals:viewmode', hide);
+  window.addEventListener('vitals:primary', hide);
+}
+
+
+
 
 
 // ───────────────────────── Gateway reader for HUD paint ─────────────────────
@@ -1067,71 +1135,6 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
   ensureReclaimLayers(elements);
   { const vm = getViewMode(); installRatePeekHandlers(elements, pools, vm==='core'?'core':vm); }
 
-  // >>> ADD: Essence breakdown tap wiring (H/M/S gradient overlay)
-  (function wireEssenceBreakdown(){
-    const root = document.querySelector('#vital-shield .bar');
-    if (!root || root.__essenceWired) return;
-    root.__essenceWired = true;
-
-    let breakdownOn = false;
-
-    function applyGradient(reclaimEl){
-      const by = data?.essenceUI?.escrowToday || { health:0, mana:0, stamina:0 };
-      const h = Math.max(0, Number(by.health||0));
-      const m = Math.max(0, Number(by.mana||0));
-      const s = Math.max(0, Number(by.stamina||0));
-      const tot = h+m+s;
-      if (!tot){ reclaimEl.style.background = ''; return; }
-
-      const hp = (h/tot)*100, mp = (m/tot)*100, sp = (s/tot)*100;
-      // You likely already have CSS vars for pool colors; fallback to readable hues
-      const colH = 'var(--health-color, #ff6a6a)';
-      const colM = 'var(--mana-color, #6aa9ff)';
-      const colS = 'var(--stamina-color, #6aff9b)';
-      reclaimEl.style.background = `linear-gradient(90deg,
-        ${colH} 0% ${hp.toFixed(2)}%,
-        ${colM} ${hp.toFixed(2)}% ${(hp+mp).toFixed(2)}%,
-        ${colS} ${(hp+mp).toFixed(2)}% 100%
-      )`;
-    }
-
-    const HIDE_MS = 1500;   // match rate peek
-    let timer = null;
-
-    root.addEventListener('click', ()=>{
-      const reclaimEl = root.querySelector('.bar-reclaim');
-      if (!reclaimEl) return;
-
-      // toggle on
-      breakdownOn = !breakdownOn;
-      if (breakdownOn){
-        applyGradient(reclaimEl);
-        reclaimEl.classList.add('is-breakdown');
-
-        // auto-hide like rate peek
-        clearTimeout(timer);
-        timer = setTimeout(()=>{
-          breakdownOn = false;
-          reclaimEl.style.background = '';
-          reclaimEl.classList.remove('is-breakdown');
-        }, HIDE_MS);
-      } else {
-        // manual hide
-        clearTimeout(timer);
-        reclaimEl.style.background = '';
-        reclaimEl.classList.remove('is-breakdown');
-      }
-    }, {passive:true});
-
-  })();
-
-
-  // >>> ADD: essence pill (sum of H/M/S) for animated HUD too
-  let essencePillDays =
-    Number(pools.health?.bankedDays || 0) +
-    Number(pools.mana?.bankedDays || 0) +
-    Number(pools.stamina?.bankedDays || 0);
-
   // Truth/current start from gateway, regen per sec from regenDaily (animation only)
   const truth = {};
   const regenPerSec = {};
@@ -1231,12 +1234,6 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
       // swap in the latest gateway snapshot
       data  = fresh;
       pools = data.pools || {};
-
-      // recompute essence pill days
-      essencePillDays =
-        Number(pools.health?.bankedDays || 0) +
-        Number(pools.mana?.bankedDays   || 0) +
-        Number(pools.stamina?.bankedDays|| 0);
 
       // reset animation baselines from new data (mutate existing objects)
       for (const [pool, v] of Object.entries(pools)) {
@@ -1407,8 +1404,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
 
           // Text uses same effective value
           el.value.textContent = softCap > 0
-            ? `${effective.toFixed(2)} / ${softCap.toFixed(2)}`
-            : `${effective.toFixed(2)}`;
+            ? `${effective.toFixed(0)} / ${softCap.toFixed(0)}`
+            : `${effective.toFixed(0)}`;
 
           enableGhostSoon();
 
@@ -1424,7 +1421,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
           const pct = (cap>0 ? (current / cap) * 100 : 0);
           el.fill.style.width = `${pct}%`;
 
-          const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
+          const txt = `${current.toFixed(0)} / ${cap.toFixed(0)}`;
           if (!el.value.__origText) el.value.__origText = el.value.textContent;
           el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
 
@@ -1576,8 +1573,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
           el.fill.style.width = `${pct.toFixed(2)}%`;
 
           const txt = softCap > 0
-            ? `${effective.toFixed(2)} / ${softCap.toFixed(2)}`
-            : `${effective.toFixed(2)}`;
+            ? `${effective.toFixed(0)} / ${softCap.toFixed(0)}`
+            : `${effective.toFixed(0)}`;
           if (!el.value.__origText) el.value.__origText = el.value.textContent;
           el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
 
@@ -1604,7 +1601,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
           const pct = cap > 0 ? (current / cap) * 100 : 0;
           el.fill.style.width = `${pct}%`;
 
-          const txt = `${current.toFixed(2)} / ${cap.toFixed(2)}`;
+          const txt = `${current.toFixed(0)} / ${cap.toFixed(0)}`;
           if (!el.value.__origText) el.value.__origText = el.value.textContent;
           el.value.textContent = el.value.classList.contains('is-rate') ? (el.value.__rateText || txt) : txt;
 
@@ -1660,8 +1657,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
         el.fill.style.width = `${basePct.toFixed(2)}%`;
 
         el.value.textContent = cap > 0
-          ? `${carry.toFixed(2)} / ${cap.toFixed(2)}`
-          : `${carry.toFixed(2)}`;
+          ? `${carry.toFixed(0)} / ${cap.toFixed(0)}`
+          : `${carry.toFixed(0)}`;
 
         const rec = el.fill.closest('.bar')?.querySelector('.bar-reclaim');
         if (rec){
@@ -1735,6 +1732,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
     updateRatePeekTexts(elements, pools, vmNow==='core'?'core':vmNow);
     repaintEngravingLabels();
   });
+
+  installShieldBreakdown(() => data);
 }
 
 // Public: recompute gateway (optional) and refresh the live HUD without re-init

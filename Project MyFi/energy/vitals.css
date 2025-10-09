@@ -309,10 +309,10 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 /* Surplus pill */
 .bar .bar-surplus {
   position: absolute;
-  right: -6px; bottom: -10px;
+  right: -12px; bottom: -10px;
   transform: none;
   z-index: 4;
-  padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+  padding: 1px 2px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
   color: #0a0a12;
   background: linear-gradient(to bottom, #f0dca4, #e6c980);
   border: 1px solid rgba(255,255,255,0.25);
@@ -322,7 +322,7 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 }
 
 /* Labels & values */
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.7rem; }
 .bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
 /* Regen rate state for the value text */
 .bar-value.is-rate {
@@ -800,6 +800,31 @@ NEw FEATURES CSS  - SUMMARY MODAL
   mix-blend-mode: screen;
   opacity: .95;
 }
+
+/* Energy Shield breakdown overlay – lives inside .bar-fill */
+#vital-shield .shield-breakdown{
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;        /* match .bar-fill shape */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s ease;
+  z-index: 2;                    /* above .bar-fill::before, below grid/labels */
+  mix-blend-mode: screen;        /* similar pop to other overlays */
+}
+
+/* subtle gloss so it feels like a native fill */
+#vital-shield .shield-breakdown::after{
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,.28),
+    inset 0 0 4px rgba(255,255,255,.06);
+}
+
+#vital-shield .shield-breakdown.is-visible{ opacity: 1; }
+
+
 
 /* ───────────────────────────── Meta row layout ───────────────────────────── */
 .hud-meta-row{
