@@ -851,23 +851,77 @@ NEw FEATURES CSS  - SUMMARY MODAL
 
 
 
-/* ───────────────────────────── Meta row layout ───────────────────────────── */
+/* Footer meta row */
 .hud-meta-row{
-  display: grid;
-  grid-template-columns: 1fr auto;  /* status left, engravings right */
+  display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 8px 0 0;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
 }
 
-/* Left status placeholder */
-.hud-status{ display:flex; align-items:center; gap:8px; opacity:.85; }
-.hud-status .status-dot{
-  width:10px; height:10px; border-radius:999px;
-  background: radial-gradient(circle, #9ef7c0 0%, #39d98a 80%);
-  box-shadow: 0 0 8px rgba(120,255,180,.5);
+/* Left group stays left */
+#mode-engrave{
+  flex: 0 0 auto;        /* just its intrinsic width */
 }
-/* engravings naturally align right via grid; keep your existing .mode-engrave styles */
+
+/* Center the status reliably */
+.vitals-status{
+  margin-inline: auto;   /* centers between left edge and right edge */
+  position: static;
+  transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vitals-status:focus-visible{
+  outline: 2px solid var(--line, #444);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* Overview (dot + text) */
+.vs-overview{
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  white-space: nowrap;
+}
+
+/* Dot (restored) */
+.status-dot{
+  width: .6rem; height: .6rem; border-radius: 999px;
+  display: inline-block; flex: 0 0 .6rem;
+  background: currentColor; box-shadow: 0 0 6px currentColor;
+}
+.status-dot.is-good{ color:#50d878; }
+.status-dot.is-warn{ color:#fbbf24; }
+.status-dot.is-bad { color:#ef4444; }
+
+.status-text{ font-weight:700; }
+
+/* Toggle to breakdown */
+.vs-breakdown{ display:none; gap:.4rem; }
+.vitals-status.is-breakdown .vs-overview{ display:none; }
+.vitals-status.is-breakdown .vs-breakdown{ display:inline-flex; }
+
+.vs-chip{
+  width:18px; height:18px; border-radius:999px;
+  display:inline-flex; align-items:center; justify-content:center;
+  font:700 11px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; color:#fff;
+}
+.vs-chip.h{ background: var(--health-color,  #7f1d1d); }
+.vs-chip.m{ background: var(--mana-color,    #164e63); }
+.vs-chip.s{ background: var(--stamina-color, #14532d); }
+
+
+/* (optional) if your dot needs spacing */
+.vitals-status .status-dot{ margin-right: .25rem; }
+
 
 /* ───────────────────────────── Essence: no escrow overlay (visual safety) ───────────────────────────── */
 #vital-essence .bar .bar-reclaim{
