@@ -39,7 +39,9 @@ import {
 
   initEmberwardFrame,
   
-  initSummaryModal, openSummaryFromGateway , openSummaryModal, buildSummaryFromHUDFallback
+  initSummaryModal, openSummaryFromGateway , openSummaryModal, buildSummaryFromHUDFallback,
+
+  wireVitalsStatusToggle
 } from "./energy-vitals-NEW_FUNCTIONS.js";
 
 
@@ -1124,7 +1126,13 @@ export async function loadVitalsToHUD(uid, opts = {}) {
       rec.style.width   = '0%';
       rec.classList.remove('is-credit','is-breakdown');
     }
+
+    let currentBase = clamp(current, 0, cap);
+    sumCurrent += currentBase;
+    sumMax     += cap;
   }
+
+  
 
   setVitalsTotals(sumCurrent, sumMax);
   if (refreshGrids) refreshBarGrids();
@@ -1670,6 +1678,8 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
       if (trend === "underspending") barEl?.classList.add("underspending");
     }
 
+
+
     setVitalsTotals(sumCurrent, sumMax);
     requestAnimationFrame(frame);
   }
@@ -1690,7 +1700,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
       //   } catch {}
       // }
 
-      await runWakeRegenAnimation(uid, elements, prev, data, { duration: 29000 });
+      await runWakeRegenAnimation(uid, elements, prev, data, { duration: 1900 });
 
       try { storeVitalsSnapshot(u, data); } catch {}
       try { await storeVitalsSnapshotRemote(u, data); } catch {}
@@ -2629,6 +2639,9 @@ export function autoInitAddSpendButton(){
 
     refreshBarGrids();
     updateModeEngrave(getViewMode());
+
+        // 🔹 add this line:
+    wireVitalsStatusToggle();
   };
 
   if (document.readyState === "loading"){
