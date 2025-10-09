@@ -573,6 +573,67 @@ export async function openSummaryFromGateway(uid) {
   }
 }
 
+// Status Section Toggle
+export function wireVitalsStatusToggle(){
+  const box = document.getElementById('vitals-status');
+  if (!box || box.__wired) return;
+  box.__wired = true;
+
+  const toggle = () => {
+    const on = box.classList.toggle('is-breakdown');
+    box.setAttribute('aria-expanded', on ? 'true' : 'false');
+  };
+  box.addEventListener('click', toggle, { passive:true });
+  box.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+  });
+
+    document.addEventListener('DOMContentLoaded', syncVitalsBreakdown);
+  if (document.readyState !== 'loading') syncVitalsBreakdown();
+
+  // Keep in sync if your app toggles the bar classes later
+  const opts = { attributes: true, attributeFilter: ['class'], subtree: true };
+  ['health','mana','stamina'].forEach(v => {
+    const root = document.querySelector(`#vital-${v}`);
+    if (!root) return;
+    new MutationObserver(syncVitalsBreakdown).observe(root, opts);
+  });
+}
+
+const vitalIds = ['health','mana','stamina'];
+
+  function stateClassFromBar(barEl){
+    if (!barEl) return 'is-warn';
+    if (barEl.classList.contains('overspending'))   return 'is-bad';
+    if (barEl.classList.contains('underspending'))  return 'is-good';
+    return 'is-warn';
+  }
+
+  function setDot(dot, cls){
+    if (!dot) return;
+    dot.classList.remove('is-good','is-warn','is-bad');
+    dot.classList.add(cls);
+  }
+
+  function syncVitalsBreakdown(){
+    const classes = [];
+
+    vitalIds.forEach(v => {
+      const bar = document.querySelector(`#vital-${v} .bar`);
+      const cls = stateClassFromBar(bar);
+      const dot = document.querySelector(`.vs-item[data-vital="${v}"] .status-dot`);
+      setDot(dot, cls);
+      classes.push(cls);
+    });
+
+    // Overview dot: any bad -> bad; all good -> good; otherwise warn
+    const overviewDot = document.querySelector('#vitals-status .vs-overview .status-dot');
+    if (overviewDot){
+      const anyBad  = classes.includes('is-bad');
+      const allGood = classes.every(c => c === 'is-good');
+      setDot(overviewDot, anyBad ? 'is-bad' : (allGood ? 'is-good' : 'is-warn'));
+    }
+  }
 
 
 
