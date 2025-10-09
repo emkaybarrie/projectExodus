@@ -34,7 +34,8 @@ import {
   loadVitalsSnapshot,
   storeVitalsSnapshot,
   loadVitalsSnapshotRemote,   
-  storeVitalsSnapshotRemote,    
+  storeVitalsSnapshotRemote,  
+  paintSnapshotToHUD,  
   runWakeRegenAnimation,
 
   initEmberwardFrame,
@@ -189,10 +190,6 @@ async function readAllocations(db, uid){
     const snap = await getDoc(doc(db, `players/${uid}/financialData/cashflowData`));
     if (snap.exists()){
       const d = snap.data() || {};
-      // const health  = safeNum(d.healthAllocation, 0.3);
-      // const mana    = safeNum(d.manaAllocation,   0.3);
-      // const stamina = safeNum(d.staminaAllocation,0.3);
-      // const essence = safeNum(d.essenceAllocation,0.1); // can be zero safely
       
       const health  = safeNum(d.poolAllocations.healthAllocation, 0.3);
       const mana    = safeNum(d.poolAllocations.manaAllocation,   0.3);
@@ -749,7 +746,7 @@ export async function startLevelListener(uid){
 
 // ─────────────────────────── DOM helpers (HUD rendering) ────────────────────
 function getVitalsElements(){
-  const pools = ["health","mana","stamina","essence"]; const map = {};
+  const pools = ["health","mana","stamina","essence", "shield"]; const map = {};
   for (const p of pools){
     const root = document.querySelector(`#vital-${p}`);
     const fill = root?.querySelector('.bar-fill');
@@ -882,6 +879,9 @@ function ensureReclaimLayers(elements){
   }
 }
 
+
+
+
 // ───────────────────────── Gateway reader for HUD paint ─────────────────────
 async function readGateway(uid){
   const snap = await getDoc(doc(db, `players/${uid}/vitalsData/gateway`));
@@ -937,7 +937,7 @@ const essencePillDays =
       sumCurrent += current;
       sumMax += cap;
     } else {
-      // Essence overlay = escrowToday % of softCap (UI only)
+      // Essence overlay = escrowToday % of softCap (UI only) - TO DELETE once confirmed
       const bar = el.fill.closest('.bar');
       const reclaimEl = bar?.querySelector('.bar-reclaim');
       const softCap = Number(data.essenceUI?.softCap || 0);
@@ -971,6 +971,36 @@ const essencePillDays =
     }
   }
 
+  // ── Paint Shield from escrow (carry base, today overlay)
+  {
+    const el = elements.shield;
+    if (el){
+      const softCap = Number(data?.essenceUI?.softCap || 0);
+      const carry   = Number(data?.meta?.escrow?.carry?.total || 0);
+      const today   = Number((data?.essenceUI?.escrowToday?.health||0) +
+                            (data?.essenceUI?.escrowToday?.mana||0) +
+                            (data?.essenceUI?.escrowToday?.stamina||0));
+
+      const basePct = softCap > 0 ? Math.min(100, (carry / softCap) * 100) : 0;
+      el.fill.style.width = `${basePct.toFixed(2)}%`;
+
+      el.value.textContent = softCap > 0
+        ? `${carry.toFixed(2)} / ${softCap.toFixed(2)}`
+        : `${carry.toFixed(2)}`;
+
+      const rec = el.fill.closest('.bar')?.querySelector('.bar-reclaim');
+      if (rec && softCap > 0 && today > 0){
+        const ovPct = Math.max(0, Math.min(100 - basePct, (today / softCap) * 100));
+        rec.style.left   = `${basePct.toFixed(2)}%`;
+        rec.style.width  = `${ovPct.toFixed(2)}%`;
+        rec.style.opacity= '1';
+      } else if (rec){
+        rec.style.opacity = '0'; rec.style.width = '0%';
+      }
+    }
+  }
+
+
   setVitalsTotals(sumCurrent, sumMax);
   refreshBarGrids();
 }
@@ -995,7 +1025,7 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
 
   // >>> ADD: Essence breakdown tap wiring (H/M/S gradient overlay)
   (function wireEssenceBreakdown(){
-    const root = document.querySelector('#vital-essence .bar');
+    const root = document.querySelector('#vital-shield .bar');
     if (!root || root.__essenceWired) return;
     root.__essenceWired = true;
 
@@ -1323,12 +1353,12 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
         // Paint bar + value text
         if (pool==='essence'){
           const valNow  = Number(v.current || 0);
-          const carryBefore = Number(data?.meta?.escrow?.carry?.total || 0);
-          const carryDrawn  = Number((escUsed.health + escUsed.mana + escUsed.stamina).toFixed(2));
-          const carry = Math.max(0, Number((carryBefore - carryDrawn).toFixed(2))); // incoming escrow
-          const pend    = Number(delta.essence || 0);                    // pending credits to Essence
+          //const carryBefore = Number(data?.meta?.escrow?.carry?.total || 0);
+          //const carryDrawn  = Number((escUsed.health + escUsed.mana + escUsed.stamina).toFixed(2));
+          //const carry = Math.max(0, Number((carryBefore - carryDrawn).toFixed(2))); // incoming escrow
+          //const pend    = Number(delta.essence || 0);                    // pending credits to Essence
           const softCap = Number(data?.essenceUI?.softCap || 0);
-          const effective = valNow + carry + pend;
+          const effective = valNow //+ carry + pend;
 
           // Fill = min(effective/softCap, 100%)
           const pct = softCap > 0 ? Math.min(100, (effective / softCap) * 100) : 0;
@@ -1582,6 +1612,43 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
       if (trend === "underspending") barEl?.classList.add("underspending");
     }
 
+    // ── Live Shield paint (carry minus drawdown, today overlay)
+    {
+      const el = elements.shield;
+      if (el){
+        const softCap = Number(data?.essenceUI?.softCap || 0);
+        const carryBefore = Number(data?.meta?.escrow?.carry?.total || 0);
+
+        // Use your existing escUsed accumulator if available; else fall back to 0
+        const used = (typeof escUsed === 'object')
+          ? Number((escUsed.health + escUsed.mana + escUsed.stamina).toFixed(2))
+          : 0;
+
+        const carry = Math.max(0, Number((carryBefore - used).toFixed(2)));
+        const today = Number((data?.essenceUI?.escrowToday?.health||0) +
+                            (data?.essenceUI?.escrowToday?.mana||0) +
+                            (data?.essenceUI?.escrowToday?.stamina||0));
+
+        const basePct = softCap > 0 ? Math.min(100, (carry / softCap) * 100) : 0;
+        el.fill.style.width = `${basePct.toFixed(2)}%`;
+
+        el.value.textContent = softCap > 0
+          ? `${carry.toFixed(2)} / ${softCap.toFixed(2)}`
+          : `${carry.toFixed(2)}`;
+
+        const rec = el.fill.closest('.bar')?.querySelector('.bar-reclaim');
+        if (rec && softCap > 0 && today > 0){
+          const ovPct = Math.max(0, Math.min(100 - basePct, (today / softCap) * 100));
+          rec.style.left   = `${basePct.toFixed(2)}%`;
+          rec.style.width  = `${ovPct.toFixed(2)}%`;
+          rec.style.opacity= '1';
+        } else if (rec){
+          rec.style.opacity='0'; rec.style.width='0%';
+        }
+      }
+    }
+
+
     setVitalsTotals(sumCurrent, sumMax);
     requestAnimationFrame(frame);
   }
@@ -1593,17 +1660,31 @@ export async function initVitalsHUD(uid, timeMultiplier = 1){
     try {
       const u = (getAuth().currentUser && getAuth().currentUser.uid) || uid;
       const prev = loadVitalsSnapshot(u) || await loadVitalsSnapshotRemote(u) || null;
-      // Tween paints the bars to current (with glow); if no prev, it paints once without tween
+
+      // 1) If we have a previous snapshot, paint it immediately (no tween, no glow)
+      if (prev?.pools) {
+        try {
+          paintSnapshotToHUD(elements, prev);
+          // ensure the paint hits the frame before we start tweening
+          await new Promise(requestAnimationFrame);
+          await new Promise(r => setTimeout(r, 1000));   // ← ADD: brief delay (350 ms) 
+        } catch {}
+      }
+
+      // 2) Tween from prev → current gateway (your existing sign-aware glow)
       await runWakeRegenAnimation(elements, prev, data, { duration: 2900 });
-      // Persist snapshot for next session/device
+
+      // 3) Persist snapshot for next session/device
       try { storeVitalsSnapshot(u, data); } catch {}
       try { await storeVitalsSnapshotRemote(u, data); } catch {}
     } catch (e) {
       console.warn("Wake regen animation failed (non-fatal):", e);
     }
-    // Now start the live loop (ghost overlays, focus mode, etc.)
+
+    // 4) Now start the live loop (ghost overlays, focus mode, etc.)
     requestAnimationFrame(frame);
   };
+
 
   // Defer until splash is done, or run immediately if no splash
   if (window.__MYFI_SPLASH_ACTIVE) {
@@ -2555,17 +2636,19 @@ export async function initHUD(uid){
 
   initSummaryModal();
   const portraitHost = document.querySelector('.portrait-wrapper');
-if (portraitHost && !portraitHost.__sumWired) {
-  portraitHost.__sumWired = true;
-  portraitHost.addEventListener('click', () => {
-    openSummaryFromGateway(uid), { passive: true }
+  if (portraitHost && !portraitHost.__sumWired) {
+    portraitHost.__sumWired = true;
+    portraitHost.addEventListener('click', () => {
+      openSummaryFromGateway(uid), { passive: true }
 
-    // For now, pull a quick snapshot from what’s on-screen.
-    // We’ll replace this with real gateway-derived stats in the next step.
-    // const data = buildSummaryFromHUDFallback();
-    // openSummaryModal(data);
-  }, { passive: true });
-}
+      // For now, pull a quick snapshot from what’s on-screen.
+      // We’ll replace this with real gateway-derived stats in the next step.
+      // const data = buildSummaryFromHUDFallback();
+      // openSummaryModal(data);
+    }, { passive: true });
+  }
+
+
 
 }
 
