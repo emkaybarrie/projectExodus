@@ -5,6 +5,7 @@ import {
   getFirestore, doc, getDoc, setDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+import { loadVitalsToHUD } from "./energy-vitals.js"
 
 
 // Local snapshot key per user
@@ -20,6 +21,7 @@ export function buildSnapshotFromGateway(gateway){
       health:  { current: Number(p.health?.current||0),  max: Number(p.health?.max||0)  },
       mana:    { current: Number(p.mana?.current||0),    max: Number(p.mana?.max||0)    },
       stamina: { current: Number(p.stamina?.current||0), max: Number(p.stamina?.max||0) },
+      shield: { current: Number(p.shield?.current||0), max: Number(p.shield?.max||0) },
       essence: { current: Number(p.essence?.current||0), max: 0 } // essence has no hard cap here
     }
   };
@@ -67,16 +69,6 @@ export async function storeVitalsSnapshotRemote(uid, gateway){
   }catch{}
 }
 
-// --- tweak: add a helper to toggle a glow class on .bar during tween
-function setBarsWaking(elements, on){
-  const pools = ['health','mana','stamina','essence'];
-  pools.forEach(k=>{
-    const bar = elements?.[k]?.fill?.closest?.('.bar');
-    if (!bar) return;
-    bar.classList.toggle('is-waking', !!on);
-  });
-}
-
 // Per-bar glow: on('pos'|'neg') or off(null)
 function setBarGlow(el, dir /* 'pos' | 'neg' | null */){
   const bar = el?.fill?.closest?.('.bar');
@@ -85,10 +77,6 @@ function setBarGlow(el, dir /* 'pos' | 'neg' | null */){
   if (!dir) return;
   bar.classList.add('is-waking', dir === 'pos' ? 'is-waking--pos' : 'is-waking--neg');
 }
-
-// clamp helper used in step painting
-function clamp01(x){ return Math.max(0, Math.min(1, x)); }
-
 
 // Simple tween (cubic ease-out)
 function tween({ from, to, dur=900, step, done }){
@@ -108,158 +96,159 @@ function formatPair(current, cap){
   return `${current.toFixed(2)} / ${cap.toFixed(2)}`;
 }
 
-// Paints the HUD bars/labels from a provided gateway-like snapshot (no tween, no glow)
-export function paintSnapshotToHUD(elements, snap){
-  if (!elements || !snap?.pools) return;
-  const pools = ['health','mana','stamina','essence'];
-
-  for (const k of pools){
-    const el = elements[k]; if (!el) continue;
-    const v  = snap.pools[k] || {};
-    const cap = Number(v.max || 0);
-    const cur = Number(v.current || 0);
-
-    if (k === 'essence' || cap <= 0){
-      // Essence: show current / softCap (when present) else current only
-      const softCap = Number(snap?.essenceUI?.softCap || 0);
-      el.value.textContent = softCap > 0
-        ? `${cur.toFixed(2)} / ${softCap.toFixed(2)}`
-        : `${cur.toFixed(2)}`;
-      // Keep width meaningful if you’re using softCap as UI cap
-      const pct = softCap > 0 ? Math.min(100, (cur/softCap)*100) : 0;
-      el.fill.style.width = `${pct.toFixed(2)}%`;
-    } else {
-      const pct = clamp01(cur / cap) * 100;
-      el.fill.style.width  = `${pct.toFixed(2)}%`;
-      el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
-    }
-
-    // Clear any transient glow/tint so the “snapshot” feels static
-    const bar = el.fill?.closest?.('.bar');
-    if (bar){
-      bar.classList.remove('is-waking','is-waking--pos','is-waking--neg','overspending','underspending');
-    }
-  }
-}
-
-
 // Drive the initial “between-logins” animation
 // elements: result of getVitalsElements() (passed in from main file)
 // prev: snapshot from loadVitalsSnapshot(uid) or null
 // curr: full gateway payload (from readGateway / recompute)
 // opts: { duration?: number } (900ms default)
-export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
+
+// export async function runWakeRegenAnimation(uid, elements, prev, curr, opts = {}){
+//   const duration = Number(opts.duration || 900);
+//   //const uid = getAuth()?.currentUser?.uid; // or pass in if you prefer
+//   if (!elements || !curr?.pools) return;
+
+//   // If no prev: just paint and bail
+//   if (!prev?.pools) {
+//     await loadVitalsToHUD(uid, { data: curr, paintOnly:true, refreshGrids:true, elements });
+//     return;
+//   }
+
+//   const pools = ['health','mana','stamina', "shield",'essence'];
+//   const softCap = Number(curr?.essenceUI?.softCap || 0);
+
+//   // Mutable copy we’ll mutate per frame
+//   const frameData = JSON.parse(JSON.stringify(curr));
+
+//   await new Promise((resolveAll)=>{
+//     let done = 0;
+//     const total = pools.length;
+
+//     pools.forEach((k)=>{
+//       const el = elements[k]; if (!el){ if(++done===total) resolveAll(); return; }
+
+//       const toMax = Number(curr.pools[k]?.max || 0);
+//       const uiCap = (k === 'essence') ? softCap : toMax;
+
+//       const fromV = Number(prev.pools?.[k]?.current || 0);
+//       const toV   = Number(curr.pools?.[k]?.current || 0);
+
+//       const eff = (val) => (uiCap > 0) ? Math.max(0, Math.min(uiCap, val)) : Math.max(0, val);
+//       const fromEff = eff(fromV);
+//       const toEff   = eff(toV);
+
+//       if (Math.abs(toEff - fromEff) < 1e-6){
+//         frameData.pools[k].current = toEff;
+//         loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
+//         if(++done===total){ loadVitalsToHUD(uid,{ data: frameData, paintOnly:true, refreshGrids:true, elements }); resolveAll(); }
+//         return;
+//       }
+
+//       setBarGlow(el, (toEff - fromEff) > 0 ? 'pos' : 'neg');
+
+//       tween({
+//         from: fromEff,
+//         to:   toEff,
+//         dur:  duration,
+//         step: (v)=>{
+//           frameData.pools[k].current = Math.max(0, v);
+//           loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
+//         },
+//         done: ()=>{
+//           setBarGlow(el, null);
+//           frameData.pools[k].current = toEff;
+//           if(++done===total){
+//             loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:true, elements });
+//             resolveAll();
+//           }
+//         }
+//       });
+//     });
+//   });
+// }
+
+export async function runWakeRegenAnimation(uid, elements, prev, curr, opts = {}){
   const duration = Number(opts.duration || 900);
+  const preTweenDelayMs  = Number(opts.preTweenDelayMs ?? 1000); // ← NEW
   if (!elements || !curr?.pools) return;
 
-  const pools = ['health','mana','stamina','essence'];
-
-  // Build current targets from gateway
-  const target = {};
-  for (const k of pools){
-    const v = curr.pools[k] || {};
-    target[k] = { current: Number(v.current||0), max: Number(v.max||0) };
-  }
-
-  // If no previous snapshot, paint once (no tween, no glow)
-  if (!prev?.pools){
-    for (const k of pools){
-      const el = elements[k]; if (!el) continue;
-      const cur = Number(target[k].current || 0);
-      const cap = Number(target[k].max || 0);
-
-      if (k === 'essence' || cap <= 0){
-        // Essence has no hard cap in this phase; keep fill as-is, set text only
-        el.value.textContent = `${cur.toFixed(2)}`;
-      } else {
-        const pct = clamp01(cur / cap) * 100;
-        el.fill.style.width  = `${pct.toFixed(2)}%`;
-        el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
-      }
-    }
+  // No snapshot? Just paint current once and bail.
+  if (!prev?.pools) {
+    await loadVitalsToHUD(uid, { data: curr, paintOnly:true, refreshGrids:true, elements });
     return;
   }
 
-  // Otherwise, per-bar tween from prev -> curr (net movement), with sign-aware glow
-  await new Promise((resolveAll) => {
-    let doneCount = 0;
-    const total   = pools.length;
-    const EPS = 1e-6;
+  const pools   = ['health','mana','stamina','shield','essence'];
+  const softCap = Number(curr?.essenceUI?.softCap || 0);
+
+  // Seed from PREV (snapshot)
+  const frameData = JSON.parse(JSON.stringify(curr));
+  for (const k of pools){
+    const toMax   = Number(curr.pools[k]?.max || 0);
+    const uiCap   = (k === 'essence') ? softCap : toMax;
+    const fromV   = Number(prev.pools?.[k]?.current || 0);
+    const fromEff = uiCap > 0 ? Math.min(Math.max(0, fromV), uiCap) : Math.max(0, fromV);
+    frameData.pools[k].current = fromEff;
+  }
+
+  // Paint the snapshot once (no handlers, no grid churn)
+  await loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
+
+  // ── NEW: let the snapshot “sit” before tweening
+  await new Promise(requestAnimationFrame);
+  if (preTweenDelayMs > 0) {
+    await new Promise(r => setTimeout(r, preTweenDelayMs));
+  }
+
+  await new Promise((resolveAll)=>{
+    let done = 0;
+    const total = pools.length;
 
     pools.forEach((k)=>{
       const el = elements[k];
-      if (!el){ if(++doneCount===total) resolveAll(); return; }
+      if (!el){ if (++done===total){ loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:true, elements }); resolveAll(); } return; }
 
-      // Use UI cap for Essence (softCap), normal cap for others
-      const capRaw  = Number(target[k].max || 0);
-      const uiCap   = (k === 'essence')
-        ? Number(curr?.essenceUI?.softCap || 0)
-        : capRaw;
+      const toMax = Number(curr.pools[k]?.max || 0);
+      const uiCap = (k === 'essence') ? softCap : toMax;
 
-      const fromRaw = Number(prev.pools?.[k]?.current || 0);
-      const toRaw   = Number(target[k].current || 0);
+      const fromV   = Number(prev.pools?.[k]?.current || 0);
+      const toV     = Number(curr.pools?.[k]?.current || 0);
+      const eff     = (val) => (uiCap > 0) ? Math.max(0, Math.min(uiCap, val)) : Math.max(0, val);
+      const fromEff = eff(fromV);
+      const toEff   = eff(toV);
 
-      // Visible (clamped to UI cap). If no cap (0), Essence shows value only.
-      const eff = (val) => (uiCap > 0) ? Math.max(0, Math.min(uiCap, val)) : Math.max(0, val);
-      const fromEff = eff(fromRaw);
-      const toEff   = eff(toRaw);
-
-      const EPS   = 1e-6;
-      const delta = toEff - fromEff;
-      const moved = Math.abs(delta) >= EPS;
-
-      // No visible change → paint once (including Essence width if uiCap>0), no glow
-      if (!moved){
-        if (k === 'essence') {
-          if (uiCap > 0){
-            const pct = clamp01(toEff / uiCap) * 100;
-            el.fill.style.width  = `${pct.toFixed(2)}%`;
-            el.value.textContent = `${toEff.toFixed(2)} / ${uiCap.toFixed(2)}`;
-          } else {
-            el.value.textContent = `${toEff.toFixed(2)}`;
-          }
-        } else {
-          const pct = clamp01(toEff / Math.max(1e-9, uiCap)) * 100;
-          el.fill.style.width  = `${pct.toFixed(2)}%`;
-          el.value.textContent = `${toEff.toFixed(2)} / ${uiCap.toFixed(2)}`;
+      if (Math.abs(toEff - fromEff) < 1e-6){
+        // Already at snapshot value
+        if (++done===total){
+          loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:true, elements });
+          resolveAll();
         }
-        if(++doneCount===total) resolveAll();
         return;
       }
 
-      // Visible movement → animate with sign-aware glow (Essence included)
-      setBarGlow(el, delta > 0 ? 'pos' : 'neg');
+      setBarGlow(el, (toEff - fromEff) > 0 ? 'pos' : 'neg');
 
       tween({
         from: fromEff,
         to:   toEff,
         dur:  duration,
         step: (v)=>{
-          const cur = Math.max(0, v);
-          if (k === 'essence') {
-            if (uiCap > 0){
-              const pct = clamp01(cur / uiCap) * 100;
-              el.fill.style.width  = `${pct.toFixed(2)}%`;
-              el.value.textContent = `${cur.toFixed(2)} / ${uiCap.toFixed(2)}`;
-            } else {
-              // No cap: keep width as-is; update numeric text
-              el.value.textContent = `${cur.toFixed(2)}`;
-            }
-          } else {
-            const pct = clamp01(cur / Math.max(1e-9, uiCap)) * 100;
-            el.fill.style.width  = `${pct.toFixed(2)}%`;
-            el.value.textContent = `${cur.toFixed(2)} / ${uiCap.toFixed(2)}`;
-          }
+          frameData.pools[k].current = Math.max(0, v);
+          loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
         },
         done: ()=>{
           setBarGlow(el, null);
-          if(++doneCount===total) resolveAll();
+          frameData.pools[k].current = toEff;
+          if (++done===total){
+            loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:true, elements });
+            resolveAll();
+          }
         }
       });
     });
-
   });
 }
+
+
 
 // ----------------------- 
 // Emberward UI

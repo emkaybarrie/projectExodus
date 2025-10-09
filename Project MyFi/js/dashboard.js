@@ -1,3 +1,4 @@
+// Dashboard.js
 // ===== PWA helper + iOS modal & pulse (TOP OF FILE) =====
 let __deferredPrompt = null;
 let __isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;

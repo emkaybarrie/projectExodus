@@ -309,7 +309,7 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 /* Surplus pill */
 .bar .bar-surplus {
   position: absolute;
-  right: -12px; bottom: -10px;
+  right: -10px; bottom: -10px;
   transform: none;
   z-index: 4;
   padding: 1px 2px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
@@ -322,8 +322,8 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 }
 
 /* Labels & values */
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.7rem; }
-.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
+.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:1.0rem; color:#f0e5c9; }
 /* Regen rate state for the value text */
 .bar-value.is-rate {
   opacity: .9;
@@ -390,16 +390,18 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 .bar.has-surplus:hover::before,
 .bar.has-surplus:focus-within::before { opacity: .45; }
 
-/* Trend states */
-.bar.underspending { border: 2px solid rgba(120,255,180,0.4); box-shadow: 0 0 8px rgba(120,255,180,0.2), 0 0 14px rgba(120,255,180,0.15); animation: borderPulseGlow 2.8s ease-in-out infinite; }
-@keyframes borderPulseGlow { 0%{box-shadow:0 0 6px rgba(120,255,180,0.2)} 50%{box-shadow:0 0 14px rgba(120,255,180,0.4)} 100%{box-shadow:0 0 6px rgba(120,255,180,0.2)} }
-.bar.overspending  { border: 2px solid rgba(255,80,80,0.25); box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2); animation: borderPulseAlert 1.6s ease-in-out infinite; }
-@keyframes borderPulseAlert { 0%,100%{box-shadow:0 0 4px rgba(255,60,60,0.1)} 50%{box-shadow:0 0 10px rgba(255,0,0,0.3)} }
+/* Trend states — subtle tint only (no glow/pulse) */
+.bar.underspending {
+  border: 2px solid rgba(120,255,180,0.25);
+  box-shadow: none;
+  animation: none;
+}
+.bar.overspending  {
+  border: 2px solid rgba(255,80,80,0.25);
+  box-shadow: none;
+  animation: none;
+}
 
-/* .bar.is-waking .bar-fill {
-  filter: drop-shadow(0 0 6px rgba(255, 218, 122, 0.6)) brightness(1.1);
-  transition: filter 160ms ease;
-} */
 
 /* shared flag during the wake tween */
 .bar.is-waking { position: relative; }
@@ -416,6 +418,29 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   filter: brightness(0.85) saturate(0.95);
   /* or a subtler shadow */
   box-shadow: 0 0 4px rgba(0,0,0,0.35) inset;
+}
+
+/* >>> Move the pulsing border/glow here (was on trend states) */
+.bar.is-waking.is-waking--pos {
+  border: 2px solid rgba(120,255,180,0.4);
+  box-shadow: 0 0 8px rgba(120,255,180,0.2), 0 0 14px rgba(120,255,180,0.15);
+  animation: borderPulseGlow 2.8s ease-in-out infinite;
+}
+.bar.is-waking.is-waking--neg {
+  border: 2px solid rgba(255,80,80,0.25);
+  box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2);
+  animation: borderPulseAlert 1.6s ease-in-out infinite;
+}
+
+/* Pulsing keyframes (reused) */
+@keyframes borderPulseGlow {
+  0%   { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
+  50%  { box-shadow: 0 0 14px rgba(120,255,180,0.4) }
+  100% { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
+}
+@keyframes borderPulseAlert {
+  0%,100% { box-shadow: 0 0 4px rgba(255,60,60,0.1) }
+  50%     { box-shadow: 0 0 10px rgba(255,0,0,0.3) }
 }
 
 
@@ -759,8 +784,8 @@ NEw FEATURES CSS  - SUMMARY MODAL
   --bar-h-health:   var(--bar-h);
   --bar-h-mana:     var(--bar-h);
   --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   38px;   /* keep thin */
-  --bar-h-essence:  26px;   /* match shield */
+  --bar-h-shield:   32px;   /* keep thin */
+  --bar-h-essence:  32px;   /* match shield */
 
   /* Vertical rhythm */
   --bar-gap: 8px;
