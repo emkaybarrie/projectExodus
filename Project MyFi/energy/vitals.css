@@ -192,8 +192,8 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   position: relative;
   overflow: visible;
   isolation: isolate;
-  width: 120px;
-  height: 110px;
+  width: 100px;
+  height: 100px;
   flex-shrink: 0;
   cursor: pointer
 }
@@ -470,7 +470,7 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
 /* ========================================================================== */
 
 .skills-row { align-items: center; margin:10px 0; display:flex; justify-content:space-between; box-shadow:0 2px 6px rgba(0,0,0,0.4); background-color:rgba(10,10,20,0.6); border-radius:8px; backdrop-filter:blur(2px); padding:6px; }
-.skill-slot { width:60px; height:60px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
+.skill-slot { width:55px; height:45px; border:2px solid #ffffff14; display:flex; align-items:center; justify-content:center; font-size:1.5rem; background-color:rgba(30,30,40,0.6); border-radius:6px; }
 .locked { opacity: .3; }
 
 /* ========================================================================== 
@@ -748,3 +748,89 @@ NEw FEATURES CSS  - SUMMARY MODAL
 
 .net.pos { color: #9ef7c0; text-shadow: 0 0 8px rgba(120,255,180,.25); }
 .net.neg { color: #ff9e9e; text-shadow: 0 0 8px rgba(255,60,60,.2); }
+
+
+/* ───────────────────────────── Bar heights (configurable) ───────────────────────────── */
+:root{
+  /* Base height for all bars (tweak this once) */
+  --bar-h: 42px;
+
+  /* Per-vital overrides (fallback to --bar-h if not set) */
+  --bar-h-health:   var(--bar-h);
+  --bar-h-mana:     var(--bar-h);
+  --bar-h-stamina:  var(--bar-h);
+  --bar-h-shield:   26px;   /* keep thin */
+  --bar-h-essence:  38px;   /* match shield */
+
+  /* Vertical rhythm */
+  --bar-gap: 8px;
+}
+
+/* Apply heights */
+.bar{ height: var(--bar-h); }
+#vital-health  .bar{ height: var(--bar-h-health);   }
+#vital-mana    .bar{ height: var(--bar-h-mana);     }
+#vital-stamina .bar{ height: var(--bar-h-stamina);  }
+#vital-shield  .bar{ height: var(--bar-h-shield);   }
+#vital-essence .bar{ height: var(--bar-h-essence);  }
+
+/* tighten gaps a touch to match thinner bars */
+.vitals-bars{ gap: var(--bar-gap); }
+#vital-stamina{ margin-top: calc(var(--bar-gap) + 2px); }
+
+/* ───────────────────────────── Shield row layout ───────────────────────────── */
+.shield-row{
+  display: grid;
+  grid-template-columns: 1fr auto; /* shield expands, totals hug right */
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--bar-gap);
+}
+.shield-row #vital-shield{ min-width: 0; }           /* allow “squish” */
+.shield-row #vitals-total{ justify-self: end; }       /* pin right */
+.shield-row #vital-shield .bar{ margin: 0; }          /* remove extra gap */
+
+/* Shield look (baseline aura + gold overlay for today's escrow) */
+#vital-shield .bar-fill::before{
+  background: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,0.08);
+}
+#vital-shield .bar .bar-reclaim{
+  background: linear-gradient(to bottom, rgba(250,204,21,.80), rgba(234,179,8,.80));
+  mix-blend-mode: screen;
+  opacity: .95;
+}
+
+/* ───────────────────────────── Meta row layout ───────────────────────────── */
+.hud-meta-row{
+  display: grid;
+  grid-template-columns: 1fr auto;  /* status left, engravings right */
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 0;
+}
+
+/* Left status placeholder */
+.hud-status{ display:flex; align-items:center; gap:8px; opacity:.85; }
+.hud-status .status-dot{
+  width:10px; height:10px; border-radius:999px;
+  background: radial-gradient(circle, #9ef7c0 0%, #39d98a 80%);
+  box-shadow: 0 0 8px rgba(120,255,180,.5);
+}
+/* engravings naturally align right via grid; keep your existing .mode-engrave styles */
+
+/* ───────────────────────────── Essence: no escrow overlay (visual safety) ───────────────────────────── */
+#vital-essence .bar .bar-reclaim{
+  opacity: 0 !important;
+  width: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+
+
+
+
+
+
+

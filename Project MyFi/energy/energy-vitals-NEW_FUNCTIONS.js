@@ -108,6 +108,39 @@ function formatPair(current, cap){
   return `${current.toFixed(2)} / ${cap.toFixed(2)}`;
 }
 
+// Paints the HUD bars/labels from a provided gateway-like snapshot (no tween, no glow)
+export function paintSnapshotToHUD(elements, snap){
+  if (!elements || !snap?.pools) return;
+  const pools = ['health','mana','stamina','essence'];
+
+  for (const k of pools){
+    const el = elements[k]; if (!el) continue;
+    const v  = snap.pools[k] || {};
+    const cap = Number(v.max || 0);
+    const cur = Number(v.current || 0);
+
+    if (k === 'essence' || cap <= 0){
+      // Essence: show current / softCap (when present) else current only
+      const softCap = Number(snap?.essenceUI?.softCap || 0);
+      el.value.textContent = softCap > 0
+        ? `${cur.toFixed(2)} / ${softCap.toFixed(2)}`
+        : `${cur.toFixed(2)}`;
+      // Keep width meaningful if you’re using softCap as UI cap
+      const pct = softCap > 0 ? Math.min(100, (cur/softCap)*100) : 0;
+      el.fill.style.width = `${pct.toFixed(2)}%`;
+    } else {
+      const pct = clamp01(cur / cap) * 100;
+      el.fill.style.width  = `${pct.toFixed(2)}%`;
+      el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
+    }
+
+    // Clear any transient glow/tint so the “snapshot” feels static
+    const bar = el.fill?.closest?.('.bar');
+    if (bar){
+      bar.classList.remove('is-waking','is-waking--pos','is-waking--neg','overspending','underspending');
+    }
+  }
+}
 
 
 // Drive the initial “between-logins” animation
@@ -115,76 +148,6 @@ function formatPair(current, cap){
 // prev: snapshot from loadVitalsSnapshot(uid) or null
 // curr: full gateway payload (from readGateway / recompute)
 // opts: { duration?: number } (900ms default)
-// export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
-//   const duration = Number(opts.duration || 900);
-//   if (!elements || !curr?.pools) return;
-
-//   // If we have no prior snapshot, just paint current values once (no animation)
-//   const pools = ['health','mana','stamina','essence'];
-
-//   // Build current targets from gateway
-//   const target = {};
-//   for (const k of pools){
-//     const v = curr.pools[k] || {};
-//     target[k] = { current: Number(v.current||0), max: Number(v.max||0) };
-//   }
-
-//   // If no previous snapshot, set bars to current silently and exit
-//   if (!prev?.pools){
-//     for (const k of pools){
-//       const el = elements[k]; if (!el) continue;
-//       const cur = target[k].current, cap = target[k].max;
-//       const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
-//       el.fill.style.width   = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
-//       el.value.textContent  = (k==='essence' && cap===0)
-//         ? `${cur.toFixed(2)}`
-//         : formatPair(cur, cap);
-//     }
-//     return;
-//   }
-
-//     // Turn on glow
-//   setBarsWaking(elements, true);
-
-//   // Animate each pool from prev.current -> target.current, respecting cap
-//   await new Promise((resolveAll) => {
-//     let doneCount = 0;
-//     const total   = pools.length;
-
-//     pools.forEach((k)=>{
-//       const el = elements[k]; if (!el) { if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } return; }
-//       const from   = Number(prev.pools[k]?.current || 0);
-//       const to     = Number(target[k].current || 0);
-//       const cap    = Number(target[k].max || 0);
-
-//       // No movement
-//       if (Math.abs(to - from) < 1e-6){
-//         const pct0 = cap > 0 ? (to / cap) * 100 : (k==='essence' ? 0 : 0);
-//         el.fill.style.width  = `${Math.max(0, Math.min(100, pct0)).toFixed(2)}%`;
-//         el.value.textContent = (k==='essence' && cap===0)
-//           ? `${to.toFixed(2)}`
-//           : formatPair(to, cap);
-//         if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); }
-//         return;
-//       }
-
-//       // Single tween from -> to (down or up). Keep it simple and readable.
-//       tween({
-//         from, to, dur: duration,
-//         step: (v)=>{
-//           const cur = Math.max(0, v);
-//           const pct = cap > 0 ? (cur / cap) * 100 : (k==='essence' ? 0 : 0);
-//           el.fill.style.width  = `${Math.max(0, Math.min(100, pct)).toFixed(2)}%`;
-//           el.value.textContent = (k==='essence' && cap===0)
-//             ? `${cur.toFixed(2)}`
-//             : formatPair(cur, cap);
-//         },
-//         done: ()=>{ if(++doneCount===total){ setBarsWaking(elements,false); resolveAll(); } }
-//       });
-//     });
-//   });
-// }
-
 export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
   const duration = Number(opts.duration || 900);
   if (!elements || !curr?.pools) return;
@@ -227,33 +190,44 @@ export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
       const el = elements[k];
       if (!el){ if(++doneCount===total) resolveAll(); return; }
 
-      const cap = Number(target[k].max || 0);
+      // Use UI cap for Essence (softCap), normal cap for others
+      const capRaw  = Number(target[k].max || 0);
+      const uiCap   = (k === 'essence')
+        ? Number(curr?.essenceUI?.softCap || 0)
+        : capRaw;
 
       const fromRaw = Number(prev.pools?.[k]?.current || 0);
       const toRaw   = Number(target[k].current || 0);
 
-      // Effective (visible) value: clamp H/M/S to cap; Essence unbounded here
-      const eff = (val) => (k==='essence' || cap<=0) ? Math.max(0, val) : Math.max(0, Math.min(cap, val));
+      // Visible (clamped to UI cap). If no cap (0), Essence shows value only.
+      const eff = (val) => (uiCap > 0) ? Math.max(0, Math.min(uiCap, val)) : Math.max(0, val);
       const fromEff = eff(fromRaw);
       const toEff   = eff(toRaw);
 
+      const EPS   = 1e-6;
       const delta = toEff - fromEff;
       const moved = Math.abs(delta) >= EPS;
 
+      // No visible change → paint once (including Essence width if uiCap>0), no glow
       if (!moved){
-        // No visible change → paint once, no glow
-        if (k === 'essence' || cap <= 0){
-          el.value.textContent = `${toEff.toFixed(2)}`;
+        if (k === 'essence') {
+          if (uiCap > 0){
+            const pct = clamp01(toEff / uiCap) * 100;
+            el.fill.style.width  = `${pct.toFixed(2)}%`;
+            el.value.textContent = `${toEff.toFixed(2)} / ${uiCap.toFixed(2)}`;
+          } else {
+            el.value.textContent = `${toEff.toFixed(2)}`;
+          }
         } else {
-          const pct = clamp01(toEff / cap) * 100;
+          const pct = clamp01(toEff / Math.max(1e-9, uiCap)) * 100;
           el.fill.style.width  = `${pct.toFixed(2)}%`;
-          el.value.textContent = `${toEff.toFixed(2)} / ${cap.toFixed(2)}`;
+          el.value.textContent = `${toEff.toFixed(2)} / ${uiCap.toFixed(2)}`;
         }
         if(++doneCount===total) resolveAll();
         return;
       }
 
-      // Visible movement → animate once with sign-aware glow
+      // Visible movement → animate with sign-aware glow (Essence included)
       setBarGlow(el, delta > 0 ? 'pos' : 'neg');
 
       tween({
@@ -262,13 +236,19 @@ export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
         dur:  duration,
         step: (v)=>{
           const cur = Math.max(0, v);
-          if (k === 'essence' || cap <= 0){
-            // Don’t fake a width for essence here; just update value
-            el.value.textContent = `${cur.toFixed(2)}`;
+          if (k === 'essence') {
+            if (uiCap > 0){
+              const pct = clamp01(cur / uiCap) * 100;
+              el.fill.style.width  = `${pct.toFixed(2)}%`;
+              el.value.textContent = `${cur.toFixed(2)} / ${uiCap.toFixed(2)}`;
+            } else {
+              // No cap: keep width as-is; update numeric text
+              el.value.textContent = `${cur.toFixed(2)}`;
+            }
           } else {
-            const pct = clamp01(cur / cap) * 100;
+            const pct = clamp01(cur / Math.max(1e-9, uiCap)) * 100;
             el.fill.style.width  = `${pct.toFixed(2)}%`;
-            el.value.textContent = `${cur.toFixed(2)} / ${cap.toFixed(2)}`;
+            el.value.textContent = `${cur.toFixed(2)} / ${uiCap.toFixed(2)}`;
           }
         },
         done: ()=>{
@@ -277,9 +257,9 @@ export async function runWakeRegenAnimation(elements, prev, curr, opts = {}){
         }
       });
     });
+
   });
 }
-
 
 // ----------------------- 
 // Emberward UI
@@ -326,12 +306,8 @@ export function initEmberwardFrame(uid, { shape='inherit', maxRatio=1.0 } = {}){
     const inc = Number(A?.inflow?.total ?? A?.inflow ?? 0);
     const out = Number(A?.outflow?.total ?? A?.outflow ?? 0);
 
-    console.log(inc)
-    console.log(out)
-
     const hasEmber = out > 0;
     const intensity = hasEmber && inc > 0 ? clamp(out / inc, 0, maxRatio) / maxRatio : 0;
-    console.log(hasEmber, intensity)
 
     host.classList.toggle('is-ember-on', hasEmber);
     host.classList.toggle('is-ember-off', !hasEmber);
@@ -339,7 +315,6 @@ export function initEmberwardFrame(uid, { shape='inherit', maxRatio=1.0 } = {}){
     // Drive the flame strength
     frame.style.setProperty('--ember-intensity', String(intensity));
 
-    console.log(frame)
   }
 
   // Expose a tiny helper to flick shape later without re-init
@@ -608,5 +583,9 @@ export async function openSummaryFromGateway(uid) {
     openSummaryModal(buildSummaryFromHUDFallback());
   }
 }
+
+
+
+
 
 

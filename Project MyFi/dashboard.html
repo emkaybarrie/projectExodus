@@ -195,12 +195,32 @@
         </div>
       </div>
 
+      <!-- Shield row: Energy Shield (left) + Totals (right) -->
+      <div class="shield-row">
+        <div id="vital-shield">
+          <div class="bar shield">
+            <span class="bar-label">Shield</span>
+            <div class="bar-fill"></div>
+            <span class="bar-value">0 / 0</span>
+            <span id="bar-surplus-shield" class="bar-surplus" aria-hidden="true"></span>
+            <div class="bar-reclaim"></div>
+          </div>
+        </div>
+
+        <!-- moved here from vitals-toprow -->
+        <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
+      </div>
+
       <div class="vitals-toprow">
         <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
           <button id="engrave-core"  class="engrave engrave--core"  aria-label="All-Time"></button>
           <button id="engrave-focus" class="engrave engrave--focus" aria-label="Focus"></button>
         </div>
-        <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
+
+        <div id="hud-status" class="hud-status" aria-live="polite">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-msg">On Track</span>
+        </div>
       </div>
 
       <div class="skills-row">Skills
