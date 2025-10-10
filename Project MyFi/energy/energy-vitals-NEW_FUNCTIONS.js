@@ -588,19 +588,19 @@ export function wireVitalsStatusToggle(){
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
   });
 
-    document.addEventListener('DOMContentLoaded', syncVitalsBreakdown);
+    // Initial + keep in sync when bar classes change
+  document.addEventListener('DOMContentLoaded', syncVitalsBreakdown);
   if (document.readyState !== 'loading') syncVitalsBreakdown();
 
-  // Keep in sync if your app toggles the bar classes later
-  const opts = { attributes: true, attributeFilter: ['class'], subtree: true };
+  const obsOpts = { attributes: true, attributeFilter: ['class'], subtree: true };
   ['health','mana','stamina'].forEach(v => {
     const root = document.querySelector(`#vital-${v}`);
-    if (!root) return;
-    new MutationObserver(syncVitalsBreakdown).observe(root, opts);
+    if (root) new MutationObserver(syncVitalsBreakdown).observe(root, obsOpts);
   });
 }
 
 const vitalIds = ['health','mana','stamina'];
+const weights = { health:2, mana:1, stamina:1 };
 
   function stateClassFromBar(barEl){
     if (!barEl) return 'is-warn';
@@ -615,9 +615,19 @@ const vitalIds = ['health','mana','stamina'];
     dot.classList.add(cls);
   }
 
+  function toScore(cls){ return cls === 'is-good' ? 1 : cls === 'is-bad' ? -1 : 0; }
+
+  function computeSummary(classes){
+    const sum = classes.reduce((n,c,i)=> n + (toScore(c) * weights[vitalIds[i]]), 0);
+    if (sum >= 1) return { cls:'is-good', label:'Ahead' };
+    if (sum <= -1) return { cls:'is-bad',  label:'Off Track' };
+    return { cls:'is-warn', label:'On Track' };
+  }
+
   function syncVitalsBreakdown(){
     const classes = [];
 
+    // Paint each vital’s dot from its bar’s trend class
     vitalIds.forEach(v => {
       const bar = document.querySelector(`#vital-${v} .bar`);
       const cls = stateClassFromBar(bar);
@@ -626,14 +636,19 @@ const vitalIds = ['health','mana','stamina'];
       classes.push(cls);
     });
 
-    // Overview dot: any bad -> bad; all good -> good; otherwise warn
+    // Summary (overview) dot + text from cumulative score
+    const { cls, label } = computeSummary(classes);
     const overviewDot = document.querySelector('#vitals-status .vs-overview .status-dot');
-    if (overviewDot){
-      const anyBad  = classes.includes('is-bad');
-      const allGood = classes.every(c => c === 'is-good');
-      setDot(overviewDot, anyBad ? 'is-bad' : (allGood ? 'is-good' : 'is-warn'));
-    }
+    const overviewText = document.getElementById('vitals-status-text');
+    setDot(overviewDot, cls);
+    if (overviewText) overviewText.textContent = label;
+
+    // Optional: helpful tooltip
+    const wrap = document.getElementById('vitals-status');
+    if (wrap) wrap.title = `H:${classes[0].slice(3)} • M:${classes[1].slice(3)} • S:${classes[2].slice(3)} → ${label}`;
   }
+
+
 
 
 
