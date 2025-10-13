@@ -199,10 +199,10 @@ attachQuickMenu('settings-btn', () =>
 // );
 
 // Center (Essence) → real Essence menu items
-attachQuickMenu('essence-btn', () =>
-  pick(window.MyFiEssenceMenu, ['contribute', 'purchase', 'empower']),
-  { menuTitle: 'Essence' }
-);
+// attachQuickMenu('essence-btn', () =>
+//   pick(window.MyFiEssenceMenu, ['contribute', 'purchase', 'empower']),
+//   { menuTitle: 'Essence' }
+// );
 
 // attachQuickMenu('right-btn', () =>
 //   pick(window.MyFiSocialMenu, ['home'])
