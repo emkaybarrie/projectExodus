@@ -3,16 +3,25 @@
 // Frontend-only; emits CustomEvents for backend & Stripe integration.
 // Depends on: energy-vitals.js (refreshVitals), optional window.MyFiModal
 
-import { refreshVitals } from "./energy-vitals.js";
+import { refreshVitals, refreshVitalsHUD } from "./energy-vitals.js";
 
 // Read-only wallet helpers
-import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 /** ---------- Utils ---------- */
 const fmt = (n, d=0) => new Intl.NumberFormat(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}).format(Number(n||0));
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const uc = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+// ↓ ADD (helpers for schema fields)
+const GHOST_WINDOW_MS = 6 * 60 * 1000; // 360000 (matches example)
+
+function startOfDayMs(ms = Date.now()){
+  const d = new Date(ms);
+  d.setHours(0,0,0,0);
+  return d.getTime();
+}
 
 async function readWallet(uid){
   try{
@@ -21,6 +30,122 @@ async function readWallet(uid){
     return snap.exists() ? (snap.data() || {}) : {};
   }catch{ return {}; }
 }
+
+// --- Synthetic TX writer for Transmute (no energy-vitals changes needed) ---
+// Writes a bundle of synthetic transactions for Transmute.
+// - One (+) credit per destination pool (H/M/S) with amount > 0
+// - One (–) debit from Essence with amount < 0 and appliedAllocation = { essence: total }
+// These post as "confirmed" so recompute picks them up immediately.
+async function writeTransmuteTxBundle(db, uid, pendingActions, bucket = 'verified'){
+  if (!uid || !Array.isArray(pendingActions) || pendingActions.length === 0) return;
+
+  // Aggregate by pool
+  const byPool = pendingActions.reduce((acc, a) => {
+    const pool = String(a.to || '').toLowerCase();      // 'health' | 'mana' | 'stamina'
+    const amt  = Number(a.amount || 0);
+    if (!amt || !['health','mana','stamina'].includes(pool)) return acc;
+    acc[pool] = Number(((acc[pool] || 0) + amt).toFixed(2));
+    return acc;
+  }, {});
+
+  const total = Object.values(byPool).reduce((s, v) => Number((s + v).toFixed(2)), 0);
+  if (total <= 0) return;
+
+  const nowMs  = Date.now();
+  const dateMs = startOfDayMs(nowMs);            // keep consistent with your example
+  const colRef = collection(db, `players/${uid}/financialData/processedTransactions/${bucket}`);
+
+  const baseCommon = {
+    accountId: null,
+    addedMs: nowMs,
+    dateMs,                                      // used by reader for the window
+    ghostWindowMs: GHOST_WINDOW_MS,              // 360000
+    ghostExpiryMs: nowMs + GHOST_WINDOW_MS,
+    rulesVersion: 'v1',
+    source: 'spirit_transmute',
+    status: 'confirmed',
+    creditModeOverride: null,
+    provisionalTag: null,
+    suggestedPool: null,
+    autoLockReason: 'client_fallback',           // safe default; matches your example
+    setAtMs: nowMs,
+    appliedAllocation: {},                       // credits: unused by reader; debit: we set essence below
+    // pool + tag filled per-row
+    transactionData: {
+      description: '',                           // filled per-row
+      entryDate: new Date(nowMs).toUTCString()   // reader prefers dateMs, but this keeps parity
+    }
+  };
+
+  const writes = [];
+
+  // (+) One CREDIT per destination pool.
+  // For HEALTH → override 'health' so reader books it straight to Health.
+  // For MANA/STAMINA → use 'allocate' and set tag.pool to intent ('mana'|'stamina').
+  //   readNonCoreUsage.applyAllocatedCredit(amount, intent, when)
+  //   will allocate to the intent pool given infinite availability.
+  for (const [pool, amount] of Object.entries(byPool)) {
+    const isHealth = (pool === 'health');
+
+    const row = {
+      ...baseCommon,
+      amount: Number(amount.toFixed(2)),  // amt > 0 ⇒ credit path
+      essence: 0, health: 0, mana: 0, stamina: 0, // not used by reader for credits
+      pool,                                // convenience for queries
+      tag: { pool },                       // intent for allocate mode
+      creditModeOverride: isHealth ? 'health' : 'allocate',
+      transactionData: {
+        description: `Spirit: Transmute → ${pool}`,
+        entryDate: new Date(nowMs).toUTCString()
+      }
+    };
+
+    writes.push(addDoc(colRef, row));
+  }
+
+  // (–) One DEBIT from ESSENCE with explicit appliedAllocation
+  // Reader prefers appliedAllocation for debits; this ensures spend comes from Essence only
+  const essenceDebit = {
+    ...baseCommon,
+    amount: Number((-total).toFixed(2)),      // amt < 0 ⇒ debit path
+    pool: 'essence',
+    tag: { pool: 'essence' },
+    creditModeOverride: null,
+    appliedAllocation: { health:0, mana:0, stamina:0, essence: Number(total.toFixed(2)) },
+    essence: 0, health: 0, mana: 0, stamina: 0,  // not used for debits
+    transactionData: {
+      description: `Spirit: Transmute ← Essence`,
+      entryDate: new Date(nowMs).toUTCString()
+    }
+  };
+
+  writes.push(addDoc(colRef, essenceDebit));
+
+  await Promise.all(writes);
+}
+
+// ADD this helper somewhere near other utils (e.g., after attachFallbackOverlay)
+function showSpiritToast(message = "Transmutation complete"){
+  // container
+  const host = document.createElement('div');
+  host.className = 'spirit-toast';
+  host.innerHTML = `
+    <div class="toast-stone">
+      <span class="spark s1"></span>
+      <span class="spark s2"></span>
+      <span class="spark s3"></span>
+      <span class="glow"></span>
+      <div class="toast-msg">${message}</div>
+    </div>
+  `;
+  document.body.appendChild(host);
+  // auto-remove
+  setTimeout(()=> host.classList.add('leaving'), 2000);
+  setTimeout(()=> host.remove(), 2600);
+}
+
+
+
 
 /** ---------- Public: init ---------- */
 export function autoInitSpiritStoneButton(selector = '#essence-btn'){
@@ -43,13 +168,12 @@ export async function openSpiritStoneMenu() {
 function buildMenuUI({ gateway, wallet }) {
   const pools = gateway?.pools || {};
 
-  // Wallet (SoT for money balances)
-  const essence = Number(wallet?.essence_free ?? pools?.essence?.current ?? 0);
+  // Essence + cap **only** from vitals gateway
+  const essence = Number(pools?.essence?.current || 0);
   const shards  = Number(wallet?.shards ?? 0);
   const chargePct = clamp(Number(wallet?.charge?.pct ?? 0), 0, 1);
   const tier      = Number(wallet?.charge?.tier ?? 1);
 
-  // Vitals pools (for bars)
   const v = {
     health: { cur: Number(pools?.health?.current || 0), max: Number(pools?.health?.max || 0) },
     mana:   { cur: Number(pools?.mana?.current   || 0), max: Number(pools?.mana?.max   || 0) },
@@ -59,6 +183,15 @@ function buildMenuUI({ gateway, wallet }) {
   // Essence soft cap for UI (matches vitals essence bar)
   const softCap = Number(gateway?.essenceUI?.softCap || pools?.essence?.max || 0);
 
+  // Decide tx bucket from gateway mode
+  const txBucket = (
+    gateway?.transactionMode === 'unverified' ||
+    gateway?.finance?.txBucket === 'unverified' ||
+    gateway?.writeBucket === 'unverified'
+  ) ? 'unverified' : 'verified';
+
+  console.log(txBucket)
+
   const root = document.createElement('div');
   root.className = 'spirit-card';
   root.innerHTML = `
@@ -67,23 +200,36 @@ function buildMenuUI({ gateway, wallet }) {
       ${renderSummaryRows({ essence, shards, tier })}
     </div>
 
+    <!-- MAIN TABS -->
     <div class="spirit-tabs">
       <button class="spirit-tab is-active" data-tab="transmute">Transmute</button>
-      <button class="spirit-tab" data-tab="charge">Charge</button>
-      <button class="spirit-tab" data-tab="shards">Shards</button>
-      <button class="spirit-tab" data-tab="contrib">Contribute</button>
+      <button class="spirit-tab" data-tab="spend">Spend</button>
     </div>
 
     <div class="spirit-panels">
-      <section class="spirit-panel is-active" data-panel="transmute">${panelTransmute(essence, v, softCap)}</section>
-      <section class="spirit-panel" data-panel="charge">${panelCharge(essence, chargePct)}</section>
-      <section class="spirit-panel" data-panel="shards">${panelShards(essence, shards, tier)}</section>
-      <section class="spirit-panel" data-panel="contrib">${panelContrib(essence)}</section>
+      <!-- TRANSMUTE PANEL -->
+      <section class="spirit-panel is-active" data-panel="transmute">
+        ${panelTransmute(essence, v, softCap)}
+      </section>
+
+      <!-- SPEND PANEL with SUB-TABS -->
+      <section class="spirit-panel" data-panel="spend">
+        <div class="spend-tabs">
+          <button class="spend-tab is-active" data-stab="charge">Charge</button>
+          <button class="spend-tab" data-stab="shards">Shards</button>
+          <button class="spend-tab" data-stab="contrib">Contribute</button>
+        </div>
+        <div class="spend-panels">
+          <section class="spend-panel is-active" data-spanel="charge">${panelCharge(essence, chargePct)}</section>
+          <section class="spend-panel" data-spanel="shards">${panelShards(essence, shards, tier)}</section>
+          <section class="spend-panel" data-spanel="contrib">${panelContrib(essence)}</section>
+        </div>
+      </section>
     </div>
   `;
 
   wireTabs(root);
-  wireTransmutePanel(root, { essence, v, softCap });
+  wireTransmutePanel(root, { essence, v, softCap, txBucket });
   wireChargePanel(root, { essence });
   wireShardsPanel(root, { essence, shards, tier });
   wireContribPanel(root, { essence });
@@ -133,15 +279,31 @@ function renderSummaryRows({ essence, shards, tier }){
 
 /** ---------- Tabs ---------- */
 function wireTabs(root){
+  // Main tabs
   const tabs = [...root.querySelectorAll('.spirit-tab')];
   const panels = [...root.querySelectorAll('.spirit-panel')];
+
   root.addEventListener('click', (e)=>{
-    const t = e.target.closest('.spirit-tab'); if(!t) return;
-    const key = t.dataset.tab;
-    tabs.forEach(b => b.classList.toggle('is-active', b===t));
-    panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel===key));
+    const t = e.target.closest('.spirit-tab');
+    if (t){
+      const key = t.dataset.tab;
+      tabs.forEach(b => b.classList.toggle('is-active', b===t));
+      panels.forEach(p => p.classList.toggle('is-active', p.dataset.panel===key));
+      return;
+    }
+    // Sub-tabs (only inside Spend panel)
+    const s = e.target.closest('.spend-tab');
+    if (s){
+      const wrap = root.querySelector('[data-panel="spend"]');
+      const stabs = [...wrap.querySelectorAll('.spend-tab')];
+      const spans = [...wrap.querySelectorAll('.spend-panel')];
+      const key = s.dataset.stab;
+      stabs.forEach(b => b.classList.toggle('is-active', b===s));
+      spans.forEach(p => p.classList.toggle('is-active', p.dataset.spanel===key));
+    }
   });
 }
+
 
 /** =========================================================
  *  TRANSMUTE: Essence → Pools (hold→preview, confirm modal)
@@ -226,7 +388,7 @@ function renderEssenceBar(essence, softCap){
 }
 
 
-function wireTransmutePanel(root, { essence, v, softCap }){
+function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
   const wrap = root.closest('.spirit-card') || root;
 
   // UI nodes
@@ -500,22 +662,30 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   btnConfirmFooter.addEventListener('click', async ()=>{
     if (pendingActions.length === 0) return;
 
-    // Firestore write: only wallet Essence here (pools are game-derived server state).
+    // Build a friendly summary BEFORE clearing
+    const sum = pendingActions.reduce((acc, a)=>{
+      acc.total = Number((acc.total + a.amount).toFixed(2));
+      acc[a.to]  = Number(((acc[a.to]||0) + a.amount).toFixed(2));
+      return acc;
+    }, { total:0 });
+
     try{
       const uid = getAuth().currentUser?.uid;
       if (uid){
         const db = getFirestore();
-        const ref = doc(db, `players/${uid}/wallet/main`);
-        await updateDoc(ref, { essence_free: Number(working.essence.toFixed(2)) });
+        await writeTransmuteTxBundle(db, uid, pendingActions, txBucket);
       }
-    }catch(e){ console.warn('Essence commit failed:', e); }
+    }catch(e){
+      console.warn('Transmute commit failed:', e);
+      return; // Do not advance baseline on failure
+    }
 
-    // Consolidated event to backend/game engine with the breakdown
+    // Optional: notify
     window.dispatchEvent(new CustomEvent('spirit:transmutes:commit', {
-      detail: { actions: pendingActions.slice(), newEssence: working.essence }
+      detail: { actions: pendingActions.slice(), newEssence: working.essence, bucket: txBucket }
     }));
 
-    // New baseline = committed working; clear queue
+    // Baseline <= working; clear queue
     baseline.essence = working.essence;
     for (const k of Object.keys(baseline.pools)){
       baseline.pools[k].cur = working.pools[k].cur;
@@ -523,6 +693,17 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     }
     pendingActions = [];
     clearPlanPreview();
+
+    // Recompute & repaint from server truth
+    try { await refreshVitalsHUD(getAuth().currentUser.uid); } catch {}
+
+    // Toast (fantasy glow + sparkles)
+    const parts = ['health','mana','stamina']
+      .filter(k => sum[k] > 0.009)
+      .map(k => `${uc(k)} £${fmt(sum[k],2)}`)
+      .join(' • ');
+    const msg = parts ? `Transmuted £${fmt(sum.total,2)} Essence → ${parts}` : `Transmuted £${fmt(sum.total,2)} Essence`;
+    showSpiritToast(msg);
   });
 
   // Initial preview clear
@@ -739,19 +920,15 @@ function attachFallbackOverlay(node){
   .stone-core .ring-on{ border-color: rgba(240,220,160,.85); box-shadow: 0 0 8px rgba(240,220,160,.35); }
   .stone-core .ring-partial{ border-color: rgba(240,220,160,.55); box-shadow: 0 0 6px rgba(240,220,160,.22), inset 0 0 6px rgba(240,220,160,.1); }
   .stone-label{ position:absolute; left:50%; top:50%; transform: translate(-50%,-50%); text-align:center; font-weight:800; font-family:'Cinzel', serif; color:#f0e6d2; }
-  .stone-caption{ margin-top:6px; font-size:.9rem; opacity:.85; text-align:center; }
 
-  /* Right-side caption above rows */
   .summary-rows { display:grid; gap:6px; align-content:start; }
-  .summary-caption{
-    font-weight:800; letter-spacing:.2px; color:#f0e6d2; margin-bottom:2px;
-    opacity:.95;
-  }
+  .summary-caption{ font-weight:800; letter-spacing:.2px; color:#f0e6d2; margin-bottom:2px; opacity:.95; }
   .summary-row{ display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .summary-row__label{ opacity:.9; }
   .summary-row__value{ font-variant-numeric: tabular-nums; }
   .summary-row .js-ess, .summary-row .js-shards { font-weight:700; }
 
+  /* MAIN TABS */
   .spirit-tabs{ display:grid; grid-auto-flow:column; gap:6px; }
   .spirit-tab{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color:#f0e6d2; cursor:pointer; }
   .spirit-tab.is-active{ background: rgba(155,93,229,.16); box-shadow: 0 0 10px rgba(155,93,229,.28); }
@@ -762,6 +939,14 @@ function attachFallbackOverlay(node){
   .panel-wrap{ display:grid; gap:10px; padding:10px; border:1px solid rgba(255,255,255,.10); border-radius:14px; background: rgba(255,255,255,.04); }
   .panel-note, .charge-hint, .rebalance-hint, .shards-hint, .hint-mini{ opacity:.85; font-size:.95rem; margin:0; }
   .hint-mini{ font-size:.9rem; }
+
+  /* SUB-TABS (Spend) */
+  .spend-tabs{ display:grid; grid-auto-flow:column; gap:6px; margin-bottom:6px; }
+  .spend-tab{ padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color:#f0e6d2; cursor:pointer; }
+  .spend-tab.is-active{ background: rgba(240,220,160,.16); box-shadow: 0 0 10px rgba(240,220,160,.28); }
+  .spend-panels{ position:relative; }
+  .spend-panel{ display:none; }
+  .spend-panel.is-active{ display:block; }
 
   .opt-row { display:flex; gap:10px; align-items:center; }
   .opt-row select{ padding:6px 8px; border-radius:8px; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#f0e6d2; }
@@ -786,23 +971,12 @@ function attachFallbackOverlay(node){
   .poolbar.mana   { --pool-base: rgba(75, 125, 220,.7); --pool-plan: repeating-linear-gradient(45deg, rgba(75,125,220,.35), rgba(75,125,220,.35) 8px, rgba(75,125,220,.20) 8px, rgba(75,125,220,.20) 16px); }
   .poolbar.stamina{ --pool-base: rgba(120, 200, 120,.7); --pool-plan: repeating-linear-gradient(45deg, rgba(120,200,120,.35), rgba(120,200,120,.35) 8px, rgba(120,200,120,.20) 8px, rgba(120,200,120,.20) 16px); }
 
-  /* Essence bar uses magenta theme (matches vitals) */
-  .essbar .ess-base{
-    background: rgba(155,93,229,.55);      /* solid magenta */
-    z-index: 1;
-  }
+  .essbar .ess-base{ background: rgba(155,93,229,.55); z-index: 1; }
   .essbar .ess-plan{
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(155,93,229,.35),
-      rgba(155,93,229,.35) 8px,
-      rgba(240,220,160,.25) 8px,
-      rgba(240,220,160,.25) 16px
-    );
+    background: repeating-linear-gradient(45deg, rgba(155,93,229,.35), rgba(155,93,229,.35) 8px, rgba(240,220,160,.25) 8px, rgba(240,220,160,.25) 16px);
     z-index: 2;
   }
 
-  /* Inline confirm overlay (stays in same menu) */
   .inline-confirm{
     position: fixed; inset: 0; display: grid; place-items: center;
     background: rgba(0,0,0,.35); z-index: 9999;
@@ -827,11 +1001,9 @@ function attachFallbackOverlay(node){
     background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
   }
 
-
   .target-pools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tgt-label{ opacity:.85; margin-right:4px; }
   .pool-btn.pill{ border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
-  /* Target pills: text colour matches pool (darker) */
   .pool-btn.pill.health{ color:rgb(150,40,55); }
   .pool-btn.pill.mana{   color:rgb(46,78,155); }
   .pool-btn.pill.stamina{color:rgb(40,110,60); }
@@ -839,31 +1011,25 @@ function attachFallbackOverlay(node){
   .pool-btn.pill.mana.is-active   { background: rgba(75,125,220,.25);  box-shadow: 0 0 8px rgba(75,125,220,.35); }
   .pool-btn.pill.stamina.is-active{ background: rgba(120,200,120,.25); box-shadow: 0 0 8px rgba(120,200,120,.35); }
 
-  /* Centred planned label + colour variants */
   .charge-stats.centered{ justify-content:center; }
   .plan-label{ font-weight:800; }
   .plan-label.health{ color: rgb(220,83,100); }
   .plan-label.mana{   color: rgb(75,125,220); }
   .plan-label.stamina{color: rgb(120,200,120); }
 
-  /* Quick row: 2 equal buttons full width; first glows with selected vital */
   .quick-row{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
   .quick-row .quick{ width:100%; }
   .tgt-health .quick.full-selected{ box-shadow:0 0 12px rgba(220,83,100,.35); border-color: rgba(220,83,100,.35); }
   .tgt-mana   .quick.full-selected{ box-shadow:0 0 12px rgba(75,125,220,.35);  border-color: rgba(75,125,220,.35); }
-  .tgt-stamina.quick-row .full-selected,
   .tgt-stamina .quick.full-selected{ box-shadow:0 0 12px rgba(120,200,120,.35); border-color: rgba(120,200,120,.35); }
-  .exact-row{ display:none; } /* removed per spec */
 
-  /* Hold button: slightly taller and magenta */
   .transmute-hold{
-    padding:14px 16px; /* taller */
+    padding:14px 16px;
     background: rgba(155,93,229,.18);
     border-color: rgba(155,93,229,.35);
   }
   .transmute-hold.is-armed{ box-shadow: 0 0 12px rgba(155,93,229,.45), inset 0 0 8px rgba(155,93,229,.25); }
 
-  /* Footer Reset / Confirm */
   .footer-actions{
     display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:2px;
   }
@@ -879,11 +1045,92 @@ function attachFallbackOverlay(node){
   .qty button{ padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
   .qty-input{ text-align:center; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color:#f0e6d2; }
 
-  /* Confirm card */
-  .confirm-card .confirm-body{ display:grid; gap:10px; padding:10px; }
-  .confirm-card input{ width:140px; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color:#f0e6d2; text-align:right; }
-  .confirm-actions{ display:flex; gap:8px; justify-content:flex-end; }
-  .confirm-actions .btn-cancel, .confirm-actions .btn-confirm{ padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
+  /* === Contribute (Spend → Contribute) exact amount row === */
+  .spirit-card .exact-row{
+    display:flex;                 /* override any old display:none */
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+
+  .spirit-card .exact-row label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0;
+    white-space:nowrap;
+    font-size:.95rem;
+    opacity:.95;
+  }
+
+  .spirit-card .exact-row .contrib-amt{
+    width:160px;                  /* tidy, not full-width */
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06);
+    color:#f0e6d2;
+    text-align:right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* remove number spinners for a cleaner look */
+  .spirit-card .exact-row .contrib-amt::-webkit-outer-spin-button,
+  .spirit-card .exact-row .contrib-amt::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .spirit-card .exact-row .contrib-amt{
+    -moz-appearance:textfield;
+  }
+
+  .spirit-card .btn-contrib-stripe{
+    white-space:nowrap;
+    height:36px;                  /* match input height visually */
+    display:inline-flex;
+    align-items:center;
+  }
+ 
+  /* === NEW: Toast (fantasy glow + sparkles) === */
+  .spirit-toast{
+    position: fixed; left:50%; bottom: 24px; transform: translateX(-50%);
+    z-index: 99999; pointer-events:none;
+    animation: toastIn .25s ease-out;
+  }
+  .spirit-toast.leaving{ animation: toastOut .4s ease-in forwards; }
+  .toast-stone{
+    position:relative; min-width: 280px; max-width: 86vw;
+    display:grid; place-items:center;
+    padding: 10px 14px; border-radius: 14px;
+    background: radial-gradient(circle at 50% 0%, rgba(155,93,229,.18), rgba(20,20,35,.92));
+    border:1px solid rgba(240,220,160,.35);
+    box-shadow: 0 6px 24px rgba(0,0,0,.45), inset 0 0 10px rgba(240,220,160,.12);
+    overflow:hidden;
+  }
+  .toast-msg{ color:#f0e6d2; font-weight:800; text-align:center; }
+  .toast-stone .glow{
+    position:absolute; inset:-20px; border-radius:18px; filter: blur(10px);
+    background: radial-gradient(circle at 50% 50%, rgba(240,220,160,.12), transparent 60%);
+    animation: glowPulse 1.8s ease-in-out infinite;
+  }
+  .spark{
+    position:absolute; width:6px; height:6px; border-radius:999px; background: rgba(240,220,160,.9);
+    filter: drop-shadow(0 0 6px rgba(240,220,160,.8));
+    animation: sparkle 1.2s linear infinite;
+  }
+  .spark.s1{ left: 14%; top: 60%; animation-delay: .0s; }
+  .spark.s2{ left: 50%; top: 70%; animation-delay: .2s; }
+  .spark.s3{ left: 82%; top: 58%; animation-delay: .4s; }
+  @keyframes sparkle{
+    0%{ transform: translateY(0) scale(1); opacity:.9; }
+    70%{ transform: translateY(-16px) scale(1.2); opacity:.6; }
+    100%{ transform: translateY(-26px) scale(.8); opacity:0; }
+  }
+  @keyframes glowPulse{
+    0%,100%{ opacity:.35; } 50%{ opacity:.6; }
+  }
+  @keyframes toastIn{ from{ transform: translate(-50%, 10px); opacity:0; } to{ transform: translate(-50%, 0); opacity:1; } }
+  @keyframes toastOut{ to{ transform: translate(-50%, 6px); opacity:0; } }
   `;
   const tag = document.createElement('style'); tag.id = 'spirit-stone-css'; tag.textContent = css; document.head.appendChild(tag);
 })();

@@ -389,6 +389,7 @@ export async function recomputeVitalsGatewayStub(uid){
   if (!activeSnap.exists()){
     // Minimal bootstrap to keep callers happy
     await setDoc(gatewayRef, {
+      transactionMode: "unverified",
       mode: "continuous",
       cadence: "monthly",
       payCycleAnchorMs: null,
@@ -416,6 +417,7 @@ export async function recomputeVitalsGatewayStub(uid){
   }
 
   const A = activeSnap.data() || {};
+  const transactionMode = String(A.transactionMode)
   const mode = String(A.energyMode || A.mode || 'continuous').toLowerCase();
   const creditMode = resolveCreditMode(A);
 
@@ -682,6 +684,7 @@ export async function recomputeVitalsGatewayStub(uid){
   const healthDebt = Math.max(0, Number(poolsOut?.health?.debt || 0));  
 
   const payload = {
+    transactionMode,
     mode,
     cadence: "monthly",
     payCycleAnchorMs:   Number.isFinite(payCycleAnchorMs)   ? payCycleAnchorMs   : null,
