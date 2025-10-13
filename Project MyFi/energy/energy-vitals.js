@@ -547,10 +547,24 @@ export async function recomputeVitalsGatewayStub(uid){
       ? essenceCreditsExtra
       : safeNum(usage.all.credits?.[k], 0);
 
-    // const T = Math.max(0, (regenDaily[k]||0) * days - spent + credit);  // no wrap
-    const T = Math.max(0, (poolSeed[k]||0) + (regenDaily[k]||0) * days - spent + credit); // no wrap + seeded start
-    const maxK = (k === 'essence') ? 0 : capsNow[k];
+    //const T = Math.max(0, (poolSeed[k]||0) + (regenDaily[k]||0) * days - spent + credit); // no wrap + seeded start
+    //const maxK = (k === 'essence') ? 0 : capsNow[k];
+    //const current = (k === 'essence') ? T : clamp(T, 0, maxK);
+
+    // NEW — allow negative truth for Health only
+    const rawT = (poolSeed[k]||0) + (regenDaily[k]||0) * days - spent + credit;
+
+    // Health: keep raw (can be negative). Others: clamp to >= 0 like before.
+    const T = (k === 'health')
+    ? Number(rawT.toFixed(2))
+    : Math.max(0, Number(rawT.toFixed(2)));
+
+    const maxK   = (k === 'essence') ? 0 : capsNow[k];
+    // UI current always clamped (health negative renders as 0)
     const current = (k === 'essence') ? T : clamp(T, 0, maxK);
+
+    // Derive explicit debt for Health (for “revival”)
+    const debt = (k === 'health' && T < 0) ? Math.abs(T) : 0;
 
     poolsOut[k] = {
       max:           Number(maxK.toFixed(2)),
@@ -560,7 +574,8 @@ export async function recomputeVitalsGatewayStub(uid){
       creditToDate:  Number(credit.toFixed(2)),
       truthTotal:    Number(T.toFixed(2)),
       bankedDays:    Number(priorGateway?.pools?.[k]?.bankedDays || 0), // updated below for H/M/S
-      trend:         trendFor(k)
+      trend:         trendFor(k),
+        ...(k === 'health' ? { debt: Number(debt.toFixed(2)) } : {})
     };
   }
 
@@ -664,6 +679,7 @@ export async function recomputeVitalsGatewayStub(uid){
   };
 }
 
+  const healthDebt = Math.max(0, Number(poolsOut?.health?.debt || 0));  
 
   const payload = {
     mode,
@@ -685,7 +701,8 @@ export async function recomputeVitalsGatewayStub(uid){
       escrow: {
         carry: carryEscrow,
         bySourceToday // save today's *level* (not cumulative) for delta on next recompute
-      }
+      },
+      debts: { health: healthDebt, asOf: nowDay } // new, non-breaking
     },
     updatedAt: Date.now()
   };
