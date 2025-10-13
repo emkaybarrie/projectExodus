@@ -1,5 +1,5 @@
 // vitals-spirit-menu.js
-// Spirit Stone Menu (Rebalance / Charge / Shards / Contribute)
+// Spirit Stone Menu (Transmute / Charge / Shards / Contribute)
 // Frontend-only; emits CustomEvents for backend & Stripe integration.
 // Depends on: energy-vitals.js (refreshVitals), optional window.MyFiModal
 
@@ -42,8 +42,6 @@ export async function openSpiritStoneMenu() {
 /** ---------- UI ---------- */
 function buildMenuUI({ gateway, wallet }) {
   const pools = gateway?.pools || {};
-  const shieldMax = Number(pools?.shield?.max || 0);
-  const shieldCur = Number(pools?.shield?.current || 0);
 
   // Wallet (SoT for money balances)
   const essence = Number(wallet?.essence_free ?? pools?.essence?.current ?? 0);
@@ -58,23 +56,26 @@ function buildMenuUI({ gateway, wallet }) {
     stamina:{ cur: Number(pools?.stamina?.current|| 0), max: Number(pools?.stamina?.max|| 0) },
   };
 
+  // Essence soft cap for UI (matches vitals essence bar)
+  const softCap = Number(gateway?.essenceUI?.softCap || pools?.essence?.max || 0);
+
   const root = document.createElement('div');
   root.className = 'spirit-card';
   root.innerHTML = `
     <div class="spirit-summary">
       ${renderStoneSummary(chargePct, tier)}
-      ${renderSummaryRows({ essence, shieldCur, shieldMax, shards })}
+      ${renderSummaryRows({ essence, shards })}
     </div>
 
     <div class="spirit-tabs">
-      <button class="spirit-tab is-active" data-tab="rebalance">Rebalance</button>
+      <button class="spirit-tab is-active" data-tab="transmute">Transmute</button>
       <button class="spirit-tab" data-tab="charge">Charge</button>
       <button class="spirit-tab" data-tab="shards">Shards</button>
       <button class="spirit-tab" data-tab="contrib">Contribute</button>
     </div>
 
     <div class="spirit-panels">
-      <section class="spirit-panel is-active" data-panel="rebalance">${panelRebalance(essence, v)}</section>
+      <section class="spirit-panel is-active" data-panel="transmute">${panelTransmute(essence, v, softCap)}</section>
       <section class="spirit-panel" data-panel="charge">${panelCharge(essence, chargePct)}</section>
       <section class="spirit-panel" data-panel="shards">${panelShards(essence, shards, tier)}</section>
       <section class="spirit-panel" data-panel="contrib">${panelContrib(essence)}</section>
@@ -82,7 +83,7 @@ function buildMenuUI({ gateway, wallet }) {
   `;
 
   wireTabs(root);
-  wireRebalancePanel(root, { essence, v });
+  wireTransmutePanel(root, { essence, v, softCap });
   wireChargePanel(root, { essence });
   wireShardsPanel(root, { essence, shards, tier });
   wireContribPanel(root, { essence });
@@ -92,12 +93,20 @@ function buildMenuUI({ gateway, wallet }) {
 
 /** ---------- Summary ---------- */
 function renderStoneSummary(chargePct, tier){
-  const tiers = 5, lit = Math.floor(chargePct * tiers), frac = (chargePct * tiers) - lit;
+  const tiers = 5;
+  const litCount = Math.floor(chargePct * tiers);
+  const frac = (chargePct * tiers) - litCount;
+
+  // reverse: inner ring = highest index, so light from inner → outer
   const rings = Array.from({length: tiers}).map((_, i) => {
-    const idx = i + 1; let cls = 'ring';
-    if (idx <= lit) cls += ' ring-on'; else if (idx === lit + 1 && frac > 0.01) cls += ' ring-partial';
+    const idx = i + 1;                 // 1..5 (1=outer, 5=inner due to scale)
+    const innerIndex = tiers - idx + 1; // convert to inner-order rank (5..1)
+    let cls = 'ring';
+    if (innerIndex <= litCount) cls += ' ring-on';
+    else if (innerIndex === litCount + 1 && frac > 0.01) cls += ' ring-partial';
     return `<span class="${cls}" style="--i:${idx}"></span>`;
   }).join('');
+
   const pctLabel = Math.round(chargePct * 100);
   return `
     <div class="stone-wrap" aria-label="Spirit Stone Charge ${pctLabel}%">
@@ -111,12 +120,11 @@ function renderStoneSummary(chargePct, tier){
   `;
 }
 
-function renderSummaryRows({ essence, shieldCur, shieldMax, shards }){
+function renderSummaryRows({ essence, shards }){
   return `
     <div class="summary-rows">
       <div class="summary-row"><div class="summary-row__label">Essence</div><div class="summary-row__value js-ess">${fmt(essence)}</div></div>
       <div class="summary-row"><div class="summary-row__label">Soul Shards</div><div class="summary-row__value js-shards">${fmt(shards)}</div></div>
-      <div class="summary-row"><div class="summary-row__label">Energy Shield (Escrow)</div><div class="summary-row__value">${fmt(shieldCur)} <span class="sep">/</span> ${fmt(shieldMax)}</div></div>
     </div>
   `;
 }
@@ -134,13 +142,13 @@ function wireTabs(root){
 }
 
 /** =========================================================
- *  REBALANCE: Essence → Pools with precision + quick fills
+ *  TRANSMUTE: Essence → Pools (hold→preview, confirm modal)
  *  =======================================================*/
-function panelRebalance(essence, v){
+function panelTransmute(essence, v, softCap){
   const pct = k => (v[k].max ? Math.round((v[k].cur / v[k].max)*100) : 0);
   return `
     <div class="panel-wrap">
-      <p class="panel-note">Refill your pools from Essence. Hold to pour (precise), or use quick actions.</p>
+      <p class="panel-note">Refill your pools using stored Essence.</p>
 
       <div class="pools-grid">
         ${renderPoolBar('health', v.health.cur, v.health.max, pct('health'))}
@@ -148,11 +156,13 @@ function panelRebalance(essence, v){
         ${renderPoolBar('stamina',v.stamina.cur,v.stamina.max,pct('stamina'))}
       </div>
 
+      ${renderEssenceBar(essence, softCap)}
+
       <div class="target-pools">
         <span class="tgt-label">Target:</span>
-        <button class="pool-btn is-active" data-target="health">Health</button>
-        <button class="pool-btn" data-target="mana">Mana</button>
-        <button class="pool-btn" data-target="stamina">Stamina</button>
+        <button class="pool-btn pill health is-active" data-target="health">Health</button>
+        <button class="pool-btn pill mana" data-target="mana">Mana</button>
+        <button class="pool-btn pill stamina" data-target="stamina">Stamina</button>
       </div>
 
       <div class="charge-meter">
@@ -166,24 +176,15 @@ function panelRebalance(essence, v){
       <div class="quick-row">
         <button class="quick full-selected">Fill Selected to Full</button>
         <button class="quick full-all">Fill All to Full</button>
-        <button class="quick split-all">Split Evenly</button>
-      </div>
-
-      <div class="exact-row">
-        <label>Exact amount (£)
-          <input class="amt-input" type="number" min="1" step="0.01" placeholder="e.g. 25">
-        </label>
-        <button class="btn-transfer-exact">Transfer Exact</button>
       </div>
 
       <button class="transmute-hold" aria-label="Hold to transfer">Hold to Transfer</button>
-      <div class="rebalance-hint">Bars show current (%) in solid colour and planned fill as striped overlay.</div>
+      <div class="rebalance-hint">Pool bars show current (solid) and planned (striped). Essence bar shows current and planned deduction.</div>
     </div>
   `;
 }
 
 function renderPoolBar(key, cur, max, pct){
-  // colour via class; overlay will be another inner bar (.plan-k)
   return `
     <div class="poolbar ${key}" data-key="${key}" data-cur="${cur}" data-max="${max}">
       <div class="poolbar__hdr">
@@ -198,18 +199,36 @@ function renderPoolBar(key, cur, max, pct){
   `;
 }
 
-function wireRebalancePanel(root, { essence, v }){
+function renderEssenceBar(essence, softCap){
+  const cur = essence;
+  const max = Math.max(softCap || cur || 1, 1);
+  const pct = Math.round((cur / max) * 100);
+  return `
+    <div class="essbar" data-cur="${cur}" data-max="${max}">
+      <div class="poolbar__hdr">
+        <span class="poolbar__name">Essence</span>
+        <span class="poolbar__val">£${fmt(cur)} <b>(${pct}%)</b></span>
+      </div>
+      <div class="poolbar__track">
+        <!-- base (solid) = current/remaining essence vs softCap -->
+        <div class="poolbar__fill base ess-base" style="width:${pct}%"></div>
+        <!-- plan (striped) = slice to be deducted; starts at remaining -->
+        <div class="poolbar__fill plan ess-plan" style="left:${pct}%; width:0%"></div>
+      </div>
+    </div>
+  `;
+}
+
+
+function wireTransmutePanel(root, { essence, v, softCap }){
   const wrap = root.closest('.spirit-card') || root;
 
-  // Selectors
   const targetBtns = [...root.querySelectorAll('.pool-btn')];
-  const fill  = root.querySelector('[data-panel="rebalance"] .charge-fill.plan') || root.querySelector('.charge-fill.plan');
-  const amtEl = root.querySelector('[data-panel="rebalance"] .cs-amt') || root.querySelector('.cs-amt');
-  const essEl = root.querySelector('[data-panel="rebalance"] .cs-ess') || root.querySelector('.cs-ess');
-  const tgtEl = root.querySelector('[data-panel="rebalance"] .cs-target') || root.querySelector('.cs-target');
+  const fill  = root.querySelector('[data-panel="transmute"] .charge-fill.plan') || root.querySelector('.charge-fill.plan');
+  const amtEl = root.querySelector('[data-panel="transmute"] .cs-amt') || root.querySelector('.cs-amt');
+  const essEl = root.querySelector('[data-panel="transmute"] .cs-ess') || root.querySelector('.cs-ess');
+  const tgtEl = root.querySelector('[data-panel="transmute"] .cs-target') || root.querySelector('.cs-target');
   const btnHold = root.querySelector('.transmute-hold');
-  const exactInp= root.querySelector('.amt-input');
-  const btnExact= root.querySelector('.btn-transfer-exact');
 
   const headEssEl = wrap.querySelector('.summary-row .js-ess');
   const poolsEls  = {
@@ -218,7 +237,13 @@ function wireRebalancePanel(root, { essence, v }){
     stamina:root.querySelector('.poolbar.stamina'),
   };
 
-  // Paint base widths
+// Essence bar elements (uses softCap as max)
+  const essBar  = root.querySelector('.essbar');
+  const essBase = essBar.querySelector('.ess-base');
+  const essPlan = essBar.querySelector('.ess-plan');
+  const essMax  = Number(essBar.dataset.max || softCap || 0);
+
+  // Paint base pool widths
   for (const k of Object.keys(poolsEls)){
     const el = poolsEls[k];
     const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
@@ -226,64 +251,117 @@ function wireRebalancePanel(root, { essence, v }){
     el.querySelector('.poolbar__fill.base').style.width = `${clamp(pct,0,100)}%`;
   }
 
-  // Planned overlay painters
-  function previewPlan(targetKey, amount){
-    // cap by essence
-    const ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
-    const planned = clamp(amount, 0, ess);
+  // Essence base = current/softCap
+  const essNow0 = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+  const essPct0 = essMax ? (essNow0 / essMax) * 100 : 0;
+  // essBase.style.width = `${clamp(essPct0,0,100)}%`;
+  // essPlan.style.width = `${clamp(essPct0,0,100)}%`;
+  essBase.style.width = `${clamp(essPct0,0,100)}%`;
+  essPlan.style.left  = `${clamp(essPct0,0,100)}%`;
+  essPlan.style.width = `0%`;
 
-    // Compute effect on target bar
+  function previewPlan(targetKey, amount){
+    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+    const planned = clamp(amount, 0, essNow);
+
+    // Target pool preview
     const el = poolsEls[targetKey];
     const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const toAdd = clamp(planned, 0, Math.max(0, max - cur)); // cannot exceed pool cap
+    const toAdd = clamp(planned, 0, Math.max(0, max - cur));
 
-    const newPct = max ? ((cur + toAdd) / max) * 100 : 0;
-    const basePct= max ? (cur / max)*100 : 0;
+    // Reset planned overlays
+    root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
 
-    // Charge meter bar (relative to Essence)
-    const essStart = ess;
-    const pctMeter = essStart ? (planned / essStart) * 100 : 0;
+    // Paint pool planned
+    const basePct = max ? (cur / max) * 100 : 0;
+    const newPct  = max ? ((cur + toAdd) / max) * 100 : 0;
+    el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
+    el.querySelector('.poolbar__fill.plan').style.width  = `${clamp(newPct,0,100)}%`;
+
+    // Meter (relative to available essence)
+    const pctMeter = essNow ? (planned / essNow) * 100 : 0;
     fill.style.width = `${pctMeter.toFixed(2)}%`;
     amtEl.textContent = fmt(planned, 2);
 
-    // Reset all planned overlays
-    root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
-
-    // Paint planned overlay for target
-    el.querySelector('.poolbar__fill.plan').style.width = `${clamp(newPct,0,100)}%`;
-    el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
+    // // Essence planned (remaining vs softCap)
+    // Essence bars:
+    //   base (solid)   = remaining after deduction
+    //   plan (striped) = ONLY the slice to be deducted (from remaining → current)
+    const curPct = essMax ? (essNow / essMax) * 100 : 0;
+    const remPct = essMax ? (clamp(essNow - planned, 0, essNow) / essMax) * 100 : 0;
+    const slice  = clamp(curPct - remPct, 0, 100);
+    essBase.style.width = `${clamp(remPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `${slice}%`;
   }
 
   function commitTransfer(targetKey, amount){
-    const ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
-    let planned = clamp(amount, 0, ess);
+    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+    let planned = clamp(amount, 0, essNow);
 
     const el = poolsEls[targetKey];
     const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
     const toAdd = clamp(planned, 0, Math.max(0, max - cur));
-    planned = toAdd; // actual used
-
+    planned = toAdd;
     if (planned <= 0.01) return;
 
-    // Event for backend
     window.dispatchEvent(new CustomEvent('spirit:transmute', {
       detail: { amount: Number(planned.toFixed(2)), from: 'essence', to: targetKey }
     }));
 
-    // Local UX: reduce Essence, raise pool, clear plan
-    const nextEss = clamp(ess - planned, 0, 9e12);
+    // Update essence
+    const nextEss = clamp(essNow - planned, 0, 9e12);
     essEl.textContent = fmt(nextEss);
     if (headEssEl) headEssEl.textContent = fmt(nextEss);
 
+    // Update pool
     const newCur = cur + planned;
     el.dataset.cur = String(newCur);
     const basePct= max ? (newCur/max)*100 : 0;
     el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
     el.querySelector('.poolbar__fill.plan').style.width  = '0%';
 
-    // clear meter
+    // // Update essence planned (remaining vs softCap)
+    // After commit, both bars equal the new current (no pending deduction)
+    const newPct = essMax ? (nextEss / essMax) * 100 : 0;
+    essBase.style.width = `${clamp(newPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(newPct,0,100)}%`;
+    essPlan.style.width = `0%`;
+
     fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 250);
     fill.style.width = '0%'; amtEl.textContent = '0';
+  }
+
+  // Lightweight in-menu confirm modal (no MyFiModal child swap)
+  function openConfirmTransmute(targetKey, planned){
+    const host = root.closest('.summary-card') || root.closest('.spirit-card') || document.body;
+    const shell = document.createElement('div');
+    shell.className = 'inline-confirm';
+    shell.innerHTML = `
+      <div class="inline-card">
+        <div class="inline-hd"><b>Confirm Transmute</b></div>
+        <div class="inline-body">
+          <p>Transfer to <b>${uc(targetKey)}</b></p>
+          <label>Amount (£)
+            <input class="confirm-input" type="number" min="0.01" step="0.01" value="${Number(planned||0).toFixed(2)}" />
+          </label>
+        </div>
+        <div class="inline-actions">
+          <button class="btn-cancel">Cancel</button>
+          <button class="btn-confirm">Confirm</button>
+        </div>
+      </div>
+    `;
+    host.appendChild(shell);
+
+    const close = ()=> shell.remove();
+    shell.addEventListener('click', e => { if (e.target === shell) close(); });
+    shell.querySelector('.btn-cancel').addEventListener('click', close);
+    shell.querySelector('.btn-confirm').addEventListener('click', ()=>{
+      const n = Number(shell.querySelector('.confirm-input').value||0);
+      close();
+      if (Number.isFinite(n) && n>0) commitTransfer(targetKey, n);
+    });
   }
 
   // Target selection
@@ -294,7 +372,7 @@ function wireRebalancePanel(root, { essence, v }){
     previewPlan(target, 0);
   }));
 
-  // Hold-to-transfer (precision via hold)
+  // Hold-to-preview then confirm
   let raf=null,start=0,running=false, planned=0;
   const MAX_RATE_PER_SEC = Math.max(1, (Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence)/6);
 
@@ -307,16 +385,15 @@ function wireRebalancePanel(root, { essence, v }){
     raf = requestAnimationFrame(step);
   };
 
-  const commitHold=()=>{ running=false; cancelAnimationFrame(raf); start=0; commitTransfer(target, planned); planned=0; };
+  const endHold=()=>{ running=false; cancelAnimationFrame(raf); start=0; openConfirmTransmute(target, planned); planned=0; };
 
   btnHold.addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(running) return; running=true; btnHold.classList.add('is-armed'); raf=requestAnimationFrame(step); }, {passive:false});
-  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); commitHold(); };
+  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); endHold(); };
   ['pointerup','pointercancel','pointerleave','keyup','blur'].forEach(ev=>{ (ev==='keyup'?window:btnHold).addEventListener(ev, stop); });
 
   // Quick actions
   const btnFullSel = root.querySelector('.quick.full-selected');
   const btnFullAll = root.querySelector('.quick.full-all');
-  const btnSplit   = root.querySelector('.quick.split-all');
 
   btnFullSel.addEventListener('click', ()=>{
     const ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
@@ -325,39 +402,16 @@ function wireRebalancePanel(root, { essence, v }){
   });
 
   btnFullAll.addEventListener('click', ()=>{
-    let ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
-    const keys = ['health','mana','stamina'];
-    for (const k of keys){
-      if (ess <= 0) break;
+    let essAvail = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
+    for (const k of ['health','mana','stamina']){
+      if (essAvail <= 0) break;
       const el = poolsEls[k]; const cur=+el.dataset.cur, max=+el.dataset.max;
       const need = Math.max(0, max - cur);
-      const use  = Math.min(ess, need);
-      if (use>0){ commitTransfer(k, use); ess -= use; }
+      const use  = Math.min(essAvail, need);
+      if (use>0){ commitTransfer(k, use); essAvail -= use; }
     }
-  });
+  });  
 
-  btnSplit.addEventListener('click', ()=>{
-    let ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
-    const deficits = ['health','mana','stamina'].map(k=>{
-      const el = poolsEls[k]; const cur=+el.dataset.cur, max=+el.dataset.max; return {k, need: Math.max(0, max - cur)};
-    });
-    const totalNeed = deficits.reduce((a,b)=>a+b.need,0);
-    if (totalNeed<=0 || ess<=0) return;
-    for (const d of deficits){
-      const share = Math.min(ess * (d.need/totalNeed), d.need);
-      if (share>0){ commitTransfer(d.k, share); ess -= share; }
-    }
-  });
-
-  // Exact amount
-  btnExact.addEventListener('click', ()=>{
-    const n = Number(exactInp.value || 0);
-    if (!Number.isFinite(n) || n <= 0) return;
-    commitTransfer(target, n);
-    exactInp.value = '';
-  });
-
-  // Initial
   previewPlan(target, 0);
 }
 
@@ -502,7 +556,6 @@ function wireShardsPanel(root, { essence }){
     // Stripe-ready envelope
     window.dispatchEvent(new CustomEvent('spirit:checkout', { detail: { kind: 'shards', amountGBP: total, options: { quantity: q, unitPrice: UNIT_PRICE } } }));
 
-    // local UX: reduce essence display
     const nextEss = clamp(ess - total, 0, 9e12);
     if (headEss) headEss.textContent = fmt(nextEss);
     buy.classList.add('flash'); setTimeout(()=>buy.classList.remove('flash'), 300);
@@ -543,12 +596,9 @@ function wireContribPanel(root, { essence }){
     if (!Number.isFinite(n) || n <= 0) return;
     n = Math.min(n, ess);
 
-    // Stripe-ready envelope (reuse essenceMenu backend)
     window.dispatchEvent(new CustomEvent('spirit:checkout', {
       detail: { kind: 'contribution', amountGBP: Number(n.toFixed(2)), options: {} }
     }));
-
-    // (Optional) local UX – don’t actually deduct Essence until backend returns
   });
 }
 
@@ -568,13 +618,14 @@ function attachFallbackOverlay(node){
   .spirit-card{ display:grid; gap:10px; width:min(560px, 92vw); }
   .spirit-summary{ display:grid; grid-template-columns: 120px 1fr; gap:12px; padding:10px; border:1px solid rgba(255,255,255,.10); border-radius:14px; background: rgba(255,255,255,.04); }
   .stone-wrap{ display:grid; justify-items:center; align-content:center; }
-  .stone-core{ position:relative; width:96px; height:96px; border-radius:999px; background: radial-gradient(circle at 50% 40%, rgba(168,85,247,.55), rgba(155,93,229,.25) 60%, transparent 62%); box-shadow: 0 0 20px rgba(155,93,229,.35), inset 0 0 8px rgba(255,255,255,.08); }
+  .stone-core{ position:relative; width:96px; height:96px; border-radius:999px; background: radial-gradient(circle at 50% 50%, rgba(168,85,247,.55), rgba(155,93,229,.25) 60%, transparent 62%); box-shadow: 0 0 20px rgba(155,93,229,.35), inset 0 0 8px rgba(255,255,255,.08); }
   .stone-glow{ position:absolute; inset:-8px; border-radius:999px; box-shadow: 0 0 22px rgba(155,93,229,.45), inset 0 0 10px rgba(255,255,255,.06); pointer-events:none; }
   .stone-core .ring{ position:absolute; inset:0; border-radius:999px; border:2px solid rgba(255,255,255,.08); transform: scale(calc(1 - (var(--i) * 0.08))); }
   .stone-core .ring-on{ border-color: rgba(240,220,160,.85); box-shadow: 0 0 8px rgba(240,220,160,.35); }
   .stone-core .ring-partial{ border-color: rgba(240,220,160,.55); box-shadow: 0 0 6px rgba(240,220,160,.22), inset 0 0 6px rgba(240,220,160,.1); }
-  .stone-label{ position:absolute; inset:auto 0 10px 0; text-align:center; font-weight:800; font-family:'Cinzel', serif; color:#f0e6d2; }
+  .stone-label{ position:absolute; left:50%; top:50%; transform: translate(-50%,-50%); text-align:center; font-weight:800; font-family:'Cinzel', serif; color:#f0e6d2; }
   .stone-caption{ margin-top:6px; font-size:.9rem; opacity:.85; text-align:center; }
+
   .summary-rows{ display:grid; gap:6px; align-content:start; }
   .summary-row{ display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .summary-row__label{ opacity:.9; }
@@ -602,7 +653,7 @@ function attachFallbackOverlay(node){
   .charge-fill.flash{ animation: chargeFlash .35s ease; }
   @keyframes chargeFlash { 0%{filter:brightness(1)} 50%{filter:brightness(1.6)} 100%{filter:brightness(1)} }
   .charge-stats{ display:flex; align-items:center; justify-content:space-between; font-variant-numeric:tabular-nums; }
-  .charge-hold, .transmute-hold, .btn-transfer-exact, .btn-buy-shards, .btn-contrib-stripe, .quick { padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
+  .charge-hold, .transmute-hold, .btn-buy-shards, .btn-contrib-stripe, .quick { padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
   .charge-hold.is-armed, .transmute-hold.is-armed{ box-shadow: 0 0 10px rgba(240,220,160,.35), inset 0 0 8px rgba(240,220,160,.2); }
 
   .pools-grid{ display:grid; gap:8px; }
@@ -615,16 +666,68 @@ function attachFallbackOverlay(node){
   .poolbar.mana   { --pool-base: rgba(75, 125, 220,.7); --pool-plan: repeating-linear-gradient(45deg, rgba(75,125,220,.35), rgba(75,125,220,.35) 8px, rgba(75,125,220,.20) 8px, rgba(75,125,220,.20) 16px); }
   .poolbar.stamina{ --pool-base: rgba(120, 200, 120,.7); --pool-plan: repeating-linear-gradient(45deg, rgba(120,200,120,.35), rgba(120,200,120,.35) 8px, rgba(120,200,120,.20) 8px, rgba(120,200,120,.20) 16px); }
 
-  .target-pools{ display:flex; gap:8px; align-items:center; }
+  /* Essence bar uses magenta theme (matches vitals) */
+  .essbar .ess-base{
+    background: rgba(155,93,229,.55);      /* solid magenta */
+    z-index: 1;
+  }
+  .essbar .ess-plan{
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(155,93,229,.35),
+      rgba(155,93,229,.35) 8px,
+      rgba(240,220,160,.25) 8px,
+      rgba(240,220,160,.25) 16px
+    );
+    z-index: 2;
+  }
+
+  /* Inline confirm overlay (stays in same menu) */
+  .inline-confirm{
+    position: fixed; inset: 0; display: grid; place-items: center;
+    background: rgba(0,0,0,.35); z-index: 9999;
+  }
+  .inline-card{
+    width: min(380px, 92vw); border-radius: 14px;
+    background: rgba(20,20,35,.9);
+    border: 1px solid rgba(255,255,255,.12);
+    box-shadow: 0 10px 30px rgba(0,0,0,.4);
+    display: grid; gap: 10px; padding: 12px;
+  }
+  .inline-hd{ font-weight: 800; }
+  .inline-body{ display: grid; gap: 8px; }
+  .inline-body input{
+    width: 160px; padding: 8px; border-radius: 10px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06); color:#f0e6d2; text-align: right;
+  }
+  .inline-actions{ display:flex; gap:8px; justify-content:flex-end; }
+  .inline-actions .btn-cancel, .inline-actions .btn-confirm{
+    padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
+  }
+
+
+  .target-pools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tgt-label{ opacity:.85; margin-right:4px; }
+  .pool-btn.pill{ border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+  .pool-btn.pill.health.is-active { background: rgba(220, 83,100,.25); box-shadow: 0 0 8px rgba(220,83,100,.35); }
+  .pool-btn.pill.mana.is-active   { background: rgba(75,125,220,.25);  box-shadow: 0 0 8px rgba(75,125,220,.35); }
+  .pool-btn.pill.stamina.is-active{ background: rgba(120,200,120,.25); box-shadow: 0 0 8px rgba(120,200,120,.35); }
 
   .quick-row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .exact-row{ display:flex; gap:8px; align-items:center; }
-  .exact-row input{ width:140px; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color:#f0e6d2; text-align:right; }
+  .exact-row{ display:none; } /* removed per spec */
+
   .shards-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .qty{ display:grid; grid-template-columns: 34px 80px 34px; gap:6px; }
   .qty button{ padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
   .qty-input{ text-align:center; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color:#f0e6d2; }
+
+  /* Confirm card */
+  .confirm-card .confirm-body{ display:grid; gap:10px; padding:10px; }
+  .confirm-card input{ width:140px; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color:#f0e6d2; text-align:right; }
+  .confirm-actions{ display:flex; gap:8px; justify-content:flex-end; }
+  .confirm-actions .btn-cancel, .confirm-actions .btn-confirm{ padding:8px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer; }
   `;
   const tag = document.createElement('style'); tag.id = 'spirit-stone-css'; tag.textContent = css; document.head.appendChild(tag);
 })();
