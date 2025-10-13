@@ -6,7 +6,7 @@
 import { refreshVitals } from "./energy-vitals.js";
 
 // Read-only wallet helpers
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 /** ---------- Utils ---------- */
@@ -64,7 +64,7 @@ function buildMenuUI({ gateway, wallet }) {
   root.innerHTML = `
     <div class="spirit-summary">
       ${renderStoneSummary(chargePct, tier)}
-      ${renderSummaryRows({ essence, shards })}
+      ${renderSummaryRows({ essence, shards, tier })}
     </div>
 
     <div class="spirit-tabs">
@@ -92,15 +92,15 @@ function buildMenuUI({ gateway, wallet }) {
 }
 
 /** ---------- Summary ---------- */
-function renderStoneSummary(chargePct, tier){
+function renderStoneSummary(chargePct, _tier){
   const tiers = 5;
   const litCount = Math.floor(chargePct * tiers);
   const frac = (chargePct * tiers) - litCount;
 
-  // reverse: inner ring = highest index, so light from inner → outer
+  // inner → outer glow order
   const rings = Array.from({length: tiers}).map((_, i) => {
-    const idx = i + 1;                 // 1..5 (1=outer, 5=inner due to scale)
-    const innerIndex = tiers - idx + 1; // convert to inner-order rank (5..1)
+    const idx = i + 1;                 // 1..5 (1=outer)
+    const innerIndex = tiers - idx + 1; // 5..1 (5 = inner)
     let cls = 'ring';
     if (innerIndex <= litCount) cls += ' ring-on';
     else if (innerIndex === litCount + 1 && frac > 0.01) cls += ' ring-partial';
@@ -115,19 +115,21 @@ function renderStoneSummary(chargePct, tier){
         ${rings}
         <div class="stone-label">${pctLabel}%</div>
       </div>
-      <div class="stone-caption">Spirit Stone • Tier ${tier}</div>
     </div>
   `;
 }
 
-function renderSummaryRows({ essence, shards }){
+
+function renderSummaryRows({ essence, shards, tier }){
   return `
     <div class="summary-rows">
+      <div class="summary-caption">Spirit Stone • Tier ${tier}</div>
       <div class="summary-row"><div class="summary-row__label">Essence</div><div class="summary-row__value js-ess">${fmt(essence)}</div></div>
       <div class="summary-row"><div class="summary-row__label">Soul Shards</div><div class="summary-row__value js-shards">${fmt(shards)}</div></div>
     </div>
   `;
 }
+
 
 /** ---------- Tabs ---------- */
 function wireTabs(root){
@@ -167,9 +169,8 @@ function panelTransmute(essence, v, softCap){
 
       <div class="charge-meter">
         <div class="charge-bar"><div class="charge-fill plan" style="width:0%"></div></div>
-        <div class="charge-stats">
-          <span class="cs-left">Planned: £<span class="cs-amt">0</span> → <b class="cs-target">Health</b></span>
-          <span class="cs-right">Essence: £<span class="cs-ess">${fmt(essence)}</span></span>
+        <div class="charge-stats centered">
+          <span class="plan-label health">Planned: £<span class="cs-amt">0</span> → <b class="cs-target">Health</b></span>
         </div>
       </div>
 
@@ -179,10 +180,15 @@ function panelTransmute(essence, v, softCap){
       </div>
 
       <button class="transmute-hold" aria-label="Hold to transfer">Hold to Transfer</button>
-      <div class="rebalance-hint">Pool bars show current (solid) and planned (striped). Essence bar shows current and planned deduction.</div>
+
+      <div class="footer-actions">
+        <button class="btn-reset" data-action="reset">Reset</button>
+        <button class="btn-confirm" data-action="confirm">Confirm</button>
+      </div>
     </div>
   `;
 }
+
 
 function renderPoolBar(key, cur, max, pct){
   return `
@@ -223,58 +229,116 @@ function renderEssenceBar(essence, softCap){
 function wireTransmutePanel(root, { essence, v, softCap }){
   const wrap = root.closest('.spirit-card') || root;
 
+  // UI nodes
   const targetBtns = [...root.querySelectorAll('.pool-btn')];
   const fill  = root.querySelector('[data-panel="transmute"] .charge-fill.plan') || root.querySelector('.charge-fill.plan');
   const amtEl = root.querySelector('[data-panel="transmute"] .cs-amt') || root.querySelector('.cs-amt');
-  const essEl = root.querySelector('[data-panel="transmute"] .cs-ess') || root.querySelector('.cs-ess');
+  const planLabel = root.querySelector('[data-panel="transmute"] .plan-label') || root.querySelector('.plan-label');
   const tgtEl = root.querySelector('[data-panel="transmute"] .cs-target') || root.querySelector('.cs-target');
   const btnHold = root.querySelector('.transmute-hold');
+  const btnReset = root.querySelector('.footer-actions .btn-reset');
+  const btnConfirmFooter = root.querySelector('.footer-actions .btn-confirm');
 
   const headEssEl = wrap.querySelector('.summary-row .js-ess');
+
+  const getEssNow = () =>
+    Number(String(headEssEl?.textContent || '').replace(/[,£]/g,'')) || Number(essence) || 0;
+
+  // colour utility: toggle class on host for CSS theming
+  const host = root.closest('.spirit-card');
+  const setTargetTheme = (k)=>{
+    host?.classList.remove('tgt-health','tgt-mana','tgt-stamina');
+    host?.classList.add(`tgt-${k}`);
+    planLabel?.classList.remove('health','mana','stamina');
+    planLabel?.classList.add(k);
+  };
+
+  // Pool DOM
   const poolsEls  = {
     health: root.querySelector('.poolbar.health'),
     mana:   root.querySelector('.poolbar.mana'),
     stamina:root.querySelector('.poolbar.stamina'),
   };
 
-// Essence bar elements (uses softCap as max)
+  // Essence bar elements (uses softCap as max)
   const essBar  = root.querySelector('.essbar');
   const essBase = essBar.querySelector('.ess-base');
   const essPlan = essBar.querySelector('.ess-plan');
   const essMax  = Number(essBar.dataset.max || softCap || 0);
 
-  // Paint base pool widths
-  for (const k of Object.keys(poolsEls)){
-    const el = poolsEls[k];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const pct = max ? (cur/max)*100 : 0;
-    el.querySelector('.poolbar__fill.base').style.width = `${clamp(pct,0,100)}%`;
+  /** ======== STATE ======== */
+  const baseline = {
+    essence: getEssNow(),
+    pools: {
+      health: { cur: Number(poolsEls.health.dataset.cur||0), max: Number(poolsEls.health.dataset.max||0) },
+      mana:   { cur: Number(poolsEls.mana.dataset.cur||0),   max: Number(poolsEls.mana.dataset.max||0) },
+      stamina:{ cur: Number(poolsEls.stamina.dataset.cur||0),max: Number(poolsEls.stamina.dataset.max||0) },
+    }
+  };
+  const working = JSON.parse(JSON.stringify(baseline));
+  /** list of {to:'health'|'mana'|'stamina', amount:number} */
+  let pendingActions = [];
+
+  // Paint functions from working state
+  function paintPools(){
+    for (const k of Object.keys(poolsEls)){
+      const el = poolsEls[k];
+      const cur = working.pools[k].cur, max = working.pools[k].max;
+      const pct = max ? (cur/max)*100 : 0;
+      el.dataset.cur = String(cur);
+      el.querySelector('.poolbar__fill.base').style.width = `${clamp(pct,0,100)}%`;
+      el.querySelector('.poolbar__fill.plan').style.width = '0%';
+      el.querySelector('.poolbar__val').innerHTML = `£${fmt(cur)} / £${fmt(max)} <b>(${max?Math.round((cur/max)*100):0}%)</b>`;
+    }
+  }
+  function paintEssenceBars(){
+    const essNow = working.essence;
+    const remPct = essMax ? (essNow / essMax) * 100 : 0;
+    essBase.style.width = `${clamp(remPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `0%`;
+    // 1) header summary number
+    if (headEssEl) headEssEl.textContent = fmt(essNow);
+    // 2) the Essence bar’s own value label
+    const essVal = essBar.querySelector('.poolbar__hdr .poolbar__val');
+    if (essVal){
+      const pctText = Math.round(clamp(remPct, 0, 100));
+      essVal.innerHTML = `£${fmt(essNow)} <b>(${pctText}%)</b>`;
+    }
+
+    // Keep Charge Essence Value text
+    const chargeEss = wrap.querySelector('[data-panel="charge"] .cs-ess');
+    if (chargeEss) chargeEss.textContent = fmt(essNow);
+  }
+  function clearPlanPreview(){
+    root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
+    fill.style.width = '0%';
+    amtEl.textContent = '0';
+    // reset essence plan slice to 0 (keep base at working)
+    const remPct = essMax ? (working.essence / essMax) * 100 : 0;
+    essBase.style.width = `${clamp(remPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `0%`;
   }
 
-  // Essence base = current/softCap
-  const essNow0 = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
-  const essPct0 = essMax ? (essNow0 / essMax) * 100 : 0;
-  // essBase.style.width = `${clamp(essPct0,0,100)}%`;
-  // essPlan.style.width = `${clamp(essPct0,0,100)}%`;
-  essBase.style.width = `${clamp(essPct0,0,100)}%`;
-  essPlan.style.left  = `${clamp(essPct0,0,100)}%`;
-  essPlan.style.width = `0%`;
+  // Initial paints
+  paintPools();
+  paintEssenceBars();
 
+  /** ======== PREVIEW ======== */
   function previewPlan(targetKey, amount){
-    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
-    const planned = clamp(amount, 0, essNow);
-
-    // Target pool preview
+    const essNow = working.essence;
     const el = poolsEls[targetKey];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const toAdd = clamp(planned, 0, Math.max(0, max - cur));
+    const cur = working.pools[targetKey].cur, max = working.pools[targetKey].max;
 
-    // Reset planned overlays
+    // clamp against both essence and pool capacity
+    const need = Math.max(0, max - cur);
+    const planned = clamp(amount, 0, Math.min(essNow, need));
+
+    // Planned overlay: pool
     root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
-
-    // Paint pool planned
     const basePct = max ? (cur / max) * 100 : 0;
-    const newPct  = max ? ((cur + toAdd) / max) * 100 : 0;
+    const newPct  = max ? ((cur + planned) / max) * 100 : 0;
     el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
     el.querySelector('.poolbar__fill.plan').style.width  = `${clamp(newPct,0,100)}%`;
 
@@ -283,57 +347,104 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     fill.style.width = `${pctMeter.toFixed(2)}%`;
     amtEl.textContent = fmt(planned, 2);
 
-    // // Essence planned (remaining vs softCap)
-    // Essence bars:
-    //   base (solid)   = remaining after deduction
-    //   plan (striped) = ONLY the slice to be deducted (from remaining → current)
+    // Essence plan slice (striped)
     const curPct = essMax ? (essNow / essMax) * 100 : 0;
-    const remPct = essMax ? (clamp(essNow - planned, 0, essNow) / essMax) * 100 : 0;
+    const remPct = essMax ? ((essNow - planned) / essMax) * 100 : 0;
     const slice  = clamp(curPct - remPct, 0, 100);
     essBase.style.width = `${clamp(remPct,0,100)}%`;
     essPlan.style.left  = `${clamp(remPct,0,100)}%`;
     essPlan.style.width = `${slice}%`;
+
+    return planned; // return clamped amount (for auto-stop)
   }
 
-  function commitTransfer(targetKey, amount){
-    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
-    let planned = clamp(amount, 0, essNow);
+  /** ======== APPLY TO WORKING (TEMP, no Firestore) ======== */
+  function applyTransferToWorking(targetKey, amount){
+    const planned = previewPlan(targetKey, amount); // ensures clamped value
+    if (planned <= 0) { clearPlanPreview(); return 0; }
 
-    const el = poolsEls[targetKey];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const toAdd = clamp(planned, 0, Math.max(0, max - cur));
-    planned = toAdd;
-    if (planned <= 0.01) return;
+    working.essence = clamp(working.essence - planned, 0, 9e12);
+    working.pools[targetKey].cur = clamp(
+      working.pools[targetKey].cur + planned, 0, working.pools[targetKey].max
+    );
 
-    window.dispatchEvent(new CustomEvent('spirit:transmute', {
-      detail: { amount: Number(planned.toFixed(2)), from: 'essence', to: targetKey }
-    }));
+    // reflect working state on UI
+    paintPools();
+    paintEssenceBars();
+    fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 200);
+    clearPlanPreview();
 
-    // Update essence
-    const nextEss = clamp(essNow - planned, 0, 9e12);
-    essEl.textContent = fmt(nextEss);
-    if (headEssEl) headEssEl.textContent = fmt(nextEss);
-
-    // Update pool
-    const newCur = cur + planned;
-    el.dataset.cur = String(newCur);
-    const basePct= max ? (newCur/max)*100 : 0;
-    el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
-    el.querySelector('.poolbar__fill.plan').style.width  = '0%';
-
-    // // Update essence planned (remaining vs softCap)
-    // After commit, both bars equal the new current (no pending deduction)
-    const newPct = essMax ? (nextEss / essMax) * 100 : 0;
-    essBase.style.width = `${clamp(newPct,0,100)}%`;
-    essPlan.style.left  = `${clamp(newPct,0,100)}%`;
-    essPlan.style.width = `0%`;
-
-    fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 250);
-    fill.style.width = '0%'; amtEl.textContent = '0';
+    // enqueue action
+    pendingActions.push({ to: targetKey, amount: Number(planned.toFixed(2)) });
+    return planned;
   }
 
-  // Lightweight in-menu confirm modal (no MyFiModal child swap)
-  function openConfirmTransmute(targetKey, planned){
+  // Target selection
+  let target = 'health';
+  targetBtns.forEach(b=>b.addEventListener('click', ()=>{
+    targetBtns.forEach(x=>x.classList.toggle('is-active', x===b));
+    target = b.dataset.target; tgtEl.textContent = uc(target);
+    setTargetTheme(target);
+    clearPlanPreview();
+  }));
+  setTargetTheme(target); // on load
+
+  // Hold-to-preview then confirm (auto-stop if capped or empty)
+  let raf=null,start=0,running=false, planned=0;
+  const MAX_RATE_PER_SEC = Math.max(1, working.essence/6);
+
+  const step=(t)=>{
+    if (!running) return;
+    if (!start) start = t;
+    const dt = (t - start)/1000;
+
+    // compute proposed amount and clamp by preview (returns clamped)
+    const rawPlanned = dt * MAX_RATE_PER_SEC;
+    const clamped = previewPlan(target, rawPlanned);
+    planned = clamped;
+
+    // Auto-stop if we hit a limit (no essence or capped)
+    const atEssenceEmpty = working.essence <= 0;
+    const atCap = clamped < rawPlanned - 1e-6; // preview had to clamp (hit cap/essence)
+    if (atEssenceEmpty || atCap) {
+      endHold();
+      return;
+    }
+    raf = requestAnimationFrame(step);
+  };
+
+  function endHold(){
+    running=false; cancelAnimationFrame(raf); start=0;
+    openConfirmTransmute(target, planned);
+    planned=0;
+  }
+
+  btnHold.addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(running) return; running=true; btnHold.classList.add('is-armed'); raf=requestAnimationFrame(step); }, {passive:false});
+  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); endHold(); };
+  ['pointerup','pointercancel','pointerleave','keyup','blur'].forEach(ev=>{ (ev==='keyup'?window:btnHold).addEventListener(ev, stop); });
+
+  // Quick actions (apply immediately to working)
+  const btnFullSel = root.querySelector('.quick.full-selected');
+  const btnFullAll = root.querySelector('.quick.full-all');
+
+  btnFullSel.addEventListener('click', ()=>{
+    const need = Math.max(0, working.pools[target].max - working.pools[target].cur);
+    const use  = Math.min(working.essence, need);
+    if (use>0) applyTransferToWorking(target, use);
+  });
+
+  btnFullAll.addEventListener('click', ()=>{
+    const order = ['health','mana','stamina'];
+    for (const k of order){
+      if (working.essence <= 0) break;
+      const need = Math.max(0, working.pools[k].max - working.pools[k].cur);
+      const use  = Math.min(working.essence, need);
+      if (use>0) applyTransferToWorking(k, use);
+    }
+  });
+
+  /** ======== Inline confirm modal ======== */
+  function openConfirmTransmute(targetKey, initial){
     const host = root.closest('.summary-card') || root.closest('.spirit-card') || document.body;
     const shell = document.createElement('div');
     shell.className = 'inline-confirm';
@@ -343,7 +454,7 @@ function wireTransmutePanel(root, { essence, v, softCap }){
         <div class="inline-body">
           <p>Transfer to <b>${uc(targetKey)}</b></p>
           <label>Amount (£)
-            <input class="confirm-input" type="number" min="0.01" step="0.01" value="${Number(planned||0).toFixed(2)}" />
+            <input class="confirm-input" type="number" min="0.01" step="0.01" value="${Number(initial||0).toFixed(2)}" />
           </label>
         </div>
         <div class="inline-actions">
@@ -356,64 +467,68 @@ function wireTransmutePanel(root, { essence, v, softCap }){
 
     const close = ()=> shell.remove();
     shell.addEventListener('click', e => { if (e.target === shell) close(); });
-    shell.querySelector('.btn-cancel').addEventListener('click', close);
+    shell.querySelector('.btn-cancel').addEventListener('click', ()=>{
+      // Cancel: revert preview only (no working change)
+      clearPlanPreview();
+      close();
+    });
     shell.querySelector('.btn-confirm').addEventListener('click', ()=>{
       const n = Number(shell.querySelector('.confirm-input').value||0);
       close();
-      if (Number.isFinite(n) && n>0) commitTransfer(targetKey, n);
+      if (Number.isFinite(n) && n>0) {
+        applyTransferToWorking(targetKey, n);
+      } else {
+        clearPlanPreview();
+      }
     });
   }
 
-  // Target selection
-  let target = 'health';
-  targetBtns.forEach(b=>b.addEventListener('click', ()=>{
-    targetBtns.forEach(x=>x.classList.toggle('is-active', x===b));
-    target = b.dataset.target; tgtEl.textContent = uc(target);
-    previewPlan(target, 0);
-  }));
-
-  // Hold-to-preview then confirm
-  let raf=null,start=0,running=false, planned=0;
-  const MAX_RATE_PER_SEC = Math.max(1, (Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence)/6);
-
-  const step=(t)=>{
-    if (!running) return;
-    if (!start) start = t;
-    const dt = (t - start)/1000;
-    planned = clamp(dt * MAX_RATE_PER_SEC, 0, Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence);
-    previewPlan(target, planned);
-    raf = requestAnimationFrame(step);
-  };
-
-  const endHold=()=>{ running=false; cancelAnimationFrame(raf); start=0; openConfirmTransmute(target, planned); planned=0; };
-
-  btnHold.addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(running) return; running=true; btnHold.classList.add('is-armed'); raf=requestAnimationFrame(step); }, {passive:false});
-  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); endHold(); };
-  ['pointerup','pointercancel','pointerleave','keyup','blur'].forEach(ev=>{ (ev==='keyup'?window:btnHold).addEventListener(ev, stop); });
-
-  // Quick actions
-  const btnFullSel = root.querySelector('.quick.full-selected');
-  const btnFullAll = root.querySelector('.quick.full-all');
-
-  btnFullSel.addEventListener('click', ()=>{
-    const ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
-    const el = poolsEls[target]; const cur=+el.dataset.cur, max=+el.dataset.max;
-    commitTransfer(target, Math.min(ess, Math.max(0, max - cur)));
+  /** ======== Footer actions ======== */
+  btnReset.addEventListener('click', ()=>{
+    // restore working from baseline & repaint
+    working.essence = baseline.essence;
+    for (const k of Object.keys(baseline.pools)){
+      working.pools[k].cur = baseline.pools[k].cur;
+      working.pools[k].max = baseline.pools[k].max;
+    }
+    pendingActions = [];
+    paintPools();
+    paintEssenceBars();
+    clearPlanPreview();
   });
 
-  btnFullAll.addEventListener('click', ()=>{
-    let essAvail = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
-    for (const k of ['health','mana','stamina']){
-      if (essAvail <= 0) break;
-      const el = poolsEls[k]; const cur=+el.dataset.cur, max=+el.dataset.max;
-      const need = Math.max(0, max - cur);
-      const use  = Math.min(essAvail, need);
-      if (use>0){ commitTransfer(k, use); essAvail -= use; }
-    }
-  });  
+  btnConfirmFooter.addEventListener('click', async ()=>{
+    if (pendingActions.length === 0) return;
 
-  previewPlan(target, 0);
+    // Firestore write: only wallet Essence here (pools are game-derived server state).
+    try{
+      const uid = getAuth().currentUser?.uid;
+      if (uid){
+        const db = getFirestore();
+        const ref = doc(db, `players/${uid}/wallet/main`);
+        await updateDoc(ref, { essence_free: Number(working.essence.toFixed(2)) });
+      }
+    }catch(e){ console.warn('Essence commit failed:', e); }
+
+    // Consolidated event to backend/game engine with the breakdown
+    window.dispatchEvent(new CustomEvent('spirit:transmutes:commit', {
+      detail: { actions: pendingActions.slice(), newEssence: working.essence }
+    }));
+
+    // New baseline = committed working; clear queue
+    baseline.essence = working.essence;
+    for (const k of Object.keys(baseline.pools)){
+      baseline.pools[k].cur = working.pools[k].cur;
+      baseline.pools[k].max = working.pools[k].max;
+    }
+    pendingActions = [];
+    clearPlanPreview();
+  });
+
+  // Initial preview clear
+  clearPlanPreview();
 }
+
 
 /** =========================================================
  *  CHARGE: Hold + Overcap handling + Stripe hook
@@ -626,7 +741,12 @@ function attachFallbackOverlay(node){
   .stone-label{ position:absolute; left:50%; top:50%; transform: translate(-50%,-50%); text-align:center; font-weight:800; font-family:'Cinzel', serif; color:#f0e6d2; }
   .stone-caption{ margin-top:6px; font-size:.9rem; opacity:.85; text-align:center; }
 
-  .summary-rows{ display:grid; gap:6px; align-content:start; }
+  /* Right-side caption above rows */
+  .summary-rows { display:grid; gap:6px; align-content:start; }
+  .summary-caption{
+    font-weight:800; letter-spacing:.2px; color:#f0e6d2; margin-bottom:2px;
+    opacity:.95;
+  }
   .summary-row{ display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .summary-row__label{ opacity:.9; }
   .summary-row__value{ font-variant-numeric: tabular-nums; }
@@ -711,12 +831,48 @@ function attachFallbackOverlay(node){
   .target-pools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tgt-label{ opacity:.85; margin-right:4px; }
   .pool-btn.pill{ border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+  /* Target pills: text colour matches pool (darker) */
+  .pool-btn.pill.health{ color:rgb(150,40,55); }
+  .pool-btn.pill.mana{   color:rgb(46,78,155); }
+  .pool-btn.pill.stamina{color:rgb(40,110,60); }
   .pool-btn.pill.health.is-active { background: rgba(220, 83,100,.25); box-shadow: 0 0 8px rgba(220,83,100,.35); }
   .pool-btn.pill.mana.is-active   { background: rgba(75,125,220,.25);  box-shadow: 0 0 8px rgba(75,125,220,.35); }
   .pool-btn.pill.stamina.is-active{ background: rgba(120,200,120,.25); box-shadow: 0 0 8px rgba(120,200,120,.35); }
 
-  .quick-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  /* Centred planned label + colour variants */
+  .charge-stats.centered{ justify-content:center; }
+  .plan-label{ font-weight:800; }
+  .plan-label.health{ color: rgb(220,83,100); }
+  .plan-label.mana{   color: rgb(75,125,220); }
+  .plan-label.stamina{color: rgb(120,200,120); }
+
+  /* Quick row: 2 equal buttons full width; first glows with selected vital */
+  .quick-row{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  .quick-row .quick{ width:100%; }
+  .tgt-health .quick.full-selected{ box-shadow:0 0 12px rgba(220,83,100,.35); border-color: rgba(220,83,100,.35); }
+  .tgt-mana   .quick.full-selected{ box-shadow:0 0 12px rgba(75,125,220,.35);  border-color: rgba(75,125,220,.35); }
+  .tgt-stamina.quick-row .full-selected,
+  .tgt-stamina .quick.full-selected{ box-shadow:0 0 12px rgba(120,200,120,.35); border-color: rgba(120,200,120,.35); }
   .exact-row{ display:none; } /* removed per spec */
+
+  /* Hold button: slightly taller and magenta */
+  .transmute-hold{
+    padding:14px 16px; /* taller */
+    background: rgba(155,93,229,.18);
+    border-color: rgba(155,93,229,.35);
+  }
+  .transmute-hold.is-armed{ box-shadow: 0 0 12px rgba(155,93,229,.45), inset 0 0 8px rgba(155,93,229,.25); }
+
+  /* Footer Reset / Confirm */
+  .footer-actions{
+    display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:2px;
+  }
+  .footer-actions .btn-reset,
+  .footer-actions .btn-confirm{
+    padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
+  }
+  .footer-actions .btn-confirm{ background: rgba(155,93,229,.18); border-color: rgba(155,93,229,.35); }
 
   .shards-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .qty{ display:grid; grid-template-columns: 34px 80px 34px; gap:6px; }

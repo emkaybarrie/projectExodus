@@ -6,7 +6,7 @@
 import { refreshVitals } from "./energy-vitals.js";
 
 // Read-only wallet helpers
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 /** ---------- Utils ---------- */
@@ -229,17 +229,20 @@ function renderEssenceBar(essence, softCap){
 function wireTransmutePanel(root, { essence, v, softCap }){
   const wrap = root.closest('.spirit-card') || root;
 
+  // UI nodes
   const targetBtns = [...root.querySelectorAll('.pool-btn')];
   const fill  = root.querySelector('[data-panel="transmute"] .charge-fill.plan') || root.querySelector('.charge-fill.plan');
   const amtEl = root.querySelector('[data-panel="transmute"] .cs-amt') || root.querySelector('.cs-amt');
   const planLabel = root.querySelector('[data-panel="transmute"] .plan-label') || root.querySelector('.plan-label');
   const tgtEl = root.querySelector('[data-panel="transmute"] .cs-target') || root.querySelector('.cs-target');
   const btnHold = root.querySelector('.transmute-hold');
+  const btnReset = root.querySelector('.footer-actions .btn-reset');
+  const btnConfirmFooter = root.querySelector('.footer-actions .btn-confirm');
 
   const headEssEl = wrap.querySelector('.summary-row .js-ess');
-  
+
   const getEssNow = () =>
-  Number(String(headEssEl?.textContent || '').replace(/[,£]/g,'')) || Number(essence) || 0;
+    Number(String(headEssEl?.textContent || '').replace(/[,£]/g,'')) || Number(essence) || 0;
 
   // colour utility: toggle class on host for CSS theming
   const host = root.closest('.spirit-card');
@@ -250,51 +253,92 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     planLabel?.classList.add(k);
   };
 
-  
+  // Pool DOM
   const poolsEls  = {
     health: root.querySelector('.poolbar.health'),
     mana:   root.querySelector('.poolbar.mana'),
     stamina:root.querySelector('.poolbar.stamina'),
   };
 
-// Essence bar elements (uses softCap as max)
+  // Essence bar elements (uses softCap as max)
   const essBar  = root.querySelector('.essbar');
   const essBase = essBar.querySelector('.ess-base');
   const essPlan = essBar.querySelector('.ess-plan');
   const essMax  = Number(essBar.dataset.max || softCap || 0);
 
-  // Paint base pool widths
-  for (const k of Object.keys(poolsEls)){
-    const el = poolsEls[k];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const pct = max ? (cur/max)*100 : 0;
-    el.querySelector('.poolbar__fill.base').style.width = `${clamp(pct,0,100)}%`;
+  /** ======== STATE ======== */
+  const baseline = {
+    essence: getEssNow(),
+    pools: {
+      health: { cur: Number(poolsEls.health.dataset.cur||0), max: Number(poolsEls.health.dataset.max||0) },
+      mana:   { cur: Number(poolsEls.mana.dataset.cur||0),   max: Number(poolsEls.mana.dataset.max||0) },
+      stamina:{ cur: Number(poolsEls.stamina.dataset.cur||0),max: Number(poolsEls.stamina.dataset.max||0) },
+    }
+  };
+  const working = JSON.parse(JSON.stringify(baseline));
+  /** list of {to:'health'|'mana'|'stamina', amount:number} */
+  let pendingActions = [];
+
+  // Paint functions from working state
+  function paintPools(){
+    for (const k of Object.keys(poolsEls)){
+      const el = poolsEls[k];
+      const cur = working.pools[k].cur, max = working.pools[k].max;
+      const pct = max ? (cur/max)*100 : 0;
+      el.dataset.cur = String(cur);
+      el.querySelector('.poolbar__fill.base').style.width = `${clamp(pct,0,100)}%`;
+      el.querySelector('.poolbar__fill.plan').style.width = '0%';
+      el.querySelector('.poolbar__val').innerHTML = `£${fmt(cur)} / £${fmt(max)} <b>(${max?Math.round((cur/max)*100):0}%)</b>`;
+    }
+  }
+  function paintEssenceBars(){
+    const essNow = working.essence;
+    const remPct = essMax ? (essNow / essMax) * 100 : 0;
+    essBase.style.width = `${clamp(remPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `0%`;
+    // 1) header summary number
+    if (headEssEl) headEssEl.textContent = fmt(essNow);
+    // 2) the Essence bar’s own value label
+    const essVal = essBar.querySelector('.poolbar__hdr .poolbar__val');
+    if (essVal){
+      const pctText = Math.round(clamp(remPct, 0, 100));
+      essVal.innerHTML = `£${fmt(essNow)} <b>(${pctText}%)</b>`;
+    }
+
+    // Keep Charge Essence Value text
+    const chargeEss = wrap.querySelector('[data-panel="charge"] .cs-ess');
+    if (chargeEss) chargeEss.textContent = fmt(essNow);
+  }
+  function clearPlanPreview(){
+    root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
+    fill.style.width = '0%';
+    amtEl.textContent = '0';
+    // reset essence plan slice to 0 (keep base at working)
+    const remPct = essMax ? (working.essence / essMax) * 100 : 0;
+    essBase.style.width = `${clamp(remPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `0%`;
   }
 
-  // Essence base = current/softCap
-  const essNow0 = getEssNow();
-  const essPct0 = essMax ? (essNow0 / essMax) * 100 : 0;
-  // essBase.style.width = `${clamp(essPct0,0,100)}%`;
-  // essPlan.style.width = `${clamp(essPct0,0,100)}%`;
-  essBase.style.width = `${clamp(essPct0,0,100)}%`;
-  essPlan.style.left  = `${clamp(essPct0,0,100)}%`;
-  essPlan.style.width = `0%`;
+  // Initial paints
+  paintPools();
+  paintEssenceBars();
 
+  /** ======== PREVIEW ======== */
   function previewPlan(targetKey, amount){
-    const essNow = getEssNow();
-    const planned = clamp(amount, 0, essNow);
-
-    // Target pool preview
+    const essNow = working.essence;
     const el = poolsEls[targetKey];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const toAdd = clamp(planned, 0, Math.max(0, max - cur));
+    const cur = working.pools[targetKey].cur, max = working.pools[targetKey].max;
 
-    // Reset planned overlays
+    // clamp against both essence and pool capacity
+    const need = Math.max(0, max - cur);
+    const planned = clamp(amount, 0, Math.min(essNow, need));
+
+    // Planned overlay: pool
     root.querySelectorAll('.poolbar__fill.plan').forEach(p => p.style.width = '0%');
-
-    // Paint pool planned
     const basePct = max ? (cur / max) * 100 : 0;
-    const newPct  = max ? ((cur + toAdd) / max) * 100 : 0;
+    const newPct  = max ? ((cur + planned) / max) * 100 : 0;
     el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
     el.querySelector('.poolbar__fill.plan').style.width  = `${clamp(newPct,0,100)}%`;
 
@@ -303,56 +347,104 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     fill.style.width = `${pctMeter.toFixed(2)}%`;
     amtEl.textContent = fmt(planned, 2);
 
-    // // Essence planned (remaining vs softCap)
-    // Essence bars:
-    //   base (solid)   = remaining after deduction
-    //   plan (striped) = ONLY the slice to be deducted (from remaining → current)
+    // Essence plan slice (striped)
     const curPct = essMax ? (essNow / essMax) * 100 : 0;
-    const remPct = essMax ? (clamp(essNow - planned, 0, essNow) / essMax) * 100 : 0;
+    const remPct = essMax ? ((essNow - planned) / essMax) * 100 : 0;
     const slice  = clamp(curPct - remPct, 0, 100);
     essBase.style.width = `${clamp(remPct,0,100)}%`;
     essPlan.style.left  = `${clamp(remPct,0,100)}%`;
     essPlan.style.width = `${slice}%`;
+
+    return planned; // return clamped amount (for auto-stop)
   }
 
-  function commitTransfer(targetKey, amount){
-    const essNow = getEssNow();
-    let planned = clamp(amount, 0, essNow);
+  /** ======== APPLY TO WORKING (TEMP, no Firestore) ======== */
+  function applyTransferToWorking(targetKey, amount){
+    const planned = previewPlan(targetKey, amount); // ensures clamped value
+    if (planned <= 0) { clearPlanPreview(); return 0; }
 
-    const el = poolsEls[targetKey];
-    const cur = Number(el.dataset.cur||0), max = Number(el.dataset.max||0);
-    const toAdd = clamp(planned, 0, Math.max(0, max - cur));
-    planned = toAdd;
-    if (planned <= 0.01) return;
+    working.essence = clamp(working.essence - planned, 0, 9e12);
+    working.pools[targetKey].cur = clamp(
+      working.pools[targetKey].cur + planned, 0, working.pools[targetKey].max
+    );
 
-    window.dispatchEvent(new CustomEvent('spirit:transmute', {
-      detail: { amount: Number(planned.toFixed(2)), from: 'essence', to: targetKey }
-    }));
+    // reflect working state on UI
+    paintPools();
+    paintEssenceBars();
+    fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 200);
+    clearPlanPreview();
 
-    // Update essence
-    const nextEss = clamp(essNow - planned, 0, 9e12);
-    if (headEssEl) headEssEl.textContent = fmt(nextEss);
-
-    // Update pool
-    const newCur = cur + planned;
-    el.dataset.cur = String(newCur);
-    const basePct= max ? (newCur/max)*100 : 0;
-    el.querySelector('.poolbar__fill.base').style.width  = `${clamp(basePct,0,100)}%`;
-    el.querySelector('.poolbar__fill.plan').style.width  = '0%';
-
-    // // Update essence planned (remaining vs softCap)
-    // After commit, both bars equal the new current (no pending deduction)
-    const newPct = essMax ? (nextEss / essMax) * 100 : 0;
-    essBase.style.width = `${clamp(newPct,0,100)}%`;
-    essPlan.style.left  = `${clamp(newPct,0,100)}%`;
-    essPlan.style.width = `0%`;
-
-    fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 250);
-    fill.style.width = '0%'; amtEl.textContent = '0';
+    // enqueue action
+    pendingActions.push({ to: targetKey, amount: Number(planned.toFixed(2)) });
+    return planned;
   }
 
-  // Lightweight in-menu confirm modal (no MyFiModal child swap)
-  function openConfirmTransmute(targetKey, planned){
+  // Target selection
+  let target = 'health';
+  targetBtns.forEach(b=>b.addEventListener('click', ()=>{
+    targetBtns.forEach(x=>x.classList.toggle('is-active', x===b));
+    target = b.dataset.target; tgtEl.textContent = uc(target);
+    setTargetTheme(target);
+    clearPlanPreview();
+  }));
+  setTargetTheme(target); // on load
+
+  // Hold-to-preview then confirm (auto-stop if capped or empty)
+  let raf=null,start=0,running=false, planned=0;
+  const MAX_RATE_PER_SEC = Math.max(1, working.essence/6);
+
+  const step=(t)=>{
+    if (!running) return;
+    if (!start) start = t;
+    const dt = (t - start)/1000;
+
+    // compute proposed amount and clamp by preview (returns clamped)
+    const rawPlanned = dt * MAX_RATE_PER_SEC;
+    const clamped = previewPlan(target, rawPlanned);
+    planned = clamped;
+
+    // Auto-stop if we hit a limit (no essence or capped)
+    const atEssenceEmpty = working.essence <= 0;
+    const atCap = clamped < rawPlanned - 1e-6; // preview had to clamp (hit cap/essence)
+    if (atEssenceEmpty || atCap) {
+      endHold();
+      return;
+    }
+    raf = requestAnimationFrame(step);
+  };
+
+  function endHold(){
+    running=false; cancelAnimationFrame(raf); start=0;
+    openConfirmTransmute(target, planned);
+    planned=0;
+  }
+
+  btnHold.addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(running) return; running=true; btnHold.classList.add('is-armed'); raf=requestAnimationFrame(step); }, {passive:false});
+  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); endHold(); };
+  ['pointerup','pointercancel','pointerleave','keyup','blur'].forEach(ev=>{ (ev==='keyup'?window:btnHold).addEventListener(ev, stop); });
+
+  // Quick actions (apply immediately to working)
+  const btnFullSel = root.querySelector('.quick.full-selected');
+  const btnFullAll = root.querySelector('.quick.full-all');
+
+  btnFullSel.addEventListener('click', ()=>{
+    const need = Math.max(0, working.pools[target].max - working.pools[target].cur);
+    const use  = Math.min(working.essence, need);
+    if (use>0) applyTransferToWorking(target, use);
+  });
+
+  btnFullAll.addEventListener('click', ()=>{
+    const order = ['health','mana','stamina'];
+    for (const k of order){
+      if (working.essence <= 0) break;
+      const need = Math.max(0, working.pools[k].max - working.pools[k].cur);
+      const use  = Math.min(working.essence, need);
+      if (use>0) applyTransferToWorking(k, use);
+    }
+  });
+
+  /** ======== Inline confirm modal ======== */
+  function openConfirmTransmute(targetKey, initial){
     const host = root.closest('.summary-card') || root.closest('.spirit-card') || document.body;
     const shell = document.createElement('div');
     shell.className = 'inline-confirm';
@@ -362,7 +454,7 @@ function wireTransmutePanel(root, { essence, v, softCap }){
         <div class="inline-body">
           <p>Transfer to <b>${uc(targetKey)}</b></p>
           <label>Amount (£)
-            <input class="confirm-input" type="number" min="0.01" step="0.01" value="${Number(planned||0).toFixed(2)}" />
+            <input class="confirm-input" type="number" min="0.01" step="0.01" value="${Number(initial||0).toFixed(2)}" />
           </label>
         </div>
         <div class="inline-actions">
@@ -375,66 +467,68 @@ function wireTransmutePanel(root, { essence, v, softCap }){
 
     const close = ()=> shell.remove();
     shell.addEventListener('click', e => { if (e.target === shell) close(); });
-    shell.querySelector('.btn-cancel').addEventListener('click', close);
+    shell.querySelector('.btn-cancel').addEventListener('click', ()=>{
+      // Cancel: revert preview only (no working change)
+      clearPlanPreview();
+      close();
+    });
     shell.querySelector('.btn-confirm').addEventListener('click', ()=>{
       const n = Number(shell.querySelector('.confirm-input').value||0);
       close();
-      if (Number.isFinite(n) && n>0) commitTransfer(targetKey, n);
+      if (Number.isFinite(n) && n>0) {
+        applyTransferToWorking(targetKey, n);
+      } else {
+        clearPlanPreview();
+      }
     });
   }
 
-  // Target selection
-  let target = 'health';
-  targetBtns.forEach(b=>b.addEventListener('click', ()=>{
-    targetBtns.forEach(x=>x.classList.toggle('is-active', x===b));
-    target = b.dataset.target; tgtEl.textContent = uc(target);
-    setTargetTheme(target);
-    previewPlan(target, 0);
-  }));
-  setTargetTheme(target); // on load
-
-  // Hold-to-preview then confirm
-  let raf=null,start=0,running=false, planned=0;
-  const MAX_RATE_PER_SEC = Math.max(1, getEssNow()/6);
-
-  const step=(t)=>{
-    if (!running) return;
-    if (!start) start = t;
-    const dt = (t - start)/1000;
-    planned = clamp(dt * MAX_RATE_PER_SEC, 0, getEssNow());
-    previewPlan(target, planned);
-    raf = requestAnimationFrame(step);
-  };
-
-  const endHold=()=>{ running=false; cancelAnimationFrame(raf); start=0; openConfirmTransmute(target, planned); planned=0; };
-
-  btnHold.addEventListener('pointerdown',(e)=>{ e.preventDefault(); if(running) return; running=true; btnHold.classList.add('is-armed'); raf=requestAnimationFrame(step); }, {passive:false});
-  const stop=()=>{ if(!running) return; btnHold.classList.remove('is-armed'); endHold(); };
-  ['pointerup','pointercancel','pointerleave','keyup','blur'].forEach(ev=>{ (ev==='keyup'?window:btnHold).addEventListener(ev, stop); });
-
-  // Quick actions
-  const btnFullSel = root.querySelector('.quick.full-selected');
-  const btnFullAll = root.querySelector('.quick.full-all');
-
-  btnFullSel.addEventListener('click', ()=>{
-    const ess = getEssNow();
-    const el = poolsEls[target]; const cur=+el.dataset.cur, max=+el.dataset.max;
-    commitTransfer(target, Math.min(ess, Math.max(0, max - cur)));
+  /** ======== Footer actions ======== */
+  btnReset.addEventListener('click', ()=>{
+    // restore working from baseline & repaint
+    working.essence = baseline.essence;
+    for (const k of Object.keys(baseline.pools)){
+      working.pools[k].cur = baseline.pools[k].cur;
+      working.pools[k].max = baseline.pools[k].max;
+    }
+    pendingActions = [];
+    paintPools();
+    paintEssenceBars();
+    clearPlanPreview();
   });
 
-  btnFullAll.addEventListener('click', ()=>{
-    let essAvail = getEssNow();
-    for (const k of ['health','mana','stamina']){
-      if (essAvail <= 0) break;
-      const el = poolsEls[k]; const cur=+el.dataset.cur, max=+el.dataset.max;
-      const need = Math.max(0, max - cur);
-      const use  = Math.min(essAvail, need);
-      if (use>0){ commitTransfer(k, use); essAvail -= use; }
-    }
-  });  
+  btnConfirmFooter.addEventListener('click', async ()=>{
+    if (pendingActions.length === 0) return;
 
-  previewPlan(target, 0);
+    // Firestore write: only wallet Essence here (pools are game-derived server state).
+    try{
+      const uid = getAuth().currentUser?.uid;
+      if (uid){
+        const db = getFirestore();
+        const ref = doc(db, `players/${uid}/wallet/main`);
+        await updateDoc(ref, { essence_free: Number(working.essence.toFixed(2)) });
+      }
+    }catch(e){ console.warn('Essence commit failed:', e); }
+
+    // Consolidated event to backend/game engine with the breakdown
+    window.dispatchEvent(new CustomEvent('spirit:transmutes:commit', {
+      detail: { actions: pendingActions.slice(), newEssence: working.essence }
+    }));
+
+    // New baseline = committed working; clear queue
+    baseline.essence = working.essence;
+    for (const k of Object.keys(baseline.pools)){
+      baseline.pools[k].cur = working.pools[k].cur;
+      baseline.pools[k].max = working.pools[k].max;
+    }
+    pendingActions = [];
+    clearPlanPreview();
+  });
+
+  // Initial preview clear
+  clearPlanPreview();
 }
+
 
 /** =========================================================
  *  CHARGE: Hold + Overcap handling + Stripe hook
