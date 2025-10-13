@@ -64,7 +64,7 @@ function buildMenuUI({ gateway, wallet }) {
   root.innerHTML = `
     <div class="spirit-summary">
       ${renderStoneSummary(chargePct, tier)}
-      ${renderSummaryRows({ essence, shards })}
+      ${renderSummaryRows({ essence, shards, tier })}
     </div>
 
     <div class="spirit-tabs">
@@ -92,15 +92,15 @@ function buildMenuUI({ gateway, wallet }) {
 }
 
 /** ---------- Summary ---------- */
-function renderStoneSummary(chargePct, tier){
+function renderStoneSummary(chargePct, _tier){
   const tiers = 5;
   const litCount = Math.floor(chargePct * tiers);
   const frac = (chargePct * tiers) - litCount;
 
-  // reverse: inner ring = highest index, so light from inner → outer
+  // inner → outer glow order
   const rings = Array.from({length: tiers}).map((_, i) => {
-    const idx = i + 1;                 // 1..5 (1=outer, 5=inner due to scale)
-    const innerIndex = tiers - idx + 1; // convert to inner-order rank (5..1)
+    const idx = i + 1;                 // 1..5 (1=outer)
+    const innerIndex = tiers - idx + 1; // 5..1 (5 = inner)
     let cls = 'ring';
     if (innerIndex <= litCount) cls += ' ring-on';
     else if (innerIndex === litCount + 1 && frac > 0.01) cls += ' ring-partial';
@@ -115,19 +115,21 @@ function renderStoneSummary(chargePct, tier){
         ${rings}
         <div class="stone-label">${pctLabel}%</div>
       </div>
-      <div class="stone-caption">Spirit Stone • Tier ${tier}</div>
     </div>
   `;
 }
 
-function renderSummaryRows({ essence, shards }){
+
+function renderSummaryRows({ essence, shards, tier }){
   return `
     <div class="summary-rows">
+      <div class="summary-caption">Spirit Stone • Tier ${tier}</div>
       <div class="summary-row"><div class="summary-row__label">Essence</div><div class="summary-row__value js-ess">${fmt(essence)}</div></div>
       <div class="summary-row"><div class="summary-row__label">Soul Shards</div><div class="summary-row__value js-shards">${fmt(shards)}</div></div>
     </div>
   `;
 }
+
 
 /** ---------- Tabs ---------- */
 function wireTabs(root){
@@ -167,9 +169,8 @@ function panelTransmute(essence, v, softCap){
 
       <div class="charge-meter">
         <div class="charge-bar"><div class="charge-fill plan" style="width:0%"></div></div>
-        <div class="charge-stats">
-          <span class="cs-left">Planned: £<span class="cs-amt">0</span> → <b class="cs-target">Health</b></span>
-          <span class="cs-right">Essence: £<span class="cs-ess">${fmt(essence)}</span></span>
+        <div class="charge-stats centered">
+          <span class="plan-label health">Planned: £<span class="cs-amt">0</span> → <b class="cs-target">Health</b></span>
         </div>
       </div>
 
@@ -179,10 +180,15 @@ function panelTransmute(essence, v, softCap){
       </div>
 
       <button class="transmute-hold" aria-label="Hold to transfer">Hold to Transfer</button>
-      <div class="rebalance-hint">Pool bars show current (solid) and planned (striped). Essence bar shows current and planned deduction.</div>
+
+      <div class="footer-actions">
+        <button class="btn-reset" data-action="reset">Reset</button>
+        <button class="btn-confirm" data-action="confirm">Confirm</button>
+      </div>
     </div>
   `;
 }
+
 
 function renderPoolBar(key, cur, max, pct){
   return `
@@ -226,11 +232,25 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   const targetBtns = [...root.querySelectorAll('.pool-btn')];
   const fill  = root.querySelector('[data-panel="transmute"] .charge-fill.plan') || root.querySelector('.charge-fill.plan');
   const amtEl = root.querySelector('[data-panel="transmute"] .cs-amt') || root.querySelector('.cs-amt');
-  const essEl = root.querySelector('[data-panel="transmute"] .cs-ess') || root.querySelector('.cs-ess');
+  const planLabel = root.querySelector('[data-panel="transmute"] .plan-label') || root.querySelector('.plan-label');
   const tgtEl = root.querySelector('[data-panel="transmute"] .cs-target') || root.querySelector('.cs-target');
   const btnHold = root.querySelector('.transmute-hold');
 
   const headEssEl = wrap.querySelector('.summary-row .js-ess');
+  
+  const getEssNow = () =>
+  Number(String(headEssEl?.textContent || '').replace(/[,£]/g,'')) || Number(essence) || 0;
+
+  // colour utility: toggle class on host for CSS theming
+  const host = root.closest('.spirit-card');
+  const setTargetTheme = (k)=>{
+    host?.classList.remove('tgt-health','tgt-mana','tgt-stamina');
+    host?.classList.add(`tgt-${k}`);
+    planLabel?.classList.remove('health','mana','stamina');
+    planLabel?.classList.add(k);
+  };
+
+  
   const poolsEls  = {
     health: root.querySelector('.poolbar.health'),
     mana:   root.querySelector('.poolbar.mana'),
@@ -252,7 +272,7 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   }
 
   // Essence base = current/softCap
-  const essNow0 = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+  const essNow0 = getEssNow();
   const essPct0 = essMax ? (essNow0 / essMax) * 100 : 0;
   // essBase.style.width = `${clamp(essPct0,0,100)}%`;
   // essPlan.style.width = `${clamp(essPct0,0,100)}%`;
@@ -261,7 +281,7 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   essPlan.style.width = `0%`;
 
   function previewPlan(targetKey, amount){
-    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+    const essNow = getEssNow();
     const planned = clamp(amount, 0, essNow);
 
     // Target pool preview
@@ -296,7 +316,7 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   }
 
   function commitTransfer(targetKey, amount){
-    const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
+    const essNow = getEssNow();
     let planned = clamp(amount, 0, essNow);
 
     const el = poolsEls[targetKey];
@@ -311,7 +331,6 @@ function wireTransmutePanel(root, { essence, v, softCap }){
 
     // Update essence
     const nextEss = clamp(essNow - planned, 0, 9e12);
-    essEl.textContent = fmt(nextEss);
     if (headEssEl) headEssEl.textContent = fmt(nextEss);
 
     // Update pool
@@ -369,18 +388,20 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   targetBtns.forEach(b=>b.addEventListener('click', ()=>{
     targetBtns.forEach(x=>x.classList.toggle('is-active', x===b));
     target = b.dataset.target; tgtEl.textContent = uc(target);
+    setTargetTheme(target);
     previewPlan(target, 0);
   }));
+  setTargetTheme(target); // on load
 
   // Hold-to-preview then confirm
   let raf=null,start=0,running=false, planned=0;
-  const MAX_RATE_PER_SEC = Math.max(1, (Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence)/6);
+  const MAX_RATE_PER_SEC = Math.max(1, getEssNow()/6);
 
   const step=(t)=>{
     if (!running) return;
     if (!start) start = t;
     const dt = (t - start)/1000;
-    planned = clamp(dt * MAX_RATE_PER_SEC, 0, Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence);
+    planned = clamp(dt * MAX_RATE_PER_SEC, 0, getEssNow());
     previewPlan(target, planned);
     raf = requestAnimationFrame(step);
   };
@@ -396,13 +417,13 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   const btnFullAll = root.querySelector('.quick.full-all');
 
   btnFullSel.addEventListener('click', ()=>{
-    const ess = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
+    const ess = getEssNow();
     const el = poolsEls[target]; const cur=+el.dataset.cur, max=+el.dataset.max;
     commitTransfer(target, Math.min(ess, Math.max(0, max - cur)));
   });
 
   btnFullAll.addEventListener('click', ()=>{
-    let essAvail = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence;
+    let essAvail = getEssNow();
     for (const k of ['health','mana','stamina']){
       if (essAvail <= 0) break;
       const el = poolsEls[k]; const cur=+el.dataset.cur, max=+el.dataset.max;
@@ -626,7 +647,12 @@ function attachFallbackOverlay(node){
   .stone-label{ position:absolute; left:50%; top:50%; transform: translate(-50%,-50%); text-align:center; font-weight:800; font-family:'Cinzel', serif; color:#f0e6d2; }
   .stone-caption{ margin-top:6px; font-size:.9rem; opacity:.85; text-align:center; }
 
-  .summary-rows{ display:grid; gap:6px; align-content:start; }
+  /* Right-side caption above rows */
+  .summary-rows { display:grid; gap:6px; align-content:start; }
+  .summary-caption{
+    font-weight:800; letter-spacing:.2px; color:#f0e6d2; margin-bottom:2px;
+    opacity:.95;
+  }
   .summary-row{ display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border-radius:10px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
   .summary-row__label{ opacity:.9; }
   .summary-row__value{ font-variant-numeric: tabular-nums; }
@@ -711,12 +737,48 @@ function attachFallbackOverlay(node){
   .target-pools{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .tgt-label{ opacity:.85; margin-right:4px; }
   .pool-btn.pill{ border-radius:999px; padding:6px 12px; border:1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); }
+  /* Target pills: text colour matches pool (darker) */
+  .pool-btn.pill.health{ color:rgb(150,40,55); }
+  .pool-btn.pill.mana{   color:rgb(46,78,155); }
+  .pool-btn.pill.stamina{color:rgb(40,110,60); }
   .pool-btn.pill.health.is-active { background: rgba(220, 83,100,.25); box-shadow: 0 0 8px rgba(220,83,100,.35); }
   .pool-btn.pill.mana.is-active   { background: rgba(75,125,220,.25);  box-shadow: 0 0 8px rgba(75,125,220,.35); }
   .pool-btn.pill.stamina.is-active{ background: rgba(120,200,120,.25); box-shadow: 0 0 8px rgba(120,200,120,.35); }
 
-  .quick-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  /* Centred planned label + colour variants */
+  .charge-stats.centered{ justify-content:center; }
+  .plan-label{ font-weight:800; }
+  .plan-label.health{ color: rgb(220,83,100); }
+  .plan-label.mana{   color: rgb(75,125,220); }
+  .plan-label.stamina{color: rgb(120,200,120); }
+
+  /* Quick row: 2 equal buttons full width; first glows with selected vital */
+  .quick-row{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  .quick-row .quick{ width:100%; }
+  .tgt-health .quick.full-selected{ box-shadow:0 0 12px rgba(220,83,100,.35); border-color: rgba(220,83,100,.35); }
+  .tgt-mana   .quick.full-selected{ box-shadow:0 0 12px rgba(75,125,220,.35);  border-color: rgba(75,125,220,.35); }
+  .tgt-stamina.quick-row .full-selected,
+  .tgt-stamina .quick.full-selected{ box-shadow:0 0 12px rgba(120,200,120,.35); border-color: rgba(120,200,120,.35); }
   .exact-row{ display:none; } /* removed per spec */
+
+  /* Hold button: slightly taller and magenta */
+  .transmute-hold{
+    padding:14px 16px; /* taller */
+    background: rgba(155,93,229,.18);
+    border-color: rgba(155,93,229,.35);
+  }
+  .transmute-hold.is-armed{ box-shadow: 0 0 12px rgba(155,93,229,.45), inset 0 0 8px rgba(155,93,229,.25); }
+
+  /* Footer Reset / Confirm */
+  .footer-actions{
+    display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:2px;
+  }
+  .footer-actions .btn-reset,
+  .footer-actions .btn-confirm{
+    padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
+  }
+  .footer-actions .btn-confirm{ background: rgba(155,93,229,.18); border-color: rgba(155,93,229,.35); }
 
   .shards-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .qty{ display:grid; grid-template-columns: 34px 80px 34px; gap:6px; }

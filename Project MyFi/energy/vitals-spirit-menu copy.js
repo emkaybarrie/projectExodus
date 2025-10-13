@@ -210,10 +210,10 @@ function renderEssenceBar(essence, softCap){
         <span class="poolbar__val">£${fmt(cur)} <b>(${pct}%)</b></span>
       </div>
       <div class="poolbar__track">
-        <!-- base (solid) = current essence vs softCap -->
+        <!-- base (solid) = current/remaining essence vs softCap -->
         <div class="poolbar__fill base ess-base" style="width:${pct}%"></div>
-        <!-- plan (striped) = original current; the striped-only segment denotes planned deduction -->
-        <div class="poolbar__fill plan ess-plan" style="width:${pct}%"></div>
+        <!-- plan (striped) = slice to be deducted; starts at remaining -->
+        <div class="poolbar__fill plan ess-plan" style="left:${pct}%; width:0%"></div>
       </div>
     </div>
   `;
@@ -254,8 +254,11 @@ function wireTransmutePanel(root, { essence, v, softCap }){
   // Essence base = current/softCap
   const essNow0 = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
   const essPct0 = essMax ? (essNow0 / essMax) * 100 : 0;
+  // essBase.style.width = `${clamp(essPct0,0,100)}%`;
+  // essPlan.style.width = `${clamp(essPct0,0,100)}%`;
   essBase.style.width = `${clamp(essPct0,0,100)}%`;
-  essPlan.style.width = `${clamp(essPct0,0,100)}%`;
+  essPlan.style.left  = `${clamp(essPct0,0,100)}%`;
+  essPlan.style.width = `0%`;
 
   function previewPlan(targetKey, amount){
     const essNow = Number(String(essEl.textContent).replace(/[,£]/g,'')) || essence || 0;
@@ -283,11 +286,13 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     // // Essence planned (remaining vs softCap)
     // Essence bars:
     //   base (solid)   = remaining after deduction
-    //   plan (striped) = original current (so the striped-only segment = amount to be deducted)
+    //   plan (striped) = ONLY the slice to be deducted (from remaining → current)
     const curPct = essMax ? (essNow / essMax) * 100 : 0;
     const remPct = essMax ? (clamp(essNow - planned, 0, essNow) / essMax) * 100 : 0;
+    const slice  = clamp(curPct - remPct, 0, 100);
     essBase.style.width = `${clamp(remPct,0,100)}%`;
-    essPlan.style.width = `${clamp(curPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(remPct,0,100)}%`;
+    essPlan.style.width = `${slice}%`;
   }
 
   function commitTransfer(targetKey, amount){
@@ -320,7 +325,8 @@ function wireTransmutePanel(root, { essence, v, softCap }){
     // After commit, both bars equal the new current (no pending deduction)
     const newPct = essMax ? (nextEss / essMax) * 100 : 0;
     essBase.style.width = `${clamp(newPct,0,100)}%`;
-    essPlan.style.width = `${clamp(newPct,0,100)}%`;
+    essPlan.style.left  = `${clamp(newPct,0,100)}%`;
+    essPlan.style.width = `0%`;
 
     fill.classList.add('flash'); setTimeout(()=>fill.classList.remove('flash'), 250);
     fill.style.width = '0%'; amtEl.textContent = '0';
@@ -663,6 +669,7 @@ function attachFallbackOverlay(node){
   /* Essence bar uses magenta theme (matches vitals) */
   .essbar .ess-base{
     background: rgba(155,93,229,.55);      /* solid magenta */
+    z-index: 1;
   }
   .essbar .ess-plan{
     background: repeating-linear-gradient(
@@ -672,6 +679,7 @@ function attachFallbackOverlay(node){
       rgba(240,220,160,.25) 8px,
       rgba(240,220,160,.25) 16px
     );
+    z-index: 2;
   }
 
   /* Inline confirm overlay (stays in same menu) */
