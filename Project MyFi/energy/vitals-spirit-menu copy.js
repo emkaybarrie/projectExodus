@@ -190,8 +190,6 @@ function buildMenuUI({ gateway, wallet }) {
     gateway?.writeBucket === 'unverified'
   ) ? 'unverified' : 'verified';
 
-  console.log(txBucket)
-
   const root = document.createElement('div');
   root.className = 'spirit-card';
   root.innerHTML = `
@@ -215,9 +213,9 @@ function buildMenuUI({ gateway, wallet }) {
       <!-- SPEND PANEL with SUB-TABS -->
       <section class="spirit-panel" data-panel="spend">
         <div class="spend-tabs">
-          <button class="spend-tab is-active" data-stab="charge">Charge</button>
-          <button class="spend-tab" data-stab="shards">Shards</button>
-          <button class="spend-tab" data-stab="contrib">Contribute</button>
+          <button class="spend-tab is-active" data-stab="charge">Channel</button>
+          <button class="spend-tab" data-stab="shards">Forge</button>
+          <button class="spend-tab" data-stab="contrib">Gift</button>
         </div>
         <div class="spend-panels">
           <section class="spend-panel is-active" data-spanel="charge">${panelCharge(essence, chargePct)}</section>
@@ -226,6 +224,12 @@ function buildMenuUI({ gateway, wallet }) {
         </div>
       </section>
     </div>
+
+    <!-- GLOBAL SHARED FOOTER (applies to current tab) -->
+    <div class="footer-actions global-footer">
+      <button class="btn-reset"  data-action="reset-global">Reset</button>
+      <button class="btn-confirm" data-action="confirm-global">Confirm</button>
+    </div>
   `;
 
   wireTabs(root);
@@ -233,11 +237,13 @@ function buildMenuUI({ gateway, wallet }) {
   wireChargePanel(root, { essence });
   wireShardsPanel(root, { essence, shards, tier });
   wireContribPanel(root, { essence });
+  wireSpendControls(root, { essence, shards, tier });
+  wireGlobalFooter(root);    // <-- new router for the shared footer
 
   return { root };
 }
 
-/** ---------- Summary ---------- */
+/** ---------- Summary (Header) ---------- */
 function renderStoneSummary(chargePct, _tier){
   const tiers = 5;
   const litCount = Math.floor(chargePct * tiers);
@@ -304,6 +310,25 @@ function wireTabs(root){
   });
 }
 
+/** ---------- Footer ---------- */
+function wireGlobalFooter(root){
+  const resetBtn   = root.querySelector('.global-footer .btn-reset');
+  const confirmBtn = root.querySelector('.global-footer .btn-confirm');
+
+  const activeMain = () => (root.querySelector('.spirit-tab.is-active')?.dataset.tab || 'transmute');
+  const activeSub  = () => (root.querySelector('[data-panel="spend"] .spend-tab.is-active')?.dataset.stab || 'charge');
+
+  const fire = (type) => {
+    const main = activeMain();
+    const sub  = main === 'spend' ? activeSub() : null;
+    root.dispatchEvent(new CustomEvent(`spirit:footer:${type}`, { detail: { main, sub } }));
+  };
+
+  resetBtn?.addEventListener('click',   () => fire('reset'));
+  confirmBtn?.addEventListener('click', () => fire('confirm'));
+}
+
+
 
 /** =========================================================
  *  TRANSMUTE: Essence → Pools (hold→preview, confirm modal)
@@ -312,7 +337,7 @@ function panelTransmute(essence, v, softCap){
   const pct = k => (v[k].max ? Math.round((v[k].cur / v[k].max)*100) : 0);
   return `
     <div class="panel-wrap">
-      <p class="panel-note">Refill your pools using stored Essence.</p>
+      <p class="panel-note">Transmute Essence into Health, Mana or Stamina.</p>
 
       <div class="pools-grid">
         ${renderPoolBar('health', v.health.cur, v.health.max, pct('health'))}
@@ -341,12 +366,8 @@ function panelTransmute(essence, v, softCap){
         <button class="quick full-all">Fill All to Full</button>
       </div>
 
-      <button class="transmute-hold" aria-label="Hold to transfer">Hold to Transfer</button>
+      <button class="transmute-hold" aria-label="Hold to transmute">Hold to Transmute</button>
 
-      <div class="footer-actions">
-        <button class="btn-reset" data-action="reset">Reset</button>
-        <button class="btn-confirm" data-action="confirm">Confirm</button>
-      </div>
     </div>
   `;
 }
@@ -398,8 +419,6 @@ function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
   const planLabel = root.querySelector('[data-panel="transmute"] .plan-label') || root.querySelector('.plan-label');
   const tgtEl = root.querySelector('[data-panel="transmute"] .cs-target') || root.querySelector('.cs-target');
   const btnHold = root.querySelector('.transmute-hold');
-  const btnReset = root.querySelector('.footer-actions .btn-reset');
-  const btnConfirmFooter = root.querySelector('.footer-actions .btn-confirm');
 
   const headEssEl = wrap.querySelector('.summary-row .js-ess');
 
@@ -646,26 +665,31 @@ function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
   }
 
   /** ======== Footer actions ======== */
-  btnReset.addEventListener('click', ()=>{
-    // restore working from baseline & repaint
-    working.essence = baseline.essence;
-    for (const k of Object.keys(baseline.pools)){
-      working.pools[k].cur = baseline.pools[k].cur;
-      working.pools[k].max = baseline.pools[k].max;
-    }
-    pendingActions = [];
-    paintPools();
-    paintEssenceBars();
-    clearPlanPreview();
-  });
+  // Shared footer → RESET (only when Transmute is active)
+  root.addEventListener('spirit:footer:reset', (e) => {
+  if (e.detail.main !== 'transmute') return;
 
-  btnConfirmFooter.addEventListener('click', async ()=>{
+  // restore working from baseline & repaint (unchanged logic)
+  working.essence = baseline.essence;
+  for (const k of Object.keys(baseline.pools)){
+    working.pools[k].cur = baseline.pools[k].cur;
+    working.pools[k].max = baseline.pools[k].max;
+  }
+  pendingActions = [];
+  paintPools();
+  paintEssenceBars();
+  clearPlanPreview();
+});
+
+  // Shared footer → CONFIRM (only when Transmute is active)
+  root.addEventListener('spirit:footer:confirm', async (e) => {
+    if (e.detail.main !== 'transmute') return;
     if (pendingActions.length === 0) return;
 
-    // Build a friendly summary BEFORE clearing
+    // Build summary BEFORE clearing (unchanged)
     const sum = pendingActions.reduce((acc, a)=>{
       acc.total = Number((acc.total + a.amount).toFixed(2));
-      acc[a.to]  = Number(((acc[a.to]||0) + a.amount).toFixed(2));
+      acc[a.to] = Number(((acc[a.to]||0) + a.amount).toFixed(2));
       return acc;
     }, { total:0 });
 
@@ -680,7 +704,6 @@ function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
       return; // Do not advance baseline on failure
     }
 
-    // Optional: notify
     window.dispatchEvent(new CustomEvent('spirit:transmutes:commit', {
       detail: { actions: pendingActions.slice(), newEssence: working.essence, bucket: txBucket }
     }));
@@ -694,10 +717,8 @@ function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
     pendingActions = [];
     clearPlanPreview();
 
-    // Recompute & repaint from server truth
     try { await refreshVitalsHUD(getAuth().currentUser.uid); } catch {}
 
-    // Toast (fantasy glow + sparkles)
     const parts = ['health','mana','stamina']
       .filter(k => sum[k] > 0.009)
       .map(k => `${uc(k)} £${fmt(sum[k],2)}`)
@@ -706,8 +727,94 @@ function wireTransmutePanel(root, { essence, v, softCap, txBucket }){
     showSpiritToast(msg);
   });
 
+
   // Initial preview clear
   clearPlanPreview();
+}
+
+/** =========================================================
+ *  Spend Controls
+ *  =======================================================*/
+
+function wireSpendControls(root, { essence }) {
+  const spend = root.querySelector('[data-panel="spend"]');
+  if (!spend) return;
+
+  const headEss = root.closest('.spirit-card')?.querySelector('.summary-row .js-ess');
+  const getEss = () => Number(String(headEss?.textContent || '').replace(/[,£]/g,'')) || Number(essence) || 0;
+
+  // RESET by sub-tab
+  root.addEventListener('spirit:footer:reset', (e) => {
+    if (e.detail.main !== 'spend') return;
+    const key = e.detail.sub;
+
+    if (key === 'charge') {
+      const wrap = spend.querySelector('[data-spanel="charge"]');
+      const fill = wrap?.querySelector('.charge-fill');
+      if (fill) fill.style.width = '0%';
+      const amtEl = wrap?.querySelector('.cs-amt'); if (amtEl) amtEl.textContent = '0';
+    }
+
+    if (key === 'shards') {
+      const inp = spend.querySelector('.qty-input');
+      if (inp) {
+        inp.value = '1';
+        inp.dispatchEvent(new Event('input', { bubbles:true }));
+      }
+    }
+
+    if (key === 'contrib') {
+      const inp = spend.querySelector('.contrib-amt');
+      if (inp) inp.value = '';
+    }
+  });
+
+  // CONFIRM by sub-tab → “Coming soon” + dispatch checkout envelope
+  root.addEventListener('spirit:footer:confirm', (e) => {
+    if (e.detail.main !== 'spend') return;
+    const key = e.detail.sub;
+
+    try { showSpiritToast('Coming soon…'); } catch {}
+
+    setTimeout(() => {
+      if (key === 'charge') {
+        const wrap = spend.querySelector('[data-spanel="charge"]');
+        const rawAmt = Number(String(wrap?.querySelector('.cs-amt')?.textContent || '0').replace(/[,£]/g,''));
+        const amount = Number((rawAmt || 0).toFixed(2));
+        if (amount > 0.009) {
+          const mode = wrap?.querySelector('.overcap-mode')?.value || 'overcharge';
+          window.dispatchEvent(new CustomEvent('spirit:checkout', {
+            detail: { kind: 'charge', amountGBP: amount, options: { overcap: mode } }
+          }));
+        }
+      }
+
+      if (key === 'shards') {
+        const inp = spend.querySelector('.qty-input');
+        const q = clamp(Number(inp?.value || 1), 1, 9999);
+        const UNIT_PRICE = 5.00;
+        const total = Number((q * UNIT_PRICE).toFixed(2));
+        if (total > 0.009) {
+          window.dispatchEvent(new CustomEvent('spirit:checkout', {
+            detail: { kind: 'shards', amountGBP: total, options: { quantity: q, unitPrice: UNIT_PRICE } }
+          }));
+        }
+      }
+
+      if (key === 'contrib') {
+        const inp = spend.querySelector('.contrib-amt');
+        let n = Number(inp?.value || 0);
+        if (!Number.isFinite(n) || n <= 0) return;
+        n = Math.min(n, getEss());
+        const amount = Number(n.toFixed(2));
+        if (amount > 0.009) {
+          window.dispatchEvent(new CustomEvent('spirit:checkout', {
+            detail: { kind: 'contribution', amountGBP: amount, options: {} }
+          }));
+        }
+      }
+    }, 220);
+  });
 }
 
 
@@ -718,14 +825,14 @@ function panelCharge(essence, chargePct){
   const capLeftPct = clamp(1 - (chargePct||0), 0, 1);
   return `
     <div class="panel-wrap">
-      <p class="panel-note">Hold to attune your Spirit Stone. Releasing commits the payment.</p>
+      <p class="panel-note">Channel Essence to attune your Spirit Stone.</p>
 
       <div class="opt-row">
         <label class="toggle">
-          Overcap handling:
+          Overflow:
           <select class="overcap-mode">
-            <option value="overcharge">Overcharge (prepay)</option>
-            <option value="convert_to_shards">Auto-convert overflow to Soul Shards</option>
+            <option value="overcharge">Overcharge</option>
+            <option value="convert_to_shards">Generate Soul Shards</option>
           </select>
         </label>
       </div>
@@ -738,8 +845,8 @@ function panelCharge(essence, chargePct){
         </div>
       </div>
 
-      <button class="charge-hold" aria-label="Hold to charge">Hold to Charge</button>
-      <div class="charge-hint">Cap remaining ~ ${(capLeftPct*100|0)}%. Extras follow your overcap setting.</div>
+      <button class="charge-hold" aria-label="Hold to channel">Hold to Channel</button>
+      <div class="charge-hint">Cap remaining ~ ${(capLeftPct*100|0)}%. Additional essence follow your overflow setting.</div>
     </div>
   `;
 }
@@ -801,7 +908,7 @@ function wireChargePanel(root, { essence }){
 function panelShards(essence, shards, tier){
   return `
     <div class="panel-wrap">
-      <p class="panel-note">Convert Essence into Soul Shards to progress avatars and cosmetics.</p>
+      <p class="panel-note">Transform Essence into Soul Shards to progress avatars and cosmetics.</p>
 
       <div class="shards-row">
         <div class="qty">
@@ -812,8 +919,8 @@ function panelShards(essence, shards, tier){
         <div class="cost">Cost: £<span class="cost-val">5.00</span></div>
       </div>
 
-      <div class="hint-mini">Capped by available Essence. Tier ${tier} may grant bonuses.</div>
-      <button class="btn-buy-shards">Buy Shards</button>
+      <div class="hint-mini">Capped by available Essence.</div>
+      <button class="btn-buy-shards">Forge Shards</button>
     </div>
   `;
 }
@@ -873,10 +980,10 @@ function panelContrib(essence){
         <label>Amount (£)
           <input class="contrib-amt" type="number" min="1" step="0.01" placeholder="e.g. 10">
         </label>
-        <button class="btn-contrib-stripe">Contribute (Stripe)</button>
+        <button class="btn-contrib-stripe">Contribute</button>
       </div>
 
-      <div class="hint-mini">Capped by available Essence. (Min £2 recommended for card fees.)</div>
+      <div class="hint-mini">Capped by available Essence. May grant additional bonuses based on Spririt Stone tier.</div>
     </div>
   `;
 }
@@ -1030,6 +1137,11 @@ function attachFallbackOverlay(node){
   }
   .transmute-hold.is-armed{ box-shadow: 0 0 12px rgba(155,93,229,.45), inset 0 0 8px rgba(155,93,229,.25); }
 
+  /* Global footer spacing */
+  .global-footer{ 
+    margin-top:6px; 
+    margin-bottom:12px;      /* <-- NEW: visible gap below the buttons */
+  }
   .footer-actions{
     display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:2px;
   }
@@ -1039,6 +1151,9 @@ function attachFallbackOverlay(node){
     background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
   }
   .footer-actions .btn-confirm{ background: rgba(155,93,229,.18); border-color: rgba(155,93,229,.35); }
+
+  /* Optional: tiny bottom padding so content never kisses container edge */
+  .spirit-card{ padding-bottom:8px; }  /* safe in modal or embedded */
 
   .shards-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .qty{ display:grid; grid-template-columns: 34px 80px 34px; gap:6px; }
