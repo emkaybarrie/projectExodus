@@ -44,6 +44,8 @@ import {
   wireVitalsStatusToggle
 } from "./energy-vitals-NEW_FUNCTIONS.js";
 
+import { autoInitSpiritStoneButton } from './vitals-spirit-menu.js';
+
 
 
 // ───────────────────────────────── Constants ────────────────────────────────
@@ -2535,6 +2537,7 @@ export function autoInitAddEnergyButton(){
     }
   });
 }
+
 export function autoInitAddSocialButton() {
   const btn = document.getElementById('right-btn');
   if (btn) {
@@ -2697,7 +2700,7 @@ export async function initHUD(uid){
     }, { passive: true });
   }
 
-
+  autoInitSpiritStoneButton(); // will grab .main-btn (the big center essence button)
 
 }
 
