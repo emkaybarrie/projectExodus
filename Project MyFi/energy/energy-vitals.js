@@ -2312,56 +2312,6 @@ function openHistoryFor_energy() {
 
 
 // ───────────────────────── Dashboard helpers & buttons ──────────────────────
-// >>> DEBUG ONLY — testing overflow & crystallisation
-export async function __debug_forceOverflow(uid, { health=0, mana=0, stamina=0 } = {}){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  const snap = await getDoc(ref); if (!snap.exists()) return;
-  const d = snap.data()||{};
-  const by = d?.meta?.escrow?.bySourceToday || { health:0, mana:0, stamina:0 };
-  const carry = d?.meta?.escrow?.carry || { total:0, bySource:{ health:0, mana:0, stamina:0 } };
-
-  const addH = Number(health||0), addM = Number(mana||0), addS = Number(stamina||0);
-  const inc = { health:addH, mana:addM, stamina:addS };
-  const tot = addH+addM+addS;
-
-  await setDoc(ref, {
-    meta: {
-      ...d.meta,
-      escrow: {
-        carry: {
-          total: Number((Number(carry.total||0) + tot).toFixed(2)),
-          bySource: {
-            health:  Number((Number(carry.bySource?.health||0)  + addH).toFixed(2)),
-            mana:    Number((Number(carry.bySource?.mana||0)    + addM).toFixed(2)),
-            stamina: Number((Number(carry.bySource?.stamina||0) + addS).toFixed(2)),
-          }
-        },
-        bySourceToday: {
-          health: Number((Number(by.health||0) + addH).toFixed(2)),
-          mana:   Number((Number(by.mana||0)   + addM).toFixed(2)),
-          stamina:Number((Number(by.stamina||0)+ addS).toFixed(2)),
-        }
-      }
-    }
-  }, { merge: true });
-}
-
-export async function __debug_forceCrystallise(uid){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  const snap = await getDoc(ref); if (!snap.exists()) return;
-  const d = snap.data()||{};
-  // Pretend day changed: move carry into Essence via recompute
-  await setDoc(ref, { meta: { ...d.meta, lastCrystallisedDay: 'force-prev' } }, { merge:true });
-  await recomputeVitalsGatewayStub(uid);
-}
-
-export async function __debug_seedReset(uid){
-  const ref = doc(db, `players/${uid}/vitalsData/gateway`);
-  await setDoc(ref, { meta: { seededAtMs: null } }, { merge:true });
-  await recomputeVitalsGatewayStub(uid);
-}
-
-
 export async function refreshVitals(){
   try{
     const u=getAuth().currentUser; if(!u) return {};

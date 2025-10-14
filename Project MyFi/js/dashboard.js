@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (shouldShowSplash) {
       createSplash({ minDuration: 2500, until: vitalsPromise, allowSkip: false });
-      await vitalsPromise; await waitForEvent('splash:done');
+      await vitalsPromise;
       await waitForEvent('splash:done');
       // mark splash as finished so HUD wake tween can run now
       window.__MYFI_SPLASH_ACTIVE = false;
@@ -276,8 +276,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       document.querySelector('.app-root')?.classList.add('app-show');
       await vitalsPromise;
-      await waitForEvent('splash:done');
       // mark splash as finished so HUD wake tween can run now
+      try { window.dispatchEvent(new CustomEvent('splash:done')); } catch {}
       window.__MYFI_SPLASH_ACTIVE = false;
     }
 
@@ -320,19 +320,17 @@ document.addEventListener("DOMContentLoaded", () => {
       current: ()=> router.current(),
     };
 
-
-
-      /* ---------- Music player ---------- */
-      // Header button click -> toggle mute (counts as a user gesture)
-      document.addEventListener("click", (e) => {
-        const btn = e.target.closest('[data-action="toggle-music"]');
-        if (!btn) return;
-        // Make sure audio exists and attempt (re)start on first gesture
-        if (window.MyFiMusic) {
-          // If currently muted, unmute will also start+fade up
-          window.MyFiMusic.toggleMuted();
-        }
-      });
+    /* ---------- Music player ---------- */
+    // Header button click -> toggle mute (counts as a user gesture)
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest('[data-action="toggle-music"]');
+      if (!btn) return;
+      // Make sure audio exists and attempt (re)start on first gesture
+      if (window.MyFiMusic) {
+        // If currently muted, unmute will also start+fade up
+        window.MyFiMusic.toggleMuted();
+      }
+    });
 
   });
 
