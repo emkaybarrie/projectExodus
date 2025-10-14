@@ -1036,6 +1036,38 @@ function attachFallbackOverlay(node){
 (function injectCss(){
   if (document.getElementById('spirit-stone-css')) return;
   const css = `
+
+  /* === Modal / overlay sizing so we get more vertical space before overflow === */
+  .summary-overlay.is-open{
+    display:grid;
+    place-items:center;
+  }
+
+  /* The card becomes a two-row grid: sticky header + scrollable body */
+  .summary-card{
+    width: min(640px, 94vw);          /* a touch wider, still mobile friendly */
+    max-height: 92vh;                 /* ↑ use more of the viewport height */
+    display: grid;
+    grid-template-rows: auto 1fr;     /* header (sticky) + scrollable body */
+    overflow: hidden;                  /* contain internal scrolling */
+  }
+
+  /* Header stays sticky (you already had this visually); keep it explicit */
+  .summary-card__hd{
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    background: rgba(20,20,35,.96);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+
+  /* Make the inner menu the scroll container; footer can stick to its bottom */
+  .summary-card > .spirit-card{
+    overflow: auto;                   /* scroll only the body */
+    padding-bottom: 76px;             /* ensure content never sits under footer */
+  }
+
   .spirit-card{ display:grid; gap:10px; width:min(560px, 92vw); }
   .spirit-summary{ display:grid; grid-template-columns: 120px 1fr; gap:12px; padding:10px; border:1px solid rgba(255,255,255,.10); border-radius:14px; background: rgba(255,255,255,.04); }
   .stone-wrap{ display:grid; justify-items:center; align-content:center; }
@@ -1155,20 +1187,45 @@ function attachFallbackOverlay(node){
   }
   .transmute-hold.is-armed{ box-shadow: 0 0 12px rgba(155,93,229,.45), inset 0 0 8px rgba(155,93,229,.25); }
 
-  /* Global footer spacing */
-  .global-footer{ 
-    margin-top:6px; 
-    margin-bottom:12px;      /* <-- NEW: visible gap below the buttons */
+  /* === Sticky global footer (Reset / Confirm) === */
+  .global-footer{
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+
+    /* Visual affordances so the footer feels anchored */
+    background:
+      linear-gradient(to top, rgba(20,20,35,.94), rgba(20,20,35,.84) 60%, rgba(20,20,35,0));
+    backdrop-filter: blur(6px);
+    border-top: 1px solid rgba(255,255,255,.10);
+
+    /* spacing + safe-area (iOS home indicator) */
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    margin: 0;                        /* remove old margins so it hugs the bottom */
   }
+
+  /* Footer button layout (unchanged semantics) */
   .footer-actions{
-    display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:2px;
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:8px;
   }
+
   .footer-actions .btn-reset,
   .footer-actions .btn-confirm{
-    padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
-    background: rgba(255,255,255,.06); color:#f0e6d2; font-weight:700; cursor:pointer;
+    padding:10px 14px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color:#f0e6d2;
+    font-weight:700;
+    cursor:pointer;
   }
-  .footer-actions .btn-confirm{ background: rgba(155,93,229,.18); border-color: rgba(155,93,229,.35); }
+
+  .footer-actions .btn-confirm{
+    background: rgba(155,93,229,.18);
+    border-color: rgba(155,93,229,.35);
+  }
 
   /* Optional: tiny bottom padding so content never kisses container edge */
   .spirit-card{ padding-bottom:8px; }  /* safe in modal or embedded */
