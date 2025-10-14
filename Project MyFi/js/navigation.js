@@ -457,7 +457,7 @@ export function createRouter({ stage, hubId, layout, onNavigate }) {
   }
   function current(){ return currentId; }
 
-  console.log("Router Initialised")
+  console.log("Navigation Router Initialised")
 
   return { update, setLayout, current, go, setLegend, setTone, pulse };
 }

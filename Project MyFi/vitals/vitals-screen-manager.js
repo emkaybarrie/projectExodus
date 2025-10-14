@@ -21,14 +21,18 @@
 //   setViewMode, getViewMode, cycleViewMode,
 //   setProvisionalTag, listenUpdateLogPending, listenRecentlyConfirmed
 
+
+
 // ───────────────────────────────── Imports ─────────────────────────────────
 import {
   getFirestore, doc, getDoc, setDoc, collection, getDocs,
   query, where, orderBy, limit, onSnapshot, updateDoc, deleteDoc, startAfter
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { openEnergyMenu } from "./energy-menu.js";
+import { openEnergyMenu } from "./modules/energy-menu.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+import { loadCSS } from "../js/core/utilities.js";
 
 import {
   loadVitalsSnapshot,
@@ -44,9 +48,19 @@ import {
   wireVitalsStatusToggle
 } from "./energy-vitals-NEW_FUNCTIONS.js";
 
-import { autoInitSpiritStoneButton } from './vitals-spirit-menu.js';
+import { autoInitSpiritStoneButton } from './modules/vitals-spirit-menu.js';
 
+// ───────────────────────────────── CSS ─────────────────────────────────────
 
+(function ensureScreenCss(){
+  // Give it an id so it’s easy to spot in DOM; dedupe happens by href anyway.
+  // Main
+  loadCSS('./vitals/modules/vitalsScreen.css', { id: 'vitals-screen-css', preload: true })
+    .catch(err => console.warn('[Vitals Screen] CSS load failed', err));
+  // Spirit Stone Menu
+  // loadCSS('./vitals/modules/spiritStoneMenu.css', { id: 'spirit-stone-menu-css', preload: true })
+  // .catch(err => console.warn('[Spirirt Stone Menu] CSS load failed', err));
+})();
 
 // ───────────────────────────────── Constants ────────────────────────────────
 const MS_PER_DAY     = 86_400_000;

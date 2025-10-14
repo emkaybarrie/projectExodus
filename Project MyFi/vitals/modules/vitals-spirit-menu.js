@@ -3,7 +3,7 @@
 // Frontend-only; emits CustomEvents for backend & Stripe integration.
 // Depends on: energy-vitals.js (refreshVitals), optional window.MyFiModal
 
-import { refreshVitals, refreshVitalsHUD } from "./energy-vitals.js";
+import { refreshVitals, refreshVitalsHUD } from "../vitals-screen-manager.js";
 
 // Read-only wallet helpers
 import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -149,10 +149,10 @@ function showSpiritToast(message = "Transmutation complete"){
 
 /** ---------- Public: init ---------- */
 export function autoInitSpiritStoneButton(selector = '#essence-btn'){
-  const btn = document.querySelector(selector) || document.querySelector('.essence-btn');
+  const btn = document.querySelector(selector) || document.querySelector('#essence-btn');
   if (!btn || btn.__spiritWired) return;
   btn.__spiritWired = true;
-  btn.addEventListener('click', (e) => { e.preventDefault(); openSpiritStoneMenu().catch(console.warn); }, { passive:true });
+  btn.addEventListener('click', (e) => { e.preventDefault(); openSpiritStoneMenu().catch(console.warn); }, { passive:false });
 }
 
 /** ---------- Public: open ---------- */
@@ -160,7 +160,7 @@ export async function openSpiritStoneMenu() {
   const uid = getAuth().currentUser?.uid;
   const [gateway, wallet] = await Promise.all([ refreshVitals().catch(()=>null), uid ? readWallet(uid) : {} ]);
   const ui = buildMenuUI({ gateway: gateway||{}, wallet: wallet||{} });
-  if (window.MyFiModal?.openChildRaw) window.MyFiModal.openChildRaw({ menuTitle: 'Spirit Stone', node: ui.root });
+  if (window.MyFiModal?.openChildRaw) window.MyFiModal.openChildRaw({ menuTitle: 'Spirit Stone', node: ui.root, closeOnBackdrop: true });
   else attachFallbackOverlay(ui.root);
 }
 
@@ -1007,12 +1007,30 @@ function wireContribPanel(root, { essence }){
 
 /** ---------- Fallback modal ---------- */
 function attachFallbackOverlay(node){
-  const overlay = document.createElement('div'); overlay.className = 'summary-overlay is-open';
-  const card = document.createElement('div'); card.className = 'summary-card';
+  const overlay = document.createElement('div');
+  overlay.className = 'summary-overlay is-open';
+  const card = document.createElement('div');
+  card.className = 'summary-card';
   card.innerHTML = `<div class="summary-card__hd"><h3>Spirit Stone</h3><button class="summary-close" aria-label="Close">✕</button></div>`;
-  card.appendChild(node); overlay.appendChild(card); document.body.appendChild(overlay); overlay.style.display = 'grid';
-  overlay.querySelector('.summary-close').addEventListener('click', ()=>overlay.remove());
+  card.appendChild(node);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  overlay.style.display = 'grid';
+
+  const close = () => overlay.remove();
+
+  // Close via ✕
+  overlay.querySelector('.summary-close').addEventListener('click', close);
+
+  // Close when clicking/tapping backdrop (but not inside the card)
+  overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) close(); });
+  overlay.addEventListener('touchstart', (e) => { if (e.target === overlay) close(); }, { passive: true });
+
+  // Close on Escape
+  const onKey = (e) => { if (e.key === 'Escape') { close(); window.removeEventListener('keydown', onKey); } };
+  window.addEventListener('keydown', onKey);
 }
+
 
 /** ---------- CSS (scoped) ---------- */
 (function injectCss(){
@@ -1249,3 +1267,4 @@ function attachFallbackOverlay(node){
   `;
   const tag = document.createElement('style'); tag.id = 'spirit-stone-css'; tag.textContent = css; document.head.appendChild(tag);
 })();
+

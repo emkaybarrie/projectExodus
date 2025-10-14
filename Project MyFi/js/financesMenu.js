@@ -2,8 +2,8 @@
 // Standardised Finances menu with inline validation via MyFiUI.
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
 import { auth, db } from './core/auth.js';
-import { initHUD } from '../energy/energy-vitals.js';
-import { connectTrueLayerAccount, ensureTlConsentDialog } from '../energy/truelayer.js';
+import { initHUD } from '../vitals/vitals-screen-manager.js';
+import { connectTrueLayerAccount, ensureTlConsentDialog } from '../vitals/modules/truelayer.js';
 // import { openSmartReviewOverlay } from '../energy/energy-verified.js'
 import {
   updateIncome, updateCoreExpenses, getDailyIncome, getDailyCoreExpenses

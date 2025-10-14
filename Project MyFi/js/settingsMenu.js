@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { resetVitalsToNow } from './data/maintenance.js';
-import { initHUD } from '../energy/energy-vitals.js';
+import { initHUD } from '../vitals/vitals-screen-manager.js';
 
 (function(){
   const { helper, field, select, primary, cancel, danger } = window.MyFiUI;
