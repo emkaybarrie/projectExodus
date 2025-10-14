@@ -31,7 +31,7 @@ body {
   position: fixed; inset: 0;
   z-index: -1; pointer-events: none;
   background:
-    url('../assets/img/stars-bg.png') repeat,
+    url('../../assets/img/stars-bg.png') repeat,
     radial-gradient(circle at 30% 90%, #2a0c18, transparent 50%),
     radial-gradient(circle at 70% 10%, #0c1440, transparent 60%);
   background-size: cover, cover, cover;

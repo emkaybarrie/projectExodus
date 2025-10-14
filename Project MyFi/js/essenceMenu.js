@@ -9,8 +9,7 @@ import {
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFunctions, httpsCallable/*, connectFunctionsEmulator*/ } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getEssenceAvailableMonthlyFromHUD } from './vitals_LEGACY.js';
-import { showToast } from '../js/core/toast.js';
+import { showToast } from './core/toast.js';
 
 (function () {
   const { helper, field, select, primary, cancel, danger, inlineError, setError, btnOpenItem, btnOpenMenu } = window.MyFiUI;
@@ -114,10 +113,6 @@ import { showToast } from '../js/core/toast.js';
         });
       });
     })();
-  }
-
-  async function getEssenceAvailableMonthly(uid) {
-    return await getEssenceAvailableMonthlyFromHUD(uid);
   }
 
   function ContributeMenu() {

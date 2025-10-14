@@ -1,7 +1,7 @@
 // js/core/truelayer.js - CLIENT SIDE
 // Centralised TrueLayer client helpers + RICH Smart Review UI (with stub fallback).
 
-import { auth } from "../js/core/auth.js";
+import { auth } from "../../js/core/auth.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc

@@ -5,8 +5,7 @@ import {
   getFirestore, doc, getDoc, setDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-import { loadVitalsToHUD } from "./energy-vitals.js"
-
+import { loadVitalsToHUD } from "./vitals-screen-manager.js"
 
 // Local snapshot key per user
 function keyFor(uid){ return `vitals:lastSeen:${uid}`; }
@@ -101,70 +100,6 @@ function formatPair(current, cap){
 // prev: snapshot from loadVitalsSnapshot(uid) or null
 // curr: full gateway payload (from readGateway / recompute)
 // opts: { duration?: number } (900ms default)
-
-// export async function runWakeRegenAnimation(uid, elements, prev, curr, opts = {}){
-//   const duration = Number(opts.duration || 900);
-//   //const uid = getAuth()?.currentUser?.uid; // or pass in if you prefer
-//   if (!elements || !curr?.pools) return;
-
-//   // If no prev: just paint and bail
-//   if (!prev?.pools) {
-//     await loadVitalsToHUD(uid, { data: curr, paintOnly:true, refreshGrids:true, elements });
-//     return;
-//   }
-
-//   const pools = ['health','mana','stamina', "shield",'essence'];
-//   const softCap = Number(curr?.essenceUI?.softCap || 0);
-
-//   // Mutable copy we’ll mutate per frame
-//   const frameData = JSON.parse(JSON.stringify(curr));
-
-//   await new Promise((resolveAll)=>{
-//     let done = 0;
-//     const total = pools.length;
-
-//     pools.forEach((k)=>{
-//       const el = elements[k]; if (!el){ if(++done===total) resolveAll(); return; }
-
-//       const toMax = Number(curr.pools[k]?.max || 0);
-//       const uiCap = (k === 'essence') ? softCap : toMax;
-
-//       const fromV = Number(prev.pools?.[k]?.current || 0);
-//       const toV   = Number(curr.pools?.[k]?.current || 0);
-
-//       const eff = (val) => (uiCap > 0) ? Math.max(0, Math.min(uiCap, val)) : Math.max(0, val);
-//       const fromEff = eff(fromV);
-//       const toEff   = eff(toV);
-
-//       if (Math.abs(toEff - fromEff) < 1e-6){
-//         frameData.pools[k].current = toEff;
-//         loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
-//         if(++done===total){ loadVitalsToHUD(uid,{ data: frameData, paintOnly:true, refreshGrids:true, elements }); resolveAll(); }
-//         return;
-//       }
-
-//       setBarGlow(el, (toEff - fromEff) > 0 ? 'pos' : 'neg');
-
-//       tween({
-//         from: fromEff,
-//         to:   toEff,
-//         dur:  duration,
-//         step: (v)=>{
-//           frameData.pools[k].current = Math.max(0, v);
-//           loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:false, elements });
-//         },
-//         done: ()=>{
-//           setBarGlow(el, null);
-//           frameData.pools[k].current = toEff;
-//           if(++done===total){
-//             loadVitalsToHUD(uid, { data: frameData, paintOnly:true, refreshGrids:true, elements });
-//             resolveAll();
-//           }
-//         }
-//       });
-//     });
-//   });
-// }
 
 export async function runWakeRegenAnimation(uid, elements, prev, curr, opts = {}){
   const duration = Number(opts.duration || 900);
@@ -600,7 +535,7 @@ export function wireVitalsStatusToggle(){
 }
 
 const vitalIds = ['health','mana','stamina'];
-const weights = { health:2, mana:1, stamina:1 };
+const weights = { health:1, mana:1, stamina:1 };
 
   function stateClassFromBar(barEl){
     if (!barEl) return 'is-warn';
