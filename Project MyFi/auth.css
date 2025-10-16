@@ -121,6 +121,7 @@ h1 {
   max-width: var(--auth-card-max-width);
   margin: 2rem auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  
 }
 
 /* Inputs */
@@ -251,3 +252,82 @@ input:focus { border-color: #8ab4f8; outline: none; }
   .tab-toggle { flex-direction: column; gap: 0.5rem; }
   .tab-toggle button { width: 100%; }
 }
+
+
+/* --- Toggle row --- */
+/* Keep the row as a normal block; no flex/grid here */
+.toggle-row{
+  width: 100%;
+  margin-top: 8px;
+  /* no display:flex / justify-content — those can trigger the bug */
+}
+
+/* Center the label itself with auto margins */
+.toggle-row .build-toggle{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  margin: 0 auto;          /* <-- centers under the button */
+}
+
+
+/* --- Toggle --- */
+.build-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.build-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.build-toggle .track {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.build-toggle .track::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease;
+}
+
+/* Label text (Stable / Latest) */
+.build-toggle .label {
+  font-size: 0.9rem;
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0.9;
+}
+.build-toggle .label .on { display: none; }
+.build-toggle .label .off { display: inline; }
+
+/* Checked state */
+.build-toggle input:checked + .track {
+  background: rgba(0,255,160,0.35); /* subtle “Latest” hint */
+}
+
+.build-toggle input:checked + .track::after {
+  transform: translateX(20px);
+}
+
+.build-toggle input:checked ~ .label .on { display: inline; }
+.build-toggle input:checked ~ .label .off { display: none; }
+

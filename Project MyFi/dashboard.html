@@ -101,11 +101,12 @@
 </script>
 
   <!-- Styles -->
+  <link rel="stylesheet" href="vitals/modules/vitalsScreen.css" />
+
   <link rel="stylesheet" href="css/splash.css" />
   <link rel="stylesheet" href="css/general.css" />
   <link rel="stylesheet" href="css/toast.css" />
   <link rel="stylesheet" href="css/tour.css" />
-  <!-- <link rel="stylesheet" href="vitals/vitals.css" /> -->
   <link rel="stylesheet" href="screenPlaceholders.css" />
   <link rel="stylesheet" href="css/modal.css" />
   <link rel="stylesheet" href="css/pwa.css" />
@@ -134,7 +135,6 @@
     <!-- Vitals (hub) -->
     <div id="vitals-root" class="vitals-container screen screen--active no-select-callout" data-screen="vitals" aria-current="page">
       <div id="background-layer"></div>
-      <div class="starfield-overlay"></div>
 
       <div class="topbar" role="region" aria-label="Vitals header">
         <h1 id="header-title" class="alias" title="VITALS">VITALS</h1>
@@ -293,6 +293,41 @@
       </div>
     </div>
 
+      <!-- Quests - Left -->
+    <div id="screen-quests" class="screen" data-screen="quests" aria-hidden="true">
+
+    
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/quests.png')">
+        <div class="placeholder-content">
+          <h1>Quests</h1>
+          <h2>(Coming Soon)</h2>
+          <p>Goals and challenges that build habits.</p>
+          <ul>
+            <li>Active & Completed Quests</li>
+            <li>Goal Progress Tracking</li>
+            <li>Streaks & Rewards</li>
+          </ul>
+        </div>
+      </div>
+      
+    </div>
+
+        <!-- Avatar - Right -->
+    <div id="screen-avatar" class="screen" data-screen="avatar" aria-hidden="true">
+      <div class="placeholder" style="--mockup-url: url('./assets/mockups/avatar.png')">
+        <div class="placeholder-content">
+          <h1>Avatar</h1>
+          <h2>(Coming Soon)</h2>
+          <p>Customise, level up, and equip perks.</p>
+          <ul>
+            <li>Stats & Level Progress</li>
+            <li>Perks, Gear & Cosmetics</li>
+            <li>Skill Tree & Artifacts</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
     <!-- Products / Resources - Up -->
     <div id="screen-products" class="screen" data-screen="products" aria-hidden="true">
       <div class="placeholder" style="--mockup-url: url('./assets/mockups/resources.png')">
@@ -309,37 +344,9 @@
       </div>
     </div>
 
-    <!-- Quests - Left -->
-    <div id="screen-quests" class="screen" data-screen="quests" aria-hidden="true">
-      <div class="placeholder" style="--mockup-url: url('./assets/mockups/quests.png')">
-        <div class="placeholder-content">
-          <h1>Quests</h1>
-          <h2>(Coming Soon)</h2>
-          <p>Goals and challenges that build habits.</p>
-          <ul>
-            <li>Active & Completed Quests</li>
-            <li>Goal Progress Tracking</li>
-            <li>Streaks & Rewards</li>
-          </ul>
-        </div>
-      </div>
-    </div>
 
-    <!-- Avatar - Right -->
-    <div id="screen-avatar" class="screen" data-screen="avatar" aria-hidden="true">
-      <div class="placeholder" style="--mockup-url: url('./assets/mockups/avatar.png')">
-        <div class="placeholder-content">
-          <h1>Avatar</h1>
-          <h2>(Coming Soon)</h2>
-          <p>Customise, level up, and equip perks.</p>
-          <ul>
-            <li>Stats & Level Progress</li>
-            <li>Perks, Gear & Cosmetics</li>
-            <li>Skill Tree & Artifacts</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+
+
 
     <!-- The Badlands - Down -->
     <div id="screen-myana" class="screen" data-screen="myana" aria-hidden="true">
@@ -358,6 +365,7 @@
     </div>
 
   </div><!-- /#screen-stage -->
+
 
     <!-- Edge-glow mount (under arrows) -->
   <div id="edgeGlowMount" class="edge-glow-mount" aria-hidden="true"></div>
@@ -433,45 +441,6 @@
   }
 })();
 </script>
-
-
-<!-- TEMP: Recompute per-stream usage + refresh vitals -->
-<!-- <button id="recomputeVitalsBtn"
-        style="position:fixed;right:12px;bottom:56px;z-index:9999">
-  Recompute Vitals
-</button>
-
-<script type="module">
-  import { auth } from './js/core/auth.js';
-
-  // Update to your project id/region if different
-  const FUNCTIONS_BASE = 'https://europe-west2-myfi-app-7fa78.cloudfunctions.net';
-
-  async function callRecomputeVitals() {
-    const user = auth.currentUser;
-    if (!user) { alert('Not signed in'); return; }
-    const qs = new URLSearchParams({ uid: user.uid });
-    const url = `${FUNCTIONS_BASE}/maintenanceRecomputeUsageAndVitals?${qs.toString()}`;
-
-    const btn = document.getElementById('recomputeVitalsBtn');
-    btn.disabled = true;
-    try {
-      const res = await fetch(url);
-      const json = await res.json().catch(() => ({}));
-      console.log('Recompute result:', json);
-      if (!res.ok || json?.error) throw new Error(json?.error || 'recompute_failed');
-      alert('Vitals recomputed. Bars should now reflect the active mode.');
-    } catch (e) {
-      console.error(e);
-      alert('Recompute failed (see console).');
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  document.getElementById('recomputeVitalsBtn')
-    .addEventListener('click', callRecomputeVitals);
-</script> -->
 
 
 

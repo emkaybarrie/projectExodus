@@ -1,0 +1,125 @@
+/* Host sits behind the content plane */
+#bg-host {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  overflow: hidden;
+  transform-style: preserve-3d;
+}
+
+/* ---------- PANORAMA LAYERED MODE (auto-built by background.js) ---------- */
+.bg-space { position: absolute; inset: 0; transform-style: preserve-3d; perspective: 1000px; }
+.bg-space .layer { position: absolute; inset: 0; will-change: transform, opacity, background-position, background-size; }
+
+/* Base panorama (the world image) */
+.bg-space .layer.pano {
+  background-image: url('../../public/assets/bg/space-backdrop.png');
+  background-repeat: no-repeat;
+  background-position: 50% 50%;   /* Vitals = image center */
+  background-size: 170% 170%;     /* enlarged for safe panning */
+  filter: saturate(.98) contrast(.98);
+}
+
+/* Star overlay */
+.bg-space .layer.stars {
+  background-image: url('../../public/assets/bg/space-starfield.png');
+  background-repeat: repeat;      /* seamless */
+  background-position: 0 0;
+  background-size: 900px 900px;   /* sparkle scale */
+  mix-blend-mode: screen;
+  opacity: .65;
+}
+
+/* Nebula / fog overlay */
+.bg-space .layer.nebula {
+  background-image: url('../../public/assets/bg/space-nebula.png');
+  background-repeat: no-repeat;
+  background-position: 50% 50%;
+  background-size: 200% 200%;
+  mix-blend-mode: screen;
+  opacity: .22;
+  filter: blur(.5px);
+}
+
+/* Sun flare – CSS only, positioned via CSS vars set by JS */
+.bg-space .layer.flare { pointer-events: none; mix-blend-mode: screen; opacity: .35; }
+.bg-space .layer.flare::before,
+.bg-space .layer.flare::after {
+  content:""; position:absolute; border-radius:50%;
+  left: var(--flare-x, 60%); top: var(--flare-y, 22%); transform: translate(-50%,-50%);
+  pointer-events:none;
+}
+.bg-space .layer.flare::before {
+  width:48vmin; height:48vmin;
+  background:
+    radial-gradient(closest-side, rgba(255,185,100,.55), rgba(255,185,100,.12) 55%, rgba(0,0,0,0) 70%),
+    radial-gradient(50% 140% at 50% 50%, rgba(255,200,120,.35), rgba(0,0,0,0) 35%),
+    radial-gradient(140% 50% at 50% 50%, rgba(255,200,120,.25), rgba(0,0,0,0) 35%);
+  filter: blur(.6vmin);
+}
+.bg-space .layer.flare::after {
+  width:60vmin; height:60vmin;
+  background:
+    radial-gradient(closest-side, rgba(255,216,160,.15), rgba(0,0,0,0) 70%),
+    radial-gradient(closest-side, rgba(255,140,80,.12), rgba(0,0,0,0) 80%);
+  filter: blur(1.4vmin) saturate(110%);
+  animation: flareTwinkle 3.4s ease-in-out infinite alternate;
+}
+@keyframes flareTwinkle {
+  0% { opacity:.85; transform: translate(-50%,-50%) scale(1.00); }
+  100%{ opacity:1.00; transform: translate(-50%,-50%) scale(1.04); }
+}
+
+/* Planet glow – CSS only, positioned via vars (defaults approximate your left planet) */
+.bg-space .layer.planet-glow { pointer-events:none; mix-blend-mode: screen; opacity: .18; }
+.bg-space .layer.planet-glow::before {
+  content:""; position:absolute; border-radius:50%;
+  left: var(--planet-x, 21%); top: var(--planet-y, 24%); transform: translate(-50%,-50%);
+  width:34vmin; height:34vmin;
+  background:
+    radial-gradient(closest-side, rgba(70,160,255,.22), rgba(0,0,0,0) 70%),
+    radial-gradient(closest-side, rgba(70,160,255,.14), rgba(0,0,0,0) 90%);
+  filter: blur(1.2vmin);
+}
+
+/* Ambient twinkle on stars (very subtle) */
+.bg-space .layer.stars {
+  animation: starsTwinkle 7s ease-in-out infinite alternate;
+}
+@keyframes starsTwinkle {
+  0%   { opacity: .62; filter: contrast(.98) saturate(.98) brightness(1.00); }
+  100% { opacity: .70; filter: contrast(1.02) saturate(1.02) brightness(1.03); }
+}
+
+/* Nebula slow breathing */
+.bg-space .layer.nebula {
+  animation: nebulaBreathe 12s ease-in-out infinite alternate;
+}
+@keyframes nebulaBreathe {
+  0%   { opacity: .18; filter: blur(.5px) saturate(1.0); }
+  100% { opacity: .26; filter: blur(.7px) saturate(1.05); }
+}
+
+/* Flare already twinkles; add a gentle brightness pulse */
+.bg-space .layer.flare {
+  animation: flarePulse 10s ease-in-out infinite alternate;
+}
+@keyframes flarePulse {
+  0%   { filter: saturate(105%) brightness(1.00); }
+  100% { filter: saturate(112%) brightness(1.05); }
+}
+
+/* Planet glow slow breathe */
+.bg-space .layer.planet-glow {
+  animation: planetBreathe 14s ease-in-out infinite alternate;
+}
+@keyframes planetBreathe {
+  0%   { opacity: .15; filter: blur(1.0vmin) }
+  100% { opacity: .22; filter: blur(1.3vmin) }
+}
+
+
+/* ---------- LEGACY THEME KEYS (still supported) ---------- */
+.bg-title         { background: url('../../public/assets/bg/emberward.png') no-repeat 50% 50% / 150% 100%; }
+.bg-cosmic-dark   { background: radial-gradient(120% 120% at 50% 0%, #1a1631 0%, #0b0920 60%, #070716 100%); }
+.bg-nebula-purple { background: radial-gradient(140% 140% at 30% -10%, #6f4bd6 0%, #321c74 40%, #0e0b1b 100%); }
+.bg-dunes-blue    { background: radial-gradient(130% 130% at 70% -5%, #1e3a8a 0%, #0b193f 50%, #081225 100%); }
+.bg-aurora-green  { background: radial-gradient(120% 120% at 50% -10%, #1ba37a 0%, #0f3a30 50%, #071b16 100%); }
