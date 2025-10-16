@@ -5,21 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Project MyFi (Login)</title>
 
-  <!-- Randomize background image (writes to --auth-bg) -->
-  <!-- <script>
-  (function () {
-    const picks = [
-      "./assets/img/symbol.png",
-    ];
-    const chosen = picks[Math.floor(Math.random() * Math.random() * picks.length)];
-    const img = new Image();
-    img.onload = () => document.documentElement.style.setProperty('--auth-bg', `url("${chosen}")`);
-    img.src = chosen;
-  })();
-  </script> -->
-
   <link rel="stylesheet" href="auth.css" />
-  <link rel="stylesheet" href="./energy/truelayer.css" />
+  <link rel="stylesheet" href="./vitals/modules/truelayer.css" />
 </head>
 <body class="ready">
 
@@ -79,7 +66,20 @@
       </div>
     </div>
 
+
     <button class="form-btn" id="login-btn">Login</button>
+
+    <div class="toggle-row">
+      <label class="build-toggle" title="Choose which build to use after login">
+        <input type="checkbox" id="build-toggle" />
+        <span class="track" aria-hidden="true"></span>
+        <span class="label">
+          <span class="off">Stable</span>
+          <span class="on">Experimental</span>
+        </span>
+      </label>
+    </div>
+
   </div>
 
   <!-- Signup Card -->
@@ -151,12 +151,30 @@
     });
 
     // Login
+    // document.getElementById("login-btn").addEventListener("click", () => {
+    //   const email = document.getElementById("login-email").value;
+    //   const password = document.getElementById("login-password").value;
+    //   if (email && password) loginUser(email, password);
+    //   else alert("Please enter both email and password.");
+    // });
+
+    // Login
     document.getElementById("login-btn").addEventListener("click", () => {
       const email = document.getElementById("login-email").value;
       const password = document.getElementById("login-password").value;
-      if (email && password) loginUser(email, password);
-      else alert("Please enter both email and password.");
+
+      // NEW: read toggle state → variant
+      const isLatest = document.getElementById("build-toggle")?.checked === true;
+      const variant = isLatest ? 'experimental' : 'stable';
+
+      if (email && password) {
+        // Pass the variant to auth.js
+        loginUser(email, password, { variant });
+      } else {
+        alert("Please enter both email and password.");
+      }
     });
+
 
     // Signup
     document.getElementById("signup-form-element").addEventListener("submit", (e) => {

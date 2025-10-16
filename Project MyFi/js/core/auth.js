@@ -34,8 +34,37 @@ const getUserDataFromFirestore = async (uid) => {
 };
 
 // Login (unchanged)
-export async function loginUser(email, password) {
+// export async function loginUser(email, password) {
+//   console.log('User Attempting to Log In');
+//   try {
+//     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+//     const user = userCredential.user;
+
+//     const playerData = await getUserDataFromFirestore(user.uid);
+//     if (playerData) {
+//       await setDoc(doc(db, "players", user.uid), { lastLoginAt: serverTimestamp() }, { merge: true });
+//       localStorage.setItem("playerData", JSON.stringify(playerData));
+//       sessionStorage.setItem('showSplashNext', '1');
+//       window.location.href = "dashboard.html";
+//     }
+//   } catch (error) {
+//     console.error("Login error:", error.message);
+//     alert("Login failed: " + error.message);
+//   }
+// }
+
+// At top of auth.js (or near your imports), define the routes once
+const ROUTES = {
+  stable: "dashboard.html",
+  experimental: "ProjectMyFi_vExperimental/public/index.html" // change if your experimental file has a different name/path
+};
+
+// Backward-compatible signature: options is optional
+export async function loginUser(email, password, options = {}) {
   console.log('User Attempting to Log In');
+  const variant = (options.variant === 'experimental') ? 'experimental' : 'stable';
+  const targetHref = ROUTES[variant] || ROUTES.stable;
+
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -45,13 +74,19 @@ export async function loginUser(email, password) {
       await setDoc(doc(db, "players", user.uid), { lastLoginAt: serverTimestamp() }, { merge: true });
       localStorage.setItem("playerData", JSON.stringify(playerData));
       sessionStorage.setItem('showSplashNext', '1');
-      window.location.href = "dashboard.html";
+
+      // Optional: remember last choice (useful for next time)
+      try { localStorage.setItem('lastBuildVariant', variant); } catch {}
+
+      // Redirect based on toggle
+      window.location.href = targetHref;
     }
   } catch (error) {
     console.error("Login error:", error.message);
     alert("Login failed: " + error.message);
   }
 }
+
 
 // Signup
 export async function signupUser(data) {
@@ -72,18 +107,6 @@ export async function signupUser(data) {
       onboarding: { welcomeDone: false }
     }, { merge: true });
 
-    // 3) Seed auxiliary docs (unchanged)
-    // await setDoc(doc(db, `players/${user.uid}/cashflowData/dailyAverages`), {
-    //   dCoreExpenses: Number(0),
-    //   dIncome: Number(0)
-    // });
-    // await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), { // Legacy
-    //   essenceAllocation: Number(0.1),
-    //   healthAllocation: Number(0.1),
-    //   manaAllocation: Number(0.3),
-    //   staminaAllocation: Number(0.5),
-    // });
-
     await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), { 
       poolAllocations: {
         essenceAllocation: Number(0.1),
@@ -92,10 +115,7 @@ export async function signupUser(data) {
         staminaAllocation: Number(0.5),
       }
     }, { merge: true });
-    // await setDoc(doc(db, `players/${user.uid}/classifiedTransactions/summary`), {
-    //   recentUsage:  { essence: 0, health: 0, mana: 0, stamina: 0 },
-    //   historicUsage:{ essence: 0, health: 0, mana: 0, stamina: 0 },
-    // });
+
 
     // Capture Invite code if present (non-blocking)
     try {

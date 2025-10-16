@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyFi</title>
+  <link rel="stylesheet" href="../src/core/background.css">
+    <style>
+    :root { --header-h: 0px; --footer-h: 0px; }
+
+    html, body { height: 100%; margin: 0; }
+    body { background: #0e0b1b; color: #eee; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+    /* Chrome (header/footer) mounts */
+    .chrome { position: fixed; left:0; right:0; z-index: 50; pointer-events: none; }
+    .chrome header, .chrome footer { pointer-events: auto; }
+    #chrome-header { top: 0; }
+    #chrome-footer { bottom: 0; }
+
+    /* Header */
+    .topbar {
+        display:flex; align-items:center; gap:.75rem;
+        padding:.75rem 1rem;
+        background: rgba(10,8,20,.6);
+        backdrop-filter: blur(8px);
+    }
+    .topbar h1 { margin:0; font-size: 1.1rem; letter-spacing:.15em; }
+
+    /* Footer (grid → true center; essence mini overlays center cell) */
+    .hud-footer {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: .5rem;
+        padding: .5rem .75rem;
+        background: rgba(10,8,20,.55);
+        backdrop-filter: blur(8px);
+        position: relative;
+    }
+    .slot-left  { justify-self: start; }
+    .slot-right { justify-self: end; }
+    .slot-center { position: relative; display: grid; place-items: center; }
+    #essence-mini {
+        position: absolute; inset: 0;
+        display: grid; place-items: center;
+        pointer-events: none; /* enable later if needed */
+    }
+
+    .btn { appearance:none; border:0; background: rgba(255,255,255,.08);
+            padding:.6rem .8rem; border-radius: 999px; color:#eee; cursor:pointer; }
+    .btn:active { transform: translateY(1px); }
+
+    /* Stage (screens under chrome, padded by measured header/footer heights) */
+    #stage {
+        position: fixed; inset: 0;
+        padding-top: var(--header-h);
+        padding-bottom: var(--footer-h);
+        overflow: hidden;
+    }
+    #plane {
+        position: absolute; inset: 0;
+        will-change: transform;
+        transition: transform 260ms ease;
+        overscroll-behavior: contain;
+    }
+
+    /* Gestures own pointer stream; opt-in scroll areas via .scrollable */
+    #plane, .screen-root { touch-action: none; }
+    .scrollable { touch-action: auto; }
+
+    /* Each screen body fits between header & footer */
+    .screen-root{
+        position:absolute; left:0;
+        top: var(--header-h);
+        width: 100vw;
+        height: calc(100vh - var(--header-h) - var(--footer-h));
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* During drag we disable the plane transition so peek feels direct */
+    .dragging #plane { transition: none; }
+    </style>
+
+</head>
+<body>
+
+  <!-- Background host (Step 3 will add gradients/images here) -->
+  <div id="bg-host" aria-hidden="true"></div>
+
+  <!-- Shared Chrome (header & footer) -->
+  <div id="chrome-header" class="chrome">
+    <header class="topbar" id="topbar">
+      <h1 id="header-title">MYFI</h1>
+      <div id="header-extras" style="margin-left:auto; display:flex; gap:.5rem;"></div>
+    </header>
+  </div>
+  <div id="chrome-footer" class="chrome">
+    <footer class="hud-footer" id="footerbar">
+    <div class="slot-left">
+        <button id="left-btn" class="btn" title="Left">◀</button>
+    </div>
+    <div class="slot-center">
+        <button id="main-btn" class="btn" title="Main">●</button>
+        <div id="essence-mini" aria-live="polite"></div>
+    </div>
+    <div class="slot-right">
+        <button id="right-btn" class="btn" title="Right">▶</button>
+    </div>
+    </footer>
+
+  </div>
+
+  <!-- Screens mount here -->
+  <div id="stage" role="main" aria-live="polite">
+    <div id="plane" aria-hidden="false"></div>
+  </div>
+
+  <script type="module" src="../src/core/app.js"></script>
+</body>
+</html>

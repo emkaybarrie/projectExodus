@@ -152,7 +152,6 @@ import playerDataManager from "./playerDataManager.js";
 import { initHUD } from "../vitals/vitals-screen-manager.js";
 import { createSplash } from './splash.js';
 
-import { updateIncome, updateCoreExpenses } from "./data/cashflowData.js";
 import { showWelcomeThenMaybeSetup } from './welcome.js';
 
 import { createRouter } from './navigation.js';
@@ -174,6 +173,7 @@ import "./quickMenus.js";
 import "./musicManager.js"
 
 import "../vitals/modules/energy-menu.js"
+
 
 const shouldShowSplash = sessionStorage.getItem('showSplashNext') === '1';
 if (shouldShowSplash) sessionStorage.removeItem('showSplashNext');
