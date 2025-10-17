@@ -2,72 +2,456 @@
 
 .screen { padding: 16px 14px; }
 
-.card {
-  background: rgba(18, 14, 33, .62);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 16px;
-  padding: 12px;
-  box-shadow: 0 6px 24px rgba(0,0,0,.25);
-  backdrop-filter: blur(6px);
-  margin: 10px 0 14px;
+/* Top Section */
+/* ========================================================================== */
+   /* Portrait & Level Pill */
+/* ========================================================================== */
+
+.top-section { display:flex; gap:16px; align-items:flex-start; }
+.portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
+
+.portrait-wrapper {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  width: 100px;
+  height: 100px;
+  flex-shrink: 0;
+  cursor: pointer
+}
+.portrait-wrapper .portrait {
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: center 15%;
+  border: 2px solid #ffffff1a; border-radius: 4px;
+}
+.level-pill {
+  position: absolute;
+  bottom: 0; right: 0;
+  transform: translate(50%, 50%);
+  padding: 4px 8px; font-size: 0.75rem; font-weight: 800;
+  font-family: 'Cinzel', serif;
+  color: #0a0a12;
+  background: linear-gradient(to bottom, #f0dca4, #e6c980);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  line-height: 1;
+  z-index: 2;
 }
 
-/* hero */
-.hero { display: grid; grid-template-columns: 86px 1fr; gap: 12px; align-items: center; }
-.hero .avatar {
-  width: 86px; height: 86px; border-radius: 14px;
-  background: linear-gradient(180deg, #8a5bff, #5330d8);
-  box-shadow: inset 0 0 12px rgba(255,255,255,.25), 0 8px 22px rgba(0,0,0,.35);
-}
-.hero .stats .line { display:flex; align-items:center; justify-content:space-between; padding: 4px 0; }
-.hero .stats .line span { opacity:.8; letter-spacing:.05em; font-size:.9rem; }
-.hero .stats .line b { font-weight:600; }
+/* ─────────── Emberward Portrait Glow (simple, reliable) ─────────── */
+.portrait-wrapper .emberward-frame {
+  position: absolute;
+  inset: -0.5px;                     /* slightly larger than portrait */
+  border-radius: inherit;          /* match portrait shape */
+  pointer-events: none;
+  z-index: 1;                     /* above portrait */
+  opacity: 0;                      /* default hidden */
+  transition: opacity 0.4s ease;
 
-/* shield */
-.shield .row { display:flex; align-items:center; justify-content:space-between; margin-bottom: 6px; }
-.shield .status { color:#cfc5ff; opacity:.9; font-style: italic; margin-bottom: 8px; }
-.shield .bar { height: 8px; background: rgba(255,255,255,.06); border-radius: 999px; overflow:hidden; }
-.shield .bar .fill { height: 100%; background: linear-gradient(90deg, #7e57ff, #d14cff); width: 0%; }
+    /* NEW: hook for JS-driven intensity 0..1 */
+  --i: var(--ember-intensity, 0);
+}
 
-/* skills */
-.skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.95rem; opacity:.9; }
-.skills .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.skills .slot {
-  height: 44px; border-radius: 10px; background: rgba(255,255,255,.05);
-  border: 1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
+/* When Emberward is active (golden glow) */
+.portrait-wrapper.is-ember-on .emberward-frame {
+ opacity: calc(0.45 + 0.55 * var(--i));
+  /* sizes + alphas scale with --i */
+  box-shadow:
+    0 0 calc(6px + 10px * var(--i))  calc(1px + 1px * var(--i))  rgba(255,215,100, calc(0.35 + 0.40 * var(--i))),
+    0 0 calc(14px + 14px * var(--i)) calc(4px + 4px * var(--i)) rgba(255,190, 70, calc(0.25 + 0.35 * var(--i))),
+    inset 0 0 calc(3px + 3px * var(--i))                           rgba(255,230,150, calc(0.30 + 0.30 * var(--i)));
+  animation: emberGlow calc(3s - 1.6s * var(--i)) ease-in-out infinite;
 }
-.skills .slot.locked::after { content: "🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
 
-/* log */
-.log .log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-.log .actions .btn.small { font-size:.9rem; padding:.35rem .55rem; }
-.log .log-sub { color:#cbb9ff; font-size:.9rem; margin: 2px 0 8px; }
-.log-list { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
-.log-item { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:8px 10px; }
-.log-item .log-title { font-weight:600; margin-bottom:2px; }
-.log-item .log-meta { font-size:.85rem; opacity:.8; }
+/* When Emberward is inactive (subtle grey ring) */
+.portrait-wrapper.is-ember-off .emberward-frame {
+  opacity: 1;
+  box-shadow:
+    0 0 3px 1px rgba(160,160,170,0.4),
+    inset 0 0 2px rgba(200,200,210,0.3);
+}
 
-/* essence mini (center footer slot) */
-#essence-mini { display:flex; align-items:center; justify-content:center; }
-.ess-mini {
-  position: relative; width:56px; height:56px; border-radius:50%;
-  border:0; background: transparent; cursor:pointer;
+@keyframes emberGlow {
+  0%,100% { box-shadow:
+    0 0 4px 1px rgba(255,215,100,0.75),
+    0 0 8px 3px rgba(255,190,70,0.45),
+    inset 0 0 2px rgba(255,230,150,0.5);
+  }
+  50% { box-shadow:
+    0 0 7px 2px rgba(255,230,120,0.85),
+    0 0 12px 4px rgba(255,200,80,0.55),
+    inset 0 0 3px rgba(255,240,180,0.6);
+  }
 }
-.ess-mini .ring {
-  position:absolute; inset:0; border-radius:50%;
-  box-shadow: 0 0 18px 4px rgba(160, 110, 255, .35) inset, 0 0 18px rgba(160,110,255,.35);
+
+/* ========================================================================== */
+   /* Vitals bars (layout + layers) */
+/* ========================================================================== */
+
+.vitals-bars { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
+
+.bar {
+  position: relative; height: 48px;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 6px; overflow: hidden; font-weight: bold;
+  display: flex; align-items: center; padding: 0 12px;
+  background-color: rgba(20,20,30,0.4); backdrop-filter: blur(4px);
+  box-shadow: 0 0 8px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.05);
+  overflow: visible;
 }
-.ess-mini .orb {
-  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:38px; height:38px; border-radius:50%;
-  background: radial-gradient(circle at 40% 35%, #e9d5ff, #a78bfa 55%, #6d28d9 100%);
-  box-shadow: 0 4px 12px rgba(0,0,0,.45);
+.bar .bar-bg { position:absolute; inset:0; z-index:1; }
+
+/* Gridlines — sits ABOVE fill and surplus by default. */
+.bar .bar-grid {
+  position: absolute; inset: 0;
+  z-index: 3;
+  pointer-events: none;
 }
-.ess-mini.pulse .ring { animation: essPulse 1.2s ease-in-out infinite; }
-@keyframes essPulse {
-  0%   { box-shadow: 0 0 12px 3px rgba(160,110,255,.25) inset, 0 0 12px rgba(160,110,255,.25); }
-  100% { box-shadow: 0 0 20px 6px rgba(160,110,255,.45) inset, 0 0 20px rgba(160,110,255,.45); }
+.bar .bar-grid .grid-line {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,255,255,0.08);
 }
+
+/* Active fill */
+.bar-fill {
+  position: absolute; inset:0 auto 0 0; left:0; width:0%; z-index:1;
+  border-radius: 6px 0 0 6px; overflow:hidden; transition: width 240ms ease;
+}
+.bar-fill::before {
+  content:''; position:absolute; inset:0; z-index:-1; border-radius:6px 0 0 6px;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 0 6px rgba(255,255,255,0.1), inset 0 0 6px rgba(255,255,255,0.05);
+}
+
+/* Surplus pill */
+.bar .bar-surplus {
+  position: absolute;
+  right: -10px; bottom: -10px;
+  transform: none;
+  z-index: 4;
+  padding: 1px 2px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+  color: #0a0a12;
+  background: linear-gradient(to bottom, #f0dca4, #e6c980);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+/* Labels & values */
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
+.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:1.0rem; color:#f0e5c9; }
+/* Regen rate state for the value text */
+.bar-value.is-rate {
+  opacity: .9;
+  font-style: italic;
+}
+
+
+/* Reclaim overlay */
+.bar .bar-reclaim {
+  position:absolute; top:0; bottom:0; z-index:2;
+  --reclaim-opacity: 0.6;
+  background: linear-gradient(
+    to bottom,
+    rgba(250, 204, 21, var(--reclaim-opacity)),
+    rgba(234, 179, 8,  var(--reclaim-opacity))
+  );
+  box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
+  border-top-left-radius: 0; border-bottom-left-radius: 0;
+  border-top-right-radius: inherit; border-bottom-right-radius: inherit;
+  transition: width 240ms ease, left 240ms ease;
+}
+
+/* credit overlay: brighter tint */
+.bar .bar-reclaim.is-credit {
+  mix-blend-mode: screen;   /* optional, looks good on dark bars */
+  filter: brightness(1.35); /* subtle pop */
+  opacity: 0.9;
+}
+/* #vital-health .bar .bar-reclaim.is-credit   { background: var(--health-color); }
+#vital-mana   .bar .bar-reclaim.is-credit   { background: var(--mana-color); }
+#vital-stamina.bar .bar-reclaim.is-credit   { background: var(--stamina-color); }
+#vital-essence.bar .bar-reclaim.is-credit   { background: var(--essence-color); } */
+
+#vital-health .bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #7f1d1d, #400000); }
+#vital-mana   .bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #164e63, #002244); }
+#vital-stamina.bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #14532d, #003300); }
+#vital-essence.bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
+
+
+.bar-reclaim.flash { animation: ghost-flash 0.4s ease-in-out; }
+@keyframes ghost-flash { 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
+
+/* Pool colours */
+#vital-health  .bar-fill::before { background: linear-gradient(to bottom, #7f1d1d, #400000); }
+#vital-mana    .bar-fill::before { background: linear-gradient(to bottom, #164e63, #002244); }
+#vital-stamina .bar-fill::before { background: linear-gradient(to bottom, #14532d, #003300); }
+#vital-essence .bar-fill::before { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
+#vital-stamina { margin-top: 10px; }
+
+/* Surplus backdrop */
+.bar.has-surplus::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 0;
+  opacity: .65; filter: saturate(120%);
+  transition: opacity .2s ease;
+  pointer-events: none;
+  border-radius: 6px;
+}
+#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .52), rgba(64, 0, 0, .52)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .52), rgba(0, 34, 68, .52)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .52), rgba(0, 51, 0, .52)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .30)); }
+.bar.has-surplus:hover::before,
+.bar.has-surplus:focus-within::before { opacity: .45; }
+
+/* Trend states — subtle tint only (no glow/pulse) */
+.bar.underspending {
+  border: 2px solid rgba(120,255,180,0.25);
+  box-shadow: none;
+  animation: none;
+}
+.bar.overspending  {
+  border: 2px solid rgba(255,80,80,0.25);
+  box-shadow: none;
+  animation: none;
+}
+
+
+/* shared flag during the wake tween */
+.bar.is-waking { position: relative; }
+
+/* positive movement: brighten */
+.bar.is-waking.is-waking--pos .bar-fill {
+  filter: brightness(1.15) saturate(1.1);
+  /* or use a glow: */
+  box-shadow: 0 0 10px currentColor, inset 0 0 6px currentColor;
+}
+
+/* negative movement: darken */
+.bar.is-waking.is-waking--neg .bar-fill {
+  filter: brightness(0.85) saturate(0.95);
+  /* or a subtler shadow */
+  box-shadow: 0 0 4px rgba(0,0,0,0.35) inset;
+}
+
+/* >>> Move the pulsing border/glow here (was on trend states) */
+.bar.is-waking.is-waking--pos {
+  border: 2px solid rgba(120,255,180,0.4);
+  box-shadow: 0 0 8px rgba(120,255,180,0.2), 0 0 14px rgba(120,255,180,0.15);
+  animation: borderPulseGlow 2.8s ease-in-out infinite;
+}
+.bar.is-waking.is-waking--neg {
+  border: 2px solid rgba(255,80,80,0.25);
+  box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2);
+  animation: borderPulseAlert 1.6s ease-in-out infinite;
+}
+
+/* Pulsing keyframes (reused) */
+@keyframes borderPulseGlow {
+  0%   { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
+  50%  { box-shadow: 0 0 14px rgba(120,255,180,0.4) }
+  100% { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
+}
+@keyframes borderPulseAlert {
+  0%,100% { box-shadow: 0 0 4px rgba(255,60,60,0.1) }
+  50%     { box-shadow: 0 0 10px rgba(255,0,0,0.3) }
+}
+
+/* ========================================================================== */
+   /* Mode engravings + Totals row */
+/* ========================================================================== */
+
+.vitals-toprow{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.75rem; margin: 6px 0 0;
+}
+.vitals-total{
+  margin-left:auto; font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
+}
+.vitals-total .label{ opacity:.8; margin-right:.35rem; }
+.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
+.vitals-total .vital-value{ font-weight:600; }
+.vitals-total .vital-max{ opacity:.8; }
+
+.mode-engrave{
+  display: flex; justify-content: flex-start; align-items: center;
+  gap: clamp(10px, 2.8vw, 18px);
+  margin: 6px 0 0px;
+}
+.mode-btn{
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 4px 8px; line-height: 1;
+  font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
+  font-size: clamp(11px, 1.8vw, 14px); user-select: none;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(228,216,180,.45);
+  text-shadow: 0 1px 0 rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.05);
+  opacity: .65;
+  transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
+}
+.mode-btn:hover, .mode-btn:focus-visible{
+  opacity: .9; outline: none;
+  -webkit-text-stroke: 1px rgba(240,230,210,.7);
+}
+.mode-btn.is-active{
+  color: #e4d8b4; -webkit-text-stroke: 0;
+  text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
+  opacity: 1;
+}
+.mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+
+/* ───────────────────────────── Bar heights (configurable) ───────────────────────────── */
+:root{
+  /* Base height for all bars (tweak this once) */
+  --bar-h: 42px;
+
+  /* Per-vital overrides (fallback to --bar-h if not set) */
+  --bar-h-health:   var(--bar-h);
+  --bar-h-mana:     var(--bar-h);
+  --bar-h-stamina:  var(--bar-h);
+  --bar-h-shield:   32px;   /* keep thin */
+  --bar-h-essence:  32px;   /* match shield */
+
+  /* Vertical rhythm */
+  --bar-gap: 8px;
+}
+
+/* Apply heights */
+.bar{ height: var(--bar-h); }
+#vital-health  .bar{ height: var(--bar-h-health);   }
+#vital-mana    .bar{ height: var(--bar-h-mana);     }
+#vital-stamina .bar{ height: var(--bar-h-stamina);  }
+#vital-shield  .bar{ height: var(--bar-h-shield);   }
+#vital-essence .bar{ height: var(--bar-h-essence);  }
+
+/* tighten gaps a touch to match thinner bars */
+.vitals-bars{ gap: var(--bar-gap); }
+#vital-stamina{ margin-top: calc(var(--bar-gap) + 2px); }
+
+/* ───────────────────────────── Shield row layout ───────────────────────────── */
+.shield-row{
+  display: grid;
+  grid-template-columns: 1fr auto; /* shield expands, totals hug right */
+  align-items: center;
+  gap: 12px;
+  margin-top: var(--bar-gap);
+}
+.shield-row #vital-shield{ min-width: 0; }           /* allow “squish” */
+.shield-row #vitals-total{ justify-self: end; }       /* pin right */
+.shield-row #vital-shield .bar{ margin: 0; }          /* remove extra gap */
+
+/* Shield look (baseline aura + gold overlay for today's escrow) */
+#vital-shield .bar-fill::before{
+  background: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,0.08);
+}
+#vital-shield .bar .bar-reclaim{
+  background: linear-gradient(to bottom, rgba(250,204,21,.80), rgba(234,179,8,.80));
+  mix-blend-mode: screen;
+  opacity: .95;
+}
+
+/* Energy Shield breakdown overlay – lives inside .bar-fill */
+#vital-shield .shield-breakdown{
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;        /* match .bar-fill shape */
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s ease;
+  z-index: 2;                    /* above .bar-fill::before, below grid/labels */
+  mix-blend-mode: screen;        /* similar pop to other overlays */
+}
+
+/* subtle gloss so it feels like a native fill */
+#vital-shield .shield-breakdown::after{
+  content: "";
+  position: absolute; inset: 0; border-radius: inherit;
+  box-shadow:
+    inset 0 2px 4px rgba(0,0,0,.28),
+    inset 0 0 4px rgba(255,255,255,.06);
+}
+
+#vital-shield .shield-breakdown.is-visible{ opacity: 1; }
+
+/* Footer meta row */
+.hud-meta-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Left group stays left */
+#mode-engrave{
+  flex: 0 0 auto;        /* just its intrinsic width */
+}
+
+/* Center the status reliably */
+.vitals-status{
+  margin-inline: auto;   /* centers between left edge and right edge */
+  position: static;
+  transform: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.vitals-status:focus-visible{
+  outline: 2px solid var(--line, #444);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* Overview (dot + text) */
+.vs-overview{
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  white-space: nowrap;
+}
+
+/* Dot (restored) */
+.status-dot{
+  width: .6rem; height: .6rem; border-radius: 999px;
+  display: inline-block; flex: 0 0 .6rem;
+  background: currentColor; box-shadow: 0 0 6px currentColor;
+}
+.status-dot.is-good{ color:#50d878; }
+.status-dot.is-warn{ color:#fbbf24; }
+.status-dot.is-bad { color:#ef4444; }
+
+.status-text{ font-weight:700; }
+
+/* Toggle to breakdown */
+.vs-breakdown{ display:none; gap:.4rem; }
+.vitals-status.is-breakdown .vs-overview{ display:none; }
+.vitals-status.is-breakdown .vs-breakdown{ display:inline-flex; }
+
+.vs-item{
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:2px 4px; border-radius:8px;
+}
+.vs-label{ font-weight:700; font-family:'Cinzel',serif; }
+
+.status-dot.is-good{ color:#50d878; }  /* underspending */
+.status-dot.is-warn{ color:#fbbf24; }  /* on track / neutral */
+.status-dot.is-bad { color:#ef4444; }  /* overspending */
+
+
+/* (optional) if your dot needs spacing */
+.vitals-status .status-dot{ margin-right: .25rem; }
+
+/* Padding */
 
 /* padding to avoid footer overlap when overscrolling */
 .pad-bottom { height: 68px; }

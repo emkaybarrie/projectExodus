@@ -1,76 +1,84 @@
+// src/screens/vitals/index.js
 import { loadScopedCSS } from '../../core/cssScope.js';
-import { setHeaderTitle } from '../../core/chrome.js';
-import { navigate } from '../../core/router.js'; // add this import
+import { setHeaderTitle, setFooter } from '../../core/chrome.js';
+import { injectView } from '../../core/view.js';
+import { navigate } from '../../core/router.js';
 
 let unstyle;
+let cleanup = [];
+
+function mountEssenceMini() {
+  const slot = document.getElementById('essence-mini');
+  if (!slot) return () => {};
+  slot.innerHTML = `
+    <button class="ess-mini" id="ess-mini-btn" title="Essence">
+      <div class="ring"></div>
+      <div class="orb"></div>
+    </button>
+  `;
+  const btn = slot.querySelector('#ess-mini-btn');
+  const onClick = () => {
+    // placeholder action; later hook to real Essence modal
+    btn.classList.toggle('pulse');
+  };
+  btn.addEventListener('click', onClick);
+  return () => btn.removeEventListener('click', onClick);
+}
 
 export default {
   id: 'vitals',
   route: 'vitals',
   title: 'VITALS',
-    chrome: {
+  background: { key: 'panorama' },
+  chrome: {
     mode: 'full',
     footer: {
-        left:  { icon:'⚡', title:'Energy',  onClick(){ navigate('quests'); } },
-        main:  { icon:'⦿', title:'Essence', onClick(){ alert('Essence menu'); } },
-        right: { icon:'🕘', title:'Log',     onClick(){ navigate('avatar'); } }
+      left:  { icon: '⚡', title: 'Quests',  onClick(){ navigate('quests'); } },
+      main:  { icon: '⦿', title: 'Essence', onClick(){ /* handled by essence-mini */ } },
+      right: { icon: '🧙', title: 'Avatar',  onClick(){ navigate('avatar'); } },
     }
-    },
-  background: { key: 'panorama' },   // ← use the panning image mode
+  },
 
   async mount(root) {
+    // 1) Scoped CSS
     unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
-    root.innerHTML = `
-      <div class="screen scrollable">
-        <section class="hero card">
-          <div class="avatar"></div>
-          <div class="stats">
-            <div class="line"><span>HEALTH</span><b>72 / 276</b></div>
-            <div class="line"><span>MANA</span><b>64 / 415</b></div>
-            <div class="line"><span>STAMINA</span><b>177 / 691</b></div>
-          </div>
-        </section>
 
-        <section class="shield card">
-          <div class="row">
-            <span>SHIELD</span>
-            <b>0 / 1,382</b>
-          </div>
-          <div class="status">Status: <em>Off Track</em></div>
-          <div class="bar"><div class="fill" style="width:0%"></div></div>
-        </section>
+    // 2) Screen body
+    await injectView(root, new URL('./view.html', import.meta.url));
 
-        <section class="skills card">
-          <h3>Skills</h3>
-          <div class="grid">
-            <button class="slot locked" title="Locked"></button>
-            <button class="slot locked" title="Locked"></button>
-            <button class="slot locked" title="Locked"></button>
-            <button class="slot locked" title="Locked"></button>
-          </div>
-        </section>
+    // 3) Wire lightweight actions
+    // const addBtn = root.querySelector('[data-act="add"]');
+    // const filterBtn = root.querySelector('[data-act="filter"]');
+    // const onAdd = () => alert('Add event (placeholder)');
+    // const onFilter = () => alert('Filter (placeholder)');
+    // addBtn.addEventListener('click', onAdd);
+    // filterBtn.addEventListener('click', onFilter);
+    // cleanup.push(() => { addBtn.removeEventListener('click', onAdd); filterBtn.removeEventListener('click', onFilter); });
 
-        <section class="log card">
-          <div class="log-header">
-            <h3>Event Log</h3>
-            <div class="actions">
-              <button class="btn small" data-act="add">＋</button>
-              <button class="btn small" data-act="filter">☰</button>
-            </div>
-          </div>
-          <div class="log-sub">Active — <span class="muted">Nothing pending</span></div>
-          <ul class="log-list" data-el="log-list"></ul>
-        </section>
+    // 4) Initial log render
 
-        <div class="pad-bottom"></div>
-      </div>
-    `;
   },
 
   onShow() {
     setHeaderTitle('VITALS');
-    // later: hook PDM, update essence mini, start listeners
+
+    // Footer buttons per-screen (keeps systemized approach)
+    setFooter(this.chrome.footer);
+
+    // Inject essence mini into the center footer slot
+    cleanup.push(mountEssenceMini());
   },
-  onHide(){},
-  unmount(){ if (unstyle) unstyle(); }
+
+  onHide() {
+    // remove essence mini content but keep footer bar
+    const slot = document.getElementById('essence-mini');
+    if (slot) slot.innerHTML = '';
+    // other per-screen listeners cleaned in unmount
+  },
+
+  unmount() {
+    cleanup.forEach(fn => { try{ fn(); } catch{} });
+    cleanup = [];
+    if (unstyle) unstyle();
+  }
 };
