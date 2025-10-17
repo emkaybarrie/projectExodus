@@ -1,16 +1,14 @@
-/* this file is scoped to #screen-vitals by cssScope.js */
 
-.screen { padding: 16px 14px; }
 
-/* Top Section */
+
+#core-vitals-wrapper {margin: 1rem;}
+
+#top-cluster { display:flex; gap:16px; align-items:flex-start; }
 /* ========================================================================== */
    /* Portrait & Level Pill */
 /* ========================================================================== */
 
-.top-section { display:flex; gap:16px; align-items:flex-start; }
-.portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
-
-.portrait-wrapper {
+.top-cluster-portrait-wrapper {
   position: relative;
   overflow: visible;
   isolation: isolate;
@@ -19,11 +17,12 @@
   flex-shrink: 0;
   cursor: pointer
 }
-.portrait-wrapper .portrait {
+.top-cluster-portrait-wrapper .portrait {
   width: 100%; height: 100%;
   object-fit: cover; object-position: center 15%;
   border: 2px solid #ffffff1a; border-radius: 4px;
 }
+.portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
 .level-pill {
   position: absolute;
   bottom: 0; right: 0;
@@ -39,57 +38,37 @@
   z-index: 2;
 }
 
-/* ─────────── Emberward Portrait Glow (simple, reliable) ─────────── */
-.portrait-wrapper .emberward-frame {
-  position: absolute;
-  inset: -0.5px;                     /* slightly larger than portrait */
-  border-radius: inherit;          /* match portrait shape */
-  pointer-events: none;
-  z-index: 1;                     /* above portrait */
-  opacity: 0;                      /* default hidden */
-  transition: opacity 0.4s ease;
-
-    /* NEW: hook for JS-driven intensity 0..1 */
-  --i: var(--ember-intensity, 0);
-}
-
-/* When Emberward is active (golden glow) */
-.portrait-wrapper.is-ember-on .emberward-frame {
- opacity: calc(0.45 + 0.55 * var(--i));
-  /* sizes + alphas scale with --i */
-  box-shadow:
-    0 0 calc(6px + 10px * var(--i))  calc(1px + 1px * var(--i))  rgba(255,215,100, calc(0.35 + 0.40 * var(--i))),
-    0 0 calc(14px + 14px * var(--i)) calc(4px + 4px * var(--i)) rgba(255,190, 70, calc(0.25 + 0.35 * var(--i))),
-    inset 0 0 calc(3px + 3px * var(--i))                           rgba(255,230,150, calc(0.30 + 0.30 * var(--i)));
-  animation: emberGlow calc(3s - 1.6s * var(--i)) ease-in-out infinite;
-}
-
-/* When Emberward is inactive (subtle grey ring) */
-.portrait-wrapper.is-ember-off .emberward-frame {
-  opacity: 1;
-  box-shadow:
-    0 0 3px 1px rgba(160,160,170,0.4),
-    inset 0 0 2px rgba(200,200,210,0.3);
-}
-
-@keyframes emberGlow {
-  0%,100% { box-shadow:
-    0 0 4px 1px rgba(255,215,100,0.75),
-    0 0 8px 3px rgba(255,190,70,0.45),
-    inset 0 0 2px rgba(255,230,150,0.5);
-  }
-  50% { box-shadow:
-    0 0 7px 2px rgba(255,230,120,0.85),
-    0 0 12px 4px rgba(255,200,80,0.55),
-    inset 0 0 3px rgba(255,240,180,0.6);
-  }
-}
 
 /* ========================================================================== */
    /* Vitals bars (layout + layers) */
 /* ========================================================================== */
 
-.vitals-bars { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
+/* ───────────────────────────── Config ───────────────────────────── */
+:root{
+  /* Bar colours */
+  --health-color: linear-gradient(to bottom, #7f1d1d, #400000);
+  --mana-color: linear-gradient(to bottom, #164e63, #002244);
+  --stamina-color: linear-gradient(to bottom, #14532d, #003300);
+  --shield-color: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
+
+
+  /* Base height for all bars (tweak this once) */
+  --bar-h: 42px;
+
+  /* Per-vital overrides (fallback to --bar-h if not set) */
+  --bar-h-health:   var(--bar-h);
+  --bar-h-mana:     var(--bar-h);
+  --bar-h-stamina:  var(--bar-h);
+  --bar-h-shield:   32px;   /* keep thin */
+  --bar-h-essence:  32px;   /* match shield */
+
+  /* Vertical rhythm */
+  --bar-gap: 8px;
+}
+
+/* ───────────────────────────── CSS ───────────────────────────── */
+
+.top-cluster-vitals-bars-wrapper { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
 
 .bar {
   position: relative; height: 48px;
@@ -190,136 +169,7 @@
 #vital-essence .bar-fill::before { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 #vital-stamina { margin-top: 10px; }
 
-/* Surplus backdrop */
-.bar.has-surplus::before {
-  content: "";
-  position: absolute; inset: 0;
-  z-index: 0;
-  opacity: .65; filter: saturate(120%);
-  transition: opacity .2s ease;
-  pointer-events: none;
-  border-radius: 6px;
-}
-#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .52), rgba(64, 0, 0, .52)); }
-#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .52), rgba(0, 34, 68, .52)); }
-#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .52), rgba(0, 51, 0, .52)); }
-#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .30)); }
-.bar.has-surplus:hover::before,
-.bar.has-surplus:focus-within::before { opacity: .45; }
 
-/* Trend states — subtle tint only (no glow/pulse) */
-.bar.underspending {
-  border: 2px solid rgba(120,255,180,0.25);
-  box-shadow: none;
-  animation: none;
-}
-.bar.overspending  {
-  border: 2px solid rgba(255,80,80,0.25);
-  box-shadow: none;
-  animation: none;
-}
-
-
-/* shared flag during the wake tween */
-.bar.is-waking { position: relative; }
-
-/* positive movement: brighten */
-.bar.is-waking.is-waking--pos .bar-fill {
-  filter: brightness(1.15) saturate(1.1);
-  /* or use a glow: */
-  box-shadow: 0 0 10px currentColor, inset 0 0 6px currentColor;
-}
-
-/* negative movement: darken */
-.bar.is-waking.is-waking--neg .bar-fill {
-  filter: brightness(0.85) saturate(0.95);
-  /* or a subtler shadow */
-  box-shadow: 0 0 4px rgba(0,0,0,0.35) inset;
-}
-
-/* >>> Move the pulsing border/glow here (was on trend states) */
-.bar.is-waking.is-waking--pos {
-  border: 2px solid rgba(120,255,180,0.4);
-  box-shadow: 0 0 8px rgba(120,255,180,0.2), 0 0 14px rgba(120,255,180,0.15);
-  animation: borderPulseGlow 2.8s ease-in-out infinite;
-}
-.bar.is-waking.is-waking--neg {
-  border: 2px solid rgba(255,80,80,0.25);
-  box-shadow: 0 0 4px rgba(255,60,60,0.1), 0 0 8px rgba(255,80,80,0.2);
-  animation: borderPulseAlert 1.6s ease-in-out infinite;
-}
-
-/* Pulsing keyframes (reused) */
-@keyframes borderPulseGlow {
-  0%   { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
-  50%  { box-shadow: 0 0 14px rgba(120,255,180,0.4) }
-  100% { box-shadow: 0 0 6px rgba(120,255,180,0.2) }
-}
-@keyframes borderPulseAlert {
-  0%,100% { box-shadow: 0 0 4px rgba(255,60,60,0.1) }
-  50%     { box-shadow: 0 0 10px rgba(255,0,0,0.3) }
-}
-
-/* ========================================================================== */
-   /* Mode engravings + Totals row */
-/* ========================================================================== */
-
-.vitals-toprow{
-  display:flex; align-items:center; justify-content:space-between;
-  gap:.75rem; margin: 6px 0 0;
-}
-.vitals-total{
-  margin-left:auto; font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
-}
-.vitals-total .label{ opacity:.8; margin-right:.35rem; }
-.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
-.vitals-total .vital-value{ font-weight:600; }
-.vitals-total .vital-max{ opacity:.8; }
-
-.mode-engrave{
-  display: flex; justify-content: flex-start; align-items: center;
-  gap: clamp(10px, 2.8vw, 18px);
-  margin: 6px 0 0px;
-}
-.mode-btn{
-  appearance: none; background: none; border: 0; cursor: pointer;
-  padding: 4px 8px; line-height: 1;
-  font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
-  font-size: clamp(11px, 1.8vw, 14px); user-select: none;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(228,216,180,.45);
-  text-shadow: 0 1px 0 rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.05);
-  opacity: .65;
-  transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
-}
-.mode-btn:hover, .mode-btn:focus-visible{
-  opacity: .9; outline: none;
-  -webkit-text-stroke: 1px rgba(240,230,210,.7);
-}
-.mode-btn.is-active{
-  color: #e4d8b4; -webkit-text-stroke: 0;
-  text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
-  opacity: 1;
-}
-.mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
-.mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
-.mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
-
-/* ───────────────────────────── Bar heights (configurable) ───────────────────────────── */
-:root{
-  /* Base height for all bars (tweak this once) */
-  --bar-h: 42px;
-
-  /* Per-vital overrides (fallback to --bar-h if not set) */
-  --bar-h-health:   var(--bar-h);
-  --bar-h-mana:     var(--bar-h);
-  --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   32px;   /* keep thin */
-  --bar-h-essence:  32px;   /* match shield */
-
-  /* Vertical rhythm */
-  --bar-gap: 8px;
-}
 
 /* Apply heights */
 .bar{ height: var(--bar-h); }
@@ -330,7 +180,7 @@
 #vital-essence .bar{ height: var(--bar-h-essence);  }
 
 /* tighten gaps a touch to match thinner bars */
-.vitals-bars{ gap: var(--bar-gap); }
+.top-cluster-vitals-bars-wrapper{ gap: var(--bar-gap); }
 #vital-stamina{ margin-top: calc(var(--bar-gap) + 2px); }
 
 /* ───────────────────────────── Shield row layout ───────────────────────────── */
@@ -378,6 +228,72 @@
 }
 
 #vital-shield .shield-breakdown.is-visible{ opacity: 1; }
+
+/* Surplus backdrop */
+.bar.has-surplus::before {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 0;
+  opacity: .65; filter: saturate(120%);
+  transition: opacity .2s ease;
+  pointer-events: none;
+  border-radius: 6px;
+}
+#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .52), rgba(64, 0, 0, .52)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .52), rgba(0, 34, 68, .52)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .52), rgba(0, 51, 0, .52)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .30)); }
+.bar.has-surplus:hover::before,
+.bar.has-surplus:focus-within::before { opacity: .45; }
+
+
+
+/* ========================================================================== */
+   /* Mode engravings + Totals row */
+/* ========================================================================== */
+
+.vitals-toprow{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:.75rem; margin: 6px 0 0;
+}
+.vitals-total{
+  margin-left:auto; font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
+}
+.vitals-total .label{ opacity:.8; margin-right:.35rem; }
+.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
+.vitals-total .vital-value{ font-weight:600; }
+.vitals-total .vital-max{ opacity:.8; }
+
+.mode-engrave{
+  display: flex; justify-content: flex-start; align-items: center;
+  gap: clamp(10px, 2.8vw, 18px);
+  margin: 6px 0 0px;
+}
+.mode-btn{
+  appearance: none; background: none; border: 0; cursor: pointer;
+  padding: 4px 8px; line-height: 1;
+  font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
+  font-size: clamp(11px, 1.8vw, 14px); user-select: none;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(228,216,180,.45);
+  text-shadow: 0 1px 0 rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.05);
+  opacity: .65;
+  transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
+}
+.mode-btn:hover, .mode-btn:focus-visible{
+  opacity: .9; outline: none;
+  -webkit-text-stroke: 1px rgba(240,230,210,.7);
+}
+.mode-btn.is-active{
+  color: #e4d8b4; -webkit-text-stroke: 0;
+  text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
+  opacity: 1;
+}
+.mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+
+
 
 /* Footer meta row */
 .hud-meta-row{
@@ -451,11 +367,14 @@
 /* (optional) if your dot needs spacing */
 .vitals-status .status-dot{ margin-right: .25rem; }
 
-/* Padding */
+/* ──────────────────────────────────────────
+   Misc
+   ────────────────────────────────────────── */
+.vitals .pad-bottom { height: 68px; }  /* keep footer-safe space */
 
-/* padding to avoid footer overlap when overscrolling */
-.pad-bottom { height: 68px; }
-
-/* buttons baseline from your chrome.css */
-.btn { appearance:none; border:0; background: rgba(255,255,255,.08); padding:.5rem .7rem; border-radius: 12px; color:#eee; cursor:pointer; }
-.btn:active { transform: translateY(1px); }
+/* If you need .btn baseline here (usually lives in chrome.css) */
+.vitals .btn{
+  appearance:none; border:0; background: rgba(255,255,255,.08);
+  padding:.5rem .7rem; border-radius:12px; color:#eee; cursor:pointer;
+}
+.vitals .btn:active{ transform: translateY(1px); }
