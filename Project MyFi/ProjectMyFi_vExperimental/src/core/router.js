@@ -1,5 +1,6 @@
 import { applyChromeProfile } from './chrome.js';
 import { applyBackground, updateParallax  } from './background.js';
+import { closeOwnedBy } from './modal.js';
 
 const registry = new Map();       // id -> loader()
 const cache = new Map();          // id -> { def, root, pos:{x,y} }
@@ -103,6 +104,8 @@ export async function navigate(id) {
   const target = await ensureMounted(id);
 
   if (current && current.def.onHide) current.def.onHide();
+  // close any modals opened by the leaving screen
+  if (current?.def?.id) closeOwnedBy(current.def.id);
 
   applyChromeProfile(target.def.chrome || {});
   applyBackground(target.def.background?.key);

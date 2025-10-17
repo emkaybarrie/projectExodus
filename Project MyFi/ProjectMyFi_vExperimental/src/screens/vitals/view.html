@@ -1,0 +1,87 @@
+      <div class="screen scrollable">
+
+        <div class="top-section">
+          <div class="portrait-wrapper">
+            <img src="../../assets/portraits/default.png" alt="Avatar Portrait" class="portrait" id="player-portrait" />
+            <div class="level-pill" id="player-level" hidden>1</div>
+          </div>
+
+          <div class="vitals-bars">
+            <div id="vital-health">
+              <div class="bar health">
+                <span class="bar-label">Health</span>
+                <div class="bar-fill" style="width: 0%;"></div>
+                <span class="bar-value">0 / 0</span>
+                <span class="bar-surplus" aria-hidden="true"></span>
+              </div>
+            </div>
+            <div id="vital-mana">
+              <div class="bar mana">
+                <span class="bar-label">Mana</span>
+                <div class="bar-fill" style="width: 0%;"></div>
+                <span class="bar-value">0 / 0</span>
+                <span class="bar-surplus" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="vital-stamina">
+          <div class="bar stamina">
+            <span class="bar-label">Stamina</span>
+            <div class="bar-fill" style="width: 0%;"></div>
+            <span class="bar-value">0 / 0</span>
+            <span id="bar-surplus-stamina" class="bar-surplus" aria-hidden="true"></span>
+          </div>
+        </div>
+
+        <!-- Shield row: Energy Shield (left) + Totals (right) -->
+        <div class="shield-row">
+          <div id="vital-shield">
+            <div class="bar shield">
+              <span class="bar-label">Shield</span>
+              <div class="bar-fill"></div>
+              <span class="bar-value">0 / 0</span>
+              <span id="bar-surplus-shield" class="bar-surplus" aria-hidden="true"></span>
+              <div class="bar-reclaim"></div>
+            </div>
+          </div>
+
+          <!-- moved here from vitals-toprow -->
+          <div class="vitals-total" id="vitals-total" aria-live="polite"></div>
+        </div>
+
+        <div class="hud-meta-row">
+          <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
+            <button id="engrave-core"  class="engrave engrave--core"  aria-label="All-Time"></button>
+            <button id="engrave-focus" class="engrave engrave--focus" aria-label="Focus"></button>
+          </div>
+
+          <!-- inside #mode-engrave (or the footer row) -->
+          <div id="vitals-status" class="vitals-status" role="button" tabindex="0" aria-expanded="false" aria-label="Show status breakdown">
+            <div class="vs-overview" id="vitals-status-overview">
+              <!-- MOVE your existing status markup into here (dot + text) -->
+              <span class="status-dot is-good"></span>
+              <span class="status-text" id="vitals-status-text">On Track</span>
+            </div>
+
+            <div class="vs-breakdown" aria-hidden="true" role="group" aria-label="Vitals breakdown">
+              <span class="vs-item" data-vital="health"  title="Health">
+                <span class="status-dot"></span><span class="vs-label">H</span>
+              </span>
+              <span class="vs-item" data-vital="mana"    title="Mana">
+                <span class="status-dot"></span><span class="vs-label">M</span>
+              </span>
+              <span class="vs-item" data-vital="stamina" title="Stamina">
+                <span class="status-dot"></span><span class="vs-label">S</span>
+              </span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="pad-bottom"></div>
+
+      </div>
+    `;

@@ -246,9 +246,6 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   }
 }
 
-
-
-
 /* ========================================================================== */
    /* Vitals bars (layout + layers) */
 /* ========================================================================== */
@@ -423,8 +420,6 @@ h1, .bar-label, .tag-button{ font-family:'Cinzel',serif; font-weight:600; }
   0%,100% { box-shadow: 0 0 4px rgba(255,60,60,0.1) }
   50%     { box-shadow: 0 0 10px rgba(255,0,0,0.3) }
 }
-
-
 
 /* ========================================================================== */
    /* Mode engravings + Totals row */
@@ -829,8 +824,6 @@ NEw FEATURES CSS  - SUMMARY MODAL
 }
 
 #vital-shield .shield-breakdown.is-visible{ opacity: 1; }
-
-
 
 /* Footer meta row */
 .hud-meta-row{

@@ -1,0 +1,17 @@
+#modal-root { position: fixed; inset: 0; z-index: 999; pointer-events: none; }
+.modal-layer { position: absolute; inset: 0; pointer-events: none; }
+.modal-overlay {
+  position: absolute; inset: 0; background: rgba(4, 6, 12, .55); backdrop-filter: blur(4px);
+  opacity: 0; transition: opacity 140ms ease; pointer-events: auto;
+}
+.modal-card {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -46%) scale(.98);
+  min-width: min(92vw, 520px); max-width: 92vw; max-height: 84vh; overflow: auto;
+  background: rgba(18,14,33,.92); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px; box-shadow: 0 18px 40px rgba(0,0,0,.45);
+  transition: transform 160ms ease, opacity 160ms ease; opacity: 0;
+  pointer-events: auto;
+}
+#modal-root.modal-open .modal-overlay { opacity: 1; }
+#modal-root.modal-open .modal-card { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+.modal-close-btn { position:absolute; right:8px; top:8px; border:0; background:transparent; color:#ddd; font-size:20px; cursor:pointer; }
