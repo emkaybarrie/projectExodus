@@ -1,5 +1,40 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
+
+
+body{
+  font-family: 'Crimson Pro', serif;
+}
+
+h1, h2 {
+  font-family: 'Cinzel', serif;
+}
+
+.card {
+  background: rgba(18, 14, 33, .62);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.25);
+  backdrop-filter: blur(6px);
+  margin: 10px 0 14px;
+}
+
+/* Alias fits & step-downs */
+#alias {
+  margin: 1rem;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  font-family: 'Cinzel', serif;
+  font-size: clamp(32px, 4.2vw, 44px);
+}
+.alias.is-gt10 { font-size: clamp(28px, 3.6vw, 38px); }
+.alias.is-gt12 { font-size: clamp(26px, 3.2vw, 34px); }
 
 #core-vitals-wrapper {margin: 1rem;}
 
@@ -118,7 +153,7 @@
 }
 
 /* Labels & values */
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-size:0.9rem; }
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-family:'Cinzel',serif; font-size:0.9rem; }
 .bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:1.0rem; color:#f0e5c9; }
 /* Regen rate state for the value text */
 .bar-value.is-rate {

@@ -1,10 +1,10 @@
+<body>
+  
 
     <section class="vitals screen scrollable" aria-labelledby="vitals-title">
-      <h2 id="vitals-title" class="sr-only">Vitals</h2>
 
 
-
-      <div id="core-vitals-wrapper"> 
+      <div id="core-vitals-wrapper" class="card"> 
           <!-- Top cluster: portrait + Health/Mana -->
           <div id="top-cluster">
             <div class="top-cluster-portrait-wrapper">
@@ -17,16 +17,16 @@
                 <div class="bar health">
                   <span class="bar-label">Health</span>
                   <div class="bar-fill" style="width: 100%;"></div>
-                  <span class="bar-value">100 / 100</span>
+                  <span class="bar-value font-ui">100 / 100</span>
                   <span class="bar-surplus" aria-hidden="true"></span>
                 </div>
               </div>
 
               <div id="vital-mana">
                 <div class="bar mana">
-                  <span class="bar-label">Mana</span>
+                  <span class="bar-label font-ui">Mana</span>
                   <div class="bar-fill" style="width: 100%;"></div>
-                  <span class="bar-value">100 / 100</span>
+                  <span class="bar-value font-ui">100 / 100</span>
                   <span class="bar-surplus" aria-hidden="true"></span>
                 </div>
               </div>
@@ -35,9 +35,9 @@
 
             <div id="vital-stamina">
                 <div class="bar stamina">
-                  <span class="bar-label">Stamina</span>
+                  <span class="bar-label font-ui">Stamina</span>
                   <div class="bar-fill" style="width: 100%;"></div>
-                  <span class="bar-value">100 / 100</span>
+                  <span class="bar-value font-ui">100 / 100</span>
                   <span id="bar-surplus-stamina" class="bar-surplus" aria-hidden="true"></span>
                 </div>
             </div>
@@ -56,13 +56,13 @@
               </div>
 
               <!-- moved here from vitals-toprow -->
-              <div class="vitals-total" id="vitals-total" aria-live="polite">Total 0/0</div>
+              <div class="vitals-total font-ui" id="vitals-total" aria-live="polite">Total 300 / 300</div>
             </div>
   
             <div class="hud-meta-row">
         <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
-          <button id="engrave-core"  class="engrave engrave--core"  aria-label="All-Time">Current</button>
-          <button id="engrave-focus" class="engrave engrave--focus" aria-label="Focus">Focus: Today</button>
+          <button id="engrave-core"  class="engrave engrave--core font-ui"  aria-label="All-Time">Current</button>
+          <button id="engrave-focus" class="engrave engrave--focus font-ui" aria-label="Focus">Focus: Today</button>
         </div>
 
         <!-- inside #mode-engrave (or the footer row) -->
@@ -99,4 +99,6 @@
 
       <div class="pad-bottom"></div>
     </section>
+
+    </body>
     ;
