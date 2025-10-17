@@ -11,6 +11,10 @@ h1, h2 {
   font-family: 'Cinzel', serif;
 }
 
+.vitals {
+  margin: 0.75rem;
+}
+
 .card {
   background: rgba(18, 14, 33, .62);
   border: 1px solid rgba(255,255,255,.06);
@@ -36,7 +40,7 @@ h1, h2 {
 .alias.is-gt10 { font-size: clamp(28px, 3.6vw, 38px); }
 .alias.is-gt12 { font-size: clamp(26px, 3.2vw, 34px); }
 
-#core-vitals-wrapper {margin: 1rem;}
+#core-vitals-wrapper {margin: 0rem;}
 
 #top-cluster { display:flex; gap:16px; align-items:flex-start; }
 /* ========================================================================== */
@@ -401,6 +405,16 @@ h1, h2 {
 
 /* (optional) if your dot needs spacing */
 .vitals-status .status-dot{ margin-right: .25rem; }
+
+
+/* skills */
+.skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.95rem; opacity:.9; }
+.skills .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.skills .slot {
+  height: 44px; border-radius: 10px; background: rgba(255,255,255,.05);
+  border: 1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
+}
+.skills .slot.locked::after { content: "🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
 
 /* ──────────────────────────────────────────
    Misc
