@@ -6,7 +6,7 @@
 //   * optionally delete txns (all|before_anchor|none)
 //   * recompute summary + vitals (incl. True-mode flatten)
 
-import { auth } from '../core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 const REGION = "europe-west2";

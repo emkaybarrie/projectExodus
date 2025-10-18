@@ -2,7 +2,7 @@
 // Standardised Help menu using MyFiUI + MyFiModal nav stack.
 // No direct DOM listeners here — quickMenus.js opens this via window.MyFiHelpMenu.
 
-import { db, auth } from './core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import {
   collection, addDoc, serverTimestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";

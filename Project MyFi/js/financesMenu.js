@@ -1,7 +1,7 @@
 // js/financesMenu.js
 // Standardised Finances menu with inline validation via MyFiUI.
 // Exposes window.MyFiFinancesMenu. No direct button listeners (quickMenus handles).
-import { auth, db } from './core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { initHUD } from '../vitals/vitals-screen-manager.js';
 import { connectTrueLayerAccount, ensureTlConsentDialog } from '../vitals/modules/truelayer.js';
 // import { openSmartReviewOverlay } from '../energy/energy-verified.js'

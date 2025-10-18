@@ -1,5 +1,5 @@
 // js/welcome.js
-import { db } from './core/auth.js';
+import { db } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import {
   getDoc, doc, setDoc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
