@@ -1,4 +1,4 @@
-// energy-vitals.js — unified Vitals Gateway + HUD (single-file drop-in)
+// vitals-screen-manager.js — unified Vitals Gateway + HUD (single-file drop-in)
 // - Builds vitalsData/gateway from cashflowData + verified processedTransactions
 // - Full HUD wiring (bars, focus/core modes, ghosts, update logs, buttons)
 // - Dashboard helpers (refreshVitals, autoInitAddEnergyButton, etc.)
@@ -385,8 +385,6 @@ async function readNonCoreUsage(db, uid, windowStartMs, creditMode = 'essence', 
 
   return totals;
 }
-
-
 
 // ───────────────────────── Vitals Gateway recompute (stub) ──────────────────
 export async function recomputeVitalsGatewayStub(uid){
@@ -1067,10 +1065,6 @@ function installShieldBreakdown(getData){
   window.addEventListener('vitals:primary', hide);
 }
 
-
-
-
-
 // ───────────────────────── Gateway reader for HUD paint ─────────────────────
 async function readGateway(uid){
   const snap = await getDoc(doc(db, `players/${uid}/vitalsData/gateway`));
@@ -1167,8 +1161,6 @@ export async function loadVitalsToHUD(uid, opts = {}) {
     sumCurrent += currentBase;
     sumMax     += cap;
   }
-
-  
 
   setVitalsTotals(sumCurrent, sumMax);
   if (refreshGrids) refreshBarGrids();
@@ -2144,8 +2136,6 @@ export async function setCreditModeOverride(uid, txId, mode){
         : null)
   });
 }
-
-
 
 // History 
 export function autoInitHistoryButtons() {

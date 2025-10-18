@@ -39,7 +39,7 @@ h1, h2{ font-family: 'Cinzel', serif; }
   --health-color:     linear-gradient(180deg, #8c2424, #3a0000);
   --mana-color:       linear-gradient(180deg, #1b6a84, #002244);
   --stamina-color:    linear-gradient(180deg, #1e6a3a, #003a00);
-  --shield-color:     linear-gradient(180deg, rgba(120,255,180,.85), rgba(155,93,229,.45));
+  --shield-color:     linear-gradient(90deg, rgba(120,255,180,.85), rgba(155,93,229,.45));
   --essence-color:    linear-gradient(180deg, rgba(150,85,255,.55), rgba(255,0,255,.22));
 
   /* Text */
@@ -363,17 +363,74 @@ h1, h2{ font-family: 'Cinzel', serif; }
 .vs-label{ font-weight:700; font-family:'Cinzel',serif; }
 .vitals-status .status-dot{ margin-right:.25rem; }
 
-/* ==========================================================================
-   SKILLS + LOG (legacy preserved)
-   ========================================================================== */
-
-.skills h3, .log h3{ margin: 2px 0 8px; letter-spacing:.06em; font-size:.9rem; opacity:.9; }
-.skills .grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; }
-.skills .slot{
-  height:40px; border-radius:10px; background: rgba(255,255,255,.05);
-  border:1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
+/* =========================
+   SKILLS — glass + rune edge
+   ========================= */
+.skills h3{
+  margin: 2px 0 8px;
+  letter-spacing: .06em;
+  font-size: .95rem;
+  opacity: .95;
 }
-.skills .slot.locked::after{ content:"🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
+
+.skills .grid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.skills .slot{
+  height: 54px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.28),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease, opacity .12s ease;
+}
+
+/* etched inner ring */
+.skills .slot::after{
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border-radius: 12px;
+  border: 1px dashed rgba(200,180,255,.18);
+  opacity: .8;
+  pointer-events: none;
+}
+
+.skills .slot:hover{
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.22);
+}
+.skills .slot:active{
+  transform: translateY(0);
+}
+
+/* locked state */
+.skills .slot.locked{
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  opacity: .75;
+}
+.skills .slot.locked::after{
+  border-color: rgba(200,180,255,.12);
+}
+.skills .slot.locked::before{
+  content: "🔒";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  opacity: .9;
+}
+
+/* LOG */
 
 .log .log-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
 .log .actions .btn.small{ font-size:.9rem; padding:.35rem .55rem; }
@@ -382,6 +439,8 @@ h1, h2{ font-family: 'Cinzel', serif; }
 .log-item{ background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:8px 10px; }
 .log-item .log-title{ font-weight:600; margin-bottom:2px; }
 .log-item .log-meta{ font-size:.85rem; opacity:.8; }
+
+
 
 /* ==========================================================================
    MISC
