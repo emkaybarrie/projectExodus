@@ -1,423 +1,395 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
 
+/* ==========================================================================
+   GLOBAL TYPOGRAPHY
+   ========================================================================== */
 
+body{ font-family: 'Crimson Pro', serif; }
+h1, h2{ font-family: 'Cinzel', serif; }
 
-body{
-  font-family: 'Crimson Pro', serif;
+/* ==========================================================================
+   THEME TOKENS (easy to tweak)
+   ========================================================================== */
+
+:root{
+  /* Cards / panels */
+  --card-bg:          rgba(18, 14, 33, .62);
+  --card-border:      rgba(255,255,255,.06);
+  --card-radius:      16px;
+  --card-blur:        6px;
+
+  /* Bar shell */
+  --bar-h:            30px;
+  --bar-radius:       10px;
+  --bar-shell:        rgba(20,20,30,0.55);
+  --bar-border:       rgba(255,255,255,0.10);
+  --bar-shell-shadow: 0 6px 18px rgba(0,0,0,.30), inset 0 0 1px rgba(255,255,255,.08);
+
+  /* Fill gloss/specular + optional twinkle */
+  --gloss:            linear-gradient(to bottom, rgba(255,255,255,.18), rgba(255,255,255,.02) 42%, rgba(0,0,0,.15) 100%);
+  --twinkle-alpha:    .14;   /* set to 0 to disable specks entirely */
+  --twinkle-speed:    10s;
+
+  /* Label chip (engraved plaque) */
+  --chip-bg:          linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+  --chip-edge:        rgba(255,255,255,.20);
+  --chip-inset:       0 1px 0 rgba(255,255,255,.05), inset 0 1px 0 rgba(255,255,255,.22);
+
+  /* Per-vital color ramps (keeps your tones) */
+  --health-color:     linear-gradient(180deg, #8c2424, #3a0000);
+  --mana-color:       linear-gradient(180deg, #1b6a84, #002244);
+  --stamina-color:    linear-gradient(180deg, #1e6a3a, #003a00);
+  --shield-color:     linear-gradient(180deg, rgba(120,255,180,.85), rgba(155,93,229,.45));
+  --essence-color:    linear-gradient(180deg, rgba(150,85,255,.55), rgba(255,0,255,.22));
+
+  /* Text */
+  --txt-strong:       #f2ead7;
+  --txt-soft:         #e5dcc4;
+  --txt-muted:        #cfc7b2;
+
+  /* Rhythm */
+  --bar-gap:          8px;
 }
 
-h1, h2 {
-  font-family: 'Cinzel', serif;
+/* Per-vital overrides (kept from your config) */
+:root{
+  --bar-h-health:   var(--bar-h);
+  --bar-h-mana:     var(--bar-h);
+  --bar-h-stamina:  var(--bar-h);
+  --bar-h-shield:   20px;  /* thin, as you had */
+  --bar-h-essence:  20px;
 }
 
-.vitals {
-  margin: 0.5rem;
-}
+/* ==========================================================================
+   PAGE WRAPPER / CARDS
+   ========================================================================== */
 
-.card {
-  background: rgba(18, 14, 33, .62);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 16px;
+.vitals{ margin:.5rem; }
+
+.card{
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
   padding: 12px;
   box-shadow: 0 6px 24px rgba(0,0,0,.25);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(var(--card-blur));
   margin: 10px 0 14px;
 }
 
-/* Alias fits & step-downs */
-#alias {
-  margin: 1rem;
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Alias fits (legacy preserved) */
+#alias{
+  margin: 1rem; flex: 1; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   line-height: 1.1;
   font-family: 'Cinzel', serif;
   font-size: clamp(32px, 4.2vw, 44px);
 }
-.alias.is-gt10 { font-size: clamp(28px, 3.6vw, 38px); }
-.alias.is-gt12 { font-size: clamp(26px, 3.2vw, 34px); }
+.alias.is-gt10{ font-size: clamp(28px, 3.6vw, 38px); }
+.alias.is-gt12{ font-size: clamp(26px, 3.2vw, 34px); }
 
-#core-vitals-wrapper {margin: 0rem;}
+#core-vitals-wrapper{ margin: 0rem; }
+#top-cluster{ display:flex; gap:16px; align-items:flex-start; } /* legacy */
 
-#top-cluster { display:flex; gap:16px; align-items:flex-start; }
-/* ========================================================================== */
-   /* Portrait & Level Pill */
-/* ========================================================================== */
+/* ==========================================================================
+   PORTRAIT + LEVEL PILL (legacy preserved)
+   ========================================================================== */
 
-.top-cluster-portrait-wrapper {
-  position: relative;
-  overflow: visible;
-  isolation: isolate;
-  width: 75px;
-  height: 75px;
-  flex-shrink: 0;
-  cursor: pointer
+.top-cluster-portrait-wrapper{ /* legacy class still supported */
+  position: relative; overflow: visible; isolation: isolate;
+  width: 75px; height: 75px; flex-shrink: 0; cursor: pointer;
 }
-.top-cluster-portrait-wrapper .portrait {
-  width: 100%; height: 100%;
-  object-fit: cover; object-position: center 15%;
+.top-cluster-portrait-wrapper .portrait{
+  width:105%; height:100%; object-fit:cover; object-position:center 15%;
   border: 2px solid #ffffff1a; border-radius: 4px;
 }
-.portrait { width:120px; height:110px; object-fit:cover; object-position:center 15%; border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
-.level-pill {
-  position: absolute;
-  bottom: 0; right: 0;
-  transform: translate(50%, 50%);
-  padding: 4px 8px; font-size: 0.75rem; font-weight: 800;
-  font-family: 'Cinzel', serif;
-  color: #0a0a12;
-  background: linear-gradient(to bottom, #f0dca4, #e6c980);
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 999px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  line-height: 1;
-  z-index: 2;
+
+.portrait{ width:120px; height:110px; object-fit:cover; object-position:center 15%;
+  border:2px solid #ffffff1a; border-radius:4px; flex-shrink:0; }
+
+.level-pill{
+  position:absolute; bottom:0; right:0; transform: translate(50%, 50%);
+  padding:4px 8px; font-size:.75rem; font-weight:800; font-family:'Cinzel',serif;
+  color:#0a0a12; background: linear-gradient(180deg, #f0dca4, #e6c980);
+  border:1px solid rgba(255,255,255,0.25); border-radius:999px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4); line-height:1; z-index:2;
 }
 
+/* ==========================================================================
+   VITALS BARS — GLASSY SHELL + SPECTRAL FILL
+   ========================================================================== */
 
-/* ========================================================================== */
-   /* Vitals bars (layout + layers) */
-/* ========================================================================== */
+.top-cluster-vitals-bars-wrapper{ flex-grow:1; display:flex; flex-direction:column; gap: var(--bar-gap); } /* legacy */
+.vitals-bars{ flex-grow:1; display:flex; flex-direction:column; gap: var(--bar-gap); } /* new structure friendly */
 
-/* ───────────────────────────── Config ───────────────────────────── */
-:root{
-  /* Bar colours */
-  --health-color: linear-gradient(to bottom, #7f1d1d, #400000);
-  --mana-color: linear-gradient(to bottom, #164e63, #002244);
-  --stamina-color: linear-gradient(to bottom, #14532d, #003300);
-  --shield-color: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
-  --essence-color: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); 
-
-
-  /* Base height for all bars (tweak this once) */
-  --bar-h: 30px;
-
-  /* Per-vital overrides (fallback to --bar-h if not set) */
-  --bar-h-health:   var(--bar-h);
-  --bar-h-mana:     var(--bar-h);
-  --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   20px;   /* keep thin */
-  --bar-h-essence:  20px;   /* match shield */
-
-  /* Vertical rhythm */
-  --bar-gap: 8px;
+.bar{
+  position: relative; height: var(--bar-h);
+  border-radius: var(--bar-radius);
+  background: var(--bar-shell);
+  border: 1px solid var(--bar-border);
+  padding: 0 12px;
+  display:flex; align-items:center;
+  box-shadow: var(--bar-shell-shadow);
+  overflow: hidden;
 }
 
-/* ───────────────────────────── CSS ───────────────────────────── */
-
-.top-cluster-vitals-bars-wrapper { flex-grow:1; display:flex; flex-direction:column; gap:8px; }
-
-.bar {
-  position: relative; height: 48px;
-  border: 2px solid rgba(255,255,255,0.08);
-  border-radius: 6px; overflow: hidden; font-weight: bold;
-  display: flex; align-items: center; padding: 0 12px;
-  background-color: rgba(20,20,30,0.4); backdrop-filter: blur(4px);
-  box-shadow: 0 0 8px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.05);
-  overflow: visible;
-}
-.bar .bar-bg { position:absolute; inset:0; z-index:1; }
-
-/* Gridlines — sits ABOVE fill and surplus by default. */
-.bar .bar-grid {
-  position: absolute; inset: 0;
-  z-index: 3;
-  pointer-events: none;
-}
-.bar .bar-grid .grid-line {
-  position: absolute; top: 0; bottom: 0; width: 1px;
-  background: rgba(255,255,255,0.08);
+/* subtle shell contour */
+.bar::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0) 40%, rgba(0,0,0,.25) 100%);
+  mix-blend-mode: soft-light;
 }
 
-/* Active fill */
-.bar-fill {
-  position: absolute; inset:0 auto 0 0; left:0; width:0%; z-index:1;
-  border-radius: 6px 0 0 6px; overflow:hidden; transition: width 240ms ease;
-}
-.bar-fill::before {
-  content:''; position:absolute; inset:0; z-index:-1; border-radius:6px 0 0 6px;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.6), 0 0 6px rgba(255,255,255,0.1), inset 0 0 6px rgba(255,255,255,0.05);
+/* active fill */
+.bar .bar-fill{
+  position:absolute; inset:0 auto 0 0; left:0; width:0%;
+  border-radius: var(--bar-radius) 0 0 var(--bar-radius);
+  overflow:hidden; transition: width 220ms cubic-bezier(.22,.78,.17,.99);
+  z-index:1; filter: saturate(1.08);
 }
 
-/* Surplus pill */
-.bar .bar-surplus {
-  position: absolute;
-  right: -10px; bottom: -10px;
-  transform: none;
-  z-index: 4;
-  padding: 1px 2px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
-  color: #0a0a12;
-  background: linear-gradient(to bottom, #f0dca4, #e6c980);
-  border: 1px solid rgba(255,255,255,0.25);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  opacity: 0.95;
-  pointer-events: none;
+/* per-vital ramps (kept compatible with your old naming) */
+#vital-health  .bar-fill{ background: var(--health-color); }
+#vital-mana    .bar-fill{ background: var(--mana-color); }
+#vital-stamina .bar-fill{ background: var(--stamina-color); }
+#vital-shield  .bar-fill{ background: var(--shield-color); }
+#vital-essence .bar-fill{ background: var(--essence-color); }
+
+/* inner glow + edge highlight (orb-in-a-bar feel) */
+.bar .bar-fill::before{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  box-shadow:
+    inset 0 8px 18px rgba(255,255,255,.10),
+    inset 0 -10px 22px rgba(0,0,0,.35),
+    inset 0 0 10px rgba(255,255,255,.06);
 }
 
-/* Labels & values */
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-family:'Cinzel',serif; font-size:0.8rem; }
-.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
-/* Regen rate state for the value text */
-.bar-value.is-rate {
-  opacity: .9;
-  font-style: italic;
+/* specular gloss */
+.bar .bar-fill::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: var(--gloss);
+  mix-blend-mode: screen; opacity:.9;
 }
 
-/* Reclaim overlay */
-.bar .bar-reclaim {
+/* OPTIONAL: star-speck layer if an <i class="twinkle"> exists */
+.bar .bar-fill > i.twinkle{
+  position:absolute; inset: -20% -40%; pointer-events:none;
+  background:
+    radial-gradient(2px 2px at 12% 40%, rgba(255,255,255,var(--twinkle-alpha)), transparent 60%),
+    radial-gradient(2px 2px at 58% 70%, rgba(255,255,255,var(--twinkle-alpha)), transparent 60%),
+    radial-gradient(1.5px 1.5px at 82% 25%, rgba(255,255,255,var(--twinkle-alpha)), transparent 60%),
+    radial-gradient(1.5px 1.5px at 36% 10%, rgba(255,255,255,var(--twinkle-alpha)), transparent 60%);
+  transform: translateX(-20%);
+  animation: twinkle-scan var(--twinkle-speed) linear infinite;
+  opacity:.8; filter: blur(.2px);
+}
+@keyframes twinkle-scan{
+  0%{ transform: translateX(-20%) }
+  100%{ transform: translateX(20%) }
+}
+
+/* reduced-motion */
+@media (prefers-reduced-motion: reduce){
+  .bar .bar-fill{ transition: none; }
+  .bar .bar-fill > i.twinkle{ animation:none; opacity:0; }
+}
+
+/* labels & values (refined) */
+.bar-label{
+  z-index:3; position:relative; flex-shrink:0;
+  padding: 2px 10px; border-radius:8px;
+  font: 600 .85rem 'Cinzel', serif; letter-spacing:.03em;
+  color: var(--txt-strong);
+  background: var(--chip-bg); border: 1px solid var(--chip-edge);
+  box-shadow: var(--chip-inset);
+  text-shadow: 0 1px 0 rgba(0,0,0,.55);
+}
+.bar-value{
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  z-index:3; white-space:nowrap; font-size:.9rem; color: var(--txt-soft);
+  font-weight:700; font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(0,0,0,.6);
+}
+.bar-value.is-rate{ opacity:.9; font-style: italic; }
+
+/* surplus pill (kept) */
+.bar .bar-surplus{
+  position:absolute; right:-10px; bottom:-10px; transform:none; z-index:4;
+  padding: 1px 6px; border-radius:999px; font-size:.75rem; font-weight:700;
+  color:#0a0a12; background: linear-gradient(180deg, #f0dca4, #e6c980);
+  border:1px solid rgba(255,255,255,.25); box-shadow:0 1px 4px rgba(0,0,0,.4);
+  opacity:.95; pointer-events:none;
+}
+
+/* reclaim overlay (kept behavior) */
+.bar .bar-reclaim{
   position:absolute; top:0; bottom:0; z-index:2;
-  --reclaim-opacity: 0.6;
-  background: linear-gradient(
-    to bottom,
-    rgba(250, 204, 21, var(--reclaim-opacity)),
-    rgba(234, 179, 8,  var(--reclaim-opacity))
-  );
-  box-shadow: inset 0 0 4px rgba(0,0,0,0.3);
-  border-top-left-radius: 0; border-bottom-left-radius: 0;
-  border-top-right-radius: inherit; border-bottom-right-radius: inherit;
-  transition: width 240ms ease, left 240ms ease;
+  --reclaim-opacity:.6;
+  background: linear-gradient(180deg, rgba(250,204,21,var(--reclaim-opacity)), rgba(234,179,8,var(--reclaim-opacity)));
+  box-shadow: inset 0 0 4px rgba(0,0,0,.3);
+  border-top-left-radius:0; border-bottom-left-radius:0;
+  border-top-right-radius: var(--bar-radius); border-bottom-right-radius: var(--bar-radius);
+  transition: width 220ms ease, left 220ms ease;
 }
-
-/* credit overlay: brighter tint */
-.bar .bar-reclaim.is-credit {
-  mix-blend-mode: screen;   /* optional, looks good on dark bars */
-  filter: brightness(1.35); /* subtle pop */
-  opacity: 0.9;
-}
+.bar .bar-reclaim.is-credit{ mix-blend-mode: screen; filter: brightness(1.35); opacity:.9; }
 
 #vital-health .bar .bar-reclaim.is-credit   { background: var(--health-color); }
 #vital-mana   .bar .bar-reclaim.is-credit   { background: var(--mana-color); }
 #vital-stamina.bar .bar-reclaim.is-credit   { background: var(--stamina-color); }
 #vital-essence.bar .bar-reclaim.is-credit   { background: var(--essence-color); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 
-.bar-reclaim.flash { animation: ghost-flash 0.4s ease-in-out; }
-@keyframes ghost-flash { 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
+.bar-reclaim.flash{ animation: ghost-flash .4s ease-in-out; }
+@keyframes ghost-flash{ 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
 
-/* Pool colours */
-#vital-health  .bar-fill::before { background: var(--health-color); }
-#vital-mana    .bar-fill::before { background: var(--mana-color); }
-#vital-stamina .bar-fill::before { background: var(--stamina-color); }
-#vital-shield .bar-fill::before{
-  background: var(--shield-color);
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,0.08);
-}
-#vital-essence .bar-fill::before { background: var(--essence-color); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
-#vital-stamina { margin-top: 10px; }
-
-/* Apply heights */
+/* heights (kept) */
 .bar{ height: var(--bar-h); }
-#vital-health  .bar{ height: var(--bar-h-health);   }
-#vital-mana    .bar{ height: var(--bar-h-mana);     }
-#vital-stamina .bar{ height: var(--bar-h-stamina);  }
-#vital-shield  .bar{ height: var(--bar-h-shield);   }
-#vital-essence .bar{ height: var(--bar-h-essence);  }
+#vital-health  .bar{ height: var(--bar-h-health); }
+#vital-mana    .bar{ height: var(--bar-h-mana); }
+#vital-stamina .bar{ height: var(--bar-h-stamina); }
+#vital-shield  .bar{ height: var(--bar-h-shield); }
+#vital-essence .bar{ height: var(--bar-h-essence); }
 
-/* tighten gaps a touch to match thinner bars */
-.top-cluster-vitals-bars-wrapper{ gap: var(--bar-gap); }
 #vital-stamina{ margin-top: calc(var(--bar-gap) + 2px); }
 
-/* ───────────────────────────── Shield row layout ───────────────────────────── */
-.shield-row{
-  display: grid;
-  grid-template-columns: 1fr auto; /* shield expands, totals hug right */
-  align-items: center;
-  gap: 12px;
-  margin-top: var(--bar-gap);
+/* optional “has-surplus” backdrop (kept) */
+.bar.has-surplus::before{
+  content:""; position:absolute; inset:0; z-index:0; opacity:.65; filter:saturate(120%);
+  transition: opacity .2s ease; pointer-events:none; border-radius: var(--bar-radius);
 }
-.shield-row #vital-shield{ min-width: 0; }           /* allow “squish” */
-.shield-row #vitals-total{ justify-self: end; }       /* pin right */
-.shield-row #vital-shield .bar{ margin: 0; }          /* remove extra gap */
-
-#vital-shield .bar .bar-reclaim{
-  background: linear-gradient(to bottom, rgba(250,204,21,.80), rgba(234,179,8,.80));
-  mix-blend-mode: screen;
-  opacity: .95;
-}
-
-/* Energy Shield breakdown overlay – lives inside .bar-fill */
-#vital-shield .shield-breakdown{
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;        /* match .bar-fill shape */
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .18s ease;
-  z-index: 2;                    /* above .bar-fill::before, below grid/labels */
-  mix-blend-mode: screen;        /* similar pop to other overlays */
-}
-
-/* subtle gloss so it feels like a native fill */
-#vital-shield .shield-breakdown::after{
-  content: "";
-  position: absolute; inset: 0; border-radius: inherit;
-  box-shadow:
-    inset 0 2px 4px rgba(0,0,0,.28),
-    inset 0 0 4px rgba(255,255,255,.06);
-}
-#vital-shield .shield-breakdown.is-visible{ opacity: 1; }
-
-/* Surplus backdrop */
-.bar.has-surplus::before {
-  content: "";
-  position: absolute; inset: 0;
-  z-index: 0;
-  opacity: .65; filter: saturate(120%);
-  transition: opacity .2s ease;
-  pointer-events: none;
-  border-radius: 6px;
-}
-#vital-health  .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(127, 29, 29, .52), rgba(64, 0, 0, .52)); }
-#vital-mana    .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(22, 78, 99, .52), rgba(0, 34, 68, .52)); }
-#vital-stamina .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(20, 83, 45, .52), rgba(0, 51, 0, .52)); }
-#vital-essence .bar.has-surplus::before { background: linear-gradient(to bottom, rgba(155, 93, 229, .32), rgba(255, 0, 255, .30)); }
+#vital-health  .bar.has-surplus::before { background: linear-gradient(180deg, rgba(127,29,29,.52), rgba(64,0,0,.52)); }
+#vital-mana    .bar.has-surplus::before { background: linear-gradient(180deg, rgba(22,78,99,.52), rgba(0,34,68,.52)); }
+#vital-stamina .bar.has-surplus::before { background: linear-gradient(180deg, rgba(20,83,45,.52), rgba(0,51,0,.52)); }
+#vital-essence .bar.has-surplus::before { background: linear-gradient(180deg, rgba(155,93,229,.32), rgba(255,0,255,.30)); }
 .bar.has-surplus:hover::before,
-.bar.has-surplus:focus-within::before { opacity: .45; }
+.bar.has-surplus:focus-within::before{ opacity:.45; }
 
-/* ========================================================================== */
-   /* Mode engravings + Status row */
-/* ========================================================================== */
-/* Footer meta row */
+/* ==========================================================================
+   SHIELD + TOTALS ROW
+   ========================================================================== */
+
+.shield-row{
+  display:grid; grid-template-columns: 1fr auto;
+  align-items:center; gap:12px; margin-top: var(--bar-gap);
+}
+.shield-row #vital-shield{ min-width:0; }
+.shield-row #vital-shield .bar{ margin:0; }
+
+/* shield look refinement already handled by fills; keep your reclaim enhancer */
+#vital-shield .bar .bar-reclaim{
+  background: linear-gradient(180deg, rgba(250,204,21,.80), rgba(234,179,8,.80));
+  mix-blend-mode: screen; opacity:.95;
+}
+
+/* breakdown overlay (kept) */
+#vital-shield .shield-breakdown{
+  position:absolute; inset:0; border-radius: inherit; pointer-events:none;
+  opacity:0; transition: opacity .18s ease; z-index:2; mix-blend-mode: screen;
+}
+#vital-shield .shield-breakdown::after{
+  content:""; position:absolute; inset:0; border-radius: inherit;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,.28), inset 0 0 4px rgba(255,255,255,.06);
+}
+#vital-shield .shield-breakdown.is-visible{ opacity:1; }
+
+/* Totals: clearer ledger chip */
+.vitals-total{
+  justify-self:end; display:flex; align-items:center; gap:.45rem;
+  font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
+  color: var(--txt-soft);
+}
+.vitals-total .label{
+  padding:.25rem .5rem; border-radius:999px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18);
+  color: var(--txt-muted); letter-spacing:.02em;
+}
+.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
+.vitals-total .vital-value{ font-weight:700; color: var(--txt-strong); }
+.vitals-total .vital-max{ opacity:.85; }
+
+/* ==========================================================================
+   MODE ENGRAVINGS + STATUS (legacy kept)
+   ========================================================================== */
+
 .hud-meta-row{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin-top: 6px;
+  display:flex; align-items:center; gap:8px; width:100%; margin-top:6px;
 }
 
 .vitals-toprow{
   display:flex; align-items:center; justify-content:space-between;
-  gap:.75rem; margin: 6px 0 0;
-}
-.vitals-total{
-  margin-left:auto; font-variant-numeric: tabular-nums; white-space:nowrap; opacity:.95;
-}
-.vitals-total .label{ opacity:.8; margin-right:.35rem; }
-.vitals-total .sep{ opacity:.5; margin:0 .25rem; }
-.vitals-total .vital-value{ font-weight:600; }
-.vitals-total .vital-max{ opacity:.8; }
-
-/* Left group stays left */
-#mode-engrave{
-  flex: 0 0 auto;        /* just its intrinsic width */
+  gap:.75rem; margin:6px 0 0;
 }
 
+#mode-engrave{ flex:0 0 auto; } /* stays left */
 .mode-engrave{
-  display: flex; justify-content: flex-start; align-items: center;
-  gap: clamp(10px, 2.8vw, 18px);
-  margin: 6px 0 0px;
+  display:flex; justify-content:flex-start; align-items:center;
+  gap: clamp(10px, 2.8vw, 18px); margin:6px 0 0;
 }
 .mode-btn{
-  appearance: none; background: none; border: 0; cursor: pointer;
-  padding: 4px 8px; line-height: 1;
-  font-family: 'Cinzel', serif; font-variant: small-caps; letter-spacing: .04em;
-  font-size: clamp(11px, 1.8vw, 14px); user-select: none;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(228,216,180,.45);
+  appearance:none; background:none; border:0; cursor:pointer;
+  padding:4px 8px; line-height:1;
+  font-family:'Cinzel',serif; font-variant: small-caps; letter-spacing:.04em;
+  font-size: clamp(11px, 1.8vw, 14px); user-select:none;
+  color: transparent; -webkit-text-stroke:1px rgba(228,216,180,.45);
   text-shadow: 0 1px 0 rgba(0,0,0,.75), 0 -1px 0 rgba(255,255,255,.05);
-  opacity: .65;
-  transition: opacity .2s ease, filter .2s ease, -webkit-text-stroke .2s ease;
+  opacity:.65; transition: opacity .2s ease, -webkit-text-stroke .2s ease;
 }
-.mode-btn:hover, .mode-btn:focus-visible{
-  opacity: .9; outline: none;
-  -webkit-text-stroke: 1px rgba(240,230,210,.7);
-}
+.mode-btn:hover, .mode-btn:focus-visible{ opacity:.9; outline:none; -webkit-text-stroke:1px rgba(240,230,210,.7); }
 .mode-btn.is-active{
-  color: #e4d8b4; -webkit-text-stroke: 0;
-  text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
-  opacity: 1;
+  color:#e4d8b4; -webkit-text-stroke:0;
+  text-shadow:0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55);
+  opacity:1;
 }
-.mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
-.mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
-.mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="daily"]{   text-shadow:0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="weekly"]{  text-shadow:0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
+.mode-btn.is-active[data-mode="monthly"]{ text-shadow:0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 
-/* Center the status reliably */
+/* Centered status */
 .vitals-status{
-  margin-inline: auto;   /* centers between left edge and right edge */
-  position: static;
-  transform: none;
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  margin-inline:auto; position:static; transform:none;
+  display:inline-flex; align-items:center; gap:.5rem;
+  cursor:pointer; user-select:none; -webkit-tap-highlight-color:transparent;
 }
-
-.vitals-status:focus-visible{
-  outline: 2px solid var(--line, #444);
-  outline-offset: 2px;
-  border-radius: 10px;
-}
-
-/* Overview (dot + text) */
-.vs-overview{
-  display: inline-flex;
-  align-items: center;
-  gap: .45rem;
-  white-space: nowrap;
-}
-
-/* Dot (restored) */
-.status-dot{
-  width: .6rem; height: .6rem; border-radius: 999px;
-  display: inline-block; flex: 0 0 .6rem;
-  background: currentColor; box-shadow: 0 0 6px currentColor;
-}
-.status-dot.is-good{ color:#50d878; }
-.status-dot.is-warn{ color:#fbbf24; }
-.status-dot.is-bad { color:#ef4444; }
-
+.vitals-status:focus-visible{ outline:2px solid var(--line, #444); outline-offset:2px; border-radius:10px; }
+.vs-overview{ display:inline-flex; align-items:center; gap:.45rem; white-space:nowrap; }
+.status-dot{ width:.6rem; height:.6rem; border-radius:999px; display:inline-block; flex:0 0 .6rem; background: currentColor; box-shadow:0 0 6px currentColor; }
+.status-dot.is-good{ color:#50d878; }   /* underspending */
+.status-dot.is-warn{ color:#fbbf24; }   /* neutral */
+.status-dot.is-bad { color:#ef4444; }   /* overspending */
 .status-text{ font-weight:700; }
-
-/* Toggle to breakdown */
 .vs-breakdown{ display:none; gap:.4rem; }
 .vitals-status.is-breakdown .vs-overview{ display:none; }
 .vitals-status.is-breakdown .vs-breakdown{ display:inline-flex; }
-
-.vs-item{
-  display:inline-flex; align-items:center; gap:.35rem;
-  padding:2px 4px; border-radius:8px;
-}
+.vs-item{ display:inline-flex; align-items:center; gap:.35rem; padding:2px 4px; border-radius:8px; }
 .vs-label{ font-weight:700; font-family:'Cinzel',serif; }
+.vitals-status .status-dot{ margin-right:.25rem; }
 
-.status-dot.is-good{ color:#50d878; }  /* underspending */
-.status-dot.is-warn{ color:#fbbf24; }  /* on track / neutral */
-.status-dot.is-bad { color:#ef4444; }  /* overspending */
+/* ==========================================================================
+   SKILLS + LOG (legacy preserved)
+   ========================================================================== */
 
-
-/* (optional) if your dot needs spacing */
-.vitals-status .status-dot{ margin-right: .25rem; }
-
-/* ========================================================================== */
-   /* Skills Section */
-/* ========================================================================== */
-.skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.9rem; opacity:.9; }
-.skills .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.skills .slot {
-  height: 44px; border-radius: 10px; background: rgba(255,255,255,.05);
-  border: 1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
+.skills h3, .log h3{ margin: 2px 0 8px; letter-spacing:.06em; font-size:.9rem; opacity:.9; }
+.skills .grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; }
+.skills .slot{
+  height:40px; border-radius:10px; background: rgba(255,255,255,.05);
+  border:1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
 }
-.skills .slot.locked::after { content: "🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
+.skills .slot.locked::after{ content:"🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
 
-/* log */
-.log .log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-.log .actions .btn.small { font-size:.9rem; padding:.35rem .55rem; }
-.log .log-sub { color:#cbb9ff; font-size:.9rem; margin: 2px 0 8px; }
-.log-list { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
-.log-item { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:8px 10px; }
-.log-item .log-title { font-weight:600; margin-bottom:2px; }
-.log-item .log-meta { font-size:.85rem; opacity:.8; }
+.log .log-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.log .actions .btn.small{ font-size:.9rem; padding:.35rem .55rem; }
+.log .log-sub{ color:#cbb9ff; font-size:.9rem; margin: 2px 0 8px; }
+.log-list{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.log-item{ background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:8px 10px; }
+.log-item .log-title{ font-weight:600; margin-bottom:2px; }
+.log-item .log-meta{ font-size:.85rem; opacity:.8; }
 
-/* ──────────────────────────────────────────
-   Misc
-   ────────────────────────────────────────── */
-.vitals .pad-bottom { height: 68px; }  /* keep footer-safe space */
+/* ==========================================================================
+   MISC
+   ========================================================================== */
 
-/* If you need .btn baseline here (usually lives in chrome.css) */
+.vitals .pad-bottom{ height:68px; } /* footer-safe space */
+
+/* button baseline (scoped) */
 .vitals .btn{
   appearance:none; border:0; background: rgba(255,255,255,.08);
   padding:.5rem .7rem; border-radius:12px; color:#eee; cursor:pointer;
