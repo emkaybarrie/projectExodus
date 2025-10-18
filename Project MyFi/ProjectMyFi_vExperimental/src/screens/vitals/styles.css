@@ -99,8 +99,8 @@ h1, h2 {
   --bar-h-health:   var(--bar-h);
   --bar-h-mana:     var(--bar-h);
   --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   24px;   /* keep thin */
-  --bar-h-essence:  24px;   /* match shield */
+  --bar-h-shield:   20px;   /* keep thin */
+  --bar-h-essence:  20px;   /* match shield */
 
   /* Vertical rhythm */
   --bar-gap: 8px;
@@ -158,8 +158,8 @@ h1, h2 {
 }
 
 /* Labels & values */
-.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-family:'Cinzel',serif; font-size:0.9rem; }
-.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:1.0rem; color:#f0e5c9; }
+.bar-label { z-index:3; position:relative; flex-shrink:0; color:#f0e5c9; font-family:'Cinzel',serif; font-size:0.8rem; }
+.bar-value { position:absolute; right:12px; top:50%; transform:translateY(-50%); z-index:3; white-space:nowrap; font-size:0.9rem; color:#f0e5c9; }
 /* Regen rate state for the value text */
 .bar-value.is-rate {
   opacity: .9;
@@ -395,7 +395,7 @@ h1, h2 {
 /* ========================================================================== */
    /* Skills Section */
 /* ========================================================================== */
-.skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.95rem; opacity:.9; }
+.skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.9rem; opacity:.9; }
 .skills .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .skills .slot {
   height: 44px; border-radius: 10px; background: rgba(255,255,255,.05);
