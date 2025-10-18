@@ -11,9 +11,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
+import { db, functions } from '../../../core/firestore.js';
+
 // ───────────────────────────────── Firestore / Functions ────────────────────
-const db = getFirestore();
-const functions = getFunctions();
+
+// const db = getFirestore();
+// const functions = getFunctions();
 
 // (Kept for compatibility; prefer using resolveDataSources() instead of relying on these.)
 let CURRENT_TX_COLLECTION_PATH = null;

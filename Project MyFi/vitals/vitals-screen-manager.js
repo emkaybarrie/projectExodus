@@ -128,16 +128,7 @@ function daysSincePayCycleStart(payCycleAnchorMs){
   return Math.max(0, (Date.now() - start) / MS_PER_DAY);
 }
 
-// ---------- HUD number formatting (one knob) ----------
-const HUD_DECIMALS = 0; // ← change this to 1/2/etc later to update all value texts
 
-const hudFmt = (n, d = HUD_DECIMALS) => {
-  const v = Number(n ?? 0);
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: d,
-    maximumFractionDigits: d,
-  }).format(v);
-};
 
 
 
@@ -724,6 +715,17 @@ export async function recomputeVitalsGatewayStub(uid){
 
   await setDoc(gatewayRef, payload, { merge:true });
 }
+
+// ---------- HUD number formatting (one knob) ----------
+const HUD_DECIMALS = 0; // ← change this to 1/2/etc later to update all value texts
+
+const hudFmt = (n, d = HUD_DECIMALS) => {
+  const v = Number(n ?? 0);
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  }).format(v);
+};
 
 // ────────────────────────────── Mode helpers (HUD) ──────────────────────────
 function displayLabelFor(mode){
@@ -1794,9 +1796,6 @@ export async function refreshVitalsHUD(uid, { recompute = true } = {}) {
 
 }
 
-
-
-
 // ───────────────────────── Update Log (pending / recent) ────────────────────
 function normalizeTxn(d){
   const x=d.data()||{};
@@ -2312,8 +2311,6 @@ function openHistoryFor_energy() {
     window.MyFiModal.open('history', { variant: 'single', menuTitle: 'Activity Log' });
   })();
 }
-
-
 
 // ───────────────────────── Dashboard helpers & buttons ──────────────────────
 export async function refreshVitals(){

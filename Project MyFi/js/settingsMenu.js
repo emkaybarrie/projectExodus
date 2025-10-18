@@ -2,7 +2,8 @@
 // Adds deletion policy + anchor date selection to Reset Vitals flow.
 // Now uses setAlias callable for alias changes.
 
-import { auth, db, logoutUser, fns } from './core/auth.js';
+import { logoutUser } from './core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import {
   doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";

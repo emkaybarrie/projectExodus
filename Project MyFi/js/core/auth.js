@@ -1,25 +1,11 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
-  authDomain: "myfi-app-7fa78.firebaseapp.com",
-  projectId: "myfi-app-7fa78",
-  storageBucket: "myfi-app-7fa78.appspot.com",
-  messagingSenderId: "720285758770",
-  appId: "1:720285758770:web:ed7d646efac936993b532b",
-  measurementId: "G-GDR4RQ25T3"
-};
+import { firebaseApp as app, auth, db, functions as fns } from '../../ProjectMyFi_vExperimental/src/core/firestore.js';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-// NEW (bind to your region)
-const fns  = getFunctions(app, "europe-west2");
 
 // Helper
 const getUserDataFromFirestore = async (uid) => {
@@ -155,6 +141,6 @@ export async function logoutUser() {
   }
 }
 
-window.auth = auth;
+// window.auth = auth;
 
-export {app, auth, db, fns };
+// export {app, auth, db, fns };

@@ -146,7 +146,7 @@ window.MyFiShowIOSInstallModal = MyFiShowIOSInstallModal;
 
 
 // ===== YOUR ORIGINAL FILE STARTS HERE =====
-import { app, auth, db, fns as functions } from './core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { getDoc, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import playerDataManager from "./playerDataManager.js";
 import { initHUD } from "../vitals/vitals-screen-manager.js";

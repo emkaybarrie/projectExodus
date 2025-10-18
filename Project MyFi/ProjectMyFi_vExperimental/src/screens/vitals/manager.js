@@ -4,8 +4,31 @@ import { setHeaderTitle, setFooter } from '../../core/chrome.js';
 import { injectView } from '../../core/view.js';
 import { navigate } from '../../core/router.js';
 
+import { refreshAndGetGateway, watchGateway } from './modules/gateway.js';
+import { buildHUDModel } from './modules/vitals-vm.js';
+import { renderBars } from './modules/ui/bars.js'; // example: initial + incremental render
+
 let unstyle;
 let cleanup = [];
+let unwatch;
+
+async function bootVitals() {
+  // 1) Force a recompute (idempotent) and paint once
+  const first = await refreshAndGetGateway();
+  if (first) {
+    const vm = buildHUDModel(first, { primary: 'core', focus: 'daily' }); // or whatever mode defaults you use
+    renderBars(vm);                    // initial paint (create DOM refs, set widths/texts)
+  }
+
+  // 2) Live updates → VM → diff paint
+  unwatch = watchGateway(null, (gw) => {
+    if (!gw) return;
+    const vm = buildHUDModel(gw);
+    renderBars(vm);                    // fast path (only set changed widths/texts)
+    // Optional: fan out UI events so other widgets can react
+    window.dispatchEvent(new CustomEvent('vitals:updated', { detail: { vm, gw } }));
+  });
+}
 
 function mountEssenceMini() {
   const slot = document.getElementById('essence-mini');
@@ -55,7 +78,8 @@ export default {
     // filterBtn.addEventListener('click', onFilter);
     // cleanup.push(() => { addBtn.removeEventListener('click', onAdd); filterBtn.removeEventListener('click', onFilter); });
 
-    // 4) Initial log render
+    // 4) Initial Render
+    await bootVitals();
 
   },
 

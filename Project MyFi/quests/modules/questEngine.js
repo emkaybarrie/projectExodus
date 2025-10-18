@@ -1,5 +1,6 @@
 // /quests/questEngine.js
-import { app, auth, db } from "../../js/core/auth.js";
+// import { app, auth, db } from "../../js/core/auth.js";
+import { firebaseApp as app, auth, db } from '../../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { on, emit, QuestEvents } from "./events.js";

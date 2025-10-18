@@ -1,3 +1,4 @@
+import './firestore.js';  // ensures the singleton is initialized early
 import { initChrome } from './chrome.js';
 import { initRouter, registerScreens, navigate, setLayout } from './router.js';
 import { setState } from './state.js';
