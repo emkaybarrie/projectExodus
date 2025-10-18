@@ -12,7 +12,7 @@ h1, h2 {
 }
 
 .vitals {
-  margin: 0.75rem;
+  margin: 0.5rem;
 }
 
 .card {
@@ -51,8 +51,8 @@ h1, h2 {
   position: relative;
   overflow: visible;
   isolation: isolate;
-  width: 100px;
-  height: 100px;
+  width: 75px;
+  height: 75px;
   flex-shrink: 0;
   cursor: pointer
 }
@@ -89,17 +89,18 @@ h1, h2 {
   --mana-color: linear-gradient(to bottom, #164e63, #002244);
   --stamina-color: linear-gradient(to bottom, #14532d, #003300);
   --shield-color: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
+  --essence-color: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); 
 
 
   /* Base height for all bars (tweak this once) */
-  --bar-h: 42px;
+  --bar-h: 30px;
 
   /* Per-vital overrides (fallback to --bar-h if not set) */
   --bar-h-health:   var(--bar-h);
   --bar-h-mana:     var(--bar-h);
   --bar-h-stamina:  var(--bar-h);
-  --bar-h-shield:   32px;   /* keep thin */
-  --bar-h-essence:  32px;   /* match shield */
+  --bar-h-shield:   24px;   /* keep thin */
+  --bar-h-essence:  24px;   /* match shield */
 
   /* Vertical rhythm */
   --bar-gap: 8px;
@@ -165,7 +166,6 @@ h1, h2 {
   font-style: italic;
 }
 
-
 /* Reclaim overlay */
 .bar .bar-reclaim {
   position:absolute; top:0; bottom:0; z-index:2;
@@ -187,28 +187,25 @@ h1, h2 {
   filter: brightness(1.35); /* subtle pop */
   opacity: 0.9;
 }
-/* #vital-health .bar .bar-reclaim.is-credit   { background: var(--health-color); }
+
+#vital-health .bar .bar-reclaim.is-credit   { background: var(--health-color); }
 #vital-mana   .bar .bar-reclaim.is-credit   { background: var(--mana-color); }
 #vital-stamina.bar .bar-reclaim.is-credit   { background: var(--stamina-color); }
-#vital-essence.bar .bar-reclaim.is-credit   { background: var(--essence-color); } */
-
-#vital-health .bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #7f1d1d, #400000); }
-#vital-mana   .bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #164e63, #002244); }
-#vital-stamina.bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, #14532d, #003300); }
-#vital-essence.bar .bar-reclaim.is-credit   { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
-
+#vital-essence.bar .bar-reclaim.is-credit   { background: var(--essence-color); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 
 .bar-reclaim.flash { animation: ghost-flash 0.4s ease-in-out; }
 @keyframes ghost-flash { 0%{filter:brightness(1)} 50%{filter:brightness(1.8)} 100%{filter:brightness(1)} }
 
 /* Pool colours */
-#vital-health  .bar-fill::before { background: linear-gradient(to bottom, #7f1d1d, #400000); }
-#vital-mana    .bar-fill::before { background: linear-gradient(to bottom, #164e63, #002244); }
-#vital-stamina .bar-fill::before { background: linear-gradient(to bottom, #14532d, #003300); }
-#vital-essence .bar-fill::before { background: linear-gradient(to bottom, rgba(150,85,255,.4), rgba(255,0,255,.15)); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
+#vital-health  .bar-fill::before { background: var(--health-color); }
+#vital-mana    .bar-fill::before { background: var(--mana-color); }
+#vital-stamina .bar-fill::before { background: var(--stamina-color); }
+#vital-shield .bar-fill::before{
+  background: var(--shield-color);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,0.08);
+}
+#vital-essence .bar-fill::before { background: var(--essence-color); box-shadow: 0 0 8px #9b5de5, 0 0 16px rgba(155,93,229,.4); }
 #vital-stamina { margin-top: 10px; }
-
-
 
 /* Apply heights */
 .bar{ height: var(--bar-h); }
@@ -234,11 +231,6 @@ h1, h2 {
 .shield-row #vitals-total{ justify-self: end; }       /* pin right */
 .shield-row #vital-shield .bar{ margin: 0; }          /* remove extra gap */
 
-/* Shield look (baseline aura + gold overlay for today's escrow) */
-#vital-shield .bar-fill::before{
-  background: linear-gradient(to bottom, rgba(120,255,180,.70), rgba(155,93,229,.35));
-  box-shadow: inset 0 2px 6px rgba(0,0,0,.6), 0 0 6px rgba(255,255,255,0.08);
-}
 #vital-shield .bar .bar-reclaim{
   background: linear-gradient(to bottom, rgba(250,204,21,.80), rgba(234,179,8,.80));
   mix-blend-mode: screen;
@@ -265,7 +257,6 @@ h1, h2 {
     inset 0 2px 4px rgba(0,0,0,.28),
     inset 0 0 4px rgba(255,255,255,.06);
 }
-
 #vital-shield .shield-breakdown.is-visible{ opacity: 1; }
 
 /* Surplus backdrop */
@@ -285,11 +276,17 @@ h1, h2 {
 .bar.has-surplus:hover::before,
 .bar.has-surplus:focus-within::before { opacity: .45; }
 
-
-
 /* ========================================================================== */
-   /* Mode engravings + Totals row */
+   /* Mode engravings + Status row */
 /* ========================================================================== */
+/* Footer meta row */
+.hud-meta-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
 
 .vitals-toprow{
   display:flex; align-items:center; justify-content:space-between;
@@ -302,6 +299,11 @@ h1, h2 {
 .vitals-total .sep{ opacity:.5; margin:0 .25rem; }
 .vitals-total .vital-value{ font-weight:600; }
 .vitals-total .vital-max{ opacity:.8; }
+
+/* Left group stays left */
+#mode-engrave{
+  flex: 0 0 auto;        /* just its intrinsic width */
+}
 
 .mode-engrave{
   display: flex; justify-content: flex-start; align-items: center;
@@ -331,22 +333,6 @@ h1, h2 {
 .mode-btn.is-active[data-mode="daily"]   { text-shadow: 0 0 10px rgba(100,255,168,.25), 0 1px 0 rgba(0,0,0,.55); }
 .mode-btn.is-active[data-mode="weekly"]  { text-shadow: 0 0 10px rgba(158,247,255,.25), 0 1px 0 rgba(0,0,0,.55); }
 .mode-btn.is-active[data-mode="monthly"] { text-shadow: 0 0 10px rgba(192,163,255,.25), 0 1px 0 rgba(0,0,0,.55); }
-
-
-
-/* Footer meta row */
-.hud-meta-row{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  margin-top: 6px;
-}
-
-/* Left group stays left */
-#mode-engrave{
-  flex: 0 0 auto;        /* just its intrinsic width */
-}
 
 /* Center the status reliably */
 .vitals-status{
@@ -406,8 +392,9 @@ h1, h2 {
 /* (optional) if your dot needs spacing */
 .vitals-status .status-dot{ margin-right: .25rem; }
 
-
-/* skills */
+/* ========================================================================== */
+   /* Skills Section */
+/* ========================================================================== */
 .skills h3, .log h3 { margin: 2px 0 8px; letter-spacing:.06em; font-size:.95rem; opacity:.9; }
 .skills .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .skills .slot {
@@ -415,6 +402,15 @@ h1, h2 {
   border: 1px dashed rgba(255,255,255,.12); color:#fff; opacity:.6;
 }
 .skills .slot.locked::after { content: "🔒"; display:block; text-align:center; line-height:44px; opacity:.8; }
+
+/* log */
+.log .log-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.log .actions .btn.small { font-size:.9rem; padding:.35rem .55rem; }
+.log .log-sub { color:#cbb9ff; font-size:.9rem; margin: 2px 0 8px; }
+.log-list { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.log-item { background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:8px 10px; }
+.log-item .log-title { font-weight:600; margin-bottom:2px; }
+.log-item .log-meta { font-size:.85rem; opacity:.8; }
 
 /* ──────────────────────────────────────────
    Misc
