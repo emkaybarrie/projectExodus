@@ -1,11 +1,15 @@
 <body>
     <section class="vitals screen scrollable" aria-labelledby="vitals-title">
 
-      <section id="core-vitals-wrapper" class="card"> 
+      <section id="vitals-wrapper-core" class="card"> 
           <!-- Top cluster: portrait + Health/Mana -->
           <div id="top-cluster">
             <div class="top-cluster-portrait-wrapper">
-              <img src="../../assets/portraits/default.png" alt="Avatar Portrait" class="portrait" id="player-portrait" />
+              <img id="portrait-img" class="portrait" src="./assets/portraits/default.png" alt="Avatar Portrait"   />
+              <div id="portrait-meta">
+                <div class="portrait-name"></div>
+                <div class="portrait-level"></div>
+              </div>
               <div class="level-pill" id="player-level" hidden>1</div>
             </div>
 
@@ -21,7 +25,7 @@
 
               <div id="vital-mana">
                 <div class="bar mana">
-                  <span class="bar-label font-ui">Mana</span>
+                  <span class="bar-label">Mana</span>
                   <div class="bar-fill" style="width: 0%;"></div>
                   <span class="bar-value">-- / --</span>
                   <span class="bar-surplus" aria-hidden="true"></span>
@@ -32,7 +36,7 @@
 
           <div id="vital-stamina">
               <div class="bar stamina">
-                <span class="bar-label font-ui">Stamina</span>
+                <span class="bar-label">Stamina</span>
                 <div class="bar-fill" style="width: 0%;"></div>
                 <span class="bar-value">-- / --</span>
                 <span id="bar-surplus-stamina" class="bar-surplus" aria-hidden="true"></span>
@@ -52,13 +56,13 @@
             </div>
 
             <!-- moved here from vitals-toprow -->
-            <div class="vitals-total font-ui" id="vitals-total" aria-live="polite">Total -- / --</div>
+            <div class="vitals-total" id="vitals-total" aria-live="polite">Total -- / --</div>
           </div>
   
           <div class="hud-meta-row">
             <div class="mode-engrave" id="mode-engrave" role="tablist" aria-label="View mode">
-              <button id="engrave-core"  class="engrave engrave--core font-ui"  aria-label="All-Time">Current</button>
-              <button id="engrave-focus" class="engrave engrave--focus font-ui" aria-label="Focus">Focus: Today</button>
+              <button id="engrave-core"  class="engrave engrave--core mode-btn"  aria-label="Current">Current</button>
+              <button id="engrave-focus" class="engrave engrave--focus mode-btn" aria-label="Focus">Focus: Today</button>
             </div>
 
             <!-- inside #mode-engrave (or the footer row) -->
@@ -86,7 +90,7 @@
           </div>
       </section>
 
-      <section class="skills card">
+      <section id="skills-wrapper" class="skills card">
         <h3>Skills</h3>
         <div class="grid">
           <button class="slot locked" title="Locked"></button>
@@ -96,7 +100,7 @@
         </div>
       </section>
 
-      <section class="log card">
+      <section id="events-log-wrapper" class="card log">
         <div class="log-header">
           <h3>Events</h3>
           <div class="actions">
@@ -106,6 +110,17 @@
         </div>
         <div class="log-sub">Active — <span class="muted">Nothing pending</span></div>
         <ul class="log-list" data-el="log-list"></ul>
+      </section>
+
+      <section id="vitals-wrapper-essence" class="card">
+        <div id="vital-essence">
+          <div class="bar essence">
+            <span class="bar-label">Essence</span>
+            <div class="bar-fill" style="width: 0%;"></div>
+            <span class="bar-value">-- / --</span>
+            <span class="bar-surplus" aria-hidden="true"></span>
+          </div>
+        </div>
       </section>
 
       <div class="pad-bottom"></div>

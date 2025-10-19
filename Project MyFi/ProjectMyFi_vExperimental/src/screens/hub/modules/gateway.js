@@ -2,17 +2,10 @@
 // Thin IO layer around the vitals gateway doc: read, watch, and recompute.
 // No DOM. No formatting. Just Firestore + calls into the BE math stub.
 
-import {
-  getFirestore, doc, getDoc, onSnapshot,
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
+import { doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 // Reuse the recompute stub you already have (from legacy-migrated file)
-import { recomputeVitalsGatewayStub, resolveDataSources } from "../BE/vitals-be.js";
-
+import { recomputeVitalsGatewayStub, resolveDataSources } from "../BE/hub-be.js";
 import { auth, db, waitForAuthUser  } from '../../../core/firestore.js';
-
-//const db = getFirestore();
 
 /** read once */
 export async function getGatewayOnce(uid) {
@@ -25,7 +18,7 @@ export async function getGatewayOnce(uid) {
 
 /** read once, but force a recompute beforehand (safe to call on page enter) */
 export async function refreshAndGetGateway(uid) {
-  const u = uid || (await waitForAuthUser())?.uid || auth.currentUser?.uid; //'24Nq8ULBihaaU0gutWO0bes1BVl2'
+  const u = uid || (await waitForAuthUser())?.uid || auth.currentUser?.uid;
   if (!u) return null;
   try { await recomputeVitalsGatewayStub(u); } catch {}
   return await getGatewayOnce(u);
@@ -40,4 +33,4 @@ export async function watchGateway(uid, cb) {
 }
 
 /** expose data-source resolver so FE/UI can ask for tx path when needed */
-export { resolveDataSources } from "../BE/vitals-be.js";
+export { resolveDataSources } from "../BE/hub-be.js";

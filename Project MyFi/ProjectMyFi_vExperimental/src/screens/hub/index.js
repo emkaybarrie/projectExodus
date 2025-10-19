@@ -1,12 +1,12 @@
-// src/screens/vitals/index.js
+// src/screens/hub/index.js
 import { loadScopedCSS } from '../../core/cssScope.js';
 import { setHeaderTitle, setFooter } from '../../core/chrome.js';
 import { injectView } from '../../core/view.js';
 import { navigate } from '../../core/router.js';
 
 import { refreshAndGetGateway, watchGateway } from './modules/gateway.js';
-import { buildHUDModel } from './modules/vitals-vm.js';
-import { renderBars } from './modules/ui/bars.js'; // example: initial + incremental render
+import { buildHUDModel } from './modules/hub-vm.js';
+import { renderBars, renderPortrait } from './modules/ui/vitals.js'; // example: initial + incremental render
 
 let unstyle;
 let cleanup = [];
@@ -17,6 +17,7 @@ async function bootVitals() {
   const first = await refreshAndGetGateway();
   if (first) {
     const vm = buildHUDModel(first, { primary: 'core', focus: 'daily' }); // or whatever mode defaults you use
+    renderPortrait(vm)
     renderBars(vm);                    // initial paint (create DOM refs, set widths/texts)
   }
 
@@ -49,9 +50,9 @@ function mountEssenceMini() {
 }
 
 export default {
-  id: 'vitals',
-  route: 'vitals',
-  title: 'VITALS',
+  id: 'hub',
+  route: 'hub',
+  title: 'HUB',
   background: { key: 'panorama' },
   chrome: {
     mode: 'full',
@@ -84,7 +85,7 @@ export default {
   },
 
   onShow() {
-    setHeaderTitle('VITALS');
+    setHeaderTitle('HUB');
 
     // Footer buttons per-screen (keeps systemized approach)
     setFooter(this.chrome.footer);

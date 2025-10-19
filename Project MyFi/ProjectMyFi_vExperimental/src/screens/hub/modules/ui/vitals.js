@@ -1,4 +1,4 @@
-// ui/components/Bars.js
+// ui/components/vitals.js
 // Expects specific DOM with ids: #vital-health, #vital-mana, #vital-stamina, #vital-shield, #vital-essence
 // and inside each: .bar .bar-fill, .bar-value, .bar-label, .bar-surplus.
 
@@ -21,6 +21,31 @@ function getEls() {
   out.title = document.getElementById('mode-engrave');
   return out;
 }
+
+// ───────────── Portrait Renderer ─────────────
+export function renderPortrait(vm) {
+  const imgEl   = document.getElementById('portrait-img');
+  const nameEl  = document.querySelector('#portrait-meta .portrait-name');
+  const levelEl = document.querySelector('#portrait-meta .portrait-level');
+  // const ringEl  = document.getElementById('portrait-ring');
+
+  // if (!imgEl || !nameEl || !levelEl) return;
+
+  const portraitSrc = `../public/assets/portraits/${vm?.portraitKey}.png` || vm?.portraitURL || './assets/avatars/default.png';
+  const displayName = vm?.alias || vm?.firstName || 'Player';
+  const level       = vm?.level || 1;
+
+  imgEl.src = portraitSrc;
+  // nameEl.textContent  = displayName;
+  // levelEl.textContent = `Lv ${level}`;
+
+  // optional: ring color by health ratio if you have vm data
+  // if (ringEl && player?.vitals?.healthPct != null) {
+  //   const hue = Math.round(player.vitals.healthPct * 120); // green→red
+  //   ringEl.style.borderColor = `hsl(${hue}, 80%, 60%)`;
+  // }
+}
+
 
 export function renderBars(vm) {
   if (!vm) return;
