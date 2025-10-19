@@ -6,6 +6,8 @@ const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 export function buildHUDModel(gw, mode = "core") {
   if (!gw || !gw.pools) return null;
 
+  const portraitKey = gw.portraitKey
+
   const pools = gw.pools;
   const essenceSoftCap = Number(gw?.essenceUI?.softCap || 0);
 
@@ -26,6 +28,9 @@ export function buildHUDModel(gw, mode = "core") {
   const E = pools.essence || {};
 
   const vm = {
+    alias: "",
+    level: 1,
+    portraitKey: portraitKey,
     labels: {
       primary: mode === "core" ? "core" : "focus",
       focus: mode === "core" ? "daily" : mode,

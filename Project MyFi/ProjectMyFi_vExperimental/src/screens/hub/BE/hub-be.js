@@ -264,7 +264,7 @@ export async function refreshVitals_BE(uid){
   }
 }
 
-export async function lockExpiredOrOverflow_BE(uid, queueCap = 50){
+export async function lockExpiredOrOverflow_BE(uid, queueCap = 5){
   try{
     const fn = httpsCallable(functions, "vitals_lockPending");
     const res = await fn({ queueCap });
@@ -278,6 +278,143 @@ export async function lockExpiredOrOverflow_BE(uid, queueCap = 50){
     console.warn("Server lock failed:", e);
     return { locked: 0 };
   }
+}
+
+// Local fallback: confirm expired and enforce queueCap if backend can't
+export async function sweepLocalExpiredAndOverflow(uid, queueCap = 5){
+  const { txCollectionPath } = await resolveDataSources(uid);
+  if (!txCollectionPath) return { locked: 0 };
+
+  const now = Date.now();
+  const col = collection(db, txCollectionPath);
+  const snap = await getDocs(query(col, where("status","==","pending")));
+
+  // Load player credit mode for credits without override
+  let creditMode = 'essence';
+  try{
+    const cfg = await getDoc(doc(db, CURRENT_CASHFLOW_DOC_PATH || `players/${uid}/financialData/cashflowData`));
+    creditMode = String(cfg.data()?.creditMode || 'essence').toLowerCase();
+  }catch{}
+
+  const pend = [];
+  snap.forEach(d=>{
+    const x = d.data()||{};
+    pend.push({
+      id: d.id,
+      amount: Number(x.amount ?? x.amountMajor ?? 0),
+      dateMs: Number(x.dateMs ?? x.postedAtMs ?? x.transactionData?.entryDate?.toMillis?.() ?? 0),
+      addedMs: Number(x.addedMs ?? 0),
+      ghostExpiryMs: Number(x.ghostExpiryMs ?? 0),
+      provisionalTag: x.provisionalTag || null,
+      tag: x.tag || null,
+      creditModeOverride: String(x.creditModeOverride || '').toLowerCase(),
+      suggestedPool: x.suggestedPool || null,
+    });
+  });
+
+  // 1) Expired first
+  const toLock = pend.filter(x => x.ghostExpiryMs && x.ghostExpiryMs <= now);
+
+  // 2) Overflow next (oldest by dateMs; fallback addedMs)
+  const remain = pend.filter(x => !toLock.find(t => t.id === x.id));
+  const overflow = Math.max(0, pend.length - queueCap - toLock.length);
+  if (overflow > 0){
+    remain.sort((a,b) => (a.dateMs||a.addedMs) - (b.dateMs||b.addedMs));
+    toLock.push(...remain.slice(0, overflow));
+  }
+
+  // Apply locks
+  // AFTER: compute appliedAllocation for debits using gateway + escrow
+
+  const gatewayRef = doc(db, `players/${uid}/vitalsData/gateway`);
+  const gatewaySnap = await getDoc(gatewayRef);
+  const G = gatewaySnap.exists() ? (gatewaySnap.data() || {}) : {};
+
+  let avail = {
+    health:  Number(G?.pools?.health?.current  || 0),
+    mana:    Number(G?.pools?.mana?.current    || 0),
+    stamina: Number(G?.pools?.stamina?.current || 0),
+  };
+  let escCarry = {
+    health:  Number(G?.meta?.escrow?.carry?.bySource?.health  || 0),
+    mana:    Number(G?.meta?.escrow?.carry?.bySource?.mana    || 0),
+    stamina: Number(G?.meta?.escrow?.carry?.bySource?.stamina || 0),
+  };
+
+  // Lock oldest-first so avail/escrow updates are consistent
+  toLock.sort((a,b)=> (a.dateMs||a.addedMs) - (b.dateMs||b.addedMs));
+
+  const ops = toLock.map(tx => {
+    const isCredit = tx.amount > 0;
+    const effOverride = String(tx.creditModeOverride || '').toLowerCase();
+
+    // Resolve final tag.pool (keep your existing logic)
+    let pool;
+    if (isCredit) {
+      const eff = (effOverride==='essence'||effOverride==='health'||effOverride==='allocate')
+        ? effOverride : creditMode;
+      pool = (eff==='health') ? 'health'
+          : (eff==='essence') ? 'essence'
+          : (tx.tag?.pool || tx.provisionalTag?.pool || 'stamina');
+    } else {
+      pool = tx.provisionalTag?.pool || tx.suggestedPool || 'stamina';
+    }
+
+    let write = {
+      status: 'confirmed',
+      tag: { pool, setAtMs: now },
+      provisionalTag: null,
+      autoLockReason: 'client_fallback'
+    };
+
+    // Credits don’t need appliedAllocation (reader handles credit modes)
+    if (isCredit) {
+      return updateDoc(doc(db, `${txCollectionPath}/${tx.id}`), write);
+    }
+
+    // ----- Debit: compute appliedAllocation with escrow + overspill -----
+    const primary = (pool === 'mana') ? 'mana' : 'stamina';
+    let spend = Math.abs(Number(tx.amount || 0));
+
+    const applied = { health:0, mana:0, stamina:0, essence:0 };
+
+    // (1) Burn escrow from primary first
+    const fromPrimaryEsc = Math.min(spend, Math.max(0, escCarry[primary]));
+    if (fromPrimaryEsc > 0) {
+      escCarry[primary] = Number((escCarry[primary] - fromPrimaryEsc).toFixed(2));
+      spend -= fromPrimaryEsc;
+    }
+
+    if (spend > 0) {
+      // (2) Split remainder by intent; use *live* availability (not Infinity)
+      const split = allocateSpendAcrossPools(
+        spend,
+        primary,
+        { health: Math.max(0, avail.health), mana: Math.max(0, avail.mana), stamina: Math.max(0, avail.stamina), essence: 0 }
+      );
+
+      // (3) For each pool getting debited, burn that pool’s escrow first
+      for (const k of ['health','mana','stamina']) {
+        const willDebit = Number(split[k] || 0);
+        if (!willDebit) continue;
+        const takeEsc = Math.min(willDebit, Math.max(0, escCarry[k]));
+        if (takeEsc > 0) {
+          escCarry[k] = Number((escCarry[k] - takeEsc).toFixed(2));
+        }
+        const postEscDebit = Number((willDebit - takeEsc).toFixed(2)); // ← hits the pool
+        if (postEscDebit > 0) {
+          applied[k] = postEscDebit;
+          avail[k] = Math.max(0, Number((avail[k] - postEscDebit).toFixed(2)));
+        }
+      }
+    }
+
+    write.appliedAllocation = applied;
+    return updateDoc(doc(db, `${txCollectionPath}/${tx.id}`), write);
+  });
+
+  if (ops.length) await Promise.allSettled(ops);
+  return { locked: toLock.length };
 }
 
 export async function getEssenceAvailableMonthly_BE(uid){
@@ -298,6 +435,7 @@ export async function getEssenceAvailableMonthly_BE(uid){
  */
 export async function recomputeVitalsGatewayStub(uid){
   const { cashflowDocPath, txCollectionPath } = await resolveDataSources(uid);
+  const playerDataPath = `players/${uid}`
 
   const activeRef = doc(db, cashflowDocPath);
   const activeSnap = await getDoc(activeRef);
@@ -310,6 +448,7 @@ export async function recomputeVitalsGatewayStub(uid){
   if (!activeSnap.exists()){
     // Minimal bootstrap to keep callers happy
     await setDoc(gatewayRef, {
+      portraitKey:"default",
       transactionMode: "unverified",
       mode: "continuous",
       cadence: "monthly",
@@ -337,6 +476,13 @@ export async function recomputeVitalsGatewayStub(uid){
     return;
   }
 
+  // Player Data
+  const playerRef = doc(db, playerDataPath);
+  const playerSnap = await getDoc(playerRef);
+  const Ap = playerSnap.data()
+  const portraitKey = Ap.avatarKey
+
+  // Vitals Data
   const A = activeSnap.data() || {};
   const transactionMode = String(A.transactionMode)
   const mode = String(A.energyMode || A.mode || 'continuous').toLowerCase();
@@ -584,6 +730,7 @@ export async function recomputeVitalsGatewayStub(uid){
   const healthDebt = Math.max(0, Number(poolsOut?.health?.debt || 0));
 
   const payload = {
+    portraitKey,
     transactionMode,
     mode,
     cadence: "monthly",
