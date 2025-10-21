@@ -118,7 +118,7 @@
 
 
 /* ---------- LEGACY THEME KEYS (still supported) ---------- */
-.bg-title         { background: url('../../public/assets/bg/emberward.png') no-repeat 50% 50% / 150% 100%; }
+.bg-emberward         { background: url('../../public/assets/bg/emberward.png') no-repeat 50% 50% / 150% 100%; }
 .bg-cosmic-dark   { background: radial-gradient(120% 120% at 50% 0%, #1a1631 0%, #0b0920 60%, #070716 100%); }
 .bg-nebula-purple { background: radial-gradient(140% 140% at 30% -10%, #6f4bd6 0%, #321c74 40%, #0e0b1b 100%); }
 .bg-dunes-blue    { background: radial-gradient(130% 130% at 70% -5%, #1e3a8a 0%, #0b193f 50%, #081225 100%); }

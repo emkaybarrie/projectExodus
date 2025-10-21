@@ -1,1 +1,335 @@
 .auth-wrap { height:100%; display:grid; place-content:center; gap:1rem; text-align:center; }
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Crimson+Pro:wght@400;600&display=swap');
+
+:root {
+  /* Background image (set by auth.html script) */
+  --auth-bg: url("./assets/img/symbol.png");
+
+  /* === Easy sizing & positioning for the auth card(s) === */
+  --auth-card-max-width: 420px;     /* cap card width */
+  --auth-card-width:  min(92vw, var(--auth-card-max-width));
+  --auth-card-radius: 16px;
+  --auth-card-pad-v:  2rem;
+  --auth-card-pad-h:  1.5rem;
+  --auth-card-gap:    1.25rem;
+
+  /* You can tweak vertical spacing here */
+  --auth-top-gap: 2rem;
+
+  /* Tooltip & info button theme */
+  --tip-bg: rgba(0,0,0,0.85);
+  --tip-fg: #fff;
+  --tip-border: rgba(255,255,255,0.12);
+  --tip-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  --info-btn-bg: rgba(255,255,255,0.08);
+  --info-btn-fg: #fff;
+  --info-btn-border: rgba(255,255,255,0.15);
+}
+
+/* Base page */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Crimson Pro', serif;
+  background-color: #0b0b18;
+  background-image:
+    radial-gradient(circle at 30% 90%, #2a0c18, transparent 50%),
+    radial-gradient(circle at 70% 10%, #0c1440, transparent 60%);
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  overflow-x: hidden;
+  color: #f0e6d2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* Image overlay layer (above body bg, behind UI) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(0,0,0,0.15), rgba(0,0,0,0.55)),
+    linear-gradient(to bottom, rgba(11,11,24,0.25), rgba(11,11,24,0.55)),
+    var(--auth-bg);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(1.05) contrast(1.05) brightness(0.98);
+}
+
+/* Lift UI above overlays (raised to sit over .motion/.pulse) */
+h1, .tab-toggle, #login-form, #signup-form, .auth-card { position: relative; z-index: 5; }
+
+/* Heading */
+h1 {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  color: #f0e6d2;
+  font-size: 1.8rem;
+  margin-bottom: 1.2rem;
+  letter-spacing: 1px;
+}
+
+/* Toggle Tabs */
+.tab-toggle {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--auth-top-gap);
+  margin-bottom: 1rem;
+  gap: 1rem;
+  width: var(--auth-card-width);
+  max-width: var(--auth-card-max-width);
+}
+.tab-toggle button {
+  flex: 1;
+  padding: 0.75rem;
+  background-color: rgba(30, 30, 40, 0.6);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  opacity: 0.6;
+  box-shadow: inset 0 0 6px rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+.tab-toggle button.active {
+  background: linear-gradient(45deg, #6a11cb, #2575fc);
+  box-shadow: 0 0 14px #2575fc, inset 0 0 8px rgba(255,255,255,0.1);
+  opacity: 1;
+  color: #f0e6d2;
+}
+
+/* Auth card (shared styles) */
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--auth-card-gap);
+  padding: var(--auth-card-pad-v) var(--auth-card-pad-h);
+  background-color: rgba(25, 25, 35, 0.4);
+  backdrop-filter: blur(8px);
+  border-radius: var(--auth-card-radius);
+  box-shadow: 0 0 30px rgba(100, 120, 200, 0.15);
+  width: var(--auth-card-width);
+  max-width: var(--auth-card-max-width);
+  margin: 2rem auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  
+}
+
+/* Inputs */
+#login-form input,
+#signup-form input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(30, 30, 45, 0.8);
+  color: #f0e6d2;
+  font-size: 1rem;
+  transition: border 0.3s ease;
+  font-family: 'Crimson Pro', serif;
+  box-sizing: border-box;
+}
+#signup-form input { margin-bottom: 0.75rem; }
+input:focus { border-color: #8ab4f8; outline: none; }
+
+/* === Tiny info button + tooltip === */
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin: .5rem 0;
+  width: 100%;
+}
+.field > input { flex: 1 1 auto; min-width: 0; }
+
+.info-btn {
+  flex: 0 0 auto;
+  width: 18px; height: 18px;   /* compact */
+  border-radius: 50%;
+  border: 1px solid var(--info-btn-border);
+  background: var(--info-btn-bg);
+  color: var(--info-btn-fg);
+  font-size: 11px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0; margin: 0 0 0 6px;
+  box-shadow: none;            /* ensure no inherited button shadows */
+}
+.info-btn:focus-visible { outline: 2px solid #6a11cb; outline-offset: 2px; }
+
+.tooltip {
+  position: absolute;
+  z-index: 10;
+  right: 0;
+  top: calc(100% + 6px);
+  max-width: 320px;
+  padding: .6rem .75rem;
+  border-radius: .6rem;
+  border: 1px solid var(--tip-border);
+  background: var(--tip-bg);
+  color: var(--tip-fg);
+  box-shadow: var(--tip-shadow);
+  font-size: .9rem;
+  line-height: 1.25rem;
+  display: none;
+}
+.tooltip::before {
+  content: "";
+  position: absolute;
+  top: -6px; right: 14px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: transparent transparent var(--tip-bg) transparent;
+  filter: drop-shadow(0 -1px 0 var(--tip-border));
+}
+.field.show-tip .tooltip,
+.info-btn[aria-expanded="true"] ~ .tooltip { display: block; }
+@media (hover:hover) and (pointer:fine) {
+  .info-btn:hover ~ .tooltip { display: block; }
+}
+
+/* === Primary form buttons (no impact on .info-btn) === */
+.form-btn {
+  padding: 12px 24px;
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  background: linear-gradient(to bottom, #25324a, #1a2336);
+  border: 1px solid #50678c;
+  color: #f0e6d2;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(80, 100, 160, 0.4);
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 180px;
+  align-self: center;
+}
+.form-btn:hover {
+  background: linear-gradient(to bottom, #3a4f72, #27374a);
+  box-shadow: 0 0 18px rgba(100, 160, 255, 0.6);
+}
+#signup-form .form-btn[type="submit"] {
+  display: block;
+  margin: 0 auto;
+  margin-top: 0.75rem;
+  background: linear-gradient(to bottom, #2a2f55, #1a1e3f);
+  box-shadow:
+    0 0 10px #8b5cf6,
+    0 0 20px rgba(139, 92, 246, 0.6),
+    inset 0 0 4px rgba(255, 255, 255, 0.1);
+}
+#signup-form .form-btn[type="submit"]:hover {
+  box-shadow:
+    0 0 15px #a78bfa,
+    0 0 25px rgba(167, 139, 250, 0.8),
+    inset 0 0 6px rgba(255, 255, 255, 0.15);
+}
+
+/* ---------- Cinematic layers (mirrored from start_v5.html) ---------- */
+.stage{position:fixed;inset:0}
+.layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* still sits above body::before */
+.still{z-index:1;filter:none}
+/* overlays sit above still */
+.motion{z-index:3;mix-blend-mode:screen;opacity:0;transition:opacity .6s ease}
+.ready .motion{opacity:.95} /* tweak .85–1.0 */
+.pulse{z-index:4; mix-blend-mode:screen;}
+.ready .pulse{opacity:.95}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .auth-card { margin: 1rem; padding: 1.5rem 1rem; }
+  .tab-toggle { flex-direction: column; gap: 0.5rem; }
+  .tab-toggle button { width: 100%; }
+}
+
+
+/* --- Toggle row --- */
+/* Keep the row as a normal block; no flex/grid here */
+.toggle-row{
+  width: 100%;
+  margin-top: 8px;
+  /* no display:flex / justify-content — those can trigger the bug */
+}
+
+/* Center the label itself with auto margins */
+.toggle-row .build-toggle{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  margin: 0 auto;          /* <-- centers under the button */
+}
+
+
+/* --- Toggle --- */
+.build-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.build-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.build-toggle .track {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.25);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.build-toggle .track::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  transition: transform 0.2s ease;
+}
+
+/* Label text (Stable / Latest) */
+.build-toggle .label {
+  font-size: 0.9rem;
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0.9;
+}
+.build-toggle .label .on { display: none; }
+.build-toggle .label .off { display: inline; }
+
+/* Checked state */
+.build-toggle input:checked + .track {
+  background: rgba(0,255,160,0.35); /* subtle “Latest” hint */
+}
+
+.build-toggle input:checked + .track::after {
+  transform: translateX(20px);
+}
+
+.build-toggle input:checked ~ .label .on { display: inline; }
+.build-toggle input:checked ~ .label .off { display: none; }
+

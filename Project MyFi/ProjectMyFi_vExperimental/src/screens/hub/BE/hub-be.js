@@ -441,7 +441,7 @@ export async function recomputeVitalsGatewayStub(uid){
   const activeSnap = await getDoc(activeRef);
 
   // Ensure gateway doc exists to read meta/escrow, etc.
-  const gatewayRef = doc(db, `players/${uid}/vitalsData/gateway`);
+  const gatewayRef = doc(db, `players/${uid}/gateways/hub`);
   const priorGatewaySnap = await getDoc(gatewayRef);
   const priorGateway = priorGatewaySnap.exists() ? (priorGatewaySnap.data()||{}) : {};
 
