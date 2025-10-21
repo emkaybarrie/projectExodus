@@ -102,6 +102,22 @@ export async function signupUser(data) {
       }
     }, { merge: true });
 
+    // New Structure
+    await setDoc(doc(db, "players", user.uid, "coreData", "userData"), {
+      registrationDate: serverTimestamp(),
+      email: data.email,
+      firstName: data.firstName || "",
+      lastName: data.lastName || "",
+    }, { merge: true });
+
+    await setDoc(doc(db, "players", user.uid, "coreData", "playerData"), {
+      alias: "unknown",
+      level: Number(1),
+      vitalsMode: 'standard',
+      lastLoginAt: serverTimestamp(),
+      onboarding: { welcomeDone: false }
+    }, { merge: true });
+
 
     // Capture Invite code if present (non-blocking)
     try {

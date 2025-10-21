@@ -7,7 +7,7 @@ initChrome();
 initRouter({ stageEl: document.getElementById('stage') });
 
 registerScreens([
-  { id: 'start',    loader: () => import('../screens/start/manager.js') },
+  { id: 'start',    loader: () => import('../screens/start/index.js') },
   { id: 'auth',     loader: () => import('../screens/auth/manager.js') },
   { id: 'hub',   loader: () => import('../screens/hub/index.js') },
   { id: 'quests',   loader: () => import('../screens/quests/manager.js') },

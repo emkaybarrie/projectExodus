@@ -493,14 +493,26 @@ async function persistAndFinish(){
   };
   await setDoc(ref, payload, { merge: true });
 
-  // Seed/merge auxiliary docs similar to your earlier flow
-  // await setDoc(doc(db, `players/${user.uid}/cashflowData/poolAllocations`), {
-  //   essenceAllocation: Number((allocations.essenceAllocation ?? 0.1).toFixed(3)),
-  //   healthAllocation:  Number((allocations.healthAllocation  ?? 0.2).toFixed(3)),
-  //   manaAllocation:    Number((allocations.manaAllocation    ?? 0.3).toFixed(3)),
-  //   staminaAllocation: Number((allocations.staminaAllocation ?? 0.4).toFixed(3)),
-  // }, { merge: true });
+  const refNew = doc(db, 'players', user.uid, "coreData", "playerData");
+  const payloadNew = {
+    onboarding: { architectWizardDone: true, architectWizardDoneAt: serverTimestamp() },
+    alias: state.alias || null,
+    alignment: state.alignment || 'balanced',
+    affinity: state.affinity || 'air',
+    vitalsMode: state.mode || 'standard',
+    // NEW — store the formation blueprint
+    avatarFormation: {
+      aspect: state.avatarFormation?.aspect || 'solar',
+      weapon: state.avatarFormation?.weapon || '',
+      weaponOther: state.avatarFormation?.weaponOther || '',
+      attire: state.avatarFormation?.attire || '',
+      attireOther: state.avatarFormation?.attireOther || '',
+      essenceText: state.avatarFormation?.essenceText || ''
+    },
+  };
+  await setDoc(refNew, payloadNew, { merge: true });
 
+  // Seed/merge auxiliary docs similar to your earlier flow
     await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), {
       poolAllocations:{
         essenceAllocation: Number((allocations.essenceAllocation ?? 0.1).toFixed(3)),
