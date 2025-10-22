@@ -8,7 +8,7 @@ initRouter({ stageEl: document.getElementById('stage') });
 
 registerScreens([
   { id: 'start',    loader: () => import('../screens/start/index.js') },
-  { id: 'auth',     loader: () => import('../screens/auth/manager.js') },
+  { id: 'auth',     loader: () => import('../screens/auth/index.js') },
   { id: 'hub',   loader: () => import('../screens/hub/index.js') },
   { id: 'quests',   loader: () => import('../screens/quests/manager.js') },
   { id: 'avatar',   loader: () => import('../screens/avatar/manager.js') },

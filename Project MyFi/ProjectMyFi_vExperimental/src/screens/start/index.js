@@ -64,7 +64,7 @@ function playIntroAnimation(root){
 }
 
 
-function wireStartScreen(root){
+function wireScreen(root){
   const cta = document.getElementById('cta');
 
   // Tap anywhere on the screen to proceed (matches legacy)
@@ -75,7 +75,6 @@ function wireStartScreen(root){
   root.addEventListener('click', onProceed);
   addCleanup(() => root.removeEventListener('click', onProceed));
 }
-
 
 export default {
   id: 'start',
@@ -89,7 +88,7 @@ export default {
     // 2) Screen body
     await injectView(root, new URL('./view.html', import.meta.url));
     // 3) Wire Actions
-    wireStartScreen(root)
+    wireScreen(root)
     // 4) Render
     playIntroAnimation(root)
 
