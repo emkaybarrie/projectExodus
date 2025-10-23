@@ -3,8 +3,20 @@ import { initChrome } from './chrome.js';
 import { initRouter, registerScreens, navigate, setLayout } from './router.js';
 import { setState } from './state.js';
 
+import { auth } from './firestore.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 initChrome();
 initRouter({ stageEl: document.getElementById('stage') });
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    // You could check lastBuildVariant if you want.
+    navigate('hub');
+  } else {
+    // maybe stay put or navigate('start') if you're on a protected route
+  }
+});
 
 registerScreens([
   { id: 'start',    loader: () => import('../screens/start/index.js') },
