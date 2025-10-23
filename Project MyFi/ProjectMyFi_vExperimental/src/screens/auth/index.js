@@ -1,6 +1,7 @@
 import { loadScopedCSS } from '../../core/cssScope.js';
 import { injectView } from '../../core/view.js';
-import { loginUser, signupUser } from '../../../../js/core/auth.js';
+import { loginUser, signupUser } from './modules/auth.js';
+import { navigate } from '../../core/router.js';
 
 let unstyle;
 let cleanup = [];
@@ -92,18 +93,34 @@ function wireAuth(root) {
   const sFirst     = root.querySelector('#firstName');
   const sLast      = root.querySelector('#lastName');
 
-  // Restore last chosen build
   try {
     const last = localStorage.getItem('lastBuildVariant');
     if (last) buildTgl.checked = (last === 'experimental');
   } catch {}
+
+  const setBusy = (b) => { loginBtn.disabled = !!b; loginBtn.textContent = b ? 'Logging in…' : 'Login'; };
 
   const onLogin = async () => {
     const email = emailIn.value.trim();
     const pass  = passIn.value;
     const variant = buildTgl?.checked ? 'experimental' : 'stable';
     if (!email || !pass) { alert('Please enter both email and password.'); return; }
-    await loginUser(email, pass, { variant }); // redirects internally
+
+    try {
+      setBusy(true);
+      const { user } = await loginUser(email, pass, { variant });
+      // Decide routing here:
+      if (variant === 'stable') {
+        window.location.href = "../../dashboard.html";   // legacy full page
+      } else {
+        navigate('hub');                                  // SPA
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Login failed');
+    } finally {
+      setBusy(false);
+    }
   };
   loginBtn.addEventListener('click', onLogin);
   addCleanup(() => loginBtn.removeEventListener('click', onLogin));
@@ -119,7 +136,15 @@ function wireAuth(root) {
     if (!data.email || !data.password || !data.firstName || !data.lastName) {
       alert('Please fill all fields.'); return;
     }
-    await signupUser(data);
+    try {
+      const { user } = await signupUser(data);
+      // Up to you: either navigate to an SPA onboarding route, or keep legacy:
+      // navigate('onboarding');  // when onboarding is a screen
+      window.location.replace("./onboarding/onboarding.html"); // current legacy
+    } catch (e) {
+      console.error(e);
+      alert(e?.message || 'Signup failed');
+    }
   };
   signupForm.addEventListener('submit', onSignup);
   addCleanup(() => signupForm.removeEventListener('submit', onSignup));
@@ -138,8 +163,7 @@ export default {
     await injectView(root, new URL('./view.html', import.meta.url));
     // 3) Wire Actions
     wireTabsAndTooltips(root);
-    // wireAuth(root);
-    root.addEventListener('click', () => { window.dispatchEvent(new CustomEvent('demo:login')); });
+    wireAuth(root);
     // 4) Render
     keepLoopsPlaying(root);
 
