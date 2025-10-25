@@ -91,6 +91,7 @@ export async function signupUser(data) {
 
 // Logout (unchanged)
 export async function logoutUser() {
+  console.log('Signing Out...')
   try {
     await signOut(auth);
     //window.location.href = "start.html";
@@ -98,7 +99,3 @@ export async function logoutUser() {
     console.error("Logout error:", error.message);
   }
 }
-
-// window.auth = auth;
-
-// export {app, auth, db, fns };

@@ -14,7 +14,7 @@ onAuthStateChanged(auth, (user) => {
     // You could check lastBuildVariant if you want.
     navigate('hub');
   } else {
-    // maybe stay put or navigate('start') if you're on a protected route
+    navigate('start'); // ensure we leave protected screens when signed out
   }
 });
 
