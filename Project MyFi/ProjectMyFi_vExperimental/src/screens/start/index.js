@@ -62,8 +62,6 @@ function playIntroAnimation(root){
   intro?.addEventListener('playing', onPlaying, { once: true });
   addCleanup(() => intro?.removeEventListener('playing', onPlaying));
 }
-
-
 function wireScreen(root){
   const cta = document.getElementById('cta');
 

@@ -1,6 +1,6 @@
 // Starts the wizard after auth, or bounces to dashboard if already complete.
 
-import { auth, db } from "../js/core/auth.js";
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { getDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 

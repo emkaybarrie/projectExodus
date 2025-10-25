@@ -5,7 +5,7 @@
 // Includes TrueLayer Smart Review (amounts locked).
 // Finish: window.location.replace('../dashboard.html').
 
-import { auth, db, fns } from '../js/core/auth.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../ProjectMyFi_vExperimental/src/core/firestore.js';
 import { httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 import { getDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { VO, PROMPT, INFO } from "./architectCopy.js";
