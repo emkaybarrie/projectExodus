@@ -11,6 +11,14 @@ import { renderBars, renderPortrait } from './modules/ui/vitals.js'; // example:
 import { logoutUser } from '../auth/modules/auth.js'
 
 import { open as openModal } from '../../core/modal.js';
+import { openHeaderPopover, closeHeaderPopover } from '../../core/chrome.js';
+
+import { openSettingsModal } from '../general/settings.js'
+import { openHelpModal } from '../general/help.js'
+import { openLogoutConfirmModal } from '../general/logout.js'
+import { openSocialModal } from '../general/social.js'
+
+import { openSpiritStoneModal } from '../general/spiritStone.js';
 
 let unstyle;
 let cleanup = [];
@@ -35,45 +43,25 @@ async function bootVitals() {
   });
 }
 
-function openHubMenu() {
-  const tpl = document.createElement('template');
-  tpl.innerHTML = `
-    <div style="padding: 12px 12px 8px;">
-      <h3 style="margin: 0 0 8px; font-family: Cinzel, serif; letter-spacing:.06em;">Menu</h3>
-      <nav class="menu-list">
-        <button data-go="settings" class="menu-item">Settings</button>
-        <button data-go="social"   class="menu-item">Social</button>
-        <button data-go="help"     class="menu-item">Help</button>
-      </nav>
-    </div>
-    <style>
-      .menu-list { display: grid; gap: 8px; }
-      .menu-item {
-        appearance: none; width: 100%;
-        padding: 10px 12px; border-radius: 10px; cursor: pointer;
-        border: 1px solid rgba(255,255,255,.1);
-        background: rgba(35,30,55,.65); backdrop-filter: blur(6px);
-        color: #eef2ff; text-align: left; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      }
-      .menu-item:hover { transform: translateY(-1px); }
-    </style>
-  `;
+function injectHeaderMenuOptions(){
+   const menuOptions = 
+            [{
+              key: 'settings',
+              label: 'Settings',
+              action: () => { openSettingsModal('hub'); }
+            },
+            {
+              key: 'help',
+              label: 'Help',
+              action: () => { openHelpModal('hub'); }
+            },
+            {
+              key: 'logout',
+              label: 'Sign out',
+              action: () => { openLogoutConfirmModal('hub'); }
+            }]
 
-  const modal = openModal({ content: tpl.content, owner: 'hub' });
-
-  // single delegated click handler, closes modal then routes
-  const card = document.querySelector('#modal-root .modal-card');
-  const onClick = (ev) => {
-    const btn = ev.target.closest('.menu-item'); if (!btn) return;
-    const key = btn.dataset.go;
-    modal.close();
-
-    // route targets — adjust as your screens go live
-    if (key === 'settings') navigate('guidance');
-    if (key === 'social')   navigate('myana');
-    if (key === 'help')     navigate('guidance');
-  };
-  card?.addEventListener('click', onClick, { once: true });
+    return menuOptions
 }
 
 
@@ -104,20 +92,89 @@ export default {
     mode: 'full',
     headerExtras: [
       {
-      icon: '☰',
-      title: 'Menu',
-      onClick () {openHubMenu(); }
+        icon: '🎵',
+        title: 'Music',
+        onClick(ev) {
+          // build panel HTML on the fly from musicManager.js state
+          const track =  { title: 'Title', artist: 'Artist', isPlaying: true } // getNowPlaying(); // { title, artist, isPlaying }
+          const panelHtml = `
+            <h3>Music</h3>
+            <div style="font-size:14px;line-height:1.4;">
+              <div style="font-weight:600;">${track.title ?? 'Unknown Track'}</div>
+              <div style="opacity:.8;">${track.artist ?? ''}</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button data-act="toggle">${track.isPlaying ? 'Pause' : 'Play'}</button>
+              <button data-act="skip">Next</button>
+              <button data-act="list">Open full list</button>
+            </div>
+          `;
+
+          const popEl = openHeaderPopover({
+            anchorEl: ev.currentTarget,
+            placement: 'bottom',
+            content: panelHtml
+          }, 'panel');
+
+          // wire buttons inside the panel
+          popEl.querySelector('[data-act="toggle"]')?.addEventListener('click', () => {
+            playPauseToggle();
+            closeHeaderPopover();
+          });
+          popEl.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
+            skipTrack();
+            closeHeaderPopover();
+          });
+          popEl.querySelector('[data-act="list"]')?.addEventListener('click', () => {
+            closeHeaderPopover();
+            openFullMusicList('hub'); // you’ll present full list with modal.open same style as Social
+          });
+        }
       },
       {
-      icon: '⏻',
-      title: 'Sign Out',
-      onClick () {logoutUser()}
+        icon: '👥',
+        title: 'Social',
+        onClick(ev) {
+          // For now, quick preview panel that then opens full social modal
+          const panelHtml = `
+            <h3>Social</h3>
+            <div style="font-size:14px;line-height:1.4;">
+              <div><strong>Requests:</strong> (stub)</div>
+              <div style="opacity:.8;">Tap to open full Social</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button data-act="open-social">Open Social</button>
+            </div>
+          `;
+          const popEl = openHeaderPopover({
+            anchorEl: ev.currentTarget,
+            placement: 'bottom',
+            content: panelHtml
+          }, 'panel');
+
+          popEl.querySelector('[data-act="open-social"]')?.addEventListener('click', () => {
+            closeHeaderPopover();
+            openSocialModal('hub');
+          });
+        }
+      },
+      {
+        icon: '☰',
+        title: 'Menu',
+        onClick (ev) {
+          // ev.currentTarget should be the header button element created by chrome.js
+          openHeaderPopover({
+            anchorEl: ev.currentTarget,
+            placement: 'bottom',
+            content: injectHeaderMenuOptions(),
+          }, 'list');
+        }
       },
     ],
     footer: {
-      left:  { icon: '⚡', title: 'Quests',  onClick(){ navigate('quests'); } },
-      main:  { icon: '⦿', title: 'Essence', onClick(){ /* handled by essence-mini */ } },
-      right: { icon: '🧙', title: 'Avatar',  onClick(){ navigate('avatar'); } },
+      left:  { icon: '⚡', title: 'Quests',  onClick(){/* Add Energy Menu */ } },
+      main:  { icon: '⦿', title: 'Essence', onClick(){ openSpiritStoneModal('hub') } },
+      right: { icon: '🧙', title: 'Avatar',  onClick(){ /* Add Spirit Menu */} },
     }
   },
 
@@ -130,11 +187,8 @@ export default {
 
     // 3) Wire lightweight actions
     // const addBtn = root.querySelector('[data-act="add"]');
-    // const filterBtn = root.querySelector('[data-act="filter"]');
     // const onAdd = () => alert('Add event (placeholder)');
-    // const onFilter = () => alert('Filter (placeholder)');
-    // addBtn.addEventListener('click', onAdd);
-    // filterBtn.addEventListener('click', onFilter);
+     // addBtn.addEventListener('click', onAdd);
     // cleanup.push(() => { addBtn.removeEventListener('click', onAdd); filterBtn.removeEventListener('click', onFilter); });
 
     // 4) Initial Render
