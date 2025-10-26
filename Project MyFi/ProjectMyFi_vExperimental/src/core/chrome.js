@@ -195,3 +195,169 @@ export function setFooter({ left, main, right } = {}) {
   wire(M, main);
   wire(R, right);
 }
+
+// ─────────────────────────────────────────────
+// Header popover (anchored menu) for Hub, etc.
+// ─────────────────────────────────────────────
+
+let activeHeaderPopover = null;
+let outsideClickHandler = null;
+let escHandler = null;
+
+export function closeHeaderPopover() {
+  if (!activeHeaderPopover) return;
+  window.removeEventListener('pointerdown', outsideClickHandler, true);
+  window.removeEventListener('keydown', escHandler, true);
+  activeHeaderPopover.remove();
+  activeHeaderPopover = null;
+  outsideClickHandler = null;
+  escHandler = null;
+}
+
+/**
+ * Unified anchored popover / panel
+ *
+ * @param {Object} opts
+ * @param {HTMLElement} opts.anchorEl  - element to anchor to (header btn, footer btn, etc)
+ * @param {String} [opts.placement]    - 'auto' | 'top' | 'bottom'
+ *                                       'auto' will choose below if there's more space below,
+ *                                       otherwise above.
+ *
+ * LIST MODE:
+ * @param {Array<{key:string,label:string,action:Function}>} opts.content
+ * @param {String} [opts.title]        - heading text for list mode
+ *
+ * PANEL MODE:
+ * @param {String|HTMLElement} opts.content
+ *        raw HTML string OR an HTMLElement root. This gets injected directly.
+ *
+ * @param {"list"|"panel"} [mode="list"]
+ *
+ * @return {HTMLElement} popover element
+ */
+export function openHeaderPopover(opts, mode = 'list') {
+  // close any currently open popover (acts as toggle)
+  closeHeaderPopover();
+
+  const { anchorEl } = opts;
+  const placement = opts.placement || 'auto';
+  if (!anchorEl) return;
+
+  // build container
+  const pop = document.createElement('div');
+  pop.className = 'header-popover';
+
+  // We'll track listItems only if mode === 'list' so we can run actions.
+  let listItems = null;
+
+  if (mode === 'list') {
+    // expect opts.content to be an array
+    listItems = Array.isArray(opts.content) ? opts.content : [];
+
+    const titleText = opts.title ?? 'Menu';
+
+    pop.innerHTML = `
+      <h3 class="header-popover__title">${titleText}</h3>
+      <div class="header-popover__list">
+        ${listItems
+          .map(i => `
+            <button
+              class="header-popover__item"
+              data-action="${i.key}"
+            >${i.label}</button>
+          `)
+          .join('')}
+      </div>
+    `;
+  } else {
+    // PANEL MODE:
+    // free-form markup for richer previews (music, social, essence quick view, etc)
+    const panelWrapper = document.createElement('div');
+    panelWrapper.className = 'header-popover__panel';
+
+    if (opts.content instanceof HTMLElement) {
+      panelWrapper.appendChild(opts.content);
+    } else {
+      panelWrapper.innerHTML = String(opts.content || '');
+    }
+
+    pop.appendChild(panelWrapper);
+  }
+
+  // mount so we can measure size
+  document.body.appendChild(pop);
+  activeHeaderPopover = pop;
+
+  // --- smart placement relative to anchor ---
+  const rect = anchorEl.getBoundingClientRect();
+
+  // 1. Decide whether to render above or below
+  let wantBelow;
+  if (placement === 'bottom') {
+    wantBelow = true;
+  } else if (placement === 'top') {
+    wantBelow = false;
+  } else {
+    // auto
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    wantBelow = spaceBelow >= spaceAbove;
+  }
+
+  let topPx;
+  if (wantBelow) {
+    // classic header dropdown, below button
+    topPx = rect.bottom + 6;
+  } else {
+    // footer-style pop-up above button
+    topPx = rect.top - pop.offsetHeight - 6;
+    if (topPx < 8) topPx = 8; // clamp to viewport
+  }
+
+  // 2. Horizontal alignment
+  let leftPx = rect.right - pop.offsetWidth;
+
+  // Clamp horizontal so it doesn't bleed off-screen
+  if (leftPx < 8) leftPx = 8;
+  if (leftPx + pop.offsetWidth > window.innerWidth - 8) {
+    leftPx = window.innerWidth - pop.offsetWidth - 8;
+  }
+
+  pop.style.position = 'fixed';
+  pop.style.top = `${Math.round(topPx)}px`;
+  pop.style.left = `${Math.round(leftPx)}px`;
+  pop.style.zIndex = '10000';
+
+  // --- list-mode click delegation (fires action + closes) ---
+  if (mode === 'list' && listItems && listItems.length) {
+    pop.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.header-popover__item');
+      if (!btn) return;
+      const key = btn.dataset.action;
+      const match = listItems.find(i => i.key === key);
+      closeHeaderPopover();
+      if (match && typeof match.action === 'function') {
+        match.action();
+      }
+    });
+  }
+
+  // --- outside click & ESC close ---
+  outsideClickHandler = (ev) => {
+    if (!activeHeaderPopover) return;
+    if (!pop.contains(ev.target) && !anchorEl.contains(ev.target)) {
+      closeHeaderPopover();
+    }
+  };
+  window.addEventListener('pointerdown', outsideClickHandler, true);
+
+  escHandler = (ev) => {
+    if (ev.key === 'Escape') {
+      closeHeaderPopover();
+    }
+  };
+  window.addEventListener('keydown', escHandler, true);
+
+  return pop;
+}
+
