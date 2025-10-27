@@ -3,42 +3,41 @@ import { open as openModal } from '../../core/modal.js';
 import { logoutUser } from '../../screens/auth/modules/auth.js';
 
 export function openLogoutConfirmModal(owner='hub') {
-  const content = `
-    <div style="display:grid;gap:16px;padding:16px;min-width:260px;max-width:90vw;color:#fff;">
-      <header style="display:grid;gap:4px;">
-        <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.06em;color:#fff;">
-          Sign out?
-        </div>
-        <div style="font-size:12px;opacity:.7;">
-          You’ll go back to the start screen.
-        </div>
-      </header>
+  const tpl = document.createElement('template');
+  tpl.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-head-title">Sign out?</div>
+      <div class="modal-head-sub">
+        You’ll go back to the start screen.
+      </div>
+    </div>
 
-      <footer style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);">
-        <button id="logout-cancel"
-          style="border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;font-size:14px;padding:8px 12px;cursor:pointer;">
-          Cancel
-        </button>
-        <button id="logout-do"
-          style="border-radius:10px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.15);box-shadow:0 0 12px rgba(255,80,80,.4);color:#fff;font-size:14px;padding:8px 12px;font-weight:600;cursor:pointer;">
-          Sign out
-        </button>
-      </footer>
+    <div class="modal-body">
+      <div style="font-size:14px;line-height:1.4;opacity:.8;">
+        You can sign back in later and your data will still be here.
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="modal-btn" id="logout-cancel">Cancel</button>
+      <button class="modal-btn modal-btn-danger" id="logout-do">Sign out</button>
     </div>
   `;
 
   const ref = openModal({
     owner,
     scope: 'screen',
-    content
+    content: tpl.content
   });
 
   const cardEl = document.querySelector('#modal-root .modal-card:last-child');
+
   cardEl.querySelector('#logout-cancel')?.addEventListener('click', () => {
     ref.close();
   });
+
   cardEl.querySelector('#logout-do')?.addEventListener('click', () => {
     ref.close();
-    logoutUser(); // your navigate('start')+signOut flow
+    logoutUser(); // navigate('start') + signOut(auth)
   });
 }
