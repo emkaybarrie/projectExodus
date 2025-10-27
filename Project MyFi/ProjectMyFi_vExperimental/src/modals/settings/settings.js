@@ -32,53 +32,42 @@ export async function openSettingsModal(owner='hub') {
   // build DOM for modal body
   const tpl = document.createElement('template');
   tpl.innerHTML = `
-    <div class="modal-section" style="display:grid;gap:16px;padding:16px;min-width:min(420px,90vw);max-width:90vw;color:#fff;">
-      <header style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;row-gap:8px;">
-        <div>
-          <div style="font-family:'Cinzel',serif;font-size:16px;letter-spacing:.06em;">Settings</div>
-          <div style="font-size:12px;opacity:.7;">Your profile & preferences</div>
+    <div class="modal-head">
+      <div class="modal-head-title">Settings</div>
+      <div class="modal-head-sub">Your profile & preferences</div>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-field">
+        <label class="form-label">Alias</label>
+        <input id="set-alias" class="form-input">
+        <div id="alias-error" class="form-error"></div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">First name</label>
+          <input id="set-first" class="form-input">
         </div>
-      </header>
-
-      <section style="display:grid;gap:12px;">
-        <label style="display:grid;gap:4px;">
-          <span style="font-size:12px;opacity:.8;">Alias</span>
-          <input id="set-alias" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:14px;">
-          <div id="alias-error" style="color:#ff6b6b;font-size:12px;min-height:16px;"></div>
-        </label>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-          <label style="display:grid;gap:4px;">
-            <span style="font-size:12px;opacity:.8;">First name</span>
-            <input id="set-first" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:14px;">
-          </label>
-
-          <label style="display:grid;gap:4px;">
-            <span style="font-size:12px;opacity:.8;">Last name</span>
-            <input id="set-last" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:14px;">
-          </label>
+        <div class="form-field">
+          <label class="form-label">Last name</label>
+          <input id="set-last" class="form-input">
         </div>
+      </div>
 
-        <label style="display:grid;gap:4px;">
-          <span style="font-size:12px;opacity:.8;">Vitals display mode</span>
-          <select id="set-vitals" style="padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:14px;">
-            <option value="standard">Standard</option>
-            <option value="detailed">Detailed</option>
-          </select>
-          <div style="font-size:12px;opacity:.6;">Controls how much detail shows in your vitals view.</div>
-        </label>
-      </section>
+      <div class="form-field">
+        <label class="form-label">Vitals display mode</label>
+        <select id="set-vitals" class="form-select">
+          <option value="standard">Standard</option>
+          <option value="detailed">Detailed</option>
+        </select>
+        <div class="form-hint">Controls how much detail shows in your vitals view.</div>
+      </div>
+    </div>
 
-      <footer style="display:flex;justify-content:flex-end;gap:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);">
-        <button id="settings-cancel"
-          style="border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;font-size:14px;padding:8px 12px;cursor:pointer;">
-          Close
-        </button>
-        <button id="settings-save"
-          style="border-radius:10px;border:1px solid rgba(120,140,255,.4);background:rgba(120,140,255,.15);box-shadow:0 0 12px rgba(120,140,255,.4);color:#fff;font-size:14px;padding:8px 12px;font-weight:600;cursor:pointer;">
-          Save
-        </button>
-      </footer>
+    <div class="modal-footer">
+      <button id="settings-cancel" class="modal-btn">Close</button>
+      <button id="settings-save" class="modal-btn modal-btn-primary">Save</button>
     </div>
   `;
 

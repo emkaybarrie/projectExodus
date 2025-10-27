@@ -10,15 +10,14 @@ import { renderBars, renderPortrait } from './modules/ui/vitals.js'; // example:
 
 import { logoutUser } from '../auth/modules/auth.js'
 
-import { open as openModal } from '../../core/modal.js';
 import { openHeaderPopover, closeHeaderPopover } from '../../core/chrome.js';
 
-import { openSettingsModal } from '../general/settings.js'
-import { openHelpModal } from '../general/help.js'
-import { openLogoutConfirmModal } from '../general/logout.js'
-import { openSocialModal } from '../general/social.js'
+import { openSettingsModal } from '../../modals/settings/settings.js'
+import { openHelpModal } from '../../modals/help/help.js'
+import { openLogoutConfirmModal } from '../../modals/logout/logout.js'
+import { openSocialModal } from '../../modals/social/social.js'
 
-import { openSpiritStoneModal } from '../general/spiritStone.js';
+import { openSpiritStoneModal } from '../../modals/spiritstone/spiritstone.js';
 
 let unstyle;
 let cleanup = [];
