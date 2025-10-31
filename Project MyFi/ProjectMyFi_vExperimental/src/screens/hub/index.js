@@ -12,6 +12,7 @@ import { logoutUser } from '../auth/modules/auth.js'
 
 import { openHeaderPopover, closeHeaderPopover } from '../../core/chrome.js';
 
+import { openFullMusicList } from '../../modals/musicPlayer.js';
 import { openSettingsModal } from '../../modals/settings/settings.js'
 import { openHelpModal } from '../../modals/help/help.js'
 import { openLogoutConfirmModal } from '../../modals/logout/logout.js'
@@ -94,68 +95,71 @@ export default {
         icon: '🎵',
         title: 'Music',
         onClick(ev) {
-          // build panel HTML on the fly from musicManager.js state
-          const track =  { title: 'Title', artist: 'Artist', isPlaying: true } // getNowPlaying(); // { title, artist, isPlaying }
-          const panelHtml = `
-            <h3>Music</h3>
-            <div style="font-size:14px;line-height:1.4;">
-              <div style="font-weight:600;">${track.title ?? 'Unknown Track'}</div>
-              <div style="opacity:.8;">${track.artist ?? ''}</div>
+        const anchorEl = ev.currentTarget;
+
+        const buildHtml = () => {
+          const np = window.MyFiMusic?.getNowPlaying?.() || {};
+          return `
+            <h3 style="margin:0 0 6px 0;">Music</h3>
+            <div style="font-size:14px;line-height:1.4;margin-bottom:8px;">
+              <div style="font-weight:600;">${np.title ?? 'Unknown Track'}</div>
+              <div style="opacity:.8;">${np.artist ?? ''}</div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button data-act="toggle">${track.isPlaying ? 'Pause' : 'Play'}</button>
-              <button data-act="skip">Next</button>
+              <button data-act="prev">Prev</button>
+              <button data-act="toggle">${np.isPlaying ? 'Pause' : 'Play'}</button>
+              <button data-act="next">Next</button>
               <button data-act="list">Open full list</button>
             </div>
           `;
+        };
 
+        const openPanel = () => {
+          // open new panel
           const popEl = openHeaderPopover({
-            anchorEl: ev.currentTarget,
+            anchorEl,
             placement: 'bottom',
-            content: panelHtml
+            content: buildHtml()
           }, 'panel');
 
-          // wire buttons inside the panel
+          // wire actions
           popEl.querySelector('[data-act="toggle"]')?.addEventListener('click', () => {
-            playPauseToggle();
+            window.MyFiMusic?.togglePlayPause?.();
             closeHeaderPopover();
           });
-          popEl.querySelector('[data-act="skip"]')?.addEventListener('click', () => {
-            skipTrack();
+          popEl.querySelector('[data-act="prev"]')?.addEventListener('click', () => {
+            window.MyFiMusic?.prev?.();
+            closeHeaderPopover();
+          });
+          popEl.querySelector('[data-act="next"]')?.addEventListener('click', () => {
+            window.MyFiMusic?.next?.();
             closeHeaderPopover();
           });
           popEl.querySelector('[data-act="list"]')?.addEventListener('click', () => {
             closeHeaderPopover();
-            openFullMusicList('hub'); // you’ll present full list with modal.open same style as Social
+            openFullMusicList('hub');
           });
-        }
-      },
-      {
-        icon: '👥',
-        title: 'Social',
-        onClick(ev) {
-          // For now, quick preview panel that then opens full social modal
-          const panelHtml = `
-            <h3>Social</h3>
-            <div style="font-size:14px;line-height:1.4;">
-              <div><strong>Requests:</strong> (stub)</div>
-              <div style="opacity:.8;">Tap to open full Social</div>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button data-act="open-social">Open Social</button>
-            </div>
-          `;
-          const popEl = openHeaderPopover({
-            anchorEl: ev.currentTarget,
-            placement: 'bottom',
-            content: panelHtml
-          }, 'panel');
 
-          popEl.querySelector('[data-act="open-social"]')?.addEventListener('click', () => {
-            closeHeaderPopover();
-            openSocialModal('hub');
+          // if state changes while open, rebuild once
+          const onChange = () => {
+            try { popEl.remove(); } catch {}
+            openPanel();
+          };
+          window.addEventListener('music:changed', onChange, { once: true });
+
+          // remove listener when panel closes (outside click handler will remove DOM)
+          const cleanup = () => window.removeEventListener('music:changed', onChange);
+          // observe removal
+          const mo = new MutationObserver(() => {
+            if (!document.body.contains(popEl)) { cleanup(); mo.disconnect(); }
           });
-        }
+          mo.observe(document.body, { childList: true, subtree: true });
+
+          return popEl;
+        };
+
+        openPanel();
+      }
       },
       {
         icon: '☰',
@@ -207,6 +211,15 @@ export default {
 
     // Footer buttons per-screen (keeps systemized approach)
     setFooter(this.chrome.footer);
+
+    // Start music when arriving on hub (if allowed)
+    try {
+      const np = window.MyFiMusic?.getNowPlaying?.();
+      const muted = window.MyFiMusic?.isMuted?.();
+      if (np && !np.isPlaying && !muted) {
+        window.MyFiMusic.play();
+      }
+    } catch {}
 
     // Inject essence mini into the center footer slot
     cleanup.push(mountEssenceMini());
