@@ -6,6 +6,14 @@ import { setState } from './state.js';
 import { auth } from './firestore.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+import '../../src/screens/general/musicManager.js';
+
+function kickMusicOnce() {
+  try { window.MyFiMusic?.play?.(); } catch {}
+}
+window.addEventListener('pointerdown', kickMusicOnce, { once: true, capture: true });
+
+
 initChrome();
 initRouter({ stageEl: document.getElementById('stage') });
 
@@ -40,8 +48,4 @@ setLayout({
 // Boot to Start
 navigate('start');
 
-// Demo auth bus: swap to vitals (dashboard mode)
-window.addEventListener('demo:login', async () => {
-  setState({ user: { uid: 'dev-user', alias: 'Emkay' } });
-  navigate('hub');
-});
+
