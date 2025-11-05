@@ -41,6 +41,9 @@ function renderLayer(contentNode) {
   // NEW: inner wrapper that applies responsive layout rules
   const inner = document.createElement('div');
   inner.className = 'modal-inner';
+  inner.style.overflowY = 'auto';
+  inner.style.maxHeight = 'calc(100vh - 120px)';
+  inner.style.minHeight = '0';
   inner.appendChild(contentNode);
 
   card.appendChild(inner);
