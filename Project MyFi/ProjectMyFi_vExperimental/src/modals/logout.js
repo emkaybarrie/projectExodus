@@ -1,6 +1,6 @@
 // logout-modal.js
-import { open as openModal } from '../../core/modal.js';
-import { logoutUser } from '../../screens/auth/modules/auth.js';
+import { open as openModal } from '../core/modal.js';
+import { logoutUser } from '../screens/auth/modules/auth.js';
 
 export function openLogoutConfirmModal(owner='hub') {
   const tpl = document.createElement('template');

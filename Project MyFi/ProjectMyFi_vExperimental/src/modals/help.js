@@ -1,5 +1,5 @@
 // help-modal.js
-import { open as openModal } from '../../core/modal.js';
+import { open as openModal } from '../core/modal.js';
 import {
   getFirestore, collection, addDoc, serverTimestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
