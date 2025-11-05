@@ -1,5 +1,5 @@
 // settings-modal.js (new helper file you create)
-import { open as openModal } from '../../core/modal.js'; // adjust path
+import { open as openModal } from '../core/modal.js'; // adjust path
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, updateDoc

@@ -79,6 +79,7 @@ export default {
   route: 'start',
   chrome: { mode: 'none' },
   background: { key: 'emberward' }, 
+  music: { mode: 'off', scene: 'quiet' },
 
   async mount(root) {
     // 1) Scoped CSS

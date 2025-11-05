@@ -86,12 +86,6 @@ function positionScreen(rec) {
   rec.root.style.transform = `translate(${x}px, ${y}px)`;
 }
 
-// function setPlaneTransform(x, y, withTransition = true) {
-//   plane.style.transition = withTransition ? `transform ${SNAP_MS}ms ease` : 'none';
-//   plane.style.transform = `translate(${-x}px, ${-y}px)`;
-//   updateParallax(x, y);  // ← make the panorama move with drag/snap
-// }
-
 function setPlaneTransform(x, y, _withTransition = false) {
   plane.style.transition = 'none';
   plane.style.transform  = `translate(${-x}px, ${-y}px)`;
@@ -143,6 +137,9 @@ export async function navigate(id) {
 
   if (target.def.onShow) target.def.onShow();
   current = target;
+
+  applyMusicPolicy(target.def);
+
 }
 
 export function currentId() { return current?.def?.id; }
@@ -262,9 +259,6 @@ function onUp() {
   const fracY = Math.abs(lastDY) / vh;
   const passed = Math.max(fracX, fracY) + VX_BONUS >= THRESHOLD;
 
-//   if (passed) navigate(activeTarget);
-//   else setPlaneTransform(current.pos.x * vw, current.pos.y * vh, true);
-
 if (passed) {
   navigate(activeTarget);  // navigate will call animateTo() to glide into place
 } else {
@@ -274,3 +268,41 @@ if (passed) {
 
   activeTarget = null;
 }
+
+// ───────────────────────── Music policy per screen ─────────────────────────
+function applyMusicPolicy(def) {
+  // Nothing to do if engine isn’t present or no music config on the screen.
+  if (!window.MyFiMusic || !def) return;
+  const m = def.music || {};
+
+  // Optional scene (soft volume target). Safe to call even if unchanged.
+  if (m.scene) window.MyFiMusic.setScene(m.scene);
+
+  // Mode: 'off' | 'play' | 'playAt'
+  switch (m.mode) {
+    case 'off': {
+      // Enforce silence for this screen, but don’t change user mute preference.
+      window.MyFiMusic.pause?.();
+      break;
+    }
+    case 'play': {
+      // Resume current track if user isn’t muted.
+      if (!window.MyFiMusic.isMuted?.()) window.MyFiMusic.play?.();
+      break;
+    }
+    case 'playAt': {
+      // Select a specific track index if given; else fall back to current.
+      const i = Number.isFinite(m.index) ? (m.index | 0) : null;
+      if (!window.MyFiMusic.isMuted?.()) {
+        if (i !== null) window.MyFiMusic.playAt?.(i);
+        else window.MyFiMusic.play?.();
+      }
+      break;
+    }
+    default:
+      // No policy: do nothing (screen leaves playback as-is).
+      break;
+  }
+}
+
+
