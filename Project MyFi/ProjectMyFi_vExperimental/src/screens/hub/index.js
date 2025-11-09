@@ -16,6 +16,7 @@ import { openSocialModal } from '../../modals/social.js';
 import { openEnergyMenu }     from '../../modals/energyMenu/energy-menu.js';
 import { openSpiritStoneModal } from '../../modals/spiritstone.js';
 import { openSpiritMenu }     from '../../modals/spirit.js';
+import { openExampleStandardModal }     from '../../modals/modal-template.js';
 
 // NEW: card interaction modules
 import { wireVitalsStatusToggle } from './modules/ui/status.js';
@@ -138,7 +139,7 @@ export default {
     footer: {
       left:  { icon: '⚡', title: 'Energy', onClick(){ openEnergyMenu({ owner:'hub', mode:'auto' }); } },
       main:  { icon: '⦿', title: 'Essence', onClick(){ openSpiritStoneModal('hub'); } },
-      right: { icon: '🧙', title: 'Spirit', onClick(){ openSpiritMenu('hub'); } },
+      right: { icon: '🧙', title: 'Spirit', onClick(){ openExampleStandardModal('hub'); } },
     }
   },
 
