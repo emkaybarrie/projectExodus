@@ -63,6 +63,8 @@ export async function openSettingsModal(owner='hub') {
         </select>
         <div class="form-hint">Controls how much detail shows in your vitals view.</div>
       </div>
+
+      
     </div>
 
     <div class="modal-footer">
