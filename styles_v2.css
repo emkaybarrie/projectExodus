@@ -1,0 +1,1009 @@
+:root {
+  --bg: #050816;
+  --bg-alt: #0b1020;
+  --bg-soft: #101526;
+  --card-bg: #141a30;
+  --border-soft: rgba(255, 255, 255, 0.08);
+
+  --text-main: #f5f7ff;
+  --text-muted: #a5b0d5;
+  --accent: #4de3ff;
+  --accent-soft: rgba(77, 227, 255, 0.15);
+  --accent-strong: #ff4dd4;
+
+  --vital-health: #ff6b6b;
+  --vital-mana: #4e9bff;
+  --vital-stamina: #ffd66b;
+  --vital-essence: #a96bff;
+  --vital-emberward: #ff9b4d;
+
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 20px 40px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.4);
+
+  --transition-fast: 0.18s ease-out;
+  --transition-med: 0.26s ease-in-out;
+
+  --font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-main);
+  color: var(--text-main);
+  background: radial-gradient(circle at top, #141b3a 0, var(--bg) 60%);
+  scroll-behavior: smooth;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* HEADER / NAV */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(18px);
+  background: rgba(5, 8, 22, 0.92);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.header-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0.6rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.logo-mark {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 40%;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, var(--accent-strong), var(--accent));
+  box-shadow: 0 0 12px rgba(77, 227, 255, 0.6);
+  font-size: 14px;
+}
+
+.logo-text {
+  font-size: 0.98rem;
+}
+
+.main-nav {
+  margin-left: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.nav-link {
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.nav-link.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.primary-cta {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+  color: #050816;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 0 16px rgba(77, 227, 255, 0.7);
+  white-space: nowrap;
+}
+
+.primary-cta:hover {
+  text-decoration: none;
+  filter: brightness(1.06);
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nav-toggle span {
+  width: 20px;
+  height: 2px;
+  background: var(--text-main);
+}
+
+/* SECTIONS */
+
+.section {
+  padding: 4rem 1.25rem 4.5rem;
+}
+
+.section-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.section-header p {
+  color: var(--text-muted);
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* BUTTONS */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  font-size: 0.95rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--transition-med), color var(--transition-med), border-color var(--transition-med), transform var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: linear-gradient(120deg, var(--accent), var(--accent-strong));
+  color: #050816;
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(77, 227, 255, 0.7);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+}
+
+/* HERO */
+
+.hero-section {
+  padding-top: 5rem;
+}
+
+.hero-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr);
+  gap: 3rem;
+  align-items: center;
+}
+
+.eyebrow {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.hero-text h1 {
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  margin: 0 0 0.8rem;
+}
+
+.hero-copy {
+  color: var(--text-muted);
+  max-width: 540px;
+}
+
+.hero-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hero-media {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+
+.device-frame {
+  background: radial-gradient(circle at top, #232a4a, #050816);
+  border-radius: 28px;
+  padding: 0.9rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.device-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  height: 280px;
+  background: #050816;
+}
+
+.device-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity var(--transition-med);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.device-slide.is-active {
+  opacity: 1;
+}
+
+.device-placeholder {
+  width: 90%;
+  height: 80%;
+  border-radius: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: radial-gradient(circle at top, rgba(77, 227, 255, 0.18), #050816);
+}
+
+.device-placeholder.alt {
+  background: radial-gradient(circle at top, rgba(255, 77, 212, 0.2), #050816);
+}
+
+.device-dots {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.device-dots .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+}
+
+.device-dots .dot.is-active {
+  background: var(--accent);
+}
+
+.hero-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.pill {
+  background: linear-gradient(135deg, var(--bg-soft), var(--bg-alt));
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border-soft);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* MISSION */
+
+.mission-section {
+  background: radial-gradient(circle at top left, #1a2144, var(--bg-alt));
+}
+
+.mission-section .section-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.mission-text h2 {
+  font-size: 1.7rem;
+}
+
+.mission-text p {
+  color: var(--text-muted);
+}
+
+.mission-points {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.mission-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+/* ABOUT MYFI */
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 2.5rem;
+}
+
+.vital-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-soft);
+  font-size: 0.9rem;
+}
+
+.vital-card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.vital-health { box-shadow: 0 0 12px rgba(255, 107, 107, 0.4); }
+.vital-mana { box-shadow: 0 0 12px rgba(78, 155, 255, 0.4); }
+.vital-stamina { box-shadow: 0 0 12px rgba(255, 214, 107, 0.45); }
+.vital-essence { box-shadow: 0 0 12px rgba(169, 107, 255, 0.45); }
+.vital-emberward { box-shadow: 0 0 12px rgba(255, 155, 77, 0.4); }
+
+.flow-diagram {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.flow-step {
+  grid-column: span 2;
+  background: var(--bg-soft);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border-soft);
+  font-size: 0.88rem;
+}
+
+.flow-arrow {
+  text-align: center;
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+
+.screens-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.screen-card {
+  background: var(--bg-soft);
+  border-radius: 22px;
+  padding: 0.7rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.screen-placeholder {
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+/* PARTNERSHIPS */
+
+.partner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.partner-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+  font-size: 0.94rem;
+}
+
+.integration-strip {
+  margin: 2rem 0;
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at left, var(--accent-soft), var(--bg-soft));
+  border: 1px solid var(--border-soft);
+}
+
+.integration-strip h3 {
+  margin-top: 0;
+}
+
+.integration-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  font-size: 0.9rem;
+}
+
+.roadmap-strip {
+  margin: 1.8rem 0 2.4rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-soft);
+  border: 1px solid var(--border-soft);
+}
+
+.roadmap-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+}
+
+.roadmap-steps li {
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Partner materials */
+
+.partner-materials {
+  margin-top: 2.2rem;
+  padding: 1.3rem 1.4rem 1.4rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at top right, rgba(169, 107, 255, 0.18), var(--bg-soft));
+  border: 1px solid var(--border-soft);
+}
+
+.partner-intro {
+  color: var(--text-muted);
+  max-width: 640px;
+}
+
+.partner-gate {
+  margin-top: 1.2rem;
+}
+
+.partner-gate-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.partner-gate input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(5, 8, 22, 0.7);
+  color: var(--text-main);
+}
+
+.partner-message {
+  font-size: 0.85rem;
+  margin-top: 0.35rem;
+}
+
+.partner-message.error {
+  color: #ff7b7b;
+}
+
+.partner-message.success {
+  color: #88ffb9;
+}
+
+.partner-content {
+  margin-top: 1.4rem;
+  display: none;
+}
+
+.partner-content.is-visible {
+  display: block;
+}
+
+.partner-tabs {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+  background: rgba(5, 8, 22, 0.85);
+  padding: 0.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.partner-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.partner-tab.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.partner-panels {
+  margin-top: 1rem;
+}
+
+.partner-panel {
+  display: none;
+  font-size: 0.9rem;
+  background: rgba(5, 8, 22, 0.9);
+  border-radius: var(--radius-md);
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-soft);
+}
+
+.partner-panel.is-active {
+  display: block;
+}
+
+.partner-panel ul {
+  padding-left: 1.1rem;
+}
+
+.partner-security-note {
+  margin-top: 0.9rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* TEAM */
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.team-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+  font-size: 0.92rem;
+}
+
+.avatar-placeholder {
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-soft), var(--bg-soft));
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.role {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.story-strip {
+  margin-top: 2rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at left, var(--accent-soft), var(--bg-soft));
+  border: 1px solid var(--border-soft);
+}
+
+/* CONTACT */
+
+.contact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.contact-form {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1.3rem;
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-card);
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.9rem;
+}
+
+.form-row label {
+  font-size: 0.88rem;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0.5rem 0.55rem;
+  background: rgba(5, 8, 22, 0.8);
+  color: var(--text-main);
+  font: inherit;
+}
+
+.contact-side {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+/* FOOTER */
+
+.site-footer {
+  border-top: 1px solid var(--border-soft);
+  padding: 1.1rem 1.25rem 1.3rem;
+  background: rgba(5, 8, 22, 0.98);
+}
+
+.footer-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.footer-nav a {
+  color: var(--text-muted);
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 920px) {
+  .hero-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero-media {
+    order: -1;
+  }
+
+  .mission-section .section-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vitals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .flow-diagram {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-step {
+    grid-column: auto;
+  }
+
+  .flow-arrow {
+    display: none;
+  }
+
+  .screens-gallery,
+  .partner-grid,
+  .integration-columns,
+  .team-grid,
+  .contact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .main-nav {
+    position: absolute;
+    inset: 56px 0 auto;
+    padding: 0.6rem 1.25rem 1rem;
+    background: rgba(5, 8, 22, 0.98);
+    border-bottom: 1px solid var(--border-soft);
+    display: none;
+    flex-direction: column;
+  }
+
+  .main-nav.is-open {
+    display: flex;
+  }
+
+  .primary-cta {
+    display: none;
+  }
+
+  .nav-toggle {
+    display: flex;
+    margin-left: auto;
+  }
+
+  .hero-section {
+    padding-top: 4rem;
+  }
+
+  .hero-inner {
+    gap: 2rem;
+  }
+
+  .hero-pillars {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-section .section-inner,
+  .screens-gallery,
+  .partner-grid,
+  .integration-columns,
+  .team-grid,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vitals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------------------
+   Forest / Avatar theme overrides
+   Drop this AFTER your existing styles.css
+---------------------------- */
+
+/* Palette shift */
+:root {
+  --bg: #04150e;
+  --bg-alt: #062015;
+  --bg-soft: #082819;
+  --card-bg: rgba(6, 27, 18, 0.9);
+  --border-soft: rgba(255, 255, 255, 0.08);
+
+  --text-main: #fdfaf3;
+  --text-muted: #d3e7d8;
+  --accent: #ffb94d;        /* warm gold/orange */
+  --accent-soft: rgba(255, 185, 77, 0.18);
+  --accent-strong: #ff7b4d;
+
+  /* vitals colours stay similar but a bit warmer */
+  --vital-health: #ff6b6b;
+  --vital-mana: #4e9bff;
+  --vital-stamina: #ffcd4d;
+  --vital-essence: #b46bff;
+  --vital-emberward: #ff9b4d;
+}
+
+/* Global background now feels like a forest at dusk */
+html,
+body {
+  background: radial-gradient(circle at top, #153825 0, #04150e 58%);
+}
+
+/* Header tweaks so it feels lighter and less sci-fi */
+.site-header {
+  background: rgba(4, 21, 14, 0.96);
+}
+
+.logo-mark {
+  background: radial-gradient(circle, #ffb94d, #ff7b4d);
+  box-shadow: 0 0 12px rgba(255, 185, 77, 0.7);
+}
+
+.primary-cta {
+  background: linear-gradient(120deg, #ffb94d, #ff7b4d);
+  box-shadow: 0 0 16px rgba(255, 185, 77, 0.75);
+}
+
+/* Generic “panel on a painted background” frame for sections */
+.section {
+  position: relative;
+  padding: 4rem 1.25rem 4.5rem;
+  overflow: hidden;
+}
+
+.section-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2.2rem 2.4rem;
+  border-radius: 26px;
+  background: linear-gradient(
+      135deg,
+      rgba(8, 40, 25, 0.92),
+      rgba(7, 29, 19, 0.95)
+    );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* Let Hero, Partnerships, Team panels be more “open” (edge-to-edge) */
+.hero-section .section-inner,
+.partnerships-section .section-inner,
+.team-section .section-inner {
+  padding: 2.4rem 2.6rem;
+}
+
+/* Soft vignette over backgrounds */
+.section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 0, rgba(0, 0, 0, 0.45) 65%);
+  z-index: 0;
+}
+
+/* ---------------------------------
+   SECTION BACKGROUNDS (plug your art in here)
+   Replace url(...) with your actual file paths
+---------------------------------- */
+
+/* HERO – use your big “running party with HUD” or blonde hero + HUD */
+.hero-section {
+  background:
+    linear-gradient(to bottom, rgba(3, 12, 7, 0.8), rgba(3, 12, 7, 1)),
+    url("img/myfi-hero-party.jpg") center/cover no-repeat;
+}
+
+/* ABOUT – use male mage or blonde smiling avatar in ruins */
+.about-section {
+  background:
+    linear-gradient(to bottom, rgba(3, 15, 9, 0.9), rgba(3, 15, 9, 1)),
+    url("img/myfi-about-mage.jpg") right center/cover no-repeat;
+}
+
+/* PARTNERSHIPS – use group shot or red-haired character walking into forest */
+.partnerships-section {
+  background:
+    linear-gradient(to bottom, rgba(5, 20, 10, 0.92), rgba(4, 18, 9, 1)),
+    url("img/myfi-partnerships-forest.jpg") left center/cover no-repeat;
+}
+
+/* TEAM – use friendly group portrait or single warm avatar */
+.team-section {
+  background:
+    linear-gradient(to bottom, rgba(5, 20, 13, 0.9), rgba(3, 14, 9, 1)),
+    url("img/myfi-team-group.jpg") center/cover no-repeat;
+}
+
+/* CONTACT – simpler, more neutral forest floor */
+.contact-section {
+  background:
+    linear-gradient(to bottom, rgba(4, 18, 11, 0.95), rgba(4, 18, 11, 1));
+}
+
+/* Make panel content sit slightly left on Hero (avatar art on right) */
+.hero-inner {
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+}
+
+.hero-media {
+  align-items: flex-end;
+}
+
+/* Cards feel more “leafy” than neon */
+.pill,
+.mission-card,
+.partner-card,
+.team-card,
+.contact-form {
+  background: rgba(5, 26, 15, 0.92);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* Vitals cards now have warm outer glows on forest panels */
+.vital-card {
+  background: rgba(5, 26, 16, 0.95);
+  border-radius: 18px;
+}
+
+/* Partner materials callout matches “access controlled” tile from reference */
+.partner-materials {
+  background: linear-gradient(
+      135deg,
+      rgba(7, 32, 19, 0.96),
+      rgba(8, 43, 26, 0.96)
+    );
+  border-radius: 22px;
+}
+
+/* Team avatar placeholder becomes a soft glowing circle that can hold your portraits */
+.avatar-placeholder {
+  background: radial-gradient(circle, rgba(255, 185, 77, 0.25), rgba(4, 21, 13, 1));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Footer to forest tone */
+.site-footer {
+  background: rgba(4, 18, 11, 0.98);
+}
+

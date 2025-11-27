@@ -2,203 +2,279 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Project Exodus — Suite</title>
-  <link rel="stylesheet" href="index.css" />
-  <meta name="theme-color" content="#0b0f1a">
+  <title>Project MyFi – Behaviour-First Financial Wellbeing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="brand">
-      <div class="brand-mark" aria-hidden="true"></div>
-      <span class="brand-name">Project Exodus</span>
+  <!-- Top nav (sits above panels) -->
+  <header class="top-nav">
+    <div class="top-nav-inner">
+      <a href="#hero" class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-text">Project MyFi</span>
+      </a>
+      <nav class="top-links">
+        <a href="#hero" class="nav-link is-active">Home</a>
+        <a href="#about" class="nav-link">About MyFi</a>
+        <a href="#partnerships" class="nav-link">Partnerships</a>
+        <a href="#team" class="nav-link">Team</a>
+      </nav>
+      <a href="#hero" class="top-cta">Open MyFi / Join Pilot</a>
+      <button class="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
     </div>
-    <nav class="nav">
-      <button class="nav-link active" data-target="products">Products</button>
-      <button class="nav-link" data-target="about">About</button>
-      <button class="nav-link" data-target="contact">Contact</button>
-    </nav>
   </header>
 
-  <main class="hero">
-    <div class="hero-content">
-      <h1 class="hero-title">Build better habits. Power brighter worlds.</h1>
-      <p class="hero-subtitle">
-        A growing suite of connected experiences — finance as a game, a world that responds
-        to you, and an ecosystem of tools and partners at your side. 
-        <!-- and an alliance of tools and partners built for you // and a network of partners that strengthen your journey // empowered by a network of trusted partners and tools -->
-        <!-- PUNCHY VERSION: “Finance as a game. A world that responds. An ecosystem at your side.” -->
-      </p>
-      <div class="hero-cta">
-        <a href="#products" class="pill-btn" data-target="products">Explore Suite</a>
+  <main class="page">
+    <!-- PANEL 1: HERO / LANDING -->
+    <section id="hero" class="panel panel-hero">
+      <div class="panel-inner">
+        <div class="panel-grid panel-hero-grid">
+          <!-- Left column: avatar / illustration -->
+          <div class="panel-hero-art">
+            <!-- Drop in your main avatar here -->
+            <!-- <img src="img/avatar-hero.png" alt="MyFi hero avatar" class="hero-avatar" /> -->
+          </div>
+
+          <!-- Right column: text, CTAs, bullets -->
+          <div class="panel-hero-copy">
+            <p class="eyebrow">Behaviour-first money · game-inspired</p>
+            <h1>Turn your money into a world you can actually feel.</h1>
+            <p class="lead">
+              Project MyFi turns real-world spending into intuitive vitals –
+              Health, Mana, Stamina, Essence and Emberward – so you can see
+              at a glance if you’re protected, over-stretched, or quietly
+              getting stronger.
+            </p>
+
+            <div class="hero-buttons">
+              <a href="#hero" class="btn btn-primary">Open MyFi</a>
+              <a href="#partnerships" class="btn btn-secondary">For partners</a>
+            </div>
+
+            <div class="hero-bullets">
+              <div class="hero-bullet">
+                <h3>Why MyFi exists</h3>
+                <p>Built as a prevention-first wellbeing engine, not another budgeting app.</p>
+              </div>
+              <div class="hero-bullet">
+                <h3>Games can teach healthier rhythms</h3>
+                <p>We use vitals, quests and avatars to make money feel readable and less scary.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
+
+    <!-- PANEL 2: ABOUT MYFI -->
+    <section id="about" class="panel panel-about">
+      <div class="panel-inner">
+        <div class="panel-grid panel-about-grid">
+          <div class="panel-about-copy">
+            <h2>About MyFi</h2>
+            <p class="lead">
+              The behaviour-first engine behind the world of MyFi.
+            </p>
+
+            <div class="vitals-row">
+              <span class="vital-pill vital-health">Health</span>
+              <span class="vital-pill vital-mana">Mana</span>
+              <span class="vital-pill vital-stamina">Stamina</span>
+              <span class="vital-pill vital-essence">Essence</span>
+              <span class="vital-pill vital-emberward">Emberward</span>
+            </div>
+
+            <p class="body">
+              MyFi normalises your income and spending into smooth regen curves,
+              then translates those into clear energy bars. Instead of guessing
+              if you’re “okay”, you see whether your vitals are protected,
+              stable or growing.
+            </p>
+
+            <ul class="about-list">
+              <li><strong>Behaviour engine</strong> – classifies, normalises and smooths cashflow.</li>
+              <li><strong>Vitals HUD</strong> – shows Health, Mana, Stamina, Essence and Emberward.</li>
+              <li><strong>Quests & world</strong> – optional game layer that rewards good pacing.</li>
+            </ul>
+          </div>
+
+          <!-- Phone mock / HUD on the right -->
+          <div class="panel-about-art">
+            <!-- Drop in your HUD phone art -->
+            <div class="phone-frame">
+              <img src="img/hud-phone.png" alt="MyFi Vitals HUD on phone" class="phone-image" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 3: PARTNERSHIPS -->
+    <section id="partnerships" class="panel panel-partnerships">
+      <div class="panel-inner">
+        <div class="panel-grid panel-partnerships-grid">
+          <div class="panel-partnerships-copy">
+            <h2>Partnerships</h2>
+            <p class="lead">
+              From CAB pilots to national bank rollouts.
+            </p>
+
+            <div class="partner-columns">
+              <div class="partner-col">
+                <h3>CAB & advice</h3>
+                <p>Gentle, non-shaming space where clients can stabilise their relationship with money.</p>
+              </div>
+              <div class="partner-col">
+                <h3>Councils & public sector</h3>
+                <p>Prevention-first tool supporting cost-of-living, resilience and youth wellbeing agendas.</p>
+              </div>
+              <div class="partner-col">
+                <h3>Banks & FS</h3>
+                <p>Behaviour-first wellbeing engine that supports Consumer Duty, engagement and ESG.</p>
+              </div>
+            </div>
+
+            <!-- Partner materials card (access controlled) -->
+            <div class="partner-materials-card">
+              <div class="pm-header">
+                <h3>Partner materials</h3>
+                <span class="pm-tag">Access controlled</span>
+              </div>
+              <p class="pm-copy">
+                If you’re exploring a pilot or integration, use your access code to view decks and packs tailored for CAB, banks and consultants.
+              </p>
+
+              <div class="pm-gate">
+                <input
+                  type="password"
+                  id="partner-code"
+                  class="pm-input"
+                  placeholder="Enter access code"
+                />
+                <button id="partner-unlock" class="btn btn-primary pm-btn">
+                  Submit
+                </button>
+              </div>
+              <p id="partner-message" class="pm-message"></p>
+
+              <!-- Tabs + content (hidden until unlocked) -->
+              <div id="partner-content" class="pm-tabs" aria-hidden="true">
+                <div class="pm-tab-row" role="tablist">
+                  <button class="pm-tab is-active" data-tab="cab" role="tab">
+                    CAB & advice
+                  </button>
+                  <button class="pm-tab" data-tab="banks" role="tab">
+                    Banks & FS
+                  </button>
+                  <button class="pm-tab" data-tab="consultants" role="tab">
+                    Consultants & labs
+                  </button>
+                </div>
+
+                <div class="pm-panels">
+                  <section class="pm-panel is-active" data-panel="cab" role="tabpanel">
+                    <p>Embed CAB-focused deck, safeguarding summary and pilot one-pager here.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">CAB deck (PDF)</a></li>
+                      <li><a href="#" target="_blank">Pilot outline</a></li>
+                    </ul>
+                  </section>
+                  <section class="pm-panel" data-panel="banks" role="tabpanel">
+                    <p>Embed bank proposition deck, integration overview and ethics sheet.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">Bank deck (PDF)</a></li>
+                      <li><a href="#" target="_blank">Integration overview</a></li>
+                    </ul>
+                  </section>
+                  <section class="pm-panel" data-panel="consultants" role="tabpanel">
+                    <p>Embed consulting opportunity summary and evaluation framework examples.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">Consulting overview</a></li>
+                      <li><a href="#" target="_blank">Labs / research one-pager</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right side avatars / art -->
+          <div class="panel-partnerships-art">
+            <img src="img/avatar-partner-1.png" alt="Partner avatar 1" class="partner-avatar" />
+            <img src="img/avatar-partner-2.png" alt="Partner avatar 2" class="partner-avatar" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 4: TEAM -->
+    <section id="team" class="panel panel-team">
+      <div class="panel-inner">
+        <div class="panel-grid panel-team-grid">
+          <div class="panel-team-copy">
+            <h2>The team behind MyFi</h2>
+            <p class="lead">
+              A hybrid of game-makers, financial professionals and advisors.
+            </p>
+
+            <div class="team-row">
+              <article class="team-card">
+                <img src="img/avatar-team-1.png" alt="Emkay avatar" class="team-avatar" />
+                <h3>Emkay Barrie</h3>
+                <p class="team-role">Founder &amp; Architect</p>
+              </article>
+              <article class="team-card">
+                <img src="img/avatar-team-2.png" alt="Future co-founder avatar" class="team-avatar" />
+                <h3>Future Co-Founder</h3>
+                <p class="team-role">Engineering / Game Director</p>
+              </article>
+              <article class="team-card">
+                <img src="img/avatar-team-3.png" alt="Advisory circle avatar" class="team-avatar" />
+                <h3>Advisory Circle</h3>
+                <p class="team-role">CAB, behavioural science, banking</p>
+              </article>
+            </div>
+
+            <div class="team-story">
+              <h3>Why we’re building MyFi</h3>
+              <p>
+                MyFi grew out of years of watching people feel crushed by complex
+                financial systems. The goal is to create a space where money feels
+                understandable, where mistakes don’t define you, and where banks
+                and public bodies can genuinely help people stay out of harm’s way.
+              </p>
+            </div>
+
+            <div class="values-row">
+              <span>Prevention</span>
+              <span>Dignity</span>
+              <span>Playfulness</span>
+              <span>Safety</span>
+            </div>
+          </div>
+
+          <!-- Optional share / CTA block on right -->
+          <div class="panel-team-side">
+            <div class="share-card">
+              <p>Like what you see?</p>
+              <a href="#hero" class="btn btn-primary share-btn">Share / Get in touch</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <section id="products" class="section visible">
-    <div class="section-head">
-      <h2>Products</h2>
-      <p>Turn everyday choices into power — for your finances, your avatar, and your world.</p>
-    </div>
-
-    <div class="cards">
-      <!-- MyFi -->
-      <article class="card">
-        <div class="card-art aura aura-blue" aria-hidden="true">
-          <img src="projectMyFi-preview.png" alt="Project MyFi preview" class="card-img" />
-        </div>
-        <div class="card-body">
-          <h3>Project MyFi</h3>
-          <p>
-            Finance, reimagined. Track personal spending, manage your avatar’s resource,
-            and convert real-world actions into in‑game power. Start your journey to financial independence, the playful way.
-          </p>
-          <div class="card-actions">
-            <button class="hub-button" onclick="location.href='Project MyFi/start.html'">
-              Open MyFi
-            </button>
-          </div>
-        </div>
-      </article>
-
-      <!-- Badlands (placeholder) -->
-      <article class="card">
-        <div class="card-art aura aura-violet" aria-hidden="true">
-          <img src="projectBadlands-preview.png" alt="Project MyFi preview" class="card-img" />
-        </div>
-        <div class="card-body">
-          <h3>Project Badlands</h3>
-          <p>
-            A stylized action roguelite that can connect to your MyFi account.
-            Survive the Badlands, earn rewards, and shape an exciting new frontier with friends.
-          </p>
-          <div class="card-actions">
-            <button class="hub-button disabled" disabled title="Coming soon">
-              Coming Soon
-            </button>
-          </div>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <section id="about" class="section">
-    <div class="section-head">
-      <h2>About</h2>
-      <p>
-        Project Exodus is building a new kind of connected experience — where finance feels like play, 
-        progress is visible, and every step opens doors. For players, it’s a world that rewards better 
-        habits. For institutions and partners, it’s a platform to engage audiences in fresh, meaningful 
-        ways. Together, we’re creating an ecosystem where utility and imagination move hand in hand.
-      </p>
-    </div>
-    <div class="about-grid glass">
-      <div>
-        <h4>Our Approach</h4>
-        <p>
-          We merge playful design with practical utility. Systems that feel good to use,
-          reward good habits, and never compromise your data.
-        </p>
-      </div>
-      <div>
-        <h4>Partnerships</h4>
-        <p>
-          We believe progress is shared. From financial institutions and technology providers
-          to creators and educators, we collaborate with partners who bring unique strengths.
-          Together we design connected experiences that empower players and expand what’s possible.
-        </p>
-      </div>
-      <div>
-        <h4>Ecosystem</h4>
-        <p>
-          Our platform is built to integrate — from banking APIs and digital wallets
-          to lifestyle services and brand activations. Every connection enriches the world,
-          giving players meaningful ways to act on their progress while amplifying partner reach.
-        </p>
-      </div>
-      <div>
-        <h4>What’s Next</h4>
-        <p>
-          The journey ahead is collaborative. We’re opening with the MyFi HUD and real-world
-          finance integrations, then layering quests, credits, avatars, and partner perks.
-          Each milestone creates new opportunities to co-create value for players and partners alike.
-        </p>
-      </div>
-
-    </div>
-  </section>
-
-  <section id="contact" class="section">
-    <div class="section-head">
-      <h2>Contact</h2>
-      <p>We’d love to hear from you. Whether you’re curious about the project, interested in partnering, or just want to say hi — reach out anytime.</p>
-    </div>
-    <div class="contact glass">
-      <div class="contact-row">
-        <span class="label">Email</span>
-        <a class="value" href="mailto:emkaybarrie@gmail.com">emkaybarrie@gmail.com</a>
-      </div>
-      <div class="contact-row">
-        <span class="label">X / Twitter</span>
-        <span class="value">@ProjectExodus</span>
-      </div>
-      <div class="contact-row">
-        <span class="label">Location</span>
-        <span class="value">London, UK</span>
-      </div>
-    </div>
-  </section>
-
-  <footer class="site-footer">
+  <footer class="page-footer">
     <div class="footer-inner">
-      <span>© <span id="year"></span> Project Exodus</span>
-      <span class="dot">•</span>
-      <a href="#about" data-target="about">About</a>
-      <span class="dot">•</span>
-      <a href="#contact" data-target="contact">Contact</a>
+      <span>© <span id="year"></span> Project MyFi</span>
+      <span class="footer-note">Built for young people · CAB-first · bank-ready</span>
     </div>
   </footer>
 
-  <script>
-    // Simple tab/section routing
-    function showSection(id) {
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('visible'));
-      const target = document.getElementById(id);
-      if (target) target.classList.add('visible');
-
-      document.querySelectorAll('.nav .nav-link').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.target === id);
-      });
-
-      // scroll into view with gentle offset
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    // Hook up nav + in-page links
-    document.addEventListener('click', (e) => {
-      const t = e.target.closest('[data-target]');
-      if (!t) return;
-      const id = t.getAttribute('data-target');
-      if (document.getElementById(id)) {
-        e.preventDefault();
-        showSection(id);
-        history.replaceState(null, '', '#' + id);
-      }
-    });
-
-    // Deep link on load
-    window.addEventListener('DOMContentLoaded', () => {
-      const hash = (location.hash || '#products').replace('#', '');
-      showSection(hash);
-      document.getElementById('year').textContent = new Date().getFullYear();
-    });
-
-    // Disable context menus and multi-touch gestures (keep single touch)
-    document.addEventListener("contextmenu", e => e.preventDefault());
-    document.addEventListener("touchstart", e => {
-      if (e.touches?.length > 1) e.preventDefault();
-    }, { passive: false });
-    document.addEventListener("gesturestart", e => e.preventDefault());
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
