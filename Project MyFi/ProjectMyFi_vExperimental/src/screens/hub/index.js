@@ -1,22 +1,14 @@
 // src/screens/hub/index.js
+import { createHubController } from './controller.js';
+
 import { loadScopedCSS } from '../../core/cssScope.js';
 import { setHeaderTitle, setFooter, setHeaderExtras, openHeaderPopover, closeHeaderPopover } from '../../core/chrome.js';
 import { injectView } from '../../core/view.js';
 
-import { refreshAndGetGateway, watchGateway } from './modules/gateway.js';
-import { buildHUDModel, ensureFocusCache  } from './modules/hub-vm.js';
-import { renderBars, renderPortrait } from './modules/ui/vitals.js';
+import { openModalById } from '../../modals/registry.js';
 
 import { openFullMusicList } from '../../modals/musicPlayer.js';
-import { openSettingsModal } from '../../modals/settings.js';
-import { openHelpModal } from '../../modals/help.js';
-import { openLogoutConfirmModal } from '../../modals/logout.js';
 import { openSocialModal } from '../../modals/social.js';
-
-import { openEnergyMenu }     from '../../modals/energyMenu/energy-menu.js';
-import { openSpiritStoneModal } from '../../modals/spiritstone.js';
-import { openSpiritMenu }     from '../../modals/spirit.js';
-import { openExampleStandardModal }     from '../../modals/modal-template.js';
 
 // NEW: card interaction modules
 import { wireVitalsStatusToggle } from './modules/ui/status.js';
@@ -26,6 +18,8 @@ import { setupViewModeSwitcher } from './modules/ui/viewMode.js';
 let unstyle;
 let cleanup = [];
 let unwatch;
+let controller = null;
+
 
 // session state
 let latestGW = null;
@@ -57,9 +51,9 @@ async function bootVitals() {
 
 function injectHeaderMenuOptions(){
   return [
-    { key:'settings', label:'Settings', action: () => openSettingsModal('hub') },
-    { key:'help',     label:'Help',     action: () => openHelpModal('hub') },
-    { key:'logout',   label:'Sign out', action: () => openLogoutConfirmModal('hub') },
+    { key:'settings', label:'Settings', action: () => openModalById('settings', { owner:'hub' }) },
+    { key:'help',     label:'Help',     action: () => openModalById('help', { owner:'hub' }) },
+    { key:'logout',   label:'Sign out', action: () => openModalById('logout', { owner:'hub' }) },
   ];
 }
 
@@ -114,7 +108,7 @@ export default {
             popEl.querySelector('[data-act="toggle"]')?.addEventListener('click', () => { window.MyFiMusic?.togglePlayPause?.(); closeHeaderPopover(); });
             popEl.querySelector('[data-act="prev"]')?.addEventListener('click', () => { window.MyFiMusic?.prev?.(); closeHeaderPopover(); });
             popEl.querySelector('[data-act="next"]')?.addEventListener('click', () => { window.MyFiMusic?.next?.(); closeHeaderPopover(); });
-            popEl.querySelector('[data-act="list"]')?.addEventListener('click', () => { closeHeaderPopover(); openFullMusicList('hub'); });
+            popEl.querySelector('[data-act="list"]')?.addEventListener('click', () => { closeHeaderPopover(); openModalById('music', { owner:'hub' }); });
 
             const onChange = () => { try { popEl.remove(); } catch {} openPanel(); };
             window.addEventListener('music:changed', onChange, { once: true });
@@ -137,36 +131,39 @@ export default {
       },
     ],
     footer: {
-      left:  { icon: '⚡', title: 'Energy', onClick(){ openEnergyMenu({ owner:'hub', mode:'auto' }); } },
-      main:  { icon: '⦿', title: 'Essence', onClick(){ openSpiritStoneModal('hub'); } },
-      right: { icon: '🧙', title: 'Spirit', onClick(){ openExampleStandardModal('hub'); } },
+      left:  { icon: '⚡', title: 'Energy', onClick(){ openModalById('energyMenu', { owner:'hub', mode:'auto' }); } },
+      main:  { icon: '⦿', title: 'Essence', onClick(){ openModalById('spiritStoneMenu', { owner:'hub' }); } },
+      right: { icon: '🧙', title: 'Spirit', onClick(){ openModalById('spiritMenu', { owner:'hub' }); } },
     }
   },
 
   async mount(root) {
-    // 1) Scoped CSS
-    unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
+    controller = createHubController({ owner: 'hub' });
+    await controller.mount(root);
 
-    // 2) Screen DOM
-    await injectView(root, new URL('./view.html', import.meta.url));
+    // // 1) Scoped CSS
+    // unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
 
-    // 3) Initial vitals boot
-    await bootVitals();
+    // // 2) Screen DOM
+    // await injectView(root, new URL('./view.html', import.meta.url));
 
-    // 4) Wire card interactions (return cleanups)
-    cleanup.push(wireVitalsStatusToggle());
-    cleanup.push(wireShieldBreakdown(() => latestGW));
-    cleanup.push(setupViewModeSwitcher(async (mode) => {
-      currentMode = mode;
-      await ensureFocusCache(mode);            // fetch sums if toggled into Focus, or window rolled
-      const vm = buildHUDModel(latestGW, currentMode);
-      renderBars(vm);
-      window.dispatchEvent(new CustomEvent('vitals:updated', { detail:{ vm, gw: latestGW } }));
-    }));
+    // // 3) Initial vitals boot
+    // await bootVitals();
 
-    // Temp: pulse the main Essence btn
-    const mainBtn = document.getElementById('main-btn');
-    if (mainBtn) mainBtn.classList.add('pulse');
+    // // 4) Wire card interactions (return cleanups)
+    // cleanup.push(wireVitalsStatusToggle());
+    // cleanup.push(wireShieldBreakdown(() => latestGW));
+    // cleanup.push(setupViewModeSwitcher(async (mode) => {
+    //   currentMode = mode;
+    //   await ensureFocusCache(mode);            // fetch sums if toggled into Focus, or window rolled
+    //   const vm = buildHUDModel(latestGW, currentMode);
+    //   renderBars(vm);
+    //   window.dispatchEvent(new CustomEvent('vitals:updated', { detail:{ vm, gw: latestGW } }));
+    // }));
+
+    // // Temp: pulse the main Essence btn
+    // const mainBtn = document.getElementById('main-btn');
+    // if (mainBtn) mainBtn.classList.add('pulse');
   },
 
   onShow() {
@@ -184,14 +181,11 @@ export default {
   },
 
   onHide() {
-    const slot = document.getElementById('essence-mini');
-    if (slot) slot.innerHTML = '';
+    controller?.onHide?.();
   },
 
   unmount() {
-    try { if (unwatch) unwatch(); } catch {}
-    cleanup.forEach(fn => { try{ fn(); } catch{} });
-    cleanup = [];
-    if (unstyle) unstyle();
+    controller?.unmount?.();
+    controller = null;
   }
 };
