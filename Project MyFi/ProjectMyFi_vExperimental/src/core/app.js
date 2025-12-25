@@ -6,32 +6,33 @@ import { setState } from './state.js';
 import { auth } from './firestore.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-import '../../src/screens/general/musicManager.js';
+import '../screens/general/musicManager.js';
 
 import { validateAll } from './validateContracts.js';
 
-import { registerCoreFeatures } from '../../src/features/registerCoreFeatures.js';
-import gatewayFeature from '../../src/features/gateway/feature.js';
-import vitalsFeature from '../../src/features/vitals/feature.js';
-import profileFeature from '../../src/features/profile/feature.js';
-import activityFeature from '../../src/features/activity/feature.js';
+import { registerCoreFeatures } from '../features/registerCoreFeatures.js';
+import authFeature from '../features/auth/feature.js';
+import gatewayFeature from '../features/gateway/feature.js';
+import vitalsFeature from '../features/vitals/feature.js';
+import profileFeature from '../features/profile/feature.js';
+import eventsFeature from '../features/events/feature.js';
 
-import { registerCoreModals } from '../../src/modals/registerCoreModals.js';
+import { registerCoreModals } from '../modals/registerCoreModals.js';
 
-import { registerJourneyModals } from '../../src/journeys/registerJourneyModals.js';
-import { journeys } from '../../src/journeys/catalog.js';
-import { runJourney } from '../../src/journeys/runner.js';
+import { registerJourneyModals } from '../journeys/registerJourneyModals.js';
+import { journeys } from '../journeys/catalog.js';
+import { runJourney } from '../journeys/runner.js';
 
 
 // Register screens (dynamic import loaders)
 registerScreens([
-  { id: 'start',    loader: () => import('../../src/screens/start/index.js') },
-  { id: 'auth',     loader: () => import('../../src/screens/auth/index.js') },
-  { id: 'hub',      loader: () => import('../../src/screens/hub/index.js') },
-  { id: 'quests',   loader: () => import('../../src/screens/quests/manager.js') },
-  { id: 'avatar',   loader: () => import('../../src/screens/avatar/manager.js') },
-  { id: 'guidance', loader: () => import('../../src/screens/guidance/manager.js') },
-  { id: 'myana',    loader: () => import('../../src/screens/myana/manager.js') }
+  { id: 'start',    loader: () => import('../screens/start/index.js') },
+  { id: 'auth',     loader: () => import('../screens/auth/index.js') },
+  { id: 'hub',      loader: () => import('../screens/hub/index.js') },
+  { id: 'quests',   loader: () => import('../screens/quests/index.js') },
+  { id: 'avatar',   loader: () => import('../screens/avatar/index.js') },
+  { id: 'guidance', loader: () => import('../screens/guidance/index.js') },
+  { id: 'badlands',    loader: () => import('../screens/badlands/index.js') }
 ]);
 
 registerCoreFeatures();
@@ -41,19 +42,20 @@ registerJourneyModals();
 // Dev-only parity checks (won't throw, only logs)
 validateAll({
   screens: [
-    { id: 'start',    loader: () => import('../../src/screens/start/index.js') },
-    { id: 'auth',     loader: () => import('../../src/screens/auth/index.js') },
-    { id: 'hub',      loader: () => import('../../src/screens/hub/index.js') },
-    { id: 'quests',   loader: () => import('../../src/screens/quests/manager.js') },
-    { id: 'avatar',   loader: () => import('../../src/screens/avatar/manager.js') },
-    { id: 'guidance', loader: () => import('../../src/screens/guidance/manager.js') },
-    { id: 'myana',    loader: () => import('../../src/screens/myana/manager.js') }
+    { id: 'start',    loader: () => import('../screens/start/index.js') },
+    { id: 'auth',     loader: () => import('../screens/auth/index.js') },
+    { id: 'hub',      loader: () => import('../screens/hub/index.js') },
+    { id: 'quests',   loader: () => import('../screens/quests/index.js') },
+    { id: 'avatar',   loader: () => import('../screens/avatar/index.js') },
+    { id: 'guidance', loader: () => import('../screens/guidance/index.js') },
+    { id: 'badlands',    loader: () => import('../screens/badlands/index.js') }
   ],
   features: [
+    { id: 'auth', feature: authFeature },
     { id: 'gateway', feature: gatewayFeature },
     { id: 'vitals', feature: vitalsFeature },
     { id: 'profile', feature: profileFeature },
-    { id: 'activity', feature: activityFeature }
+    { id: 'events', feature: eventsFeature }
   ],
   journeys: journeys.map(j => ({ id: j.id, journey: j })),
 });
@@ -83,7 +85,7 @@ setLayout({
   left:    'quests',
   right:   'avatar',
   up:      'guidance',
-  down:    'myana'
+  down:    'badlands'
 });
 
 // Dev helper: run journeys from console (no UI yet, just convenient)

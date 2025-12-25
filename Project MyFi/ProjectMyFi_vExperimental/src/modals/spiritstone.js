@@ -14,7 +14,7 @@ import {
   getFirestore, doc, getDoc, setDoc, updateDoc,
   addDoc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFeature } from "../features/registry.js";
 
 /* ---------- small utils ---------- */
 const fmt = (n, d=0) => new Intl.NumberFormat(undefined,{minimumFractionDigits:d,maximumFractionDigits:d}).format(Number(n||0));
@@ -27,7 +27,10 @@ function startOfDayMs(ms = Date.now()) { const d = new Date(ms); d.setHours(0,0,
 function el(tag, cls, html) { const n = document.createElement(tag); if (cls) n.className = cls; if (html!=null) n.innerHTML = html; return n; }
 
 /* ---------- data ---------- */
-async function getUid() { return getAuth().currentUser?.uid || null; }
+async function getUid() { 
+  const user = getFeature('auth').api.getUser();
+  return user?.uid || null; 
+}
 
 async function getTransactionMode(uid) {
   const db = getFirestore();

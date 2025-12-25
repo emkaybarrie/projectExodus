@@ -1,0 +1,360 @@
+<!-- tools/surfaces-studio/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Surfaces Studio</title>
+  <link rel="stylesheet" href="./studio.css" />
+  <link rel="icon" href="data:,">
+</head>
+
+<body>
+  <div class="app" id="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brandMark" aria-hidden="true"></div>
+        <div class="brandText">
+          <div class="brandTitle">Surfaces Studio</div>
+          <div class="brandSub">Slots · Parts · Tokens · Journeys</div>
+        </div>
+      </div>
+
+      <div class="surfacePicker">
+        <div class="seg" role="tablist" aria-label="Surface type">
+          <button class="segBtn isOn" data-surface-type="screen" id="segScreen" role="tab" aria-selected="true">Screen</button>
+          <button class="segBtn" data-surface-type="modal" id="segModal" role="tab" aria-selected="false">Modal</button>
+        </div>
+
+        <div class="field">
+          <label class="fieldLbl" for="surfaceId">Surface ID</label>
+          <input id="surfaceId" class="fieldInp" type="text" placeholder="hub / quests / profile…" spellcheck="false" />
+        </div>
+
+        <div class="field">
+          <label class="fieldLbl" for="preset">Preset</label>
+          <select id="preset" class="fieldSel">
+            <option value="mobile-390x844">Mobile — 390×844</option>
+            <option value="mobile-430x932">Mobile — 430×932</option>
+            <option value="mobile-360x800">Mobile — 360×800</option>
+            <option value="custom">Custom…</option>
+          </select>
+        </div>
+
+        <div class="field isInline" id="customSizeWrap" hidden>
+          <label class="fieldLbl" for="customW">W</label>
+          <input id="customW" class="fieldInp isSmall" type="number" min="200" step="1" value="390" />
+          <label class="fieldLbl" for="customH">H</label>
+          <input id="customH" class="fieldInp isSmall" type="number" min="200" step="1" value="844" />
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnNew">New</button>
+          <button class="btn" id="btnOpenJson">Open JSON</button>
+          <input id="fileJson" type="file" accept="application/json" hidden />
+
+          <div class="split">
+            <button class="btn btnPrimary" id="btnExport">Export</button>
+            <button class="btn" id="btnExportMenu" aria-label="Export menu" title="Export options">▾</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main layout -->
+    <div class="shell">
+      <!-- Left: Tabs -->
+      <aside class="sidebar">
+        <nav class="tabs" aria-label="Studio tabs">
+          <button class="tab isOn" data-tab="layout">
+            <span class="tabIco">▦</span>
+            <span class="tabTxt">Slot Designer</span>
+          </button>
+          <button class="tab" data-tab="parts">
+            <span class="tabIco">⎙</span>
+            <span class="tabTxt">Parts Composer</span>
+          </button>
+          <button class="tab" data-tab="data">
+            <span class="tabIco">⌁</span>
+            <span class="tabTxt">Data Browser</span>
+          </button>
+          <button class="tab" data-tab="sandbox">
+            <span class="tabIco">◳</span>
+            <span class="tabTxt">Part Sandbox</span>
+          </button>
+          <button class="tab" data-tab="journeys">
+            <span class="tabIco">▶</span>
+            <span class="tabTxt">Journey Runner</span>
+          </button>
+          <button class="tab" data-tab="validate">
+            <span class="tabIco">✓</span>
+            <span class="tabTxt">Validate</span>
+          </button>
+        </nav>
+
+        <div class="sidebarCard">
+          <div class="cardTitle">Quick tips</div>
+          <div class="cardBody" id="tips">
+            <div class="tip">Drag on the canvas to create a slot.</div>
+            <div class="tip">Hold <kbd>Shift</kbd> to disable snap temporarily.</div>
+            <div class="tip">Use nested layout: select a slot → “Edit Inside”.</div>
+          </div>
+        </div>
+
+        <div class="sidebarCard">
+          <div class="cardTitle">Project hooks</div>
+          <div class="cardBody">
+            <div class="row">
+              <span class="pill" id="pillLive">Live VM: <b>off</b></span>
+              <button class="btn btnTiny" id="btnTryLive">Try connect</button>
+            </div>
+            <div class="muted tiny">
+              Live mode reads <code>window.__DEV__.surfaces</code> from a running dev tab.
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center: Canvas + Panels -->
+      <main class="main">
+        <!-- Toolbar -->
+        <div class="toolbar">
+          <div class="toolGroup">
+            <button class="toolBtn isOn" id="toolSelect" data-tool="select" title="Select (V)">Select</button>
+            <button class="toolBtn" id="toolDraw" data-tool="draw" title="Draw slot (R)">Draw</button>
+            <button class="toolBtn" id="toolPan" data-tool="pan" title="Pan (Space)">Pan</button>
+          </div>
+
+          <div class="toolGroup">
+            <div class="field isInline">
+              <label class="fieldLbl" for="gridCols">Cols</label>
+              <input id="gridCols" class="fieldInp isSmall" type="number" min="4" max="24" value="12" />
+            </div>
+            <div class="field isInline">
+              <label class="fieldLbl" for="gridRows">Rows</label>
+              <input id="gridRows" class="fieldInp isSmall" type="number" min="6" max="48" value="24" />
+            </div>
+            <button class="btn" id="btnToggleGrid">Grid</button>
+            <button class="btn" id="btnToggleSnap">Snap</button>
+          </div>
+
+          <div class="toolGroup">
+            <button class="btn" id="btnEditInside" disabled>Edit inside</button>
+            <button class="btn" id="btnBackOut" disabled>Back</button>
+            <button class="btn btnDanger" id="btnDeleteSlot" disabled>Delete</button>
+          </div>
+
+          <div class="toolSpacer"></div>
+
+          <div class="toolGroup">
+            <button class="btn" id="btnCopyHtml">Copy HTML</button>
+            <button class="btn" id="btnCopyCss">Copy CSS</button>
+            <button class="btn" id="btnCopyJson">Copy JSON</button>
+          </div>
+        </div>
+
+        <!-- Canvas area -->
+        <section class="work">
+          <div class="canvasWrap">
+            <div class="canvasMeta">
+              <div class="metaLeft">
+                <span class="tag" id="tagPath">/</span>
+                <span class="tag" id="tagSize">390×844</span>
+                <span class="tag" id="tagGrid">12×24</span>
+              </div>
+              <div class="metaRight">
+                <span class="tag" id="tagSelection">No selection</span>
+              </div>
+            </div>
+
+            <div class="canvasFrame" id="canvasFrame" tabindex="0" aria-label="Layout canvas">
+              <svg id="gridSvg" class="gridSvg" aria-hidden="true"></svg>
+              <div id="slotsLayer" class="slotsLayer"></div>
+
+              <!-- draw rectangle preview -->
+              <div id="drawGhost" class="drawGhost" hidden></div>
+            </div>
+          </div>
+
+          <!-- Right panel changes with tab -->
+          <div class="panel">
+            <!-- Slot Designer panel -->
+            <section class="panelPage isOn" data-page="layout">
+              <div class="panelTitle">Slot Properties</div>
+
+              <div class="panelGroup">
+                <div class="field">
+                  <label class="fieldLbl" for="slotName">Slot ID</label>
+                  <input id="slotName" class="fieldInp" type="text" placeholder="slot-events" spellcheck="false" disabled />
+                  <div class="hint">Use <code>slot-*</code>. Studio will normalize.</div>
+                </div>
+
+                <div class="grid2">
+                  <div class="field">
+                    <label class="fieldLbl" for="slotVariant">Variant</label>
+                    <select id="slotVariant" class="fieldSel" disabled>
+                      <option value="">Default</option>
+                      <option value="dense">Dense</option>
+                      <option value="flat">Flat</option>
+                      <option value="scroll">Scroll</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label class="fieldLbl" for="slotSurface">Surface</label>
+                    <select id="slotSurface" class="fieldSel" disabled>
+                      <option value="card">Card</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid2">
+                  <div class="field">
+                    <label class="fieldLbl" for="minH">Min Height</label>
+                    <input id="minH" class="fieldInp" type="number" min="0" step="1" value="0" disabled />
+                  </div>
+                  <div class="field">
+                    <label class="fieldLbl" for="zIndex">Z</label>
+                    <input id="zIndex" class="fieldInp" type="number" min="0" step="1" value="0" disabled />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <button class="btn" id="btnDuplicateSlot" disabled>Duplicate</button>
+                  <button class="btn" id="btnAutoName" disabled>Auto-name</button>
+                </div>
+              </div>
+
+              <div class="panelGroup">
+                <div class="panelTitleSm">Nested layout</div>
+                <div class="muted tiny">
+                  Use nested layout for “portrait left of bars” style compositions.
+                </div>
+                <div class="row">
+                  <button class="btn" id="btnMakeContainer" disabled>Mark as container</button>
+                  <button class="btn" id="btnClearContainer" disabled>Clear container</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Parts Composer panel -->
+            <section class="panelPage" data-page="parts">
+              <div class="panelTitle">Parts Composer</div>
+              <div class="muted tiny">
+                Assign parts to slots and define <code>slicePath</code> for consistent VM flow.
+              </div>
+
+              <div class="panelGroup">
+                <div class="row">
+                  <button class="btn" id="btnPartsAuto">Auto-map</button>
+                  <button class="btn" id="btnPartsExport">Export ui.parts.js</button>
+                </div>
+                <div class="list" id="partsList"></div>
+              </div>
+            </section>
+
+            <!-- Data Browser panel -->
+            <section class="panelPage" data-page="data">
+              <div class="panelTitle">Data Browser</div>
+              <div class="muted tiny">
+                Inspect full VM or the selected part’s slice (live if connected).
+              </div>
+
+              <div class="panelGroup">
+                <div class="row">
+                  <button class="btn" id="btnRefreshVM">Refresh</button>
+                  <button class="btn" id="btnCopyVM">Copy slice</button>
+                </div>
+                <div class="field">
+                  <label class="fieldLbl" for="slicePath">Slice path</label>
+                  <input id="slicePath" class="fieldInp" type="text" placeholder="eventsFeed.items" spellcheck="false" />
+                </div>
+                <pre class="codeBox" id="vmBox">{}</pre>
+              </div>
+            </section>
+
+            <!-- Part Sandbox panel -->
+            <section class="panelPage" data-page="sandbox">
+              <div class="panelTitle">Part Sandbox</div>
+              <div class="muted tiny">
+                Preview a part in isolation with mock or live slice data.
+              </div>
+
+              <div class="panelGroup">
+                <div class="field">
+                  <label class="fieldLbl" for="sandboxPart">Part</label>
+                  <select id="sandboxPart" class="fieldSel"></select>
+                </div>
+
+                <div class="row">
+                  <button class="btn" id="btnPullSlice">Pull live slice</button>
+                  <button class="btn" id="btnRenderSandbox">Render</button>
+                  <button class="btn" id="btnExportPartStub">Export stub</button>
+                </div>
+
+                <textarea id="sandboxJson" class="codeArea" spellcheck="false" placeholder='{"items":[...]}'></textarea>
+                <div class="sandboxPreview" id="sandboxPreview"></div>
+              </div>
+            </section>
+
+            <!-- Journey Runner panel -->
+            <section class="panelPage" data-page="journeys">
+              <div class="panelTitle">Journey Runner</div>
+              <div class="muted tiny">
+                Lists journeys from the project registry (requires a small dev hook).
+              </div>
+
+              <div class="panelGroup">
+                <div class="row">
+                  <button class="btn" id="btnLoadJourneys">Load</button>
+                  <button class="btn" id="btnRunJourney" disabled>Run</button>
+                  <button class="btn" id="btnStopJourney" disabled>Stop</button>
+                </div>
+                <div class="field">
+                  <label class="fieldLbl" for="journeySel">Journey</label>
+                  <select id="journeySel" class="fieldSel"></select>
+                </div>
+                <pre class="codeBox" id="journeyLog">—</pre>
+              </div>
+            </section>
+
+            <!-- Validate panel -->
+            <section class="panelPage" data-page="validate">
+              <div class="panelTitle">Validate</div>
+              <div class="muted tiny">
+                Checks layout ↔ parts ↔ slicePaths. Also warns about forbidden imports (optional scan).
+              </div>
+
+              <div class="panelGroup">
+                <div class="row">
+                  <button class="btn btnPrimary" id="btnValidate">Run checks</button>
+                  <button class="btn" id="btnCopyReport">Copy report</button>
+                </div>
+                <pre class="codeBox" id="reportBox">—</pre>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Export menu (popover) -->
+    <div class="popover" id="exportPopover" hidden>
+      <button class="popItem" data-export="all">Export all (HTML+CSS+JSON+ui.parts.js)</button>
+      <button class="popItem" data-export="html">Export HTML</button>
+      <button class="popItem" data-export="css">Export CSS</button>
+      <button class="popItem" data-export="json">Export JSON</button>
+      <button class="popItem" data-export="parts">Export ui.parts.js</button>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" hidden>
+      <div class="toastBody" id="toastBody">Copied</div>
+    </div>
+  </div>
+
+  <script type="module" src="./studio.js"></script>
+</body>
+</html>

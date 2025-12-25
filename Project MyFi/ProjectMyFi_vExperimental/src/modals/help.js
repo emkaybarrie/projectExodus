@@ -3,7 +3,7 @@ import { open as openModal } from '../core/modal.js';
 import {
   getFirestore, collection, addDoc, serverTimestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFeature } from "../features/registry.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 /**
@@ -463,8 +463,8 @@ function reportPage(refCloseModal) {
       };
 
       try {
-        const auth = getAuth();
-        const uid = auth?.currentUser?.uid || null;
+        const user = getFeature('auth').api.getUser();
+        const uid = user?.uid || null;
 
         // attach alias for triage
         let alias = null;

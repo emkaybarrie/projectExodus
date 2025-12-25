@@ -1,6 +1,6 @@
 // settings-modal.js (new helper file you create)
 import { open as openModal } from '../core/modal.js'; // adjust path
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFeature } from "../features/registry.js";
 import {
   getFirestore, doc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -9,11 +9,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 export async function openSettingsModal(owner='hub') {
-  const auth = getAuth();
+  const user = getFeature('auth').api.getUser();
   const db   = getFirestore();
   const fns  = getFunctions(undefined, 'europe-west2');
 
-  const uid = auth?.currentUser?.uid;
+  const uid = user?.uid;
   let initial = { alias:'', firstName:'', lastName:'', vitalsMode:'standard' };
 
   if (uid) {
