@@ -1,6 +1,6 @@
 // logout-modal.js
 import { open as openModal } from '../core/modal.js';
-import { logoutUser } from '../screens/auth/modules/auth.js';
+import { getFeature } from "../features/registry.js";
 
 export function openLogoutConfirmModal(owner='hub') {
   const tpl = document.createElement('template');
@@ -38,6 +38,6 @@ export function openLogoutConfirmModal(owner='hub') {
 
   cardEl.querySelector('#logout-do')?.addEventListener('click', () => {
     ref.close();
-    logoutUser(); // navigate('start') + signOut(auth)
+    getFeature('auth').api.logout(); // navigate('start') + signOut(auth)
   });
 }

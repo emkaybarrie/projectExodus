@@ -11,25 +11,25 @@
  *
  * NOTE: This is a wrapper (Phase 2A). Behaviour should remain unchanged.
  */
-import * as hubGateway from '../../screens/hub/modules/gateway.js';
+import * as gatewayIO from './io.js';
 
 export const gatewayFeature = {
   id: 'gateway',
   api: {
     /** Read the gateway doc once */
-    getOnce: hubGateway.getGatewayOnce,
+    getOnce: gatewayIO.getGatewayOnce,
 
     /** Force recompute stub, then read once */
-    refreshAndGet: hubGateway.refreshAndGetGateway,
+    refreshAndGet: gatewayIO.refreshAndGetGateway,
 
     /**
      * Watch gateway doc; callback-first for ergonomics.
      * Returns unsubscribe() (awaited because underlying is async)
      */
-    watch: async (cb, uid) => hubGateway.watchGateway(uid, cb),
+    watch: async (cb, uid) => gatewayIO.watchGateway(uid, cb),
 
     /** Expose tx path + source resolution */
-    resolveDataSources: hubGateway.resolveDataSources
+    resolveDataSources: gatewayIO.resolveDataSources
   }
 };
 

@@ -12,13 +12,13 @@
  *
  * NOTE: This is a wrapper (Phase 2A). Behaviour should remain unchanged.
  */
-import * as hubVM from '../../screens/hub/modules/hub-vm.js';
+import * as vm from './hudModel.js';
 
 export const vitalsFeature = {
   id: 'vitals',
   api: {
-    buildHUDModel: hubVM.buildHUDModel,
-    ensureFocusCache: hubVM.ensureFocusCache
+    buildHUDModel: vm.buildHUDModel,
+    ensureFocusCache: vm.ensureFocusCache
   }
 };
 

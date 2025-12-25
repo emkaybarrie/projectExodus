@@ -1,6 +1,6 @@
 /**
  * Hub UI: Events Log
- * UI-only renderer. Feed items are built by activity feature pack.
+ * UI-only renderer. Feed items are built by events feature pack.
  */
 import { getFeature } from '../../../../features/registry.js';
 
@@ -11,10 +11,10 @@ export function wireEventsLog(getGateway) {
   if (!listEl || listEl.__wiredEventsLog) return () => {};
   listEl.__wiredEventsLog = true;
 
-  const activity = getFeature('activity').api;
+  const events = getFeature('events').api;
 
   function paint(vm, gw) {
-    const items = activity.buildFeed(vm, gw);
+    const items = events.buildFeed(vm, gw);
 
     listEl.innerHTML = '';
     items.slice(0, 6).forEach(it => {

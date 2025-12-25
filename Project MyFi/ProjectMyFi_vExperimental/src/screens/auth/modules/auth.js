@@ -1,5 +1,5 @@
 
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFeature } from '../../../features/registry.js';
 import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
@@ -23,7 +23,7 @@ const getUserDataFromFirestore = async (uid) => {
 
 // ---- Login ----
 export async function loginUser(email, password, { variant = 'stable' } = {}) {
-  const { user } = await signInWithEmailAndPassword(auth, email, password);
+  const { user } = await getFeature('auth').api.signInEmail(email, password)
   const playerData = await getUserDataFromFirestore(user.uid);
 
   if (!playerData) {
@@ -47,7 +47,7 @@ export async function loginUser(email, password, { variant = 'stable' } = {}) {
 
 // ---- Signup ----
 export async function signupUser(data) {
-  const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
+  const { user } = await getFeature('auth').api.signUpEmail(email, password);
 
   await setDoc(doc(db, "players", user.uid), {
     startDate: serverTimestamp(),
@@ -93,7 +93,7 @@ export async function signupUser(data) {
 export async function logoutUser() {
   console.log('Signing Out...')
   try {
-    await signOut(auth);
+    await getFeature('auth').api.logout();
     //window.location.href = "start.html";
   } catch (error) {
     console.error("Logout error:", error.message);

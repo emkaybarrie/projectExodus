@@ -9,6 +9,7 @@
  * - { type:'wait', ms:250 }
  *
  * You can extend this safely later.
+ * Run via: MyFiJourneys.run('[folder].[journeyName]')
  */
 import { navigate } from '../core/router.js';
 import { getFeature } from '../features/registry.js';

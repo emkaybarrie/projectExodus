@@ -21,13 +21,14 @@ import { loadScopedCSS } from '../../core/cssScope.js';
 
 import { openModalById } from '../../modals/registry.js';
 import { getFeature } from '../../features/registry.js';
-import { wireEventsLog } from './modules/ui/eventsLog.js';
 
 // Hub UI modules (still local to Hub screen for now)
-import { renderBars, renderPortrait } from './modules/ui/vitals.js';
+import { createHubUI } from './modules/ui/index.js';
+
 import { setupViewModeSwitcher } from './modules/ui/viewMode.js';
 import { wireVitalsStatusToggle } from './modules/ui/status.js';
 import { wireShieldBreakdown } from './modules/ui/shieldBreakdown.js';
+
 
 export function createHubController({ owner = 'hub' } = {}) {
   // Feature APIs (stable surfaces)
@@ -37,6 +38,7 @@ export function createHubController({ owner = 'hub' } = {}) {
   // Internal controller state
   let unstyle = null;
   let unwatch = null;
+  let ui = null;
   let cleanup = [];
 
   // We keep the latest gateway doc in memory for UI helpers (shield breakdown etc.)
@@ -54,8 +56,8 @@ export function createHubController({ owner = 'hub' } = {}) {
 
     // Build VM and render (existing UI modules expect this shape)
     const vm = await vitals.buildHUDModel(latestGatewayDoc, mode);
-    renderBars(vm);
-    renderPortrait(vm);
+    ui?.render?.(vm);
+
   }
 
   async function mount(root) {
@@ -64,6 +66,11 @@ export function createHubController({ owner = 'hub' } = {}) {
 
     // 2) Inject DOM
     await injectView(root, new URL('./view.html', import.meta.url));
+
+    // 3) Render UI
+    ui = createHubUI(root, { getGateway: () => latestGatewayDoc });
+    cleanup.push(() => { try { ui?.destroy?.(); } catch {} ui = null; });
+
 
     // Profile
     // Portrait tap -> Profile modal (canonical)
@@ -101,9 +108,6 @@ export function createHubController({ owner = 'hub' } = {}) {
     // 6) Wire shield breakdown overlay using gateway state
     const unwireShield = wireShieldBreakdown(getGatewayDoc);
     cleanup.push(unwireShield);
-
-    // Events Log (Activity)
-    cleanup.push(wireEventsLog(() => latestGatewayDoc));
 
 
     // 7) Watch gateway for updates -> rerender in current mode
