@@ -81,7 +81,7 @@
           </button>
           <button class="tab" data-tab="sandbox">
             <span class="tabIco">◳</span>
-            <span class="tabTxt">Part Sandbox</span>
+            <span class="tabTxt">Visualisers</span>
           </button>
           <button class="tab" data-tab="journeys">
             <span class="tabIco">▶</span>
@@ -93,14 +93,7 @@
           </button>
         </nav>
 
-        <div class="sidebarCard">
-          <div class="cardTitle">Quick tips</div>
-          <div class="cardBody" id="tips">
-            <div class="tip">Drag on the canvas to create a slot.</div>
-            <div class="tip">Hold <kbd>Shift</kbd> to disable snap temporarily.</div>
-            <div class="tip">Use nested layout: select a slot → “Edit Inside”.</div>
-          </div>
-        </div>
+
 
         <div class="sidebarCard">
           <div class="cardTitle">Project hooks</div>
@@ -114,6 +107,15 @@
             </div>
           </div>
         </div>
+
+                <div class="sidebarCard">
+          <div class="cardTitle">Quick tips</div>
+          <div class="cardBody" id="tips">
+            <div class="tip">Drag on the canvas to create a slot.</div>
+            <div class="tip">Hold <kbd>Shift</kbd> to disable snap temporarily.</div>
+            <div class="tip">Use nested layout: select a slot → “Edit Inside”.</div>
+          </div>
+        </div>
       </aside>
 
       <!-- Center: Canvas + Panels -->
@@ -125,6 +127,21 @@
             <button class="toolBtn" id="toolDraw" data-tool="draw" title="Draw slot (R)">Draw</button>
             <button class="toolBtn" id="toolPan" data-tool="pan" title="Pan (Space)">Pan</button>
           </div>
+
+          <div class="toolGroup">
+            <div class="field isInline">
+              <label class="fieldLbl" for="zoomSel">Zoom</label>
+              <select id="zoomSel" class="fieldSel">
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+              </select>
+            </div>
+            <button class="btn" id="btnRotate" title="Toggle Portrait/Landscape">Rotate</button>
+          </div>
+
 
           <div class="toolGroup">
             <div class="field isInline">
@@ -165,16 +182,20 @@
               </div>
               <div class="metaRight">
                 <span class="tag" id="tagSelection">No selection</span>
+                <span class="tag" id="tagProgress">Progress: —</span>
               </div>
             </div>
 
-            <div class="canvasFrame" id="canvasFrame" tabindex="0" aria-label="Layout canvas">
-              <svg id="gridSvg" class="gridSvg" aria-hidden="true"></svg>
-              <div id="slotsLayer" class="slotsLayer"></div>
+            <div class="canvasStage" id="canvasStage">
+              <div class="canvasFrame" id="canvasFrame" tabindex="0" aria-label="Layout canvas">
+                <svg id="gridSvg" class="gridSvg" aria-hidden="true"></svg>
+                <div id="slotsLayer" class="slotsLayer"></div>
 
-              <!-- draw rectangle preview -->
-              <div id="drawGhost" class="drawGhost" hidden></div>
+                <!-- draw rectangle preview -->
+                <div id="drawGhost" class="drawGhost" hidden></div>
+              </div>
             </div>
+
           </div>
 
           <!-- Right panel changes with tab -->
@@ -182,6 +203,17 @@
             <!-- Slot Designer panel -->
             <section class="panelPage isOn" data-page="layout">
               <div class="panelTitle">Slot Properties</div>
+              <div class="progressBox" id="progressBox">
+                <div class="progressTop">
+                  <div class="progressLbl">Surface progress</div>
+                  <div class="progressPct" id="progressPct">—</div>
+                </div>
+                <div class="progressBar">
+                  <div class="progressFill" id="progressFill" style="width:0%"></div>
+                </div>
+                <div class="progressSteps" id="progressSteps"></div>
+              </div>
+
 
               <div class="panelGroup">
                 <div class="field">
@@ -237,6 +269,29 @@
                   <button class="btn" id="btnClearContainer" disabled>Clear container</button>
                 </div>
               </div>
+
+              <div class="panelGroup">
+                <div class="panelTitleSm">Chrome safe area</div>
+                <div class="muted tiny">
+                  Guides for MyFi header/footer so you don’t design into chrome.
+                </div>
+
+                <div class="grid2">
+                  <div class="field">
+                    <label class="fieldLbl" for="chromeTop">Header (px)</label>
+                    <input id="chromeTop" class="fieldInp" type="number" min="0" step="1" value="56" />
+                  </div>
+                  <div class="field">
+                    <label class="fieldLbl" for="chromeBottom">Footer (px)</label>
+                    <input id="chromeBottom" class="fieldInp" type="number" min="0" step="1" value="64" />
+                  </div>
+                </div>
+
+                <div class="row">
+                  <button class="btn" id="btnToggleChrome">Toggle guides</button>
+                </div>
+              </div>
+
             </section>
 
             <!-- Parts Composer panel -->
@@ -247,13 +302,13 @@
               </div>
 
               <div class="panelGroup">
-                <div class="row">
-                  <button class="btn" id="btnPartsAuto">Auto-map</button>
-                  <button class="btn" id="btnPartsExport">Export ui.parts.js</button>
+                <div class="panelSplit">
+                  <div id="partsList"></div>
+                  <div id="partsDetail"></div>
                 </div>
-                <div class="list" id="partsList"></div>
               </div>
             </section>
+
 
             <!-- Data Browser panel -->
             <section class="panelPage" data-page="data">

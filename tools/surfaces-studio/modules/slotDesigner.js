@@ -22,6 +22,22 @@ export function initSlotDesigner(state) {
   const btnMakeContainer = $('#btnMakeContainer');
   const btnClearContainer = $('#btnClearContainer');
 
+  // --- Snap helpers (required by draw/move/resize) ---
+  function snapX(v){
+    if (!state.snapOn) return v;
+    const step = state.canvasW / state.gridCols;
+    return Math.round(v / step) * step;
+  }
+  function snapY(v){
+    if (!state.snapOn) return v;
+    const step = state.canvasH / state.gridRows;
+    return Math.round(v / step) * step;
+  }
+
+  // Expose for other modules / internal use
+  state.__snap = { snapX, snapY };
+
+
   function currentSlots() { return state.getCurrentSlots(); }
   function selectedSlot() { return state.findSlotById(state.selectedSlotId); }
 
@@ -103,16 +119,33 @@ export function initSlotDesigner(state) {
       box.style.height = `${s.h}px`;
       box.style.zIndex = `${s.z || 0}`;
 
+      const map = state.partsMap?.[s.id] || null;
+      const partId = map?.partId || '';
+      const slicePath = map?.slicePath || '';
+
+      const meta = s.variant || 'default';
+      const bindLabel = partId ? `🧩 ${partId}` : '🧩 —';
+      const sliceLabel = slicePath ? `⌁ ${slicePath}` : '';
+
       box.innerHTML = `
         <div class="slotHead">
-          <div class="slotTitle">${s.id}</div>
-          <div class="slotMeta">${s.variant || 'default'}</div>
+          <div class="slotTitle">${escapeHtml(s.id)}</div>
+          <div class="slotMeta">${escapeHtml(meta)}</div>
         </div>
+
+        <div class="slotBind">
+          <div class="slotBindRow">
+            <span class="slotPill">${escapeHtml(bindLabel)}</span>
+            ${sliceLabel ? `<span class="slotPill isDim">${escapeHtml(sliceLabel)}</span>` : ``}
+          </div>
+        </div>
+
         <div class="handle tl" data-h="tl"></div>
         <div class="handle tr" data-h="tr"></div>
         <div class="handle bl" data-h="bl"></div>
         <div class="handle br" data-h="br"></div>
       `;
+
 
       // Select on click
       box.addEventListener('mousedown', (e) => {
@@ -158,7 +191,8 @@ export function initSlotDesigner(state) {
 
   // Drawing new slots
   function beginDraw(e) {
-    const rect = layer.getBoundingClientRect();
+    const rect = frame.getBoundingClientRect();
+
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const { snapX, snapY } = state.__snap;
@@ -173,7 +207,8 @@ export function initSlotDesigner(state) {
 
   function updateDraw(e) {
     if (!state.drawing) return;
-    const rect = layer.getBoundingClientRect();
+    const rect = frame.getBoundingClientRect();
+
     let x = e.clientX - rect.left;
     let y = e.clientY - rect.top;
 
@@ -434,6 +469,20 @@ export function initSlotDesigner(state) {
   state.on('selectionChanged', syncInspector);
   state.on('pathChanged', () => { if (btnBackOut) btnBackOut.disabled = (state.path.length === 0); });
 
+  state.on('canvasChanged', () => {
+    // Clamp all slots to new canvas bounds
+    const slots = currentSlots();
+    for (const s of slots) {
+      s.x = clamp(s.x, 0, state.canvasW - s.w);
+      s.y = clamp(s.y, 0, state.canvasH - s.h);
+      s.w = Math.min(s.w, state.canvasW - s.x);
+      s.h = Math.min(s.h, state.canvasH - s.y);
+    }
+    state.emit('render');
+    state.emit('slotsChanged');
+  });
+
+
   // Initial
   renderSlots();
   syncInspector();
@@ -441,3 +490,13 @@ export function initSlotDesigner(state) {
 }
 
 function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
+
+function escapeHtml(v){
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
