@@ -7,9 +7,23 @@ export function createStudioState() {
     surfaceType: 'screen', // 'screen' | 'modal'
     surfaceId: 'hub',
 
-    // Canvas
+    // Canvas (logical size of the surface)
     canvasW: 390,
     canvasH: 844,
+
+    // MyFi chrome safe areas (header/footer).
+    // These are *guides only* for layout planning; they do not affect exports.
+    chromeTop: 56,
+    chromeBottom: 64,
+    showChromeGuides: true,
+
+    // Canvas (base + transform)
+    baseW: 390,
+    baseH: 844,
+    orientation: 'portrait', // 'portrait' | 'landscape'
+    zoom: 1, // 1 = 1:1 (logical)
+
+    // Grid
     gridCols: 12,
     gridRows: 24,
     showGrid: true,
@@ -26,8 +40,18 @@ export function createStudioState() {
     // Slot: {id,x,y,w,h,z,minH,variant,surface,isContainer,children:[]}
     rootSlots: [],
 
-    // Parts mapping (for Parts Composer export)
-    partsMap: {}, // slotId -> { partId, slicePath, variant }
+    // Slot -> mapping
+    // slotId -> { partId, slicePath, variant }
+    partsMap: {},
+
+    // ✅ Part library (inventory; reusable; not tied 1:1 to slots)
+    // partId -> {
+    //   meta:{ title,type,createdAt,updatedAt },
+    //   contract:{ version, requiredMarkers },
+    //   baseline:{ html, css, js },
+    //   uplift?:{ html, css, js }
+    // }
+    partsLibrary: {},
 
     // Live hooks
     liveConnected: false,
@@ -53,9 +77,12 @@ export function createStudioState() {
       this.drawing = null;
       this.rootSlots = [];
       this.partsMap = {};
+      // NOTE: resetSurface does NOT clear library by default
       this.emit('slotsChanged');
+      this.emit('partsChanged');
       this.emit('selectionChanged');
       this.emit('pathChanged');
+      this.emit('render');
     },
 
     // Helpers
@@ -79,6 +106,9 @@ export function createStudioState() {
       }
       return walk(this.rootSlots);
     },
+    hasPart(partId) {
+      return !!this.partsLibrary?.[partId];
+    }
   };
 
   return state;

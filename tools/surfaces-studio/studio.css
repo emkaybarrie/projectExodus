@@ -60,11 +60,18 @@ code{
   color: rgba(234,240,255,.92);
 }
 
-.app{ height:100%; display:flex; flex-direction:column; }
+.app{
+  height: 100vh;
+  min-height: 0;
+  display:flex;
+  flex-direction:column;
+}
 
 .topbar{
   display:flex;
-  align-items:center;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items:flex-start;
   justify-content:space-between;
   gap:14px;
   padding:14px 16px;
@@ -186,10 +193,16 @@ code{
   border-right:1px solid var(--border);
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
   backdrop-filter: blur(10px);
+
   display:flex;
   flex-direction:column;
   gap:12px;
+
+  /* ✅ critical for scroll in flex layouts */
+  min-height: 0;
+  overflow: auto;
 }
+
 
 .tabs{ display:flex; flex-direction:column; gap:8px; }
 .tab{
@@ -250,6 +263,10 @@ code{
   border-bottom:1px solid var(--border);
   background: rgba(255,255,255,.03);
   backdrop-filter: blur(10px);
+
+  flex-wrap: wrap;
+  row-gap: 8px;
+
 }
 .toolGroup{ display:flex; align-items:center; gap:8px; }
 .toolBtn{
@@ -303,10 +320,31 @@ code{
 }
 .tag b{ color:var(--text); }
 
+/* Canvas stage centers a fixed-size device surface; scrolls if it doesn't fit */
+.canvasStage{
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: var(--r20);
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+/* CanvasFrame becomes a true W×H surface (set via CSS vars) */
+.canvasFrame{
+  flex: 0 0 auto;               /* stops flex stretch */
+  width: var(--cv-w, 390px);
+  height: var(--cv-h, 844px);
+  max-width: none;              /* ensure it doesn't clamp */
+  max-height: none;
+}
+
+/* Keep your existing look, just ensure bg + border remain */
 .canvasFrame{
   position:relative;
-  flex:1;
-  min-height:0;
   border-radius: var(--r20);
   border:1px solid var(--border);
   background:
@@ -378,6 +416,37 @@ code{
   color: rgba(234,240,255,.70);
 }
 
+.slotBind{
+  padding:8px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.10);
+}
+
+.slotBindRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  align-items:center;
+}
+
+.slotPill{
+  font-size:11px;
+  padding:3px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: rgba(234,240,255,.88);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slotPill.isDim{
+  opacity:.75;
+}
+
+
 .handle{
   position:absolute;
   width:14px; height:14px;
@@ -402,9 +471,14 @@ code{
   backdrop-filter: blur(14px);
   box-shadow: var(--shadow2);
   overflow:hidden;
+
   display:flex;
   flex-direction:column;
+
+  /* ✅ */
+  min-height: 0;
 }
+
 
 .panelPage{
   padding:14px;
@@ -436,6 +510,20 @@ code{
   flex-direction:column;
   gap:10px;
 }
+
+.panelSplit{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+@media (min-width: 1200px){
+  /* If you ever widen the panel later, this becomes 2 columns automatically */
+  .panelSplit{
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 
 .grid2{
   display:grid;
@@ -549,10 +637,157 @@ code{
 .toastBody{ font-weight:800; font-size:13px; }
 
 @media (max-width: 1100px){
-  .sidebar{ display:none; }
+  .sidebar{ width: 240px; } /* keep it visible */
   .panel{ width: 340px; }
 }
+
 @media (max-width: 920px){
-  .panel{ display:none; }
-  .work{ padding:12px; }
+  .work{
+    flex-direction: column;
+  }
+
+  .panel{
+    display:flex;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 340px;        /* panel becomes a bottom tray */
+  }
+
+  .canvasWrap{
+    min-height: 0;
+  }
+
+  .canvasFrame{
+    min-height: 420px;    /* ensures canvas is still usable */
+  }
 }
+
+@media (max-width: 980px){
+  .toolbar{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .toolSpacer{ display:none; }
+  .toolbar .toolGroup{ flex-wrap: wrap; }
+}
+
+
+
+/* Added - Need to chekc merge */
+/* Parts Composer list + detail */
+.slotRow {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(10,18,30,.35);
+  border-radius: 14px;
+  padding: 10px 10px;
+  cursor: pointer;
+  transition: transform .08s ease, border-color .12s ease;
+  margin-bottom: 10px;
+}
+.slotRow:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.18); }
+.slotRow.isOn { border-color: rgba(124, 241, 255, .35); box-shadow: 0 0 0 2px rgba(124,241,255,.10) inset; }
+
+.slotRowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.slotRowId { font-weight: 650; letter-spacing: .2px; }
+.slotRowBadge {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  opacity: .85;
+}
+.slotRowBadge.hasMap { border-color: rgba(52,211,153,.35); }
+
+.crumbs {
+  font-size: 12px;
+  opacity: .75;
+  margin-top: 4px;
+}
+
+.slotRowMeta { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+
+/* Minor helper */
+.hintSmall { font-size: 12px; opacity: .72; margin-top: 6px; }
+
+.panelDivider {
+  height: 1px;
+  background: rgba(255,255,255,.10);
+  margin: 14px 0;
+}
+
+/* ---------- Phase A: Chrome safe-area guides ---------- */
+.chromeGuide{
+  position:absolute;
+  left:0; right:0;
+  pointer-events:none;
+  z-index: 50;
+  border-top: 1px dashed rgba(255,255,255,.18);
+  border-bottom: 1px dashed rgba(255,255,255,.18);
+  background: rgba(0,0,0,.14);
+}
+.chromeGuideTop{ top:0; }
+.chromeGuideBottom{}
+
+/* ---------- Phase A: Progress UI ---------- */
+.progressBox{
+  margin-top: 12px;
+  border-radius: var(--r16);
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+  padding: 12px;
+}
+.progressTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.progressLbl{ font-weight:900; font-size:13px; }
+.progressPct{ font-family: var(--mono); font-size:12px; opacity:.9; }
+.progressBar{
+  margin-top: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
+  overflow:hidden;
+}
+.progressFill{
+  height:100%;
+  background: linear-gradient(135deg, rgba(124,92,255,.75), rgba(45,212,255,.35));
+}
+.progressSteps{
+  margin-top: 10px;
+  display:flex;
+  flex-wrap: wrap;
+  gap:8px;
+}
+.stepPill{
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  padding: 4px 8px;
+  font-size: 12px;
+  opacity: .85;
+}
+.stepPill.isOk{
+  border-color: rgba(52,211,153,.30);
+  opacity: 1;
+}
+
+/* Toolbar wrap safety (prevents cut-off on narrow widths) */
+.toolbar{ flex-wrap: wrap; }
+.toolSpacer{ flex: 1 1 32px; min-width: 12px; }
+@media (max-width: 920px){
+  .toolSpacer{ flex-basis: 100%; height: 0; }
+}
+
+
