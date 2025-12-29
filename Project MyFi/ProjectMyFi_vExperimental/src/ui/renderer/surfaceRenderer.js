@@ -98,14 +98,23 @@ export function renderSurface({ surfaceSpec, mountEl, vm, actions, partRegistry,
     wrapper.style.width = '100%';
     slotEl.appendChild(wrapper);
 
-    const instance = Part.mount({
-      el: wrapper,
-      variant,
-      props: m.props || {},
-      slice,
-      tokens: null,
-      emit: makeEmit(m.slotId, eventsMap)
-    });
+    let instance = null;
+    try {
+      instance = Part.mount({
+        el: wrapper,
+        variant,
+        props: m.props || {},
+        slice,
+        tokens: null,
+        emit: makeEmit(m.slotId, eventsMap)
+      });
+    } catch (e) {
+      console.warn('[surfaceRenderer] part mount failed', partId, e);
+      wrapper.className = 'ui-btn';
+      wrapper.style.textAlign = 'left';
+      wrapper.textContent = `Part mount failed: ${partId}`;
+      instance = { update() {}, unmount() {} };
+    }
 
     partInstances.set(m.slotId, { instance, meta: { slotId:m.slotId, partId, variant, slicePath, eventsMap, slotEl } });
     slotMetaList.push({ slotId:m.slotId, partId, variant, slicePath, eventsMap, slotEl });

@@ -15,9 +15,14 @@ import { renderSurface } from '../../ui/renderer/surfaceRenderer.js';
 import { partRegistry } from '../../ui/parts/registry.js';
 import { createActions } from '../../ui/actions/registry.js';
 
+import { createVMStore } from '../../core/vmStore.js';
+
 export function createController() {
   let unstyle = null;
   let surfaceHandle = null;
+  let vmStore = null;
+  let unsub = null;
+
   let rootEl = null;
   let surfaceSpec = null;
 
@@ -27,9 +32,8 @@ export function createController() {
   }
 
   async function refresh() {
-    if (!surfaceHandle) return;
-    const vm = await buildVM();
-    surfaceHandle.update({ vm });
+    if (!vmStore) return;
+    await vmStore.refresh();
   }
 
   return {
@@ -49,11 +53,16 @@ export function createController() {
       // Load surface spec once
       surfaceSpec = await loadSurfaceSpec('quests.v1');
 
+      vmStore = createVMStore({ buildVM });
+      unsub = vmStore.subscribe((vm) => {
+        surfaceHandle?.update?.({ vm });
+      });
+
       // Initial VM
-      const vm = await buildVM();
+      const vm = await vmStore.refresh();
 
       // Actions close over refresh()
-      const actions = createActions({ refresh });
+      const actions = createActions({ vmStore, refresh });
 
       // Render surface
       surfaceHandle = renderSurface({
@@ -75,6 +84,11 @@ export function createController() {
 
     unmount() {
       try { surfaceHandle?.unmount?.(); } catch {}
+
+      try { unsub?.(); } catch {}
+      unsub = null;
+      vmStore = null;
+
       surfaceHandle = null;
 
       if (unstyle) unstyle();

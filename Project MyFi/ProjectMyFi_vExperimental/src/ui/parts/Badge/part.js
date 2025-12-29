@@ -1,6 +1,22 @@
+const PART_ID = 'Badge';
+
 async function loadHTML() {
-  const res = await fetch(new URL('./baseline.html', import.meta.url));
-  return res.text();
+  const url = new URL('./baseline.html', import.meta.url);
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    console.warn(`[${PART_ID}] baseline.html failed to load (${res.status}):`, url.href);
+    return `<div class="ui-btn">Missing baseline.html for ${PART_ID}</div>`;
+  }
+
+  const html = await res.text();
+
+  // CONTRACT validation MUST come after this line
+  if (!html.includes('CONTRACT:BEGIN') || !html.includes('CONTRACT:END')) {
+    console.warn(`[${PART_ID}] baseline.html missing CONTRACT markers`);
+  }
+
+  return html;
 }
 
 export default {
