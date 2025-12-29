@@ -9,6 +9,8 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/fi
 import '../screens/general/musicManager.js';
 
 import { validateAll } from './validateContracts.js';
+import '../ui/theme/applyTheme.js';
+
 
 import { registerCoreFeatures } from '../features/registerCoreFeatures.js';
 import authFeature from '../features/auth/feature.js';
