@@ -1,0 +1,36 @@
+{
+  "id": "quests.v1",
+  "type": "screen",
+  "meta": { "title": "QUESTS", "chromeProfile": "default", "fullBleed": false },
+
+  "viewport": { "safeAreas": { "top": true, "bottom": true } },
+
+  "grid": { "columns": 12, "rowGap": 12, "colGap": 12, "padding": 16 },
+
+  "slots": [
+    { "id": "tabs", "area": { "row": 1, "col": 1, "colSpan": 12 } },
+    { "id": "body", "area": { "row": 2, "col": 1, "colSpan": 12 } }
+  ],
+
+  "mount": [
+    {
+      "slotId": "tabs",
+      "part": { "partId": "SegmentedTabs", "variant": "default" },
+      "bind": { "slicePath": "quests.tabs" },
+      "props": { "id": "questsTabs" },
+      "events": {
+        "change": { "action": "quests.setActiveTab", "args": { "tabId": "$event.tabId" } }
+      }
+    },
+    {
+      "slotId": "body",
+      "part": { "partId": "List", "variant": "sections" },
+      "bind": { "slicePath": "quests.sections" },
+      "props": { "sectionOrder": ["active", "available"], "renderItemPartId": "QuestItem", "maxActive": 3 },
+      "events": {
+        "item.primary": { "action": "quests.primary", "args": { "questId": "$event.item.id" } },
+        "item.claim":   { "action": "quests.claim",   "args": { "questId": "$event.item.id" } }
+      }
+    }
+  ]
+}

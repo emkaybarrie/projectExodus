@@ -13,6 +13,7 @@ import gatewayFeature from './gateway/feature.js';
 import vitalsFeature from './vitals/feature.js';
 import profileFeature from './profile/feature.js';
 import eventsFeature from './events/feature.js';
+import questsFeature from './quests/feature.js';
 
 
 export function registerCoreFeatures() {
@@ -23,4 +24,7 @@ export function registerCoreFeatures() {
   registerFeature(vitalsFeature);
   registerFeature(profileFeature);
   registerFeature(eventsFeature);
+
+  registerFeature(questsFeature);
+
 }

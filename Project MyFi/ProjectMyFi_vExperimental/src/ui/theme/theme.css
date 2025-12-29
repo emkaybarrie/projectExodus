@@ -1,0 +1,57 @@
+:root {
+  /* Safe area fallbacks */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Chrome aliases (set in core/chrome.js measure()) */
+  --chrome-header-h: var(--header-h, 0px);
+  --chrome-footer-h: var(--footer-h, 0px);
+
+  /* Minimal part defaults (unstyled-but-readable baseline) */
+  --ui-font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --ui-text: rgba(255,255,255,0.92);
+  --ui-muted: rgba(255,255,255,0.70);
+  --ui-line: rgba(255,255,255,0.12);
+  --ui-surface: rgba(255,255,255,0.06);
+  --ui-surface-2: rgba(255,255,255,0.10);
+  --ui-accent: rgba(166, 95, 255, 0.95);
+}
+
+.ui-root {
+  font-family: var(--ui-font);
+  color: var(--ui-text);
+}
+
+/* Generic layout helpers used by parts */
+.ui-grid {
+  display: grid;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ui-slot {
+  min-width: 0; /* prevent overflow */
+}
+
+/* Simple baseline controls */
+.ui-btn {
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.ui-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ui-chip {
+  border: 1px solid var(--ui-line);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
