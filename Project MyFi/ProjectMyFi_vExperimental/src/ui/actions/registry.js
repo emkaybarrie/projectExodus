@@ -5,23 +5,27 @@ import { getFeature } from '../../features/registry.js';
  * - refresh() is a callback the screen host provides to re-render after actions.
  * - Actions stay thin and delegate to feature packs.
  */
-export function createActions({ refresh } = {}) {
+export function createActions({ vmStore, refresh } = {}) {
+
   const quests = () => getFeature('quests').api;
 
   return {
     'quests.setActiveTab': async ({ tabId }) => {
       await quests().setActiveTab(tabId);
-      await refresh?.();
+      if (vmStore) await vmStore.refresh();
+      else await refresh?.();
     },
 
     'quests.claim': async ({ questId }) => {
       await quests().claim(questId);
-      await refresh?.();
+      if (vmStore) await vmStore.refresh();
+      else await refresh?.();
     },
 
     'quests.primary': async ({ questId }) => {
       await quests().primary(questId);
-      await refresh?.();
+      if (vmStore) await vmStore.refresh();
+      else await refresh?.();
     }
   };
 }

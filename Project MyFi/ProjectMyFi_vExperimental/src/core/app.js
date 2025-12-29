@@ -11,6 +11,8 @@ import '../screens/general/musicManager.js';
 import { validateAll } from './validateContracts.js';
 import '../ui/theme/applyTheme.js';
 
+import { partRegistry } from '../ui/parts/registry.js';
+import { validatePartRegistry } from '../ui/parts/validateRegistry.js';
 
 import { registerCoreFeatures } from '../features/registerCoreFeatures.js';
 import authFeature from '../features/auth/feature.js';
@@ -62,6 +64,12 @@ validateAll({
   journeys: journeys.map(j => ({ id: j.id, journey: j })),
 });
 
+try {
+  const { ok, errors } = validatePartRegistry(partRegistry);
+  if (!ok) console.warn('[ui] part registry issues:\n- ' + errors.join('\n- '));
+} catch (e) {
+  console.warn('[ui] part registry validator failed', e);
+}
 
 function kickMusicOnce() {
   try { window.MyFiMusic?.play?.(); } catch {}
