@@ -17,7 +17,7 @@ build/
 .firebase/
 
 # Ignore Firebase backend code inside Project MyFi
-Project MyFi/functions/
+# Project MyFi/functions/
 
 # VS Code
 .vscode/
