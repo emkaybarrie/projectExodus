@@ -2,6 +2,7 @@ import './firestore.js';  // ensures the singleton is initialized early
 import { initChrome } from './chrome.js';
 import { initRouter, registerScreens, navigate, setLayout } from './router.js';
 import { setState } from './state.js';
+import { setGlobalDataMode, setFeatureDataMode } from './dataMode.js';
 
 import { auth } from './firestore.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -26,7 +27,6 @@ import { registerCoreModals } from '../modals/registerCoreModals.js';
 import { registerJourneyModals } from '../journeys/registerJourneyModals.js';
 import { journeys } from '../journeys/catalog.js';
 import { runJourney } from '../journeys/runner.js';
-
 
 // Register screens (dynamic import loaders)
 registerScreens([
@@ -109,8 +109,6 @@ window.MyFiJourneys = {
 };
 
 // Dev helper: data mode toggles (safe in prod; just exposes helpers)
-import { setGlobalDataMode, setFeatureDataMode } from './dataMode.js';
-
 window.MyFiData = {
   setGlobal: (mode) => {
     const ok = setGlobalDataMode(mode);
