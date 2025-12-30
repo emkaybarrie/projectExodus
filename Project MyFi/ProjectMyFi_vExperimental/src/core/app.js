@@ -28,6 +28,59 @@ import { registerJourneyModals } from '../journeys/registerJourneyModals.js';
 import { journeys } from '../journeys/catalog.js';
 import { runJourney } from '../journeys/runner.js';
 
+function installFatalOverlay() {
+  // Toggle with localStorage to avoid shipping noisy overlays accidentally
+  const enabled = (() => {
+    try { return localStorage.getItem('MYFI_SHOW_FATAL') === '1'; } catch { return false; }
+  })();
+  if (!enabled) return;
+
+  const show = (label, err) => {
+    try {
+      const msg = err?.stack || err?.message || String(err);
+      let host = document.getElementById('myfi-fatal-overlay');
+      if (!host) {
+        host = document.createElement('div');
+        host.id = 'myfi-fatal-overlay';
+        host.style.cssText = `
+          position:fixed; inset:0; z-index:999999;
+          background:rgba(0,0,0,.88); color:#fff;
+          padding:16px; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+          overflow:auto;
+        `;
+        document.body.appendChild(host);
+      }
+      host.innerHTML = `
+        <div style="font-weight:900; font-size:16px; margin-bottom:10px;">MyFi runtime error</div>
+        <div style="opacity:.9; margin-bottom:8px;">${label}</div>
+        <pre style="white-space:pre-wrap; font-size:12px; line-height:1.35; opacity:.9;">${escapeHtml(msg)}</pre>
+        <div style="margin-top:10px; opacity:.7; font-size:12px;">
+          (Disable by setting localStorage.MYFI_SHOW_FATAL = "0")
+        </div>
+      `;
+    } catch {}
+  };
+
+  window.addEventListener('error', (e) => show('window.error', e.error || e.message || e));
+  window.addEventListener('unhandledrejection', (e) => show('unhandledrejection', e.reason || e));
+
+  // Also expose a quick compat dump
+  window.__MYFI_COMPAT__ = () => ({
+    ua: navigator.userAgent,
+    replaceAll: !!String.prototype.replaceAll,
+    randomUUID: !!(globalThis.crypto && crypto.randomUUID),
+    structuredClone: typeof globalThis.structuredClone === 'function',
+    esModules: true
+  });
+}
+
+function escapeHtml(s) {
+  const str = String(s ?? '');
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return str.replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+
 // Register screens (dynamic import loaders)
 registerScreens([
   { id: 'start',    loader: () => import('../screens/start/index.js') },
@@ -76,7 +129,7 @@ function kickMusicOnce() {
 }
 window.addEventListener('pointerdown', kickMusicOnce, { once: true, capture: true });
 
-
+installFatalOverlay();
 initChrome();
 initRouter({ stageEl: document.getElementById('stage') });
 
