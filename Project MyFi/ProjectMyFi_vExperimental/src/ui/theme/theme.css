@@ -55,3 +55,17 @@
   padding: 6px 10px;
   font-size: 12px;
 }
+
+/* ───────────────── Navigation gesture lock ───────────────── */
+
+/* While a navigation drag is in progress, only the active screen
+   should receive pointer events. This prevents destination screens
+   (e.g. Quests) from stealing the gesture mid-transition. */
+body[data-nav-state="transitioning"] .screen-root {
+  pointer-events: none;
+}
+
+/* Re-enable interaction only for the currently active screen */
+body[data-nav-state="transitioning"] .screen-root.screen-active {
+  pointer-events: auto;
+}

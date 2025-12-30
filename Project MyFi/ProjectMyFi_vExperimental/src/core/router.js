@@ -11,6 +11,14 @@ const SNAP_MS = 260;
 const THRESHOLD = 0.34;
 const VX_BONUS  = 0.18;
 
+let navState = 'idle'; // 'idle' | 'transitioning'
+
+function setNavState(next) {
+  navState = next;
+  document.body.dataset.navState = next;
+}
+
+
 export function initRouter({ stageEl }) {
   stage = stageEl;
   plane = stage.querySelector('#plane');
@@ -95,6 +103,8 @@ function setPlaneTransform(x, y, _withTransition = false) {
 
 
 export async function navigate(id) {
+  setNavState('idle');
+
   const target = await ensureMounted(id);
 
   if (current && current.def.onHide) current.def.onHide();
@@ -137,6 +147,11 @@ export async function navigate(id) {
 
   if (target.def.onShow) target.def.onShow();
   current = target;
+
+  cache.forEach(rec => {
+    rec.root.classList.toggle('screen-active', rec === target);
+  });
+
 
   applyMusicPolicy(target.def);
 
@@ -208,6 +223,9 @@ function onDown(e) {
   dragging = true;
   stage.classList.add('dragging');
 
+  setNavState('transitioning');
+
+
   // capture safely (some desktop emulators don’t support/allow it)
   try { stage.setPointerCapture(e.pointerId); } catch {}
 
@@ -247,6 +265,7 @@ function onUp() {
   if (!dragging) return;
   dragging = false;
   stage.classList.remove('dragging');
+  setNavState('idle');
 
   if (!activeTarget) {
     const vw = window.innerWidth, vh = window.innerHeight;
