@@ -167,9 +167,6 @@ export default {
     // 4) Render
     keepLoopsPlaying(root);
 
-    try { localStorage.setItem('MYFI_SHOW_FATAL', '1'); } catch {}
-
-
   },
 
   unmount() {
