@@ -7,15 +7,15 @@ import { createEventsLogUI } from './eventsLogUI.js';
 
 export function createHubUI(root, deps = {}) {
   const vitals = createVitalsUI(root, deps);
-  //const events = createEventsLogUI(root, deps);
+  const events = createEventsLogUI(root, deps);
 
   return {
     render(vm) {
       vitals.render(vm);
-      //events.render(vm);
+      events.render(vm);
     },
     destroy() {
-      //events.destroy();
+      events.destroy();
       vitals.destroy();
     }
   };

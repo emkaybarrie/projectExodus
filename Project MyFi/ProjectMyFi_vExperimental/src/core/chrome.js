@@ -24,12 +24,6 @@ function measure() {
 
   root.style.setProperty('--header-h', (currentMode === 'none' ? 0 : h) + 'px');
   root.style.setProperty('--footer-h', (currentMode === 'full' ? f : 0) + 'px');
-
-  // Aliases (so DSL/layout can reference explicit chrome tokens)
-  root.style.setProperty('--chrome-header-h', getComputedStyle(root).getPropertyValue('--header-h').trim());
-  root.style.setProperty('--chrome-footer-h', getComputedStyle(root).getPropertyValue('--footer-h').trim());
-
-
 }
 
 /**

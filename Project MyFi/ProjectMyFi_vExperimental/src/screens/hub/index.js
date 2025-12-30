@@ -141,6 +141,29 @@ export default {
     controller = createHubController({ owner: 'hub' });
     await controller.mount(root);
 
+    // // 1) Scoped CSS
+    // unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
+
+    // // 2) Screen DOM
+    // await injectView(root, new URL('./view.html', import.meta.url));
+
+    // // 3) Initial vitals boot
+    // await bootVitals();
+
+    // // 4) Wire card interactions (return cleanups)
+    // cleanup.push(wireVitalsStatusToggle());
+    // cleanup.push(wireShieldBreakdown(() => latestGW));
+    // cleanup.push(setupViewModeSwitcher(async (mode) => {
+    //   currentMode = mode;
+    //   await ensureFocusCache(mode);            // fetch sums if toggled into Focus, or window rolled
+    //   const vm = buildHUDModel(latestGW, currentMode);
+    //   renderBars(vm);
+    //   window.dispatchEvent(new CustomEvent('vitals:updated', { detail:{ vm, gw: latestGW } }));
+    // }));
+
+    // // Temp: pulse the main Essence btn
+    // const mainBtn = document.getElementById('main-btn');
+    // if (mainBtn) mainBtn.classList.add('pulse');
   },
 
   onShow() {
