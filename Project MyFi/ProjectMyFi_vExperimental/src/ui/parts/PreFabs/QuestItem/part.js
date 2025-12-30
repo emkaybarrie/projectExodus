@@ -23,7 +23,6 @@ async function loadHTML() {
   return html;
 }
 
-
 export default {
   id: 'QuestItem',
   variants: ['default'],

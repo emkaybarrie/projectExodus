@@ -108,6 +108,23 @@ window.MyFiJourneys = {
   }
 };
 
+// Dev helper: data mode toggles (safe in prod; just exposes helpers)
+import { setGlobalDataMode, setFeatureDataMode } from './dataMode.js';
+
+window.MyFiData = {
+  setGlobal: (mode) => {
+    const ok = setGlobalDataMode(mode);
+    console.log('[MyFiData] setGlobal', mode, ok);
+    return ok;
+  },
+  setFeature: (featureId, mode) => {
+    const ok = setFeatureDataMode(featureId, mode);
+    console.log('[MyFiData] setFeature', featureId, mode, ok);
+    return ok;
+  }
+};
+
+
 
 
 
