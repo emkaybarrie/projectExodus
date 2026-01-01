@@ -69,3 +69,16 @@ body[data-nav-state="transitioning"] .screen-root {
 body[data-nav-state="transitioning"] .screen-root.screen-active {
   pointer-events: auto;
 }
+
+/* ───────────────── Navigation gesture lock ─────────────────
+   During a drag transition, prevent destination screens from
+   stealing pointer/touch input mid-swipe.
+*/
+body[data-nav-state="transitioning"] .screen-root {
+  pointer-events: none;
+}
+
+body[data-nav-state="transitioning"] .screen-root.screen-current {
+  pointer-events: auto;
+}
+
