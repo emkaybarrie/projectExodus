@@ -36,6 +36,22 @@ async function importOrThrow(rel, base, label) {
   }
 }
 
+async function probeURL(url) {
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+    return { ok: res.ok, status: res.status, statusText: res.statusText, ct, url };
+  } catch (e) {
+    return { ok: false, status: 0, statusText: 'fetch failed', ct: '', url, err: e?.message || String(e) };
+  }
+}
+
+function formatProbe(p) {
+  const status = p.status ? `${p.status} ${p.statusText}`.trim() : (p.err || '');
+  return `${p.ok ? '✅' : '❌'} ${p.url}\n   ${status} ct="${p.ct}"`;
+}
+
+
 export function createController() {
   let unstyle = null;
   let surfaceHandle = null;
@@ -69,6 +85,34 @@ export function createController() {
       root.innerHTML = `<div style="padding:14px; font:12px system-ui; opacity:.75;">Loading quests…</div>`;
 
       try {
+        // PROBE: validate all part module URLs are served as JS (catches 404/case/SW HTML fallback on mobile)
+        
+          const baseURL = import.meta.url;
+          const urls = [
+            new URL('../../ui/parts/SegmentedTabs/part.js', baseURL).href,
+            new URL('../../ui/parts/List/part.js', baseURL).href,
+            new URL('../../ui/parts/Button/part.js', baseURL).href,
+            new URL('../../ui/parts/Badge/part.js', baseURL).href,
+            new URL('../../ui/parts/ProgressBar/part.js', baseURL).href,
+            new URL('../../ui/parts/PreFabs/QuestItem/part.js', baseURL).href,
+            // Also probe the registry itself
+            new URL('../../ui/parts/registry.js', baseURL).href,
+          ];
+
+          const probes = await Promise.all(urls.map(probeURL));
+
+          const bad = probes.filter(p =>
+            !p.ok ||
+            (!p.ct.includes('javascript') && !p.ct.includes('ecmascript'))
+          );
+
+          if (bad.length) {
+            const detail = bad.map(formatProbe).join('\n\n');
+            showFatal(root, 'Quests cannot load UI parts (mobile)', detail);
+            throw new Error('Part module probe failed (see screen details)');
+          }
+        
+
         // Resolve relative to *this* file reliably
         const base = import.meta.url;
 
