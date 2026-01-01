@@ -49,12 +49,12 @@ export default {
 
     try {
       // Dynamically import chrome helper (avoid static import at module eval time)
-      const chromeUrl = new URL('../../core/chrome.js', import.meta.url).href + `?v=${Date.now()}`;
+      const chromeUrl = new URL('../../core/chrome.js', import.meta.url).href;
       const chromeMod = await import(chromeUrl);
       _setHeaderTitle = chromeMod.setHeaderTitle || null;
 
       // Dynamically import controller (avoid static import at module eval time)
-      const controllerUrl = new URL('./controller.js', import.meta.url).href + `?v=${Date.now()}`;
+      const controllerUrl = new URL('./controller.js', import.meta.url).href;
       const controllerMod = await import(controllerUrl);
 
       const createController = controllerMod.createController || null;
