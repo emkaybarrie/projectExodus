@@ -23,7 +23,7 @@ export async function loadJSON(urlLike) {
 // Surface schema (v1)
 // {
 //   id: "quests",
-//   slots: [ { id:"root", class:"...", style:{...} }, ... ],
+//   slots: [ { id:"root", class:"...", style:{...}, parent?:"<slotId>" }, ... ],
 //   parts: [ { id:"board", kind:"QuestBoard", slot:"root", props:{...} }, ... ]
 // }
 function validateSurface(surface) {
@@ -63,9 +63,10 @@ export async function mountSurface(root, surface, { resolvePart, ctx = {} } = {}
   if (!vr.ok) throw new Error(`mountSurface: invalid surface: ${vr.problems.join('; ')}`);
   if (typeof resolvePart !== 'function') throw new Error('mountSurface: resolvePart(kind) is required');
 
-  // Build slots
+  // Build slots (supports simple nesting via `parent` slot id)
   root.innerHTML = '';
   const slots = new Map();
+  // First pass: create all slot elements
   for (const s of surface.slots) {
     const id = s?.id;
     if (!id) continue;
@@ -75,8 +76,17 @@ export async function mountSurface(root, surface, { resolvePart, ctx = {} } = {}
       style: s.style || {}
     });
     slot.dataset.slotId = id;
-    root.appendChild(slot);
     slots.set(id, slot);
+  }
+  // Second pass: append in declared order to either root or parent slot
+  for (const s of surface.slots) {
+    const id = s?.id;
+    if (!id) continue;
+    const slot = slots.get(id);
+    if (!slot) continue;
+    const parentId = s?.parent;
+    const parentEl = parentId ? slots.get(parentId) : null;
+    (parentEl || root).appendChild(slot);
   }
 
   // Mount parts
@@ -94,7 +104,14 @@ export async function mountSurface(root, surface, { resolvePart, ctx = {} } = {}
     const partRoot = el('div', { class: `part part-${p.kind}` });
     partRoot.dataset.partId = p.id || '';
     partRoot.dataset.partKind = p.kind;
-    host.appendChild(partRoot);
+
+    // IMPORTANT (nested slots):
+    // Slots can contain child slot elements (declared via `parent`). We want parts
+    // mounted into a slot to appear *before* its child slots, so header/tabs don't
+    // get pushed below the nested content region.
+    const firstChildSlot = Array.from(host.children).find(ch => ch?.dataset?.slotId);
+    if (firstChildSlot) host.insertBefore(partRoot, firstChildSlot);
+    else host.appendChild(partRoot);
 
     const api = await partFactory(partRoot, {
       id: p.id,

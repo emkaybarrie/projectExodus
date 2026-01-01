@@ -10,9 +10,9 @@
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
 import { loadTextOnce, loadJSONOnce } from '../../../core/assetLoader.js';
 import { warnIfInvalid } from '../../../core/contractValidator.js';
-// RewardRow is a primitive (with compat wrapper under ui/parts). Import via the wrapper
+// RewardRow is a primitive. Import directly from primitives.
 // so the ObjectiveCard prefab stays decoupled from internal folder layout.
-import { rewardRowHTML } from '../../parts/RewardRow.js';
+import { rewardRowHTML } from '../../primitives/RewardRow/part.js';
 
 function clamp01(n){ return Math.max(0, Math.min(1, n)); }
 
