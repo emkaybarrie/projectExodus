@@ -84,8 +84,8 @@ function build(){
   return wrap;
 }
 
-function renderQuestCard(q, handlers){
-  return renderObjectiveCard(q, handlers);
+function renderQuestCard(q){
+  return renderObjectiveCard(q);
 }
 
 
@@ -105,11 +105,6 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   const focusedListEl = root.querySelector('[data-list="focused"]');
   const availListEl = root.querySelector('[data-list="available"]');
   const doneListEl = root.querySelector('[data-list="completed"]');
-
-  const handlers = {
-    onFocus: (q) => toggleFocus(q),
-    onClaim: (q) => claim(q),
-  };
 
   function setFilter(type){
     state.filterType = type;
@@ -151,9 +146,9 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
     availListEl.innerHTML = '';
     doneListEl.innerHTML = '';
 
-    focused.forEach(q => focusedListEl.appendChild(renderQuestCard(q, handlers)));
-    available.forEach(q => availListEl.appendChild(renderQuestCard(q, handlers)));
-    completed.forEach(q => doneListEl.appendChild(renderQuestCard(q, handlers)));
+    focused.forEach(q => focusedListEl.appendChild(renderQuestCard(q)));
+    available.forEach(q => availListEl.appendChild(renderQuestCard(q)));
+    completed.forEach(q => doneListEl.appendChild(renderQuestCard(q)));
 
     if (focused.length === 0) focusedListEl.innerHTML = `<div class="qbEmpty">No focused quests yet.</div>`;
     if (available.length === 0) availListEl.innerHTML = `<div class="qbEmpty">No available quests in this filter.</div>`;
