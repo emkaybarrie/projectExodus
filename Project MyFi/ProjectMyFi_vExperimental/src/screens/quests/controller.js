@@ -18,6 +18,8 @@ export function createController() {
 
   return {
     async mount(root, ctx = {}) {
+      // Enable vertical scrolling on touch devices (plane owns gestures; screens opt-in).
+      root.classList.add('scrollable','questsScreen');
       unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
 
       // JSON-first surface

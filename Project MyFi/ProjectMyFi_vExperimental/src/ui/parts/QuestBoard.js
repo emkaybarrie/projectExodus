@@ -5,6 +5,8 @@
 // rather than a bespoke "QuestCard" widget. The JSON surface decides WHERE
 // it sits; this part decides HOW to render and wire events.
 
+import { renderObjectiveCard } from './ObjectiveCard.js';
+
 const TYPES = [
   { key: 'income', label: 'Income' },
   { key: 'spend', label: 'Spend' },
@@ -82,33 +84,10 @@ function build(){
   return wrap;
 }
 
-function renderQuestCard(q){
-  const pct = q.target ? clamp01((q.progress || 0) / q.target) : 0;
-  const card = document.createElement('div');
-  card.className = `qbCard ${q.focused ? 'is-focused' : ''} ${q.state ? `is-${q.state}` : ''}`;
-  card.dataset.qid = q.id;
-  card.innerHTML = `
-    <div class="qbCard__row">
-      <div class="qbCard__meta">
-        <div class="qbCard__type">${q.type.toUpperCase()}</div>
-        <div class="qbCard__name">${q.title}</div>
-      </div>
-      <div class="qbCard__actions">
-        <button class="qbBtn" data-act="focus">${q.focused ? 'Unfocus' : 'Focus'}</button>
-        <button class="qbBtn" data-act="claim" ${q.state !== 'complete' || q.claimed ? 'disabled' : ''}>Claim</button>
-      </div>
-    </div>
-    <div class="qbCard__nar">${q.narrative || ''}</div>
-    <div class="qbCard__bar">
-      <div class="qbCard__fill" style="width:${Math.round(pct*100)}%"></div>
-    </div>
-    <div class="qbCard__foot">
-      <div class="qbCard__prog">${q.progress || 0}/${q.target || 0}</div>
-      <div class="qbCard__reward">${fmtReward(q.reward)}</div>
-    </div>
-  `;
-  return card;
+function renderQuestCard(q, handlers){
+  return renderObjectiveCard(q, handlers);
 }
+
 
 export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   const state = {
@@ -126,6 +105,11 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   const focusedListEl = root.querySelector('[data-list="focused"]');
   const availListEl = root.querySelector('[data-list="available"]');
   const doneListEl = root.querySelector('[data-list="completed"]');
+
+  const handlers = {
+    onFocus: (q) => toggleFocus(q),
+    onClaim: (q) => claim(q),
+  };
 
   function setFilter(type){
     state.filterType = type;
@@ -167,9 +151,9 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
     availListEl.innerHTML = '';
     doneListEl.innerHTML = '';
 
-    focused.forEach(q => focusedListEl.appendChild(renderQuestCard(q)));
-    available.forEach(q => availListEl.appendChild(renderQuestCard(q)));
-    completed.forEach(q => doneListEl.appendChild(renderQuestCard(q)));
+    focused.forEach(q => focusedListEl.appendChild(renderQuestCard(q, handlers)));
+    available.forEach(q => availListEl.appendChild(renderQuestCard(q, handlers)));
+    completed.forEach(q => doneListEl.appendChild(renderQuestCard(q, handlers)));
 
     if (focused.length === 0) focusedListEl.innerHTML = `<div class="qbEmpty">No focused quests yet.</div>`;
     if (available.length === 0) availListEl.innerHTML = `<div class="qbEmpty">No available quests in this filter.</div>`;
