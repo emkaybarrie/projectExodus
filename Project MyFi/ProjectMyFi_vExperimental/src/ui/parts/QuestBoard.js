@@ -6,6 +6,7 @@
 // it sits; this part decides HOW to render and wire events.
 
 import { renderObjectiveCard } from './ObjectiveCard.js';
+import { mountSegmentTabs } from './SegmentTabs.js';
 
 const TYPES = [
   { key: 'income', label: 'Income' },
@@ -108,26 +109,7 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
 
   function setFilter(type){
     state.filterType = type;
-    [...typesEl.querySelectorAll('button')].forEach(b => b.classList.toggle('is-active', b.dataset.type === type));
     paint();
-  }
-
-  function buildTypeTabs(){
-    const btnAll = document.createElement('button');
-    btnAll.className = 'qbTab is-active';
-    btnAll.dataset.type = 'all';
-    btnAll.textContent = 'All';
-    btnAll.addEventListener('click', () => setFilter('all'));
-    typesEl.appendChild(btnAll);
-
-    for (const t of TYPES) {
-      const b = document.createElement('button');
-      b.className = 'qbTab';
-      b.dataset.type = t.key;
-      b.textContent = t.label;
-      b.addEventListener('click', () => setFilter(t.key));
-      typesEl.appendChild(b);
-    }
   }
 
   function filtered(list){
@@ -193,13 +175,21 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   }
 
   // Init
-  buildTypeTabs();
+  const tabs = mountSegmentTabs(typesEl, {
+    ariaLabel: 'Quest types',
+    buttonClass: 'qbTab',
+    activeClass: 'is-active',
+    items: [{ key:'all', label:'All' }, ...TYPES.map(t => ({ key:t.key, label:t.label }))],
+    initialKey: 'all',
+    onSelect: setFilter,
+  });
   root.addEventListener('click', onClick);
   paint();
 
   return {
     unmount(){
       try { root.removeEventListener('click', onClick); } catch {}
+      try { tabs?.unmount?.(); } catch {}
       try { host.innerHTML = ''; } catch {}
     }
   };
