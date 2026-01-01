@@ -47,7 +47,7 @@ function makeSafeScreenLoader(screenId, relPath) {
     }
 
     // 2) Cache-bust the actual module import
-    return import(url.href + `?v=${Date.now()}`);
+    return import(url.href);
   };
 }
 
