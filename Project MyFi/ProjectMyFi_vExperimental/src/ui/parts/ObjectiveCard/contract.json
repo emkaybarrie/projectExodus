@@ -1,11 +1,29 @@
 {
   "part": "ObjectiveCard",
-  "version": 0,
-  "required": {
-    "cardClass": "qbCard",
-    "dataset": ["qid"],
-    "buttonActs": ["focus", "claim"],
-    "progress": [".qbCard__bar", ".qbCard__fill"],
-    "footer": [".qbCard__foot", ".qbCard__prog", ".qbCard__reward"]
+  "version": 1,
+  "rootClass": "ObjectiveCard",
+  "requiredHooks": [
+    "row",
+    "meta",
+    "type",
+    "title",
+    "actions",
+    "btnFocus",
+    "btnClaim",
+    "narrative",
+    "bar",
+    "fill",
+    "foot",
+    "progressText",
+    "reward"
+  ],
+  "requiredButtonActs": ["focus", "claim"],
+  "scope": {
+    "cssRoot": ".ObjectiveCard",
+    "forbiddenSelectors": ["body", "html", "#plane", ".screen-root"]
+  },
+  "notes": {
+    "revert": "Delete/blank uplift.css to revert visuals; delete uplift.html to revert markup.",
+    "behaviour": "Buttons must keep data-act attributes; QuestBoard owns click handling."
   }
 }
