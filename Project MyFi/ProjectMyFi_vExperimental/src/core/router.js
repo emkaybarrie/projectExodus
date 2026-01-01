@@ -13,6 +13,58 @@ const SNAP_MS = 260;
 const THRESHOLD = 0.34;
 const VX_BONUS  = 0.18;
 
+let navInFlight = false;
+
+function notifyNavError(message) {
+  try {
+    console.warn('[router]', message);
+    // Minimal visible hint (no dependencies)
+    let el = document.getElementById('router-nav-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'router-nav-toast';
+      el.style.cssText = `
+        position:fixed; left:12px; right:12px; bottom:calc(12px + var(--chrome-footer-h, 0px));
+        z-index:999999; background:rgba(0,0,0,.72); color:#fff;
+        padding:10px 12px; border-radius:12px; font:12px system-ui;
+        pointer-events:none;
+      `;
+      document.body.appendChild(el);
+    }
+    el.textContent = message;
+    clearTimeout(el.__t);
+    el.__t = setTimeout(() => { try { el.remove(); } catch {} }, 2400);
+  } catch {}
+}
+
+async function safeNavigate(targetId, { timeoutMs = 2500 } = {}) {
+  if (!targetId) return false;
+  if (navInFlight) return false;
+  navInFlight = true;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const backX = current?.pos?.x ? current.pos.x * vw : 0;
+  const backY = current?.pos?.y ? current.pos.y * vh : 0;
+
+  try {
+    const navPromise = navigate(targetId);
+    const timeoutPromise = new Promise((_, rej) => {
+      setTimeout(() => rej(new Error(`navigate timeout: ${targetId}`)), timeoutMs);
+    });
+
+    await Promise.race([navPromise, timeoutPromise]);
+    return true;
+  } catch (e) {
+    notifyNavError(`Could not open "${targetId}" (mobile). Snapping back…`);
+    // Snap back to the current screen position instead of leaving the plane mid-way.
+    try { animateTo(backX, backY); } catch {}
+    return false;
+  } finally {
+    navInFlight = false;
+  }
+}
+
+
 function armDragListeners() {
   if (dragListenersArmed) return;
   dragListenersArmed = true;
@@ -250,7 +302,10 @@ function onDown(e) {
   const neighbors = ['left','right','up','down']
     .map(dir => getNeighbor(current.def.id, dir))
     .filter(Boolean);
-  neighbors.forEach(n => ensureMounted(n));
+  neighbors.forEach(n => ensureMounted(n).catch(err => {
+    console.warn('[router] neighbor mount failed:', n, err);
+  }));
+
 }
 
 function onMove(e) {
@@ -296,7 +351,8 @@ function onUp() {
   const passed = Math.max(fracX, fracY) + VX_BONUS >= THRESHOLD;
 
 if (passed) {
-  navigate(activeTarget);  // navigate will call animateTo() to glide into place
+  safeNavigate(activeTarget);
+  // navigate will call animateTo() to glide into place
 } else {
   const vw = window.innerWidth, vh = window.innerHeight;
   animateTo(current.pos.x * vw, current.pos.y * vh); // glide back to current
