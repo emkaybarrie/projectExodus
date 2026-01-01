@@ -1,191 +1,30 @@
 /**
- * Quests Screen Controller (Surface Host)
- * - Renders DSL surface into the screen root
- * - Builds VM slices via quests feature
- * - Provides actions registry (routes UI events -> feature APIs)
+ * <SCREEN> Controller
+ * Responsibility:
+ * - Mount UI (inject view)
+ * - Wire UI events (later)
+ * - Call feature APIs / open modals by ID (later)
  *
- * NOTE:
- * This controller uses dynamic imports inside mount() so that:
- * - The module always evaluates (even if a dependency path is wrong on mobile/GitHub Pages)
- * - Failures report the exact URL that couldn't be imported
+ * NOTE: currently minimal placeholder to standardize screen structure.
  */
-function escapeHtml(s) {
-  const str = String(s ?? '');
-  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return str.replace(/[&<>"']/g, (ch) => map[ch]);
-}
-
-function showFatal(root, title, detail) {
-  try {
-    root.innerHTML = `
-      <div style="padding:14px;">
-        <div style="font:14px system-ui; font-weight:900; margin-bottom:8px;">${escapeHtml(title)}</div>
-        <pre style="white-space:pre-wrap; font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height:1.35; background:rgba(0,0,0,.06); padding:10px; border-radius:12px;">${escapeHtml(detail)}</pre>
-      </div>
-    `;
-  } catch {}
-}
-
-async function importOrThrow(rel, base, label) {
-  const url = new URL(rel, base).href;
-  try {
-    return await import(url);
-  } catch (e) {
-    const msg = e?.stack || e?.message || String(e);
-    throw new Error(`[quests.controller] failed to import ${label}\n${url}\n\n${msg}`);
-  }
-}
-
-async function probeURL(url) {
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    const ct = (res.headers.get('content-type') || '').toLowerCase();
-    return { ok: res.ok, status: res.status, statusText: res.statusText, ct, url };
-  } catch (e) {
-    return { ok: false, status: 0, statusText: 'fetch failed', ct: '', url, err: e?.message || String(e) };
-  }
-}
-
-function formatProbe(p) {
-  const status = p.status ? `${p.status} ${p.statusText}`.trim() : (p.err || '');
-  return `${p.ok ? '✅' : '❌'} ${p.url}\n   ${status} ct="${p.ct}"`;
-}
-
+import { injectView } from '../../core/view.js';
+import { loadScopedCSS } from '../../core/cssScope.js';
 
 export function createController() {
+  let cleanup = [];
   let unstyle = null;
-  let surfaceHandle = null;
-  let vmStore = null;
-  let unsub = null;
-
-  let rootEl = null;
-
-  // Loaded lazily (so a bad path doesn't prevent controller eval)
-  let loadScopedCSS = null;
-  let getFeature = null;
-  let loadSurfaceSpec = null;
-  let renderSurface = null;
-  let partRegistry = null;
-  let createActions = null;
-  let createVMStore = null;
-
-  async function buildVM() {
-    const quests = getFeature('quests').api;
-    return quests.buildVM();
-  }
-
-  async function refresh() {
-    if (!vmStore) return;
-    await vmStore.refresh();
-  }
 
   return {
     async mount(root) {
-      rootEl = root;
-      root.innerHTML = `<div style="padding:14px; font:12px system-ui; opacity:.75;">Loading quests…</div>`;
-
-      try {
-        // PROBE: validate all part module URLs are served as JS (catches 404/case/SW HTML fallback on mobile)
-        
-          const baseURL = import.meta.url;
-          const urls = [
-            new URL('../../ui/parts/SegmentedTabs/part.js', baseURL).href,
-            new URL('../../ui/parts/List/part.js', baseURL).href,
-            new URL('../../ui/parts/Button/part.js', baseURL).href,
-            new URL('../../ui/parts/Badge/part.js', baseURL).href,
-            new URL('../../ui/parts/ProgressBar/part.js', baseURL).href,
-            new URL('../../ui/parts/PreFabs/QuestItem/part.js', baseURL).href,
-            // Also probe the registry itself
-            new URL('../../ui/parts/registry.js', baseURL).href,
-          ];
-
-          const probes = await Promise.all(urls.map(probeURL));
-
-          const bad = probes.filter(p =>
-            !p.ok ||
-            (!p.ct.includes('javascript') && !p.ct.includes('ecmascript'))
-          );
-
-          if (bad.length) {
-            const detail = bad.map(formatProbe).join('\n\n');
-            showFatal(root, 'Quests cannot load UI parts (mobile)', detail);
-            throw new Error('Part module probe failed (see screen details)');
-          }
-        
-
-        // Resolve relative to *this* file reliably
-        const base = import.meta.url;
-
-        // 1) Import dependencies with explicit per-module error messages
-        ({ loadScopedCSS } = await importOrThrow('../../core/cssScope.js', base, 'core/cssScope.js'));
-        ({ getFeature } = await importOrThrow('../../features/registry.js', base, 'features/registry.js'));
-        ({ loadSurfaceSpec } = await importOrThrow('../../ui/surfaces/registry.js', base, 'ui/surfaces/registry.js'));
-        ({ renderSurface } = await importOrThrow('../../ui/renderer/surfaceRenderer.js', base, 'ui/renderer/surfaceRenderer.js'));
-        ({ partRegistry } = await importOrThrow('../../ui/parts/registry.js', base, 'ui/parts/registry.js'));
-        ({ createActions } = await importOrThrow('../../ui/actions/registry.js', base, 'ui/actions/registry.js'));
-        ({ createVMStore } = await importOrThrow('../../core/vmStore.js', base, 'core/vmStore.js'));
-
-        // 2) Optional: scoped css
-        // Guard: root.id must exist for scoping; if missing, scope to a fallback id
-        const scopeId = root.id || 'screen-quests';
-        unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), scopeId);
-
-        // 3) Build surface container
-        root.replaceChildren();
-        const mountEl = document.createElement('div');
-        mountEl.className = 'ui-surface-root';
-        root.appendChild(mountEl);
-
-        // 4) Load surface spec once
-        const surfaceSpec = await loadSurfaceSpec('quests.v1');
-
-        // 5) VM store + subscription
-        vmStore = createVMStore({ buildVM });
-        unsub = vmStore.subscribe((vm) => {
-          surfaceHandle?.update?.({ vm });
-        });
-
-        const vm = await vmStore.refresh();
-
-        // 6) Actions close over refresh()
-        const actions = createActions({ vmStore, refresh });
-
-        // 7) Render surface
-        surfaceHandle = renderSurface({
-          surfaceSpec,
-          mountEl,
-          vm,
-          actions,
-          partRegistry,
-          opts: {}
-        });
-
-      } catch (e) {
-        const msg = e?.stack || e?.message || String(e);
-        showFatal(root, 'Quests failed to mount', msg);
-        throw e; // lets router snap back + toast too (your new router patch)
-      }
+      unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
+      await injectView(root, new URL('./view.html', import.meta.url));
     },
-
-    onShow() {
-      refresh().catch(() => {});
-    },
-
+    onShow() {},
     onHide() {},
-
     unmount() {
-      try { surfaceHandle?.unmount?.(); } catch {}
-
-      try { unsub?.(); } catch {}
-      unsub = null;
-      vmStore = null;
-      surfaceHandle = null;
-
-      try { if (unstyle) unstyle(); } catch {}
-      unstyle = null;
-
-      if (rootEl) rootEl.replaceChildren();
-      rootEl = null;
+      cleanup.forEach(fn => { try { fn(); } catch {} });
+      cleanup = [];
+      if (unstyle) unstyle();
     }
   };
 }
