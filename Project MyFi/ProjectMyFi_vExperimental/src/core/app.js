@@ -23,6 +23,9 @@ import { registerJourneyModals } from '../journeys/registerJourneyModals.js';
 import { journeys } from '../journeys/catalog.js';
 import { runJourney } from '../journeys/runner.js';
 
+import '../ui/theme/applyTheme.js';
+
+
 
 // Register screens (dynamic import loaders)
 registerScreens([
