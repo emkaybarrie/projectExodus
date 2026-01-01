@@ -9,8 +9,10 @@
 
 import { loadScopedCSS } from '../../core/cssScope.js';
 import { loadJSON, mountSurface } from '../../core/surface.js';
-import { resolvePart } from '../../ui/parts/registry.js';
+import { resolvePart } from '../../ui/registry.js';
 import { ensureGlobalCSS } from '../../core/styleLoader.js';
+
+import { createQuestsStore } from './model.js';
 
 export function createController() {
   let cleanup = [];
@@ -35,11 +37,15 @@ export function createController() {
       root.appendChild(scroll);
       unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
 
+      // Screen store (Model A): controller owns state + actions.
+      // Parts render from this store via ctx.quests.
+      const questsStore = createQuestsStore();
+
       // JSON-first surface
       const surface = await loadJSON(new URL('./surface.json', import.meta.url));
       surfaceMount = await mountSurface(scroll, surface, {
         resolvePart,
-        ctx
+        ctx: { ...ctx, quests: questsStore }
       });
 
       // (Optional) example of listening to part events without touching DOM structure
