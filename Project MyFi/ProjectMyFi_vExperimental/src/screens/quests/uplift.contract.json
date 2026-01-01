@@ -1,0 +1,16 @@
+{
+  "surface": "quests",
+  "version": 1,
+  "scope": {
+    "cssRoot": ".questsScreen",
+    "forbiddenSelectors": ["body", "html", "#plane", ".screen-root"]
+  },
+  "hooks": {
+    "screenRoot": ".questsScreen",
+    "scroll": ".questsScroll"
+  },
+  "notes": {
+    "revert": "Blank screens/quests/uplift.css to revert layout/style adjustments.",
+    "intent": "Screen-level uplift may adjust spacing, alignment and layout only; avoid changing interaction or navigation affordances."
+  }
+}

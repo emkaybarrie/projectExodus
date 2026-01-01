@@ -1,0 +1,28 @@
+<!-- CONTRACT:BEGIN ObjectiveCard
+Rules:
+- Keep all elements with data-hook attributes.
+- Keep button data-act attributes: focus, claim.
+- You may rearrange markup INSIDE this block, but do not remove required hooks.
+- You may add new elements as long as you don't break existing hooks.
+-->
+
+<div class="qbCard__row" data-hook="row">
+  <div class="qbCard__meta" data-hook="meta">
+    <div class="qbCard__type" data-hook="type">TYPE</div>
+    <div class="qbCard__name" data-hook="title">Title</div>
+  </div>
+  <div class="qbCard__actions" data-hook="actions">
+    <button class="myfiBtn myfiBtnGhost" data-act="focus" data-hook="btnFocus" type="button">Focus</button>
+    <button class="myfiBtn myfiBtnGhost" data-act="claim" data-hook="btnClaim" type="button">Claim</button>
+  </div>
+</div>
+<div class="qbCard__nar" data-hook="narrative"></div>
+<div class="qbCard__bar" data-hook="bar">
+  <div class="qbCard__fill" data-hook="fill"></div>
+</div>
+<div class="qbCard__foot" data-hook="foot">
+  <div class="qbCard__prog" data-hook="progressText"></div>
+  <div class="qbCard__reward" data-hook="reward"></div>
+</div>
+
+<!-- CONTRACT:END ObjectiveCard -->
