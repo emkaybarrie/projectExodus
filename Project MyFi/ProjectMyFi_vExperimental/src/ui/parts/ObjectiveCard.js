@@ -7,6 +7,9 @@
 // - Screen/part styles may add small layout tweaks via extra classes.
 // - Behaviour stays in the calling part (QuestBoard), not here.
 
+import { progressBarHTML } from './ProgressBar.js';
+import { objectiveFooterHTML } from './ObjectiveFooter.js';
+
 function clamp01(n){ return Math.max(0, Math.min(1, n)); }
 
 function fmtReward(r){
@@ -54,13 +57,8 @@ export function renderObjectiveCard(q){
       </div>
     </div>
     <div class="qbCard__nar">${q.narrative || ''}</div>
-    <div class="qbCard__bar">
-      <div class="qbCard__fill" style="width:${Math.round(pct*100)}%"></div>
-    </div>
-    <div class="qbCard__foot">
-      <div class="qbCard__prog">${q.progress || 0}/${q.target || 0}</div>
-      <div class="qbCard__reward">${fmtReward(q.reward)}</div>
-    </div>
+    ${progressBarHTML(pct)}
+    ${objectiveFooterHTML(`${q.progress || 0}/${q.target || 0}`, fmtReward(q.reward))}
   `;
   return card;
 }
