@@ -1,0 +1,85 @@
+/* src/core/base.css
+   Baseline primitives / utility classes.
+   Prefer these over bespoke screen CSS so new screens align by default.
+*/
+html, body{
+  font-family: var(--mf-font-body);
+  color: var(--mf-text);
+}
+
+.myfiTitle{
+  font-family: var(--mf-font-title);
+  letter-spacing: .6px;
+}
+
+.myfiCard{
+  background: var(--mf-card-bg);
+  border: 1px solid var(--mf-border);
+  border-radius: var(--mf-radius-m);
+  box-shadow: var(--mf-shadow-tight);
+  backdrop-filter: blur(var(--mf-surface-blur));
+  -webkit-backdrop-filter: blur(var(--mf-surface-blur));
+}
+
+.myfiCard--soft{ background: var(--mf-card-bg-2); }
+
+.myfiCardPad{ padding: var(--mf-pad-2) var(--mf-pad-3); }
+
+.myfiSectionTitle{
+  font-family: var(--mf-font-title);
+  font-weight: 800;
+  font-size: 15px;
+  opacity: .96;
+}
+
+.myfiHint{
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--mf-text-dim);
+}
+
+.myfiRow{ display:flex; align-items:center; gap: var(--mf-gap-1); }
+.myfiCol{ display:flex; flex-direction:column; gap: var(--mf-gap-2); }
+
+.myfiPill{
+  border: 1px solid var(--mf-btn-border);
+  background: var(--mf-btn-bg);
+  color: var(--mf-text);
+  border-radius: var(--mf-pill-radius);
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.myfiPill.is-active{
+  background: rgba(255,255,255,0.10);
+  border-color: var(--mf-btn-border-hover);
+}
+
+.myfiBtn{
+  border: 1px solid var(--mf-btn-border);
+  background: var(--mf-btn-bg);
+  color: var(--mf-text);
+  border-radius: var(--mf-pill-radius);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.myfiBtn:hover{ background: var(--mf-btn-bg-hover); border-color: var(--mf-btn-border-hover); }
+.myfiBtn:disabled{ opacity:.45; pointer-events:none; }
+
+.myfiProgressTrack{
+  height: 10px;
+  border-radius: var(--mf-pill-radius);
+  background: rgba(255,255,255,0.08);
+  overflow:hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.myfiProgressFill{
+  height:100%;
+  width:0%;
+  background: rgba(255,255,255,0.20);
+}
+
+.myfiReward{
+  font-size: 12px;
+  color: rgba(255,255,255,0.86);
+}

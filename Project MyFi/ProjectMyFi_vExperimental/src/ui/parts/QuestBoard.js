@@ -59,22 +59,22 @@ function build(){
   const wrap = document.createElement('div');
   wrap.className = 'qb';
   wrap.innerHTML = `
-    <div class="qb__top">
-      <div class="qb__title">Quests</div>
-      <div class="qb__hint">Focus up to <b>one</b> quest per type. Focused quests auto-claim on completion.</div>
+    <div class="qb__top myfiCard myfiCardPad">
+      <div class="qb__title myfiTitle">Quests</div>
+      <div class="qb__hint myfiHint">Focus up to <b>one</b> quest per type. Focused quests auto-claim on completion.</div>
     </div>
     <div class="qb__types" role="tablist" aria-label="Quest types"></div>
     <div class="qb__sections">
-      <div class="qb__section" data-sec="focused">
-        <div class="qb__secHead">Focused</div>
+      <div class="qb__section myfiCard myfiCardPad" data-sec="focused">
+        <div class="qb__secHead myfiSectionTitle">Focused</div>
         <div class="qb__list" data-list="focused"></div>
       </div>
-      <div class="qb__section" data-sec="available">
-        <div class="qb__secHead">Available</div>
+      <div class="qb__section myfiCard myfiCardPad" data-sec="available">
+        <div class="qb__secHead myfiSectionTitle">Available</div>
         <div class="qb__list" data-list="available"></div>
       </div>
-      <div class="qb__section" data-sec="completed">
-        <div class="qb__secHead">Completed</div>
+      <div class="qb__section myfiCard myfiCardPad" data-sec="completed">
+        <div class="qb__secHead myfiSectionTitle">Completed</div>
         <div class="qb__list" data-list="completed"></div>
       </div>
     </div>
