@@ -1,1 +1,82 @@
-.wrap { padding: 1rem; }
+.questsRoot{
+  padding: 14px;
+}
+
+/* QuestBoard part (v1) */
+.qb{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.qb__top{
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+}
+
+.qb__title{ font-size: 18px; font-weight: 800; letter-spacing: .4px; }
+.qb__hint{ font-size: 12px; opacity: .88; margin-top: 4px; line-height: 1.35; }
+
+.qb__types{ display:flex; gap:8px; overflow:auto; padding-bottom:2px; }
+.qbTab{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.20);
+  color: rgba(255,255,255,0.92);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.qbTab.is-active{ background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.26); }
+
+.qb__sections{ display:flex; flex-direction:column; gap: 14px; }
+.qb__section{
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(0,0,0,0.22);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+}
+.qb__secHead{ font-size: 13px; font-weight: 800; opacity:.95; margin-bottom: 8px; letter-spacing:.2px; }
+.qb__list{ display:flex; flex-direction:column; gap: 10px; }
+
+.qbEmpty{ font-size: 12px; opacity: .7; padding: 10px; text-align: center; }
+
+.qbCard{
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.22);
+}
+.qbCard.is-focused{
+  border-color: rgba(255,255,255,0.22);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset;
+}
+
+.qbCard__row{ display:flex; align-items:flex-start; justify-content:space-between; gap: 10px; }
+.qbCard__meta{ min-width: 0; }
+.qbCard__type{ font-size: 10px; opacity: .75; letter-spacing: .8px; }
+.qbCard__name{ font-size: 14px; font-weight: 800; margin-top: 2px; }
+
+.qbCard__actions{ display:flex; gap: 8px; }
+.qbBtn{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.95);
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+.qbBtn:disabled{ opacity: .45; }
+
+.qbCard__nar{ font-size: 12px; opacity: .85; line-height: 1.35; margin-top: 8px; }
+
+.qbCard__bar{ height: 8px; border-radius: 99px; background: rgba(255,255,255,0.08); overflow:hidden; margin-top: 10px; }
+.qbCard__fill{ height: 100%; background: rgba(255,255,255,0.22); }
+
+.qbCard__foot{ display:flex; justify-content:space-between; gap: 10px; margin-top: 8px; font-size: 12px; }
+.qbCard__prog{ opacity: .8; }
+.qbCard__reward{ opacity: .95; font-weight: 700; }

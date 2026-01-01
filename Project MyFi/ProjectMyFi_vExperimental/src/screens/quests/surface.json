@@ -1,0 +1,16 @@
+{
+  "id": "quests",
+  "slots": [
+    { "id": "root", "class": "questsRoot" }
+  ],
+  "parts": [
+    {
+      "id": "questBoard",
+      "kind": "QuestBoard",
+      "slot": "root",
+      "props": {
+        "variant": "v1"
+      }
+    }
+  ]
+}
