@@ -15,6 +15,34 @@ const VX_BONUS  = 0.18;
 
 let navInFlight = false;
 
+function formatErr(err) {
+  if (!err) return 'Unknown error';
+  if (typeof err === 'string') return err;
+  return err.stack || err.message || String(err);
+}
+
+function showScreenBootError({ screenId, stageEl, message }) {
+  try {
+    let host = document.getElementById('screen-boot-error');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'screen-boot-error';
+      host.style.cssText = `
+        position:fixed; left:12px; right:12px; top:12px;
+        z-index:999999; background:rgba(122,0,0,.92); color:#fff;
+        padding:12px 12px; border-radius:12px;
+        font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        white-space:pre-wrap; line-height:1.35;
+      `;
+      document.body.appendChild(host);
+    }
+    host.textContent = `[BOOT FAIL] ${screenId}\n\n${message}`;
+    // also mark the stage so you can see we’re in error state
+    if (stageEl) stageEl.classList.add('nav-error');
+  } catch {}
+}
+
+
 function notifyNavError(message) {
   try {
     console.warn('[router]', message);
@@ -55,7 +83,7 @@ async function safeNavigate(targetId, { timeoutMs = 2500 } = {}) {
     await Promise.race([navPromise, timeoutPromise]);
     return true;
   } catch (e) {
-    notifyNavError(`Could not open "${targetId}" (mobile). Snapping back…`);
+    notifyNavError(`Could not open "${targetId}" (mobile).\n${formatErr(err)}\nSnapping back…`);
     // Snap back to the current screen position instead of leaving the plane mid-way.
     try { animateTo(backX, backY); } catch {}
     return false;
@@ -135,7 +163,30 @@ async function ensureMounted(id) {
   let rec = cache.get(id);
   if (rec) return rec;
 
-  const mod = await registry.get(id)();
+  const loader = registry.get(id);
+  if (!loader) {
+    const msg = `No screen registered for id="${id}"`;
+    showScreenBootError({
+      screenId: id,
+      stageEl: stage,
+      message: msg
+    });
+    throw new Error(msg);
+  }
+
+  let mod;
+  try {
+    mod = await loader();
+  } catch (err) {
+    const msg = `Dynamic import failed for "${id}"\n\n${formatErr(err)}`;
+    showScreenBootError({
+      screenId: id,
+      stageEl: stage,
+      message: msg
+    });
+    throw err;
+  }
+
   const def = mod.default;
   const root = document.createElement('section');
   root.id = 'screen-' + def.id;
@@ -147,9 +198,22 @@ async function ensureMounted(id) {
   cache.set(def.id, rec);
 
   positionScreen(rec);
-  await def.mount(root, { navigate });
+
+  try {
+    await def.mount(root, { navigate });
+  } catch (err) {
+    const msg = `mount() failed for "${id}"\n\n${formatErr(err)}`;
+    showScreenBootError({
+      screenId: id,
+      stageEl: stage,
+      message: msg
+    });
+    throw err;
+  }
+
   return rec;
 }
+
 
 function positionScreen(rec) {
   // NEW: only position dashboard screens; others will be hidden unless active
