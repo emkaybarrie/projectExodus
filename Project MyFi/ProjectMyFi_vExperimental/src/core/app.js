@@ -24,12 +24,40 @@ import { journeys } from '../journeys/catalog.js';
 import { runJourney } from '../journeys/runner.js';
 
 
+function makeSafeScreenLoader(screenId, relPath) {
+  const url = new URL(relPath, import.meta.url);
+
+  return async () => {
+    // 1) Preflight fetch so we can detect 404 or HTML masquerading as JS
+    const res = await fetch(url, { cache: 'no-store' });
+    const ct = (res.headers.get('content-type') || '').toLowerCase();
+
+    if (!res.ok) {
+      throw new Error(`[${screenId}] fetch failed: ${res.status} ${res.statusText} (${url.pathname})`);
+    }
+
+    // GitHub Pages/SW sometimes returns HTML for missing files
+    if (!ct.includes('javascript') && !ct.includes('ecmascript')) {
+      // Read a small prefix to help identify HTML fallback
+      const preview = (await res.text()).slice(0, 120).replace(/\s+/g, ' ');
+      throw new Error(
+        `[${screenId}] bad content-type "${ct}" for ${url.pathname}. ` +
+        `Response starts: "${preview}"`
+      );
+    }
+
+    // 2) Cache-bust the actual module import
+    return import(url.href + `?v=${Date.now()}`);
+  };
+}
+
+
 // Register screens (dynamic import loaders)
 registerScreens([
   { id: 'start',    loader: () => import('../screens/start/index.js') },
   { id: 'auth',     loader: () => import('../screens/auth/index.js') },
   { id: 'hub',      loader: () => import('../screens/hub/index.js') },
-  { id: 'quests',   loader: () => import('../screens/quests/index.js') },
+  { id:'quests', loader: makeSafeScreenLoader('quests', '../screens/quests/index.js') },
   { id: 'avatar',   loader: () => import('../screens/avatar/index.js') },
   { id: 'guidance', loader: () => import('../screens/guidance/index.js') },
   { id: 'badlands',    loader: () => import('../screens/badlands/index.js') }

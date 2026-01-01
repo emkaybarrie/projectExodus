@@ -159,59 +159,71 @@ function screenPos(id) {
   return { x:0, y:0 };
 }
 
+function showToast(text, ms = 1800) {
+  try {
+    let el = document.getElementById('router-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'router-toast';
+      el.style.position = 'fixed';
+      el.style.left = '50%';
+      el.style.bottom = '14px';
+      el.style.transform = 'translateX(-50%)';
+      el.style.zIndex = '999999';
+      el.style.maxWidth = '92vw';
+      el.style.padding = '10px 12px';
+      el.style.borderRadius = '12px';
+      el.style.border = '1px solid rgba(255,255,255,0.18)';
+      el.style.background = 'rgba(0,0,0,0.75)';
+      el.style.backdropFilter = 'blur(10px)';
+      el.style.color = '#fff';
+      el.style.fontSize = '12px';
+      el.style.lineHeight = '1.3';
+      el.style.whiteSpace = 'pre-wrap';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.style.display = 'block';
+    clearTimeout(el.__t);
+    el.__t = setTimeout(() => { el.style.display = 'none'; }, ms);
+  } catch {}
+}
+
 async function ensureMounted(id) {
   let rec = cache.get(id);
   if (rec) return rec;
 
   const loader = registry.get(id);
   if (!loader) {
-    const msg = `No screen registered for id="${id}"`;
-    showScreenBootError({
-      screenId: id,
-      stageEl: stage,
-      message: msg
-    });
-    throw new Error(msg);
-  }
-
-  let mod;
-  try {
-    mod = await loader();
-  } catch (err) {
-    const msg = `Dynamic import failed for "${id}"\n\n${formatErr(err)}`;
-    showScreenBootError({
-      screenId: id,
-      stageEl: stage,
-      message: msg
-    });
+    const err = new Error(`No screen registered for id "${id}"`);
+    showToast(err.message);
     throw err;
   }
 
-  const def = mod.default;
-  const root = document.createElement('section');
-  root.id = 'screen-' + def.id;
-  root.className = 'screen-root';
-  plane.appendChild(root);
-
-  const pos = screenPos(def.id);
-  rec = { def, root, pos };
-  cache.set(def.id, rec);
-
-  positionScreen(rec);
-
   try {
+    const mod = await loader();
+    const def = mod.default;
+
+    const root = document.createElement('section');
+    root.id = 'screen-' + def.id;
+    root.className = 'screen-root';
+    plane.appendChild(root);
+
+    const pos = screenPos(def.id);
+    rec = { def, root, pos };
+    cache.set(def.id, rec);
+
+    positionScreen(rec);
+
+    // Mount can also fail (e.g. surface fetch / part mount)
     await def.mount(root, { navigate });
+    return rec;
+
   } catch (err) {
-    const msg = `mount() failed for "${id}"\n\n${formatErr(err)}`;
-    showScreenBootError({
-      screenId: id,
-      stageEl: stage,
-      message: msg
-    });
+    const msg = (err && err.message) ? err.message : String(err);
+    showToast(`Could not open "${id}". ${msg}`);
     throw err;
   }
-
-  return rec;
 }
 
 
