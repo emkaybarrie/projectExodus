@@ -7,115 +7,9 @@ const cache = new Map();          // id -> { def, root, pos:{x,y} }
 let stage, plane, current, layout;
 let dragging = false, startX=0, startY=0, lastDX=0, lastDY=0, activeTarget=null;
 
-let dragListenersArmed = false;
-
 const SNAP_MS = 260;
 const THRESHOLD = 0.34;
 const VX_BONUS  = 0.18;
-
-let navInFlight = false;
-
-function formatErr(err) {
-  if (!err) return 'Unknown error';
-  if (typeof err === 'string') return err;
-  return err.stack || err.message || String(err);
-}
-
-function showScreenBootError({ screenId, stageEl, message }) {
-  try {
-    let host = document.getElementById('screen-boot-error');
-    if (!host) {
-      host = document.createElement('div');
-      host.id = 'screen-boot-error';
-      host.style.cssText = `
-        position:fixed; left:12px; right:12px; top:12px;
-        z-index:999999; background:rgba(122,0,0,.92); color:#fff;
-        padding:12px 12px; border-radius:12px;
-        font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        white-space:pre-wrap; line-height:1.35;
-      `;
-      document.body.appendChild(host);
-    }
-    host.textContent = `[BOOT FAIL] ${screenId}\n\n${message}`;
-    // also mark the stage so you can see we’re in error state
-    if (stageEl) stageEl.classList.add('nav-error');
-  } catch {}
-}
-
-
-function notifyNavError(message) {
-  try {
-    console.warn('[router]', message);
-    // Minimal visible hint (no dependencies)
-    let el = document.getElementById('router-nav-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'router-nav-toast';
-      el.style.cssText = `
-        position:fixed; left:12px; right:12px; bottom:calc(12px + var(--chrome-footer-h, 0px));
-        z-index:999999; background:rgba(0,0,0,.72); color:#fff;
-        padding:10px 12px; border-radius:12px; font:12px system-ui;
-        pointer-events:none;
-      `;
-      document.body.appendChild(el);
-    }
-    el.textContent = message;
-    clearTimeout(el.__t);
-    el.__t = setTimeout(() => { try { el.remove(); } catch {} }, 2400);
-  } catch {}
-}
-
-async function safeNavigate(targetId, { timeoutMs = 2500 } = {}) {
-  if (!targetId) return false;
-  if (navInFlight) return false;
-  navInFlight = true;
-
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const backX = current?.pos?.x ? current.pos.x * vw : 0;
-  const backY = current?.pos?.y ? current.pos.y * vh : 0;
-
-  try {
-    const navPromise = navigate(targetId);
-    const timeoutPromise = new Promise((_, rej) => {
-      setTimeout(() => rej(new Error(`navigate timeout: ${targetId}`)), timeoutMs);
-    });
-
-    await Promise.race([navPromise, timeoutPromise]);
-    return true;
-  } catch (e) {
-    notifyNavError(`Could not open "${targetId}" (mobile).\n${formatErr(err)}\nSnapping back…`);
-    // Snap back to the current screen position instead of leaving the plane mid-way.
-    try { animateTo(backX, backY); } catch {}
-    return false;
-  } finally {
-    navInFlight = false;
-  }
-}
-
-
-function armDragListeners() {
-  if (dragListenersArmed) return;
-  dragListenersArmed = true;
-
-  // Capture phase so we get events even if UI underneath tries to handle them.
-  stage.addEventListener('pointermove', onMove, { passive: false, capture: true });
-  stage.addEventListener('pointerup', onUp, { passive: true, capture: true });
-  stage.addEventListener('pointercancel', onUp, { passive: true, capture: true });
-}
-
-function disarmDragListeners() {
-  if (!dragListenersArmed) return;
-  dragListenersArmed = false;
-
-  stage.removeEventListener('pointermove', onMove, { capture: true });
-  stage.removeEventListener('pointerup', onUp, { capture: true });
-  stage.removeEventListener('pointercancel', onUp, { capture: true });
-}
-
-function setNavState(state) {
-  try { document.body.dataset.navState = state; } catch {}
-}
-
 
 export function initRouter({ stageEl }) {
   stage = stageEl;
@@ -159,73 +53,25 @@ function screenPos(id) {
   return { x:0, y:0 };
 }
 
-function showToast(text, ms = 1800) {
-  try {
-    let el = document.getElementById('router-toast');
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'router-toast';
-      el.style.position = 'fixed';
-      el.style.left = '50%';
-      el.style.bottom = '14px';
-      el.style.transform = 'translateX(-50%)';
-      el.style.zIndex = '999999';
-      el.style.maxWidth = '92vw';
-      el.style.padding = '10px 12px';
-      el.style.borderRadius = '12px';
-      el.style.border = '1px solid rgba(255,255,255,0.18)';
-      el.style.background = 'rgba(0,0,0,0.75)';
-      el.style.backdropFilter = 'blur(10px)';
-      el.style.color = '#fff';
-      el.style.fontSize = '12px';
-      el.style.lineHeight = '1.3';
-      el.style.whiteSpace = 'pre-wrap';
-      document.body.appendChild(el);
-    }
-    el.textContent = text;
-    el.style.display = 'block';
-    clearTimeout(el.__t);
-    el.__t = setTimeout(() => { el.style.display = 'none'; }, ms);
-  } catch {}
-}
-
 async function ensureMounted(id) {
   let rec = cache.get(id);
   if (rec) return rec;
 
-  const loader = registry.get(id);
-  if (!loader) {
-    const err = new Error(`No screen registered for id "${id}"`);
-    showToast(err.message);
-    throw err;
-  }
+  const mod = await registry.get(id)();
+  const def = mod.default;
+  const root = document.createElement('section');
+  root.id = 'screen-' + def.id;
+  root.className = 'screen-root';
+  plane.appendChild(root);
 
-  try {
-    const mod = await loader();
-    const def = mod.default;
+  const pos = screenPos(def.id);
+  rec = { def, root, pos };
+  cache.set(def.id, rec);
 
-    const root = document.createElement('section');
-    root.id = 'screen-' + def.id;
-    root.className = 'screen-root';
-    plane.appendChild(root);
-
-    const pos = screenPos(def.id);
-    rec = { def, root, pos };
-    cache.set(def.id, rec);
-
-    positionScreen(rec);
-
-    // Mount can also fail (e.g. surface fetch / part mount)
-    await def.mount(root, { navigate });
-    return rec;
-
-  } catch (err) {
-    const msg = (err && err.message) ? err.message : String(err);
-    showToast(`Could not open "${id}". ${msg}`);
-    throw err;
-  }
+  positionScreen(rec);
+  await def.mount(root, { navigate });
+  return rec;
 }
-
 
 function positionScreen(rec) {
   // NEW: only position dashboard screens; others will be hidden unless active
@@ -291,11 +137,6 @@ export async function navigate(id) {
 
   if (target.def.onShow) target.def.onShow();
   current = target;
-
-  // Mark the current screen so CSS can allow interaction only there.
-  cache.forEach(rec => {
-    rec.root.classList.toggle('screen-current', rec === current);
-  });
 
   applyMusicPolicy(target.def);
 
@@ -366,9 +207,7 @@ function onDown(e) {
 
   dragging = true;
   stage.classList.add('dragging');
-  setNavState('transitioning');
-  armDragListeners();
-  
+
   // capture safely (some desktop emulators don’t support/allow it)
   try { stage.setPointerCapture(e.pointerId); } catch {}
 
@@ -378,10 +217,7 @@ function onDown(e) {
   const neighbors = ['left','right','up','down']
     .map(dir => getNeighbor(current.def.id, dir))
     .filter(Boolean);
-  neighbors.forEach(n => ensureMounted(n).catch(err => {
-    console.warn('[router] neighbor mount failed:', n, err);
-  }));
-
+  neighbors.forEach(n => ensureMounted(n));
 }
 
 function onMove(e) {
@@ -411,9 +247,6 @@ function onUp() {
   if (!dragging) return;
   dragging = false;
   stage.classList.remove('dragging');
-  setNavState('idle');
-  disarmDragListeners();
-  
 
   if (!activeTarget) {
     const vw = window.innerWidth, vh = window.innerHeight;
@@ -427,8 +260,7 @@ function onUp() {
   const passed = Math.max(fracX, fracY) + VX_BONUS >= THRESHOLD;
 
 if (passed) {
-  safeNavigate(activeTarget);
-  // navigate will call animateTo() to glide into place
+  navigate(activeTarget);  // navigate will call animateTo() to glide into place
 } else {
   const vw = window.innerWidth, vh = window.innerHeight;
   animateTo(current.pos.x * vw, current.pos.y * vh); // glide back to current
