@@ -10,6 +10,7 @@
 import { loadScopedCSS } from '../../core/cssScope.js';
 import { loadJSON, mountSurface } from '../../core/surface.js';
 import { resolvePart } from '../../ui/parts/registry.js';
+import { ensureGlobalCSS } from '../../core/styleLoader.js';
 
 export function createController() {
   let cleanup = [];
@@ -24,6 +25,9 @@ export function createController() {
       // horizontal panning and interfere with router navigation). Instead, we create an inner
       // scroll region that opts into vertical scrolling only.
       root.classList.add('questsScreen');
+
+      // Optional screen-level uplift (blank file = baseline; safe to edit/delete content).
+      ensureGlobalCSS('screen.quests', new URL('./uplift.css', import.meta.url));
 
       // Create the single authoritative scroll container for this screen.
       const scroll = document.createElement('div');

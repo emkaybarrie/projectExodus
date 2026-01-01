@@ -12,15 +12,21 @@
  * @param {string|URL} url Stylesheet URL.
  */
 export function ensureGlobalCSS(key, url) {
-  const attr = `data-myfi-style-${key}`;
-  const existing = document.querySelector(`link[${attr}]`);
+  // NOTE: Do NOT bake `key` into the *attribute name*.
+  // Keys may contain characters (e.g. dots) that produce invalid CSS selectors.
+  // Instead, store the key as the attribute *value* and query by value.
+  const esc = (window.CSS && typeof window.CSS.escape === 'function')
+    ? window.CSS.escape(String(key))
+    : String(key).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+
+  const existing = document.querySelector(`link[data-myfi-style="${esc}"]`);
   if (existing) return existing;
 
   const href = (url instanceof URL) ? url.href : String(url);
   const link = document.createElement('link');
   link.rel = 'stylesheet';
   link.href = href;
-  link.setAttribute(attr, '1');
+  link.setAttribute('data-myfi-style', String(key));
   document.head.appendChild(link);
   return link;
 }

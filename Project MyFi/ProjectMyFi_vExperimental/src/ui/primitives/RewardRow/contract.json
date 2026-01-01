@@ -1,0 +1,17 @@
+{
+  "part": "RewardRow",
+  "version": 1,
+  "rootClass": "RewardRowRoot",
+  "hooks": {
+    "root": ".RewardRowRoot",
+    "pill": ".myfiPillTiny"
+  },
+  "scope": {
+    "cssRoot": ".RewardRowRoot",
+    "forbiddenSelectors": ["body", "html", "#plane", ".screen-root"]
+  },
+  "notes": {
+    "revert": "Blank RewardRow/uplift.css to revert visuals.",
+    "behaviour": "RewardRow is markup-only; do not assume JS hooks here."
+  }
+}

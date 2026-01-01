@@ -1,0 +1,18 @@
+{
+  "part": "SegmentTabs",
+  "version": 1,
+  "rootClass": "SegmentTabsRoot",
+  "hooks": {
+    "host": ".SegmentTabsRoot",
+    "button": "button[data-tab]",
+    "active": ".is-active"
+  },
+  "scope": {
+    "cssRoot": ".SegmentTabsRoot",
+    "forbiddenSelectors": ["body", "html", "#plane", ".screen-root"]
+  },
+  "notes": {
+    "revert": "Blank SegmentTabs/uplift.css to revert visuals.",
+    "behaviour": "Do not change data-tab attributes or role/tablist semantics; JS owns behaviour."
+  }
+}
