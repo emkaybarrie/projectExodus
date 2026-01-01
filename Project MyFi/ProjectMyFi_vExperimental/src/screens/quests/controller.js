@@ -54,38 +54,25 @@ export function createController() {
       surfaceSpec = await loadSurfaceSpec('quests.v1');
 
       vmStore = createVMStore({ buildVM });
-
-      // Actions close over refresh()
-      const actions = createActions({ vmStore, refresh });
-
-      // Render immediately with an empty VM so navigation can settle on mobile.
-      surfaceHandle = renderSurface({
-        surfaceSpec,
-        mountEl,
-        vm: {},
-        actions,
-        partRegistry,
-        opts: {}
-      });
-
-      // Subscribe AFTER surface exists
       unsub = vmStore.subscribe((vm) => {
         surfaceHandle?.update?.({ vm });
       });
 
-      // Kick VM refresh asynchronously (do not block mount)
-      vmStore.refresh().catch((err) => {
-        console.warn('[quests] vm refresh failed', err);
-        // Minimal visible hint in the surface root
-        try {
-          const warn = document.createElement('div');
-          warn.className = 'ui-btn';
-          warn.style.textAlign = 'left';
-          warn.textContent = 'Failed to load quests data (demo).';
-          mountEl.prepend(warn);
-        } catch {}
-      });
+      // Initial VM
+      const vm = await vmStore.refresh();
 
+      // Actions close over refresh()
+      const actions = createActions({ vmStore, refresh });
+
+      // Render surface
+      surfaceHandle = renderSurface({
+        surfaceSpec,
+        mountEl,
+        vm,
+        actions,
+        partRegistry,
+        opts: {}
+      });
     },
 
     onShow() {

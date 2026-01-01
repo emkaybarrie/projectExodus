@@ -17,7 +17,6 @@ import eventsFeature from './events/feature.js';
 import questsFeature from './quests/feature.js';
 
 
-
 export function registerCoreFeatures() {
   registerFeature(authFeature);
 
