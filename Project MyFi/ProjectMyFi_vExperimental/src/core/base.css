@@ -63,6 +63,15 @@ html, body{
   padding: 8px 12px;
   font-size: 12px;
 }
+
+.myfiBtnGhost{
+  background: transparent;
+  border-color: var(--mf-border);
+}
+.myfiBtnGhost:hover{
+  background: rgba(255,255,255,0.06);
+}
+
 .myfiBtn:hover{ background: var(--mf-btn-bg-hover); border-color: var(--mf-btn-border-hover); }
 .myfiBtn:disabled{ opacity:.45; pointer-events:none; }
 
