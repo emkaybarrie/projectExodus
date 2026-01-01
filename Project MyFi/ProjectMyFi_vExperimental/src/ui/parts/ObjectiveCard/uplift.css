@@ -1,0 +1,12 @@
+/* src/ui/parts/ObjectiveCard/uplift.css */
+
+/*
+ObjectiveCard uplift layer.
+
+Guardrails:
+- Baseline styling is defined globally in src/core/tokens.css + src/core/base.css.
+- Keep selectors scoped to `.qbCard` and descendants to avoid leaking styles.
+- Prefer local token overrides (CSS variables) over hard-coded colors.
+*/
+
+/* Intentionally empty by default. */

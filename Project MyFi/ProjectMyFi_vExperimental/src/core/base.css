@@ -50,6 +50,11 @@ html, body{
   font-size: 12px;
   white-space: nowrap;
 }
+
+.myfiPillTiny{
+  padding: 4px 8px;
+  font-size: 11px;
+}
 .myfiPill.is-active{
   background: rgba(255,255,255,0.10);
   border-color: var(--mf-btn-border-hover);

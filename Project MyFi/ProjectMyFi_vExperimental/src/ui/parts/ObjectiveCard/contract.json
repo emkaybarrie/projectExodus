@@ -1,0 +1,11 @@
+{
+  "part": "ObjectiveCard",
+  "version": 0,
+  "required": {
+    "cardClass": "qbCard",
+    "dataset": ["qid"],
+    "buttonActs": ["focus", "claim"],
+    "progress": [".qbCard__bar", ".qbCard__fill"],
+    "footer": [".qbCard__foot", ".qbCard__prog", ".qbCard__reward"]
+  }
+}

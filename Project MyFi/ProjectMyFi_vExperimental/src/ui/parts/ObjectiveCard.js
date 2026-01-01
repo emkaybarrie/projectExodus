@@ -9,10 +9,12 @@
 
 import { progressBarHTML } from './ProgressBar.js';
 import { objectiveFooterHTML } from './ObjectiveFooter.js';
+import { rewardRowHTML } from './RewardRow.js';
+import { ensureGlobalCSS } from '../../core/styleLoader.js';
 
 function clamp01(n){ return Math.max(0, Math.min(1, n)); }
 
-function fmtReward(r){
+function fmtRewardFallback(r){
   if (!r) return '';
   const bits = [];
   if (r.xp) bits.push(`+${r.xp} XP`);
@@ -32,6 +34,9 @@ function fmtReward(r){
  * - progress uses qbCard__bar/qbCard__fill classes (styled by quests/styles.css)
  */
 export function renderObjectiveCard(q){
+  // Load ObjectiveCard uplift stylesheet once (part-owned). Safe on repeated calls.
+  ensureGlobalCSS('ObjectiveCard', new URL('./ObjectiveCard/uplift.css', import.meta.url));
+
   const pct = q.target ? clamp01((q.progress || 0) / q.target) : 0;
 
   const card = document.createElement('div');
@@ -46,6 +51,7 @@ export function renderObjectiveCard(q){
   const claimable = q.state === 'complete' && !q.claimed;
 
   card.innerHTML = `
+    <!-- CONTRACT:BEGIN ObjectiveCard -->
     <div class="qbCard__row">
       <div class="qbCard__meta">
         <div class="qbCard__type">${(q.type || 'misc').toUpperCase()}</div>
@@ -58,7 +64,12 @@ export function renderObjectiveCard(q){
     </div>
     <div class="qbCard__nar">${q.narrative || ''}</div>
     ${progressBarHTML(pct)}
-    ${objectiveFooterHTML(`${q.progress || 0}/${q.target || 0}`, fmtReward(q.reward))}
+    ${objectiveFooterHTML(
+      `${q.progress || 0}/${q.target || 0}`,
+      // Prefer pill layout; fall back to plain text.
+      rewardRowHTML(q.reward) || fmtRewardFallback(q.reward)
+    )}
+    <!-- CONTRACT:END ObjectiveCard -->
   `;
   return card;
 }
