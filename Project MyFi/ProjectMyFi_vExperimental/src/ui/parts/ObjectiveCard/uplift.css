@@ -1,12 +1,20 @@
 /* src/ui/parts/ObjectiveCard/uplift.css */
 
 /*
-ObjectiveCard uplift layer.
+ObjectiveCard uplift layer (AI-editable).
 
-Guardrails:
-- Baseline styling is defined globally in src/core/tokens.css + src/core/base.css.
-- Keep selectors scoped to `.qbCard` and descendants to avoid leaking styles.
-- Prefer local token overrides (CSS variables) over hard-coded colors.
+Guardrails
+- Baseline styling lives in: src/core/tokens.css + src/core/base.css
+- All selectors in this file must start with `.ObjectiveCard`.
+- Never style: body, html, #plane, .screen-root
+- Prefer local token overrides (CSS variables) for cohesive theming.
+
+Useful hooks (data-hook attributes)
+- type, title, narrative, bar, fill, progressText, reward, btnFocus, btnClaim
+
+Revert
+- Delete or blank this file to revert to baseline visuals.
 */
 
 /* Intentionally empty by default. */
+

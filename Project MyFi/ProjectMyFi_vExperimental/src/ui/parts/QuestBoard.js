@@ -5,7 +5,7 @@
 // rather than a bespoke "QuestCard" widget. The JSON surface decides WHERE
 // it sits; this part decides HOW to render and wire events.
 
-import { renderObjectiveCard } from './ObjectiveCard.js';
+import { preloadObjectiveCardTemplate, renderObjectiveCard } from './ObjectiveCard.js';
 import { mountSegmentTabs } from './SegmentTabs.js';
 
 const TYPES = [
@@ -90,7 +90,7 @@ function renderQuestCard(q){
 }
 
 
-export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
+export async function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   const state = {
     filterType: 'all',
     quests: Array.isArray(props.quests) ? structuredClone(props.quests) : makeDemoQuests(),
@@ -175,6 +175,10 @@ export function QuestBoardPart(host, { props = {}, ctx = {} } = {}) {
   }
 
   // Init
+  // Preload ObjectiveCard template + contract so first paint is already using baseline.html.
+  // (If preload fails, ObjectiveCard will fall back to its inline safe renderer.)
+  try { await preloadObjectiveCardTemplate(); } catch {}
+
   const tabs = mountSegmentTabs(typesEl, {
     ariaLabel: 'Quest types',
     buttonClass: 'qbTab',
