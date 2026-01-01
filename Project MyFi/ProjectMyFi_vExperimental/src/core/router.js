@@ -11,6 +11,37 @@ const SNAP_MS = 260;
 const THRESHOLD = 0.34;
 const VX_BONUS  = 0.18;
 
+function showToast(text, ms = 1800) {
+  try {
+    let el = document.getElementById('router-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'router-toast';
+      el.style.position = 'fixed';
+      el.style.left = '50%';
+      el.style.bottom = '14px';
+      el.style.transform = 'translateX(-50%)';
+      el.style.zIndex = '999999';
+      el.style.maxWidth = '92vw';
+      el.style.padding = '10px 12px';
+      el.style.borderRadius = '12px';
+      el.style.border = '1px solid rgba(255,255,255,0.18)';
+      el.style.background = 'rgba(0,0,0,0.75)';
+      el.style.backdropFilter = 'blur(10px)';
+      el.style.color = '#fff';
+      el.style.fontSize = '12px';
+      el.style.lineHeight = '1.3';
+      el.style.whiteSpace = 'pre-wrap';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.style.display = 'block';
+    clearTimeout(el.__t);
+    el.__t = setTimeout(() => { el.style.display = 'none'; }, ms);
+  } catch {}
+}
+
+
 export function initRouter({ stageEl }) {
   stage = stageEl;
   plane = stage.querySelector('#plane');
@@ -57,21 +88,47 @@ async function ensureMounted(id) {
   let rec = cache.get(id);
   if (rec) return rec;
 
-  const mod = await registry.get(id)();
-  const def = mod.default;
-  const root = document.createElement('section');
-  root.id = 'screen-' + def.id;
-  root.className = 'screen-root';
-  plane.appendChild(root);
+  const loader = registry.get(id);
+  if (!loader) {
+    const err = new Error(`router: no screen registered for "${id}"`);
+    showToast(err.message);
+    throw err;
+  }
 
-  const pos = screenPos(def.id);
-  rec = { def, root, pos };
-  cache.set(def.id, rec);
+  let mod, def, root;
+  try {
+    mod = await loader();
+    def = mod?.default;
+    if (!def?.id) throw new Error(`router: screen "${id}" missing default export or def.id`);
 
-  positionScreen(rec);
-  await def.mount(root, { navigate });
-  return rec;
+    root = document.createElement('section');
+    root.id = 'screen-' + def.id;
+    root.className = 'screen-root';
+    plane.appendChild(root);
+
+    const pos = screenPos(def.id);
+    rec = { def, root, pos };
+    cache.set(def.id, rec);
+
+    positionScreen(rec);
+
+    // IMPORTANT: mount may throw (surface fetch, part mount, etc.)
+    await def.mount(root, { navigate });
+
+    return rec;
+  } catch (e) {
+    // Cleanup partial mount so we don’t leave a broken screen in the DOM/cache
+    try {
+      if (root?.parentNode) root.parentNode.removeChild(root);
+    } catch {}
+    try { cache.delete(id); } catch {}
+
+    const msg = e?.stack || e?.message || String(e);
+    showToast(`Could not mount "${id}".\n${msg}`);
+    throw e;
+  }
 }
+
 
 function positionScreen(rec) {
   // NEW: only position dashboard screens; others will be hidden unless active
@@ -217,7 +274,8 @@ function onDown(e) {
   const neighbors = ['left','right','up','down']
     .map(dir => getNeighbor(current.def.id, dir))
     .filter(Boolean);
-  neighbors.forEach(n => ensureMounted(n));
+  neighbors.forEach(n => ensureMounted(n).catch(() => {}));
+
 }
 
 function onMove(e) {
@@ -248,26 +306,34 @@ function onUp() {
   dragging = false;
   stage.classList.remove('dragging');
 
+  const vw = window.innerWidth, vh = window.innerHeight;
+
   if (!activeTarget) {
-    const vw = window.innerWidth, vh = window.innerHeight;
-    setPlaneTransform(current.pos.x * vw, current.pos.y * vh, true);
+    animateTo(current.pos.x * vw, current.pos.y * vh);
     return;
   }
 
-  const vw = window.innerWidth, vh = window.innerHeight;
   const fracX = Math.abs(lastDX) / vw;
   const fracY = Math.abs(lastDY) / vh;
   const passed = Math.max(fracX, fracY) + VX_BONUS >= THRESHOLD;
 
-if (passed) {
-  navigate(activeTarget);  // navigate will call animateTo() to glide into place
-} else {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  animateTo(current.pos.x * vw, current.pos.y * vh); // glide back to current
+  if (!passed) {
+    animateTo(current.pos.x * vw, current.pos.y * vh);
+    activeTarget = null;
+    return;
+  }
+
+  // Commit attempt. If it fails, snap back cleanly.
+  const targetId = activeTarget;
+  activeTarget = null;
+
+  navigate(targetId).catch((e) => {
+    const msg = e?.message || String(e);
+    showToast(`Could not open "${targetId}".\nSnapping back.\n${msg}`);
+    animateTo(current.pos.x * vw, current.pos.y * vh);
+  });
 }
 
-  activeTarget = null;
-}
 
 // ───────────────────────── Music policy per screen ─────────────────────────
 function applyMusicPolicy(def) {
