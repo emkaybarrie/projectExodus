@@ -7,9 +7,35 @@ const cache = new Map();          // id -> { def, root, pos:{x,y} }
 let stage, plane, current, layout;
 let dragging = false, startX=0, startY=0, lastDX=0, lastDY=0, activeTarget=null;
 
+let dragListenersArmed = false;
+
 const SNAP_MS = 260;
 const THRESHOLD = 0.34;
 const VX_BONUS  = 0.18;
+
+function armDragListeners() {
+  if (dragListenersArmed) return;
+  dragListenersArmed = true;
+
+  // Capture phase so we get events even if UI underneath tries to handle them.
+  stage.addEventListener('pointermove', onMove, { passive: false, capture: true });
+  stage.addEventListener('pointerup', onUp, { passive: true, capture: true });
+  stage.addEventListener('pointercancel', onUp, { passive: true, capture: true });
+}
+
+function disarmDragListeners() {
+  if (!dragListenersArmed) return;
+  dragListenersArmed = false;
+
+  stage.removeEventListener('pointermove', onMove, { capture: true });
+  stage.removeEventListener('pointerup', onUp, { capture: true });
+  stage.removeEventListener('pointercancel', onUp, { capture: true });
+}
+
+function setNavState(state) {
+  try { document.body.dataset.navState = state; } catch {}
+}
+
 
 export function initRouter({ stageEl }) {
   stage = stageEl;
@@ -138,6 +164,11 @@ export async function navigate(id) {
   if (target.def.onShow) target.def.onShow();
   current = target;
 
+  // Mark the current screen so CSS can allow interaction only there.
+  cache.forEach(rec => {
+    rec.root.classList.toggle('screen-current', rec === current);
+  });
+
   applyMusicPolicy(target.def);
 
 }
@@ -207,7 +238,9 @@ function onDown(e) {
 
   dragging = true;
   stage.classList.add('dragging');
-
+  setNavState('transitioning');
+  armDragListeners();
+  
   // capture safely (some desktop emulators don’t support/allow it)
   try { stage.setPointerCapture(e.pointerId); } catch {}
 
@@ -247,6 +280,9 @@ function onUp() {
   if (!dragging) return;
   dragging = false;
   stage.classList.remove('dragging');
+  setNavState('idle');
+  disarmDragListeners();
+  
 
   if (!activeTarget) {
     const vw = window.innerWidth, vh = window.innerHeight;
