@@ -17,9 +17,9 @@ export default {
   },
   background: { key: 'panorama' },
 
-  async mount(root) {
+  async mount(root, ctx) {
     c = createController();
-    await c.mount(root);
+    await c.mount(root, ctx);
   },
   onShow() {
     setHeaderTitle('QUESTS');
