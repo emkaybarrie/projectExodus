@@ -1,0 +1,43 @@
+/* src/core/tokens.css
+   Canonical design tokens for baseline styling.
+   Parts/screens should rely on these tokens; per-part uplift.css can override locally.
+*/
+:root{
+  --mf-font-title: "Cinzel", ui-serif, Georgia, serif;
+  --mf-font-body: "Crimson Pro", ui-serif, Georgia, serif;
+
+  --mf-text: rgba(255,255,255,0.92);
+  --mf-text-dim: rgba(255,255,255,0.72);
+  --mf-border: rgba(255,255,255,0.12);
+  --mf-border-strong: rgba(255,255,255,0.18);
+
+  --mf-card-bg: rgba(0,0,0,0.28);
+  --mf-card-bg-2: rgba(0,0,0,0.22);
+  --mf-surface-blur: 10px;
+
+  --mf-radius-s: 12px;
+  --mf-radius-m: 16px;
+  --mf-radius-l: 22px;
+  --mf-pill-radius: 999px;
+
+  --mf-shadow-soft: 0 10px 28px rgba(0,0,0,0.35);
+  --mf-shadow-tight: 0 6px 18px rgba(0,0,0,0.30);
+
+  --mf-pad-1: 8px;
+  --mf-pad-2: 12px;
+  --mf-pad-3: 14px;
+  --mf-gap-1: 8px;
+  --mf-gap-2: 12px;
+  --mf-gap-3: 16px;
+
+  --mf-btn-bg: rgba(0,0,0,0.20);
+  --mf-btn-bg-hover: rgba(255,255,255,0.08);
+  --mf-btn-border: rgba(255,255,255,0.14);
+  --mf-btn-border-hover: rgba(255,255,255,0.22);
+
+  --mf-accent: rgba(180,140,255,0.95);
+  --mf-accent-2: rgba(120,200,255,0.95);
+  --mf-positive: rgba(120,255,180,0.92);
+  --mf-warning: rgba(255,210,120,0.92);
+  --mf-danger: rgba(255,120,140,0.92);
+}
