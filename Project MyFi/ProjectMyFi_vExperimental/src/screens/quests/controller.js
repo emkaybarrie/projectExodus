@@ -18,13 +18,22 @@ export function createController() {
 
   return {
     async mount(root, ctx = {}) {
-      // Enable vertical scrolling on touch devices (plane owns gestures; screens opt-in).
-      root.classList.add('scrollable','questsScreen');
+      // IMPORTANT:
+      // The router/plane owns horizontal swipe gestures via `touch-action:none` on `.screen-root`.
+      // We therefore DO NOT mark the screen root as `.scrollable` (that would re-enable browser
+      // horizontal panning and interfere with router navigation). Instead, we create an inner
+      // scroll region that opts into vertical scrolling only.
+      root.classList.add('questsScreen');
+
+      // Create the single authoritative scroll container for this screen.
+      const scroll = document.createElement('div');
+      scroll.className = 'questsScroll scrollable';
+      root.appendChild(scroll);
       unstyle = await loadScopedCSS(new URL('./styles.css', import.meta.url), root.id);
 
       // JSON-first surface
       const surface = await loadJSON(new URL('./surface.json', import.meta.url));
-      surfaceMount = await mountSurface(root, surface, {
+      surfaceMount = await mountSurface(scroll, surface, {
         resolvePart,
         ctx
       });
@@ -34,8 +43,12 @@ export function createController() {
         // placeholder: could fan out to Events feature, toast, etc
         // console.log('claimed', e.detail);
       };
-      root.addEventListener('quests:claimed', onClaimed);
-      cleanup.push(() => root.removeEventListener('quests:claimed', onClaimed));
+      scroll.addEventListener('quests:claimed', onClaimed);
+      cleanup.push(() => scroll.removeEventListener('quests:claimed', onClaimed));
+
+      cleanup.push(() => {
+        try { root.removeChild(scroll); } catch {}
+      });
     },
     onShow() {},
     onHide() {},

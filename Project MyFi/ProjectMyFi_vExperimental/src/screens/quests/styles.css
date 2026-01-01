@@ -1,8 +1,25 @@
+/*
+  Quests scroll model (mobile-safe + router-safe)
+
+  - `.screen-root` is `touch-action:none` globally so the plane/router can own horizontal swipes.
+  - We keep the screen root *not scrollable*.
+  - We create ONE inner scroll region (`.questsScroll.scrollable`) that opts into vertical panning.
+*/
 .screen-root.questsScreen{
-  /* Allow native vertical panning for lists on mobile while keeping plane gestures for horizontal swipes */
-  touch-action: pan-y;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+.questsScroll{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .questsRoot{
