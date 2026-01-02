@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "description": "Project MyFi UI + Surfaces manifest for Surfaces Studio (source of truth for discoverability + allowlisted writes).",
+  "write_allowlist": [
+    "src/screens/**/surface.json",
+    "src/screens/**/uplift.css",
+    "src/ui/**/uplift.css",
+    "src/ui/**/uplift.html",
+    "src/ui/**/uplift.md"
+  ],
+  "screens": [
+    {
+      "id": "quests",
+      "title": "Quests",
+      "surface": "src/screens/quests/surface.json",
+      "baseline_css": [
+        "src/screens/quests/styles.css"
+      ],
+      "uplift": {
+        "css": "src/screens/quests/uplift.css",
+        "prompt": "src/screens/quests/uplift.prompt.md",
+        "contract": "src/screens/quests/uplift.contract.json"
+      }
+    }
+  ],
+  "mountables": [
+    {
+      "kind": "QuestsHeader",
+      "category": "screen-part",
+      "entry": "src/screens/quests/parts/QuestsHeaderPart.js"
+    },
+    {
+      "kind": "QuestsTabs",
+      "category": "screen-part",
+      "entry": "src/screens/quests/parts/QuestsTabsPart.js"
+    },
+    {
+      "kind": "QuestSection",
+      "category": "screen-part",
+      "entry": "src/screens/quests/parts/QuestSectionPart.js"
+    }
+  ],
+  "ui_units": [
+    {
+      "id": "SegmentTabs",
+      "category": "primitive",
+      "pack": "src/ui/primitives/SegmentTabs",
+      "uplift": {
+        "css": "src/ui/primitives/SegmentTabs/uplift.css"
+      },
+      "prompt": "src/ui/primitives/SegmentTabs/prompt.md",
+      "contract": "src/ui/primitives/SegmentTabs/contract.json"
+    },
+    {
+      "id": "RewardRow",
+      "category": "primitive",
+      "pack": "src/ui/primitives/RewardRow",
+      "uplift": {
+        "css": "src/ui/primitives/RewardRow/uplift.css"
+      },
+      "prompt": "src/ui/primitives/RewardRow/prompt.md",
+      "contract": "src/ui/primitives/RewardRow/contract.json"
+    },
+    {
+      "id": "ObjectiveCard",
+      "category": "prefab",
+      "pack": "src/ui/prefabs/ObjectiveCard",
+      "uplift": {
+        "css": "src/ui/prefabs/ObjectiveCard/uplift.css",
+        "html": "src/ui/prefabs/ObjectiveCard/uplift.html"
+      },
+      "prompt": "src/ui/prefabs/ObjectiveCard/prompt.md",
+      "contract": "src/ui/prefabs/ObjectiveCard/contract.json",
+      "baseline": {
+        "html": "src/ui/prefabs/ObjectiveCard/baseline.html"
+      }
+    }
+  ],
+  "studio": {
+    "templates": {
+      "primitive": "tools/surfaces-studio/templates/new-part-pack/primitive",
+      "prefab": "tools/surfaces-studio/templates/new-part-pack/prefab"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "root": ".Part-<Kind>",
+  "hooks": {
+    "title": ".<Kind>__title",
+    "body": ".<Kind>__body",
+    "actions": ".<Kind>__actions"
+  },
+  "states": {},
+  "required": [
+    "title",
+    "body"
+  ],
+  "constraints": {
+    "scope": "All selectors must start with .Part-<Kind>",
+    "forbidden": [
+      "body",
+      ".screen-root",
+      "#plane"
+    ]
+  }
+}
