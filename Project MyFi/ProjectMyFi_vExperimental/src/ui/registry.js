@@ -22,6 +22,18 @@ export async function resolvePart(kind){
     case 'QuestSection':
       return (await import('../screens/quests/parts/QuestSectionPart.js')).QuestSectionPart;
 
+    // ----- Hub2 screen (JSON-first dry-run for Surfaces Studio) -----
+    case 'Hub2Header':
+      return (await import('../screens/hub2/parts/Hub2HeaderPart.js')).Hub2HeaderPart;
+    case 'Hub2Vitals':
+      return (await import('../screens/hub2/parts/Hub2VitalsPart.js')).Hub2VitalsPart;
+    case 'Hub2Skills':
+      return (await import('../screens/hub2/parts/Hub2SkillsPart.js')).Hub2SkillsPart;
+    case 'Hub2Events':
+      return (await import('../screens/hub2/parts/Hub2EventsPart.js')).Hub2EventsPart;
+    case 'Hub2Essence':
+      return (await import('../screens/hub2/parts/Hub2EssencePart.js')).Hub2EssencePart;
+
     default:
       throw new Error(`resolvePart: unknown kind "${kind}"`);
   }

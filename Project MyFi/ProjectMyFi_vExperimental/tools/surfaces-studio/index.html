@@ -102,11 +102,69 @@
       <div id="upliftMeta" class="muted">Select a UI Unit to load its pack.</div>
 
       <div class="tabs">
-        <button class="tab active" data-tab="pack">Pack</button>
-        <button class="tab" data-tab="edit">Edit</button>
+        <button class="tab active" data-tab="compose">Composer</button>
+        <button class="tab" data-tab="fabricate">Parts Fabricator</button>
+        <button class="tab" data-tab="model">Surface Modeler</button>
+        <button class="tab" data-tab="pack">AI Pack</button>
       </div>
 
-      <section id="tab-pack" class="tabPane active">
+      
+      <section id="tab-fabricate" class="tabPane">
+        <h3>Parts Fabricator</h3>
+        <p class="muted">Create a new primitive/prefab in a firewalled way. Studio generates a strict AI pack; paste AI output back; Studio validates and saves to the correct folder.</p>
+
+        <div class="grid2">
+          <label>Part ID<br><input id="fabPartId" placeholder="e.g. VitalsCard"></label>
+          <label>Category<br>
+            <select id="fabCategory">
+              <option value="primitive">Primitive</option>
+              <option value="prefab">Prefab</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Short description (used in prompt)<br>
+          <textarea id="fabDesc" rows="3" placeholder="Describe what this part does and where it will be used."></textarea>
+        </label>
+
+        <label>Data binds (optional JSON, used to scaffold contract + demo preview)<br>
+          <textarea id="fabBinds" rows="6" placeholder='{"avatarUrl":"player.avatarUrl","health":"vitals.health"}'></textarea>
+        </label>
+
+        <div class="row">
+          <button id="btnFabCreate">Create skeleton</button>
+          <button id="btnFabCopyPack" class="secondary">Copy AI Pack</button>
+        </div>
+
+        <h4>Paste AI Output</h4>
+        <p class="muted">Paste files in the format: <code>---FILE: relative/path.ext</code> then content, repeat.</p>
+        <textarea id="fabPaste" rows="10" placeholder="---FILE: baseline.html
+..."></textarea>
+        <div class="row">
+          <button id="btnFabApply">Apply output</button>
+          <button id="btnFabValidate" class="secondary">Validate</button>
+        </div>
+
+        <pre id="fabStatus" class="code"></pre>
+      </section>
+
+      <section id="tab-model" class="tabPane">
+        <h3>Surface Modeler</h3>
+        <p class="muted">Inspect a UI Unit's selector map and preview baseline + uplift without running the full app.</p>
+
+        <div class="grid2">
+          <div>
+            <h4>Selector Map</h4>
+            <pre id="selectorMapOut" class="code"></pre>
+          </div>
+          <div>
+            <h4>Preview</h4>
+            <iframe id="partPreview" class="previewFrame"></iframe>
+          </div>
+        </div>
+      </section>
+
+<section id="tab-pack" class="tabPane">
         <h4>Prompt</h4>
         <pre id="packPrompt" class="code"></pre>
         <h4>Contract</h4>
@@ -118,7 +176,7 @@
         </div>
       </section>
 
-      <section id="tab-edit" class="tabPane">
+      <section id="tab-compose" class="tabPane active">
         <h4>uplift.css</h4>
         <textarea id="upliftCssEditor" spellcheck="false" disabled></textarea>
         <h4>uplift.html (optional)</h4>

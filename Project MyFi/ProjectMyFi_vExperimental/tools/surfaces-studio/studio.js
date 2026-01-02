@@ -38,6 +38,24 @@ const upliftHtmlEditor = $('#upliftHtmlEditor');
 const btnSaveUplift = $('#btnSaveUplift');
 const btnClearUplift = $('#btnClearUplift');
 
+
+// Parts Fabricator
+const fabPartId = $('#fabPartId');
+const fabCategory = $('#fabCategory');
+const fabDesc = $('#fabDesc');
+const fabBinds = $('#fabBinds');
+const btnFabCreate = $('#btnFabCreate');
+const btnFabCopyPack = $('#btnFabCopyPack');
+const fabPaste = $('#fabPaste');
+const btnFabApply = $('#btnFabApply');
+const btnFabValidate = $('#btnFabValidate');
+const fabStatus = $('#fabStatus');
+
+// Modeler
+const selectorMapOut = $('#selectorMapOut');
+const partPreview = $('#partPreview');
+
+
 // Part instance bind editor (optional metadata)
 const bindEditor = $('#bindEditor');
 const btnApplyBind = $('#btnApplyBind');
@@ -59,6 +77,72 @@ let surfaceView = 'canvas'; // 'canvas' | 'list'
 
 let selectedUiUnit = null; // manifest ui_units entry
 let uiUnitFiles = null;
+
+// --- Studio state persistence (prevents losing progress on dev-server reloads)
+// Live Server / similar tools may refresh this page when files are written.
+// We persist lightweight draft state in sessionStorage so the UI restores.
+const STUDIO_STATE_KEY = 'myfi_surfaces_studio_state_v1';
+let activeTab = 'compose';
+let _saveTimer = null;
+
+function _readStudioState(){
+  try{
+    const raw = sessionStorage.getItem(STUDIO_STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch{ return null; }
+}
+
+function _writeStudioState(state){
+  try{ sessionStorage.setItem(STUDIO_STATE_KEY, JSON.stringify(state)); }catch{}
+}
+
+function _snapshotStudioState(){
+  return {
+    v: 1,
+    tab: activeTab,
+    surfaceView,
+    fabricate: {
+      partId: fabPartId?.value || '',
+      category: fabCategory?.value || 'primitive',
+      desc: fabDesc?.value || '',
+      binds: fabBinds?.value || '',
+      paste: fabPaste?.value || ''
+    }
+  };
+}
+
+function scheduleStudioSave(){
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(()=>{
+    _saveTimer = null;
+    _writeStudioState(_snapshotStudioState());
+  }, 120);
+}
+
+function restoreStudioState(){
+  const st = _readStudioState();
+  if (!st || st.v !== 1) return;
+  if (st.surfaceView && (st.surfaceView === 'canvas' || st.surfaceView === 'list')){
+    surfaceView = st.surfaceView;
+  }
+  if (st.fabricate){
+    if (fabPartId) fabPartId.value = st.fabricate.partId || '';
+    if (fabCategory) fabCategory.value = st.fabricate.category || 'primitive';
+    if (fabDesc) fabDesc.value = st.fabricate.desc || '';
+    if (fabBinds) fabBinds.value = st.fabricate.binds || '';
+    if (fabPaste) fabPaste.value = st.fabricate.paste || '';
+  }
+  if (st.tab) activeTab = st.tab;
+}
+
+// Hook draft persistence for Fabricator fields
+[ fabPartId, fabCategory, fabDesc, fabBinds, fabPaste ].forEach(el=>{
+  if (!el) return;
+  el.addEventListener('input', scheduleStudioSave);
+  el.addEventListener('change', scheduleStudioSave);
+});
+
+
 
 function setEnabled(el, on){ el.disabled = !on; }
 function escapeHTML(s){ return (s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
@@ -606,10 +690,18 @@ ${screenUpliftEditor.value}
 };
 
 function setTab(tab){
+  activeTab = tab;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.querySelectorAll('.tabPane').forEach(p=>p.classList.toggle('active', p.id===`tab-${tab}`));
+  scheduleStudioSave();
 }
 document.querySelectorAll('.tab').forEach(b=> b.onclick = ()=> setTab(b.dataset.tab));
+
+// Restore draft state after potential dev-server reloads (e.g., after file writes)
+restoreStudioState();
+setTab(activeTab || 'compose');
+setSurfaceView(surfaceView || 'canvas');
+
 
 async function openUiUnit(u){
   selectedUiUnit = u;
@@ -770,9 +862,341 @@ btnReload.onclick = async () => {
   await loadManifest();
 };
 
+
+// Fabricator buttons
+if (btnFabCreate) btnFabCreate.onclick = async () => { try{ await createPartSkeleton(); }catch(e){ fabStatus.textContent = 'Error: ' + e.message; console.error(e);} };
+if (btnFabCopyPack) btnFabCopyPack.onclick = async () => { try{ await copyFabricatorAIPack(); }catch(e){ fabStatus.textContent = 'Error: ' + e.message; console.error(e);} };
+if (btnFabApply) btnFabApply.onclick = async () => { try{ await applyFabricatorOutput(); }catch(e){ fabStatus.textContent = 'Error: ' + e.message; console.error(e);} };
+if (btnFabValidate) btnFabValidate.onclick = async () => { try{ await validateFabricator(); }catch(e){ fabStatus.textContent = 'Error: ' + e.message; console.error(e);} };
+
+
+
 // View toggles
 btnViewCanvas.onclick = () => { if (!btnViewCanvas.disabled) setSurfaceView('canvas'); };
 btnViewList.onclick = () => { if (!btnViewList.disabled) setSurfaceView('list'); };
 
+
+
+
+async function readOptionalText(path){
+  try{ return await readText(path); }catch{ return ''; }
+}
+
+function buildSelectorMapFromHTML(html){
+  const map = { hooks: [], classes: [], ids: [] };
+  if (!html || !html.trim()) return map;
+  try{
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const hooks = [...doc.querySelectorAll('[data-hook]')].map(el=>el.getAttribute('data-hook')).filter(Boolean);
+    map.hooks = Array.from(new Set(hooks)).sort();
+    const ids = [...doc.querySelectorAll('[id]')].map(el=>el.id).filter(Boolean);
+    map.ids = Array.from(new Set(ids)).sort();
+    const cls = new Set();
+    [...doc.querySelectorAll('[class]')].forEach(el=>{
+      (el.getAttribute('class')||'').split(/\s+/).filter(Boolean).forEach(c=>cls.add(c));
+    });
+    map.classes = Array.from(cls).sort();
+  }catch(e){
+    map.error = e.message;
+  }
+  return map;
+}
+
+async function updateModelerForUiUnit(u){
+  if (!selectorMapOut || !partPreview) return;
+
+  // prefer baseline.html if available, else uplift.html if present
+  let html = '';
+  if (u.baseline?.html){
+    html = await readOptionalText(u.baseline.html);
+  }
+  if (!html && u.uplift?.html){
+    html = await readOptionalText(u.uplift.html);
+  }
+
+  const map = buildSelectorMapFromHTML(html);
+  selectorMapOut.textContent = JSON.stringify(map, null, 2);
+
+  // Build a safe preview that shows the structure + CSS only.
+  // We intentionally do NOT run arbitrary JS here; preview is for layout/styling + hook visibility.
+  const upliftCssPath = u.uplift?.css || '';
+  const safeHTML = `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../../src/core/myfi.css">
+  ${upliftCssPath ? `<link rel="stylesheet" href="../../${upliftCssPath}">` : ''}
+  <style>
+    body{ margin:0; padding:16px; background: #070712; color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .previewRoot{ max-width: 520px; margin: 0 auto; }
+    .hookBadge{ display:inline-block; padding:2px 6px; border:1px solid rgba(255,255,255,0.15); border-radius:999px; font-size:11px; opacity:0.85; }
+    [data-hook]{ outline: 1px dashed rgba(170,120,255,0.25); outline-offset: 3px; }
+    .previewNote{ opacity:0.75; font-size:12px; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+  <div class="previewRoot">
+    <div class="previewNote">Preview shows markup + CSS (no JS). Hooks are outlined.</div>
+    ${html || '<div class="previewNote">No baseline/uplift HTML available for preview.</div>'}
+  </div>
+</body>
+</html>`;
+  partPreview.srcdoc = safeHTML;
+}
+
+// Built-in templates (fallback) so Parts Fabricator works even if template fetch fails
+const BUILTIN_TPL = {
+  prefab: {
+    'baseline.html': `<!-- CONTRACT:BASELINE_HTML:BEGIN -->\n<section class="{{ID}} myfiCard">\n  <div class="cardHead" data-hook="title">{{ID}}</div>\n  <div class="cardBody" data-hook="body">Prefab body</div>\n</section>\n<!-- CONTRACT:BASELINE_HTML:END -->\n`,
+    'uplift.html': `<!-- CONTRACT:UPLIFT_HTML:BEGIN -->\n<!-- Optional uplift markup (keep hooks intact). -->\n<!-- CONTRACT:UPLIFT_HTML:END -->\n`,
+    'uplift.css': `/* UPLIFT ONLY. Scope everything under .{{ID}} */\n.{{ID}}{\n  /* styles here */\n}\n`,
+    'contract.json': `{
+  "id": "{{ID}}",
+  "category": "prefab",
+  "description": "",
+  "hooks": ["title","body"],
+  "allowedSelectors": [".{{ID}}"],
+  "binds": {}
+}\n`,
+    'prompt.md': `You are editing a MyFi UI Prefab.\n\nRules:\n- Edit ONLY the files provided.\n- Keep all data-hook values intact.\n- Keep everything scoped under the root class .{{ID}}.\n- Do not add external dependencies.\n\nReturn output in paste-back format:\n---FILE: <filename>\n<content>\n`,
+    'part.js': `export function mount(root, ctx){\n  // Basic prefab mount: render is DOM-only; no external deps.\n  const el = root.querySelector('.{{ID}}');\n  const title = root.querySelector('[data-hook="title"]');\n  if (title) title.textContent = '{{ID}}';\n  return {\n    update(nextCtx){ /* noop by default */ },\n    unmount(){ /* noop */ }\n  };\n}\n`
+  },
+  primitive: {
+    'uplift.css': `/* UPLIFT ONLY. Scope everything under .{{ID}} */\n.{{ID}}{\n  /* styles here */\n}\n`,
+    'contract.json': `{
+  "id": "{{ID}}",
+  "category": "primitive",
+  "description": "",
+  "hooks": [],
+  "allowedSelectors": [".{{ID}}"],
+  "binds": {}
+}\n`,
+    'prompt.md': `You are editing a MyFi UI Primitive.\n\nRules:\n- Edit ONLY the files provided.\n- Keep everything scoped under the root class .{{ID}}.\n- Do not add external dependencies.\n\nReturn output in paste-back format:\n---FILE: <filename>\n<content>\n`,
+    'part.js': `export function mount(root, ctx){\n  // Primitive mounts into the root element passed by the surface runtime.\n  root.classList.add('{{ID}}');\n  return {\n    update(nextCtx){ /* noop */ },\n    unmount(){ /* noop */ }\n  };\n}\n`
+  }
+};
+
+async function fetchTemplateText(rel, cat, filename, partId){
+  // Try HTTP fetch first (works when served via Live Server)
+  try{
+    const res = await fetch(rel, { cache: 'no-store' });
+    if (res.ok){
+      return await res.text();
+    }
+  }catch(e){ /* ignore and fall back */ }
+
+  // Fallback: built-in template
+  const group = BUILTIN_TPL[cat] || {};
+  const raw = group[filename];
+  if (raw == null) throw new Error('Missing template (fetch + fallback): ' + rel);
+  const id = partId || 'Part';
+  return raw.replaceAll('{{ID}}', id);
+}
+
+function coercePartId(raw){
+  const s = (raw||'').trim();
+  // allow letters/numbers/underscore only, start with letter
+  const cleaned = s.replace(/[^A-Za-z0-9_]/g, '');
+  if (!cleaned) return '';
+  if (!/^[A-Za-z]/.test(cleaned)) return 'Part' + cleaned;
+  return cleaned;
+}
+
+async function createPartSkeleton(){
+  // Persist current draft in case the dev server reloads Studio while writing files
+  scheduleStudioSave();
+  const id = coercePartId(fabPartId?.value);
+  const cat = fabCategory?.value === 'prefab' ? 'prefab' : 'primitive';
+  if (!id) throw new Error('Part ID is required.');
+
+  const folder = `src/ui/${cat === 'prefab' ? 'prefabs' : 'primitives'}/${id}`;
+  const tplBase = `./templates/new-part-pack/${cat}`;
+
+  // Load templates
+  const files = {};
+  const fileList = (cat === 'prefab')
+    ? ['baseline.html','uplift.html','uplift.css','contract.json','prompt.md','part.js']
+    : ['uplift.css','contract.json','prompt.md','part.js'];
+
+  for (const f of fileList){
+    files[f] = await fetchTemplateText(`${tplBase}/${f}`, cat, f, id);
+  }
+
+  // Light customisation: inject id/desc/binds into contract + prompt
+  const desc = (fabDesc?.value || '').trim();
+  const bindsRaw = (fabBinds?.value || '').trim();
+
+  try{
+    const c = JSON.parse(files['contract.json']);
+    c.id = id;
+    c.category = cat;
+    if (desc) c.description = desc;
+    if (bindsRaw){
+      try{ c.binds = JSON.parse(bindsRaw); }catch{ /* keep raw */ c.binds = bindsRaw; }
+    }
+    files['contract.json'] = JSON.stringify(c, null, 2);
+  }catch{
+    // leave as-is (template might be comments)
+  }
+
+  // Add a header to prompt with your description
+  if (desc){
+    files['prompt.md'] = `## Studio brief\n${desc}\n\n` + files['prompt.md'];
+  }
+
+  // Write files
+  for (const [name, txt] of Object.entries(files)){
+    await writeText(`${folder}/${name}`, txt);
+  }
+
+  // Update manifest.json (add ui_unit entry)
+  const manifestText = await readText('src/ui/manifest.json');
+  const man = JSON.parse(manifestText);
+  const exists = (man.ui_units||[]).some(u=>u.id===id);
+  if (!exists){
+    const entry = {
+      id,
+      category: cat,
+      pack: folder,
+      uplift: { css: `${folder}/uplift.css` },
+      prompt: `${folder}/prompt.md`,
+      contract: `${folder}/contract.json`
+    };
+    if (cat === 'prefab'){
+      entry.uplift.html = `${folder}/uplift.html`;
+      entry.baseline = { html: `${folder}/baseline.html` };
+    }
+    man.ui_units = man.ui_units || [];
+    man.ui_units.push(entry);
+    await writeText('src/ui/manifest.json', JSON.stringify(man, null, 2));
+  }
+
+  await loadManifest();
+  fabStatus.textContent = `Created skeleton: ${id} (${cat})\nFolder: ${folder}`;
+}
+
+function parsePasteBack(text){
+  const lines = (text||'').split(/\r?\n/);
+  const out = [];
+  let cur = null;
+  for (const line of lines){
+    const m = line.match(/^---FILE:\s*(.+)$/);
+    if (m){
+      if (cur) out.push(cur);
+      cur = { path: m[1].trim(), content: '' };
+      continue;
+    }
+    if (cur){
+      cur.content += line + '\n';
+    }
+  }
+  if (cur) out.push(cur);
+  return out.filter(f=>f.path && f.content != null);
+}
+
+async function applyFabricatorOutput(){
+  const id = coercePartId(fabPartId?.value);
+  if (!id) throw new Error('Part ID is required.');
+  const cat = fabCategory?.value === 'prefab' ? 'prefab' : 'primitive';
+  const folder = `src/ui/${cat === 'prefab' ? 'prefabs' : 'primitives'}/${id}`;
+
+  const files = parsePasteBack(fabPaste?.value || '');
+  if (!files.length) throw new Error('No files detected in paste-back.');
+
+  // allowlist within the part folder only
+  const allowedNames = new Set(['uplift.css','uplift.html','baseline.html','contract.json','prompt.md','part.js']);
+  for (const f of files){
+    // normalize
+    const rel = f.path.replace(/^\.\//,'').replace(/^\//,'');
+    const base = rel.split('/').pop();
+    if (!allowedNames.has(base)) throw new Error('Disallowed file in paste-back: ' + rel);
+    const target = `${folder}/${base}`;
+    await writeText(target, f.content.replace(/\s+$/,'') + '\n');
+  }
+
+  await loadManifest();
+  fabStatus.textContent = `Applied ${files.length} file(s) to ${folder}`;
+}
+
+async function copyFabricatorAIPack(){
+  const id = coercePartId(fabPartId?.value);
+  if (!id) throw new Error('Part ID is required.');
+  const cat = fabCategory?.value === 'prefab' ? 'prefab' : 'primitive';
+  const folder = `src/ui/${cat === 'prefab' ? 'prefabs' : 'primitives'}/${id}`;
+
+  // build pack from current files
+  const prompt = await readOptionalText(`${folder}/prompt.md`);
+  const contract = await readOptionalText(`${folder}/contract.json`);
+  const upliftCss = await readOptionalText(`${folder}/uplift.css`);
+  const upliftHtml = cat==='prefab' ? await readOptionalText(`${folder}/uplift.html`) : '';
+  const baselineHtml = cat==='prefab' ? await readOptionalText(`${folder}/baseline.html`) : '';
+
+  const map = buildSelectorMapFromHTML(baselineHtml || upliftHtml);
+
+  const payload = [
+`# MyFi Studio: Parts Fabricator AI Pack`,
+`Part ID: ${id}`,
+`Category: ${cat}`,
+``,
+`## Rules (non-negotiable)`,
+`- You may edit ONLY the files listed below.`,
+`- Keep all existing data-hook values intact.`,
+`- Do not introduce new external dependencies.`,
+`- Return output in the exact paste-back format:`,
+`  ---FILE: <filename>`,
+`  <content>`,
+``,
+`## Selector Map (what exists to style / hook into)`,
+JSON.stringify(map, null, 2),
+``,
+`## Prompt`,
+prompt,
+``,
+`## Contract (locked intent + hooks)`,
+contract,
+``,
+`## Files`,
+`---FILE: uplift.css`,
+upliftCss || '',
+cat==='prefab' ? `---FILE: uplift.html
+${upliftHtml||''}` : '',
+cat==='prefab' ? `---FILE: baseline.html
+${baselineHtml||''}` : '',
+``
+  ].filter(Boolean).join('\n');
+
+  await navigator.clipboard.writeText(payload);
+  fabStatus.textContent = 'Copied Fabricator AI Pack to clipboard.';
+}
+
+async function validateFabricator(){
+  const id = coercePartId(fabPartId?.value);
+  if (!id) throw new Error('Part ID is required.');
+  const cat = fabCategory?.value === 'prefab' ? 'prefab' : 'primitive';
+  const folder = `src/ui/${cat === 'prefab' ? 'prefabs' : 'primitives'}/${id}`;
+
+  const contractText = await readOptionalText(`${folder}/contract.json`);
+  let contract = null;
+  try{ contract = JSON.parse(contractText); }catch{}
+  const html = cat==='prefab' ? await readOptionalText(`${folder}/baseline.html`) : '';
+  const map = buildSelectorMapFromHTML(html);
+
+  const issues = [];
+  if (!contractText.trim()) issues.push('Missing contract.json');
+  if (cat==='prefab' && !html.trim()) issues.push('Missing baseline.html');
+  if (contract && contract.hooks && Array.isArray(contract.hooks)){
+    for (const h of contract.hooks){
+      if (!map.hooks.includes(h)) issues.push(`Contract hook missing in HTML: ${h}`);
+    }
+  }
+
+  fabStatus.textContent = issues.length
+    ? `⚠️ Issues found:\n- ${issues.join('\n- ')}`
+    : '✅ Fabricator validation OK (basic).';
+}
+
 // Default state
+setTab('compose');
 setSurfaceView('canvas');
