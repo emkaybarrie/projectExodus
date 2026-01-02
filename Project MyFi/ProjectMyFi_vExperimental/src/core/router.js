@@ -55,7 +55,13 @@ function screenPos(id) {
 
 async function ensureMounted(id) {
   let rec = cache.get(id);
-  if (rec) return rec;
+  if (rec) {
+    // If a preload mount is still in-flight, await it before returning.
+    // This prevents showing half-mounted screens and avoids mount re-entry
+    // races that can leave duplicate DOM layers (especially on mobile).
+    if (rec._mountPromise) await rec._mountPromise;
+    return rec;
+  }
 
   const mod = await registry.get(id)();
   const def = mod.default;
@@ -65,11 +71,15 @@ async function ensureMounted(id) {
   plane.appendChild(root);
 
   const pos = screenPos(def.id);
-  rec = { def, root, pos };
+  rec = { def, root, pos, _mountPromise: null };
   cache.set(def.id, rec);
 
   positionScreen(rec);
-  await def.mount(root, { navigate });
+  // Track mount promise so later calls can await it.
+  rec._mountPromise = Promise.resolve()
+    .then(() => def.mount(root, { navigate }))
+    .finally(() => { rec._mountPromise = null; });
+  await rec._mountPromise;
   return rec;
 }
 
