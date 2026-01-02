@@ -21,6 +21,12 @@ export function createController() {
 
   return {
     async mount(root, ctx = {}) {
+      // HARDENING (mobile stacking / duplicate DOM prevention)
+      // Some mobile browsers + fast interactions can leave behind stale DOM layers
+      // if a mount is re-entered unexpectedly. We enforce a clean slate before
+      // constructing the scroll container + surface.
+      try { root.replaceChildren(); } catch { root.innerHTML = ''; }
+
       // IMPORTANT:
       // The router/plane owns horizontal swipe gestures via `touch-action:none` on `.screen-root`.
       // We therefore DO NOT mark the screen root as `.scrollable` (that would re-enable browser
@@ -68,6 +74,9 @@ export function createController() {
       try { surfaceMount?.unmount?.(); } catch {}
       surfaceMount = null;
       if (unstyle) unstyle();
+
+      // Note: router caches screens and typically hides/shows without calling unmount.
+      // Any hard cleanup required for re-entry is handled at the top of mount().
     }
   };
 }

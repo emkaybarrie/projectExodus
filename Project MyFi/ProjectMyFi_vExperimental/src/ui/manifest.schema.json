@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "version",
+    "screens",
+    "mountables",
+    "ui_units",
+    "write_allowlist"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "write_allowlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "screens": {
+      "type": "array"
+    },
+    "mountables": {
+      "type": "array"
+    },
+    "ui_units": {
+      "type": "array"
+    },
+    "studio": {
+      "type": "object"
+    }
+  }
+}
