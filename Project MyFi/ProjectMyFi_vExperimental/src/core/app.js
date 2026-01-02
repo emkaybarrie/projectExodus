@@ -29,6 +29,8 @@ registerScreens([
   { id: 'start',    loader: () => import('../screens/start/index.js') },
   { id: 'auth',     loader: () => import('../screens/auth/index.js') },
   { id: 'hub',      loader: () => import('../screens/hub/index.js') },
+  // Experimental: JSON-first Hub rebuild (non-dashboard) for Surfaces Studio dry-run
+  { id: 'hub2',     loader: () => import('../screens/hub2/index.js') },
   { id: 'quests',   loader: () => import('../screens/quests/index.js') },
   { id: 'avatar',   loader: () => import('../screens/avatar/index.js') },
   { id: 'guidance', loader: () => import('../screens/guidance/index.js') },
@@ -45,6 +47,7 @@ validateAll({
     { id: 'start',    loader: () => import('../screens/start/index.js') },
     { id: 'auth',     loader: () => import('../screens/auth/index.js') },
     { id: 'hub',      loader: () => import('../screens/hub/index.js') },
+    { id: 'hub2',     loader: () => import('../screens/hub2/index.js') },
     { id: 'quests',   loader: () => import('../screens/quests/index.js') },
     { id: 'avatar',   loader: () => import('../screens/avatar/index.js') },
     { id: 'guidance', loader: () => import('../screens/guidance/index.js') },
@@ -70,10 +73,28 @@ window.addEventListener('pointerdown', kickMusicOnce, { once: true, capture: tru
 initChrome();
 initRouter({ stageEl: document.getElementById('stage') });
 
+function desiredStartScreen() {
+  try {
+    const hash = (window.location.hash || '').replace('#', '').trim();
+    if (hash) return hash;
+    const url = new URL(window.location.href);
+    const q = (url.searchParams.get('screen') || '').trim();
+    return q || null;
+  } catch {
+    return null;
+  }
+}
+
 onAuthStateChanged(auth, (user) => {
   if (user) {
     // You could check lastBuildVariant if you want.
-    navigate('hub');
+    // Optional dev/deeplink override (helps test Surfaces-built screens on mobile
+    // without touching the main Hub UI):
+    //   - https://.../#hub2
+    //   - https://.../?screen=hub2
+    const wanted = desiredStartScreen();
+    const allow = new Set(['hub', 'hub2', 'quests', 'avatar', 'guidance', 'badlands']);
+    navigate(allow.has(wanted) ? wanted : 'hub');
   } else {
     navigate('start'); // ensure we leave protected screens when signed out
   }

@@ -21,6 +21,19 @@
         "prompt": "src/screens/quests/uplift.prompt.md",
         "contract": "src/screens/quests/uplift.contract.json"
       }
+    },
+    {
+      "id": "hub2",
+      "title": "Hub (JSON-first)",
+      "surface": "src/screens/hub2/surface.json",
+      "baseline_css": [
+        "src/screens/hub2/styles.css"
+      ],
+      "uplift": {
+        "css": "src/screens/hub2/uplift.css",
+        "prompt": "src/screens/hub2/uplift.prompt.md",
+        "contract": "src/screens/hub2/uplift.contract.json"
+      }
     }
   ],
   "mountables": [
@@ -38,6 +51,31 @@
       "kind": "QuestSection",
       "category": "screen-part",
       "entry": "src/screens/quests/parts/QuestSectionPart.js"
+    },
+    {
+      "kind": "Hub2Header",
+      "category": "screen-part",
+      "entry": "src/screens/hub2/parts/Hub2HeaderPart.js"
+    },
+    {
+      "kind": "Hub2Vitals",
+      "category": "screen-part",
+      "entry": "src/screens/hub2/parts/Hub2VitalsPart.js"
+    },
+    {
+      "kind": "Hub2Skills",
+      "category": "screen-part",
+      "entry": "src/screens/hub2/parts/Hub2SkillsPart.js"
+    },
+    {
+      "kind": "Hub2Events",
+      "category": "screen-part",
+      "entry": "src/screens/hub2/parts/Hub2EventsPart.js"
+    },
+    {
+      "kind": "Hub2Essence",
+      "category": "screen-part",
+      "entry": "src/screens/hub2/parts/Hub2EssencePart.js"
     }
   ],
   "ui_units": [
