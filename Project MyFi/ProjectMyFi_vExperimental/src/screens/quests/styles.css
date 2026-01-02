@@ -20,6 +20,31 @@
   overscroll-behavior-y: contain;
   touch-action: pan-y;
   padding-bottom: env(safe-area-inset-bottom);
+
+  /*
+    MOBILE COMPOSITING HARDENING
+    ---------------------------
+    Some mobile browsers can leave behind a “stale” snapshot layer when:
+      - the scroll container lives inside a transformed parent (our router plane)
+      - AND children use backdrop-filter (our .myfiCard base class)
+
+    The symptom looks like duplicated content where one layer scrolls and one
+    is static. It’s usually a GPU/compositor artifact, not real DOM duplication.
+
+    Mitigation strategy:
+      1) Isolate paints for the scrolling region.
+      2) Avoid backdrop-filter inside this scroll region.
+  */
+  contain: paint;
+  isolation: isolate;
+  transform: translateZ(0);
+}
+
+/* Disable blur surfaces inside Quests scroll to prevent compositor “ghost layers”. */
+.questsScroll .myfiCard,
+.questsScroll .qbCard{
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .questsRoot{
