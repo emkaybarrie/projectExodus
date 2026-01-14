@@ -1,0 +1,15 @@
+.Part-EmptyCard{
+  color: var(--text);
+}
+.Part-EmptyCard .EmptyCard__title{
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.Part-EmptyCard .EmptyCard__body{
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.4;
+}

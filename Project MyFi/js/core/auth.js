@@ -4,7 +4,7 @@ import { doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/fi
 
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
-import { firebaseApp as app, auth, db, functions as fns } from '../../ProjectMyFi_vExperimental/src/core/firestore.js';
+import { firebaseApp as app, auth, db, functions as fns } from '../../ProjectMyFi_vLatest/src/core/firestore.js';
 
 
 // Helper
@@ -42,7 +42,8 @@ const getUserDataFromFirestore = async (uid) => {
 // At top of auth.js (or near your imports), define the routes once
 const ROUTES = {
   stable: "dashboard.html",
-  experimental: "ProjectMyFi_vExperimental/public/index.html" // change if your experimental file has a different name/path
+  experimental: "ProjectMyFi_vExperimental/index.html" 
+  //experimental: "ProjectMyFi_vLatest/public/index.html" // change if your experimental file has a different name/path
 };
 
 // Backward-compatible signature: options is optional

@@ -1,0 +1,77 @@
+<div class="Part Part-WardwatchStage myfiCard" data-hook="root">
+  <!-- Header (always visible) -->
+  <div class="wwHead">
+    <div class="wwTitle" data-hook="title">—</div>
+    <div class="wwSub" data-hook="subtitle">—</div>
+  </div>
+
+  <!-- Normal mode: Tabs + Pages -->
+  <div class="wwNormal" data-hook="normalWrap">
+    <div class="wwTabs">
+      <button class="wwTab isActive" data-hook="tabWorld">World</button>
+      <button class="wwTab" data-hook="tabEvents">Events</button>
+      <button class="wwTab" data-hook="tabLoadout">Loadout</button>
+    </div>
+
+    <div class="wwPages">
+      <!-- WORLD -->
+      <section class="wwPage isActive" data-hook="pageWorld">
+        <div class="wwViewport" data-hook="worldViewport">
+          <div class="wwCaption" data-hook="worldCaption">—</div>
+          <div class="wwEnemyLayer" data-hook="worldEnemies"></div>
+
+          <button class="wwCta" data-hook="btnAid">
+            <span class="wwCtaIcon">⚔️</span>
+            <span class="wwCtaText">Aid Your Avatar</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- EVENTS -->
+      <section class="wwPage" data-hook="pageEvents">
+        <div class="wwCardTitle">Last 3 encounters</div>
+        <div class="wwRecentList" data-hook="recentList"></div>
+        <div class="wwHint">V1: list only.</div>
+      </section>
+
+      <!-- LOADOUT -->
+      <section class="wwPage" data-hook="pageLoadout">
+        <div class="wwCardTitle">Loadout</div>
+        <div class="wwLoadoutBox">
+          <div class="wwLoadoutLine">• Tactics: <b>Oldest First</b></div>
+          <div class="wwLoadoutLine">• Auto: <b data-hook="loadoutAuto">—</b></div>
+          <div class="wwLoadoutLine">• Skills: <b>Endure</b>, <b>Channel</b></div>
+          <div class="wwHint">V1: loadout is a stub. Next: actual tactic builder + equip slots.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Battle mode: replaces normal stage view -->
+  <div class="wwBattle" data-hook="battleWrap">
+    <div class="wwBattleTop">
+      <div class="wwCaption" data-hook="battleCaption">Battle</div>
+      <button class="wwExit" data-hook="btnExitBattle" title="Exit battle">✕</button>
+    </div>
+
+    <div class="wwBattleEnemies" data-hook="battleEnemies"></div>
+
+    <div class="wwBattleMid">
+      <div class="wwBattleAvatar">
+        <div class="wwBattlePortrait" data-hook="battlePortrait">AZ</div>
+        <div class="wwAtb">
+          <div class="wwAtbFill" data-hook="atbFill"></div>
+        </div>
+      </div>
+
+      <div class="wwBattleActions">
+        <button class="wwAct wwActStam" data-hook="btnEndure">Endure</button>
+        <button class="wwAct wwActMana" data-hook="btnChannel">Channel</button>
+        <button class="wwAct wwActEmpty" data-hook="btnSkill3" disabled>—</button>
+        <button class="wwAct wwActEmpty" data-hook="btnSkill4" disabled>—</button>
+      </div>
+    </div>
+
+    <div class="wwBattleLog" data-hook="battleLog"></div>
+  </div>
+</div>

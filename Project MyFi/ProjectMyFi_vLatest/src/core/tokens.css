@@ -1,0 +1,91 @@
+:root{
+  --bg0: #0b0f1a;
+  --bg1: #0f1630;
+  --card: rgba(255,255,255,0.06);
+  --cardBorder: rgba(255,255,255,0.12);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.68);
+  --r: 16px;
+  --gap: 12px;
+  --pad: 14px;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+html, body{
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* IMPORTANT: prevents page scroll */
+}
+
+
+body{
+  background: var(--bg0);
+  color: var(--text);
+}
+
+#app{
+  height: 100vh;        /* authoritative height, not min-height */
+  display: block;
+}
+
+/* ---- Chrome Shell ---- */
+.chrome{
+  height: 100%;         /* now inherits #app height */
+  display: flex;
+  flex-direction: column;
+}
+
+.chrome__header{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chrome__title{
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.chrome__surfaceHost{
+  flex: 1 1 auto;
+  min-height: 0; /* important for overflow containers */
+  overflow: auto;
+}
+
+.chrome__footer{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px 10px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.chrome__navBtn{
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  padding: 10px 10px;
+  border-radius: 14px;
+  font-weight: 800;
+}
+
+/* ---- Surfaces ---- */
+.screen-host{
+  min-height: 100%;
+}
+
+.surface-root{
+  padding: var(--pad);
+  display: grid;
+  gap: var(--gap);
+}
+
+.slot-card{
+  background: var(--card);
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--r);
+  padding: var(--pad);
+}
