@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "parts": [
+    { "kind": "EmptyCard", "category": "primitive", "path": "./primitives/EmptyCard/part.js" },
+    { "kind": "StartCard", "category": "primitive", "path": "./primitives/StartCard/part.js" },
+    { "kind": "AuthCard",  "category": "primitive", "path": "./primitives/AuthCard/part.js" }
+  ]
+}

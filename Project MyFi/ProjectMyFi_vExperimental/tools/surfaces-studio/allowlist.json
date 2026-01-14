@@ -1,9 +1,0 @@
-{
-  "write_allowlist": [
-    "src/screens/**/surface.json",
-    "src/screens/**/uplift.css",
-    "src/ui/**/uplift.css",
-    "src/ui/**/uplift.html",
-    "src/ui/**/uplift.md"
-  ]
-}

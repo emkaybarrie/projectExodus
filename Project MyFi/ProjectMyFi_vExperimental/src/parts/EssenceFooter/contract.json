@@ -1,0 +1,8 @@
+{
+  "id": "EssenceFooter",
+  "bindRequired": ["essence"],
+  "actionsAllowed": [],
+  "vmReads": ["hub.essence"],
+  "strictVmReads": true,
+  "editableFiles": ["uplift.css"]
+}

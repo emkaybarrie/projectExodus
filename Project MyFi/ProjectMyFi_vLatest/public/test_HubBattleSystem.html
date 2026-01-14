@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MyFi Arena Prototype (Pressure Accounting)</title>
+  <style>
+    :root{
+      --bg:#0b0f1e;
+      --panel:#121a33;
+      --panel2:#0f1630;
+      --ink:#e9ecff;
+      --muted:#aeb6e6;
+      --line:rgba(255,255,255,.10);
+      --good:#4ee6a6;
+      --warn:#ffd66b;
+      --bad:#ff6b7a;
+      --mana:#4aa3ff;
+      --stam:#44d07b;
+      --health:#ff4f6a;
+      --shadow: 0 10px 30px rgba(0,0,0,.45);
+      --radius: 18px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    }
+    body{
+      margin:0;
+      background: radial-gradient(1200px 900px at 40% 20%, rgba(122,98,255,.18), transparent 55%),
+                  radial-gradient(900px 600px at 80% 60%, rgba(90,220,255,.14), transparent 50%),
+                  radial-gradient(700px 700px at 30% 85%, rgba(255,120,200,.10), transparent 55%),
+                  var(--bg);
+      color:var(--ink);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+    .phone{
+      width:min(420px, 96vw);
+      border-radius: 30px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .topbar{
+      padding:14px 16px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+      backdrop-filter: blur(10px);
+      background: rgba(10,14,30,.35);
+    }
+    .title{
+      font-weight: 800;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      font-size: 16px;
+      opacity:.92;
+    }
+    .status{
+      font-size: 12px;
+      color: var(--muted);
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: var(--good);
+      box-shadow: 0 0 0 4px rgba(78,230,166,.15);
+    }
+    .wrap{
+      padding:14px 14px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+
+    /* HUD */
+    .hud{
+      display:grid;
+      grid-template-columns: 76px 1fr;
+      gap:12px;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(10,14,30,.35);
+    }
+    .avatar{
+      width:76px;height:76px;border-radius:18px;
+      background:
+        radial-gradient(40px 40px at 30% 30%, rgba(255,255,255,.25), transparent 55%),
+        linear-gradient(135deg, rgba(126,88,255,.60), rgba(60,220,255,.35));
+      border:1px solid rgba(255,255,255,.14);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:hidden;
+    }
+    .avatar::after{
+      content:"";
+      position:absolute; inset:-30%;
+      background: conic-gradient(from 0deg, rgba(180,120,255,.0), rgba(180,120,255,.45), rgba(120,220,255,.0));
+      animation: spin 6s linear infinite;
+      opacity:.8;
+    }
+    .avatar span{
+      position:relative;
+      font-weight:900;
+      letter-spacing:.06em;
+      z-index:1;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    .bars{ display:flex; flex-direction:column; gap:10px; }
+    .barRow{
+      display:grid;
+      grid-template-columns: 70px 1fr 70px;
+      gap:8px;
+      align-items:center;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .barRow b{ color:var(--ink); font-weight:800; letter-spacing:.02em; }
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+      position:relative;
+    }
+    .fill{
+      height:100%;
+      width:50%;
+      border-radius:999px;
+      background: linear-gradient(90deg, rgba(255,255,255,.25), rgba(255,255,255,.45));
+    }
+    .fill.health{ background: linear-gradient(90deg, rgba(255,79,106,.65), rgba(255,79,106,.95)); }
+    .fill.mana{ background: linear-gradient(90deg, rgba(74,163,255,.55), rgba(74,163,255,.95)); }
+    .fill.stam{ background: linear-gradient(90deg, rgba(68,208,123,.55), rgba(68,208,123,.95)); }
+
+    /* Arena */
+    .arenaCard{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(10,14,30,.35);
+      overflow:hidden;
+      transition: max-height .25s ease, opacity .25s ease;
+      max-height: 600px;
+    }
+    .arenaHeader{
+      padding:10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+    }
+    .arenaHeader .left{
+      display:flex; align-items:center; gap:10px;
+      font-weight:800;
+    }
+    .pill{
+      font-size:12px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+    }
+    .arenaBody{
+      padding:12px;
+      display:grid;
+      gap:12px;
+    }
+    .viewport{
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(500px 220px at 50% 30%, rgba(120,220,255,.10), transparent 60%),
+        radial-gradient(520px 260px at 50% 90%, rgba(180,120,255,.12), transparent 62%),
+        linear-gradient(180deg, rgba(15,22,48,.72), rgba(8,10,20,.78));
+      position:relative;
+      min-height: 150px;
+      overflow:hidden;
+    }
+    .viewport .caption{
+      position:absolute; left:10px; top:10px;
+      font-size:12px; color:var(--muted);
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.10);
+      padding:4px 8px;
+      border-radius:999px;
+    }
+    .enemySlots{
+      position:absolute; left:10px; right:10px; bottom:10px;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+    }
+    .enemy{
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      padding:10px;
+      min-height: 74px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .enemyName{
+      display:flex; justify-content:space-between; align-items:center;
+      font-size:12px;
+      color: var(--muted);
+    }
+    .enemyName b{ color: var(--ink); font-weight:900; }
+    .mini{
+      font-variant-numeric: tabular-nums;
+      font-size:12px;
+      color: var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .mini .p{ color: #ffe0b1; }
+    .mini .m{ color: rgba(68,208,123,.95); }
+    .mini .l{ color: rgba(255,107,122,.95); }
+    .prog{
+      height:8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    .prog .fill2{
+      height:100%;
+      width:0%;
+      border-radius:999px;
+      background: linear-gradient(90deg, rgba(255,214,107,.50), rgba(255,214,107,.92));
+    }
+
+    .log{
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      padding:10px 10px;
+      max-height: 150px;
+      overflow:auto;
+      font-size:12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+    .log .line{ margin: 0 0 6px; }
+    .log .good{ color: rgba(78,230,166,.95); }
+    .log .bad{ color: rgba(255,107,122,.95); }
+    .log .mana{ color: rgba(74,163,255,.95); }
+    .log .stam{ color: rgba(68,208,123,.95); }
+
+    /* Actions */
+    .actions{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+    }
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(26,36,72,.85), rgba(18,26,51,.85));
+      color: var(--ink);
+      border-radius: 16px;
+      padding:10px 10px;
+      font-weight:900;
+      letter-spacing:.02em;
+      cursor:pointer;
+      user-select:none;
+      position:relative;
+      overflow:hidden;
+      touch-action: manipulation;
+    }
+    .btn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+    .sub{
+      display:block;
+      font-size:11px;
+      font-weight:700;
+      color: var(--muted);
+      margin-top:4px;
+      letter-spacing:0;
+    }
+    .cool{
+      position:absolute;
+      right:10px; top:10px;
+      font-size:11px;
+      color: var(--muted);
+      opacity:.95;
+      z-index:2;
+    }
+    .btnStam{ border-color: rgba(68,208,123,.35); }
+    .btnMana{ border-color: rgba(74,163,255,.35); }
+    .btnAuto{ border-color: rgba(255,214,107,.35); }
+    .autoOn{
+      background: linear-gradient(180deg, rgba(50,44,14,.65), rgba(24,20,10,.70));
+      border-color: rgba(255,214,107,.55);
+    }
+    .holdFill{
+      position:absolute; inset:0;
+      width:0%;
+      background: rgba(255,255,255,.10);
+      z-index:1;
+      transition: width .05s linear;
+    }
+    .holdHint{
+      position:absolute; left:10px; top:10px;
+      font-size:11px;
+      color: var(--muted);
+      z-index:2;
+    }
+
+    /* Controls */
+    .controls{
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(10,14,30,.25);
+      padding:12px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 1fr auto auto;
+      gap:8px;
+      align-items:center;
+    }
+    input{
+      width:100%;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      color: var(--ink);
+      padding:10px 12px;
+      font-weight:800;
+      outline:none;
+    }
+    .tiny{
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    /* Collapsed arena */
+    .collapsed{
+      max-height: 56px;
+    }
+    .collapsed .arenaBody{
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="topbar">
+      <div class="title">HUB · ARENA TEST</div>
+      <div class="status"><span class="dot" id="dot"></span><span id="statusText">All quiet</span></div>
+    </div>
+
+    <div class="wrap">
+      <!-- HUD -->
+      <div class="hud">
+        <div class="avatar"><span>AZ</span></div>
+        <div class="bars">
+          <div class="barRow">
+            <b>Health</b>
+            <div class="bar"><div class="fill health" id="barHealth"></div></div>
+            <div style="text-align:right" id="txtHealth">20 / 20</div>
+          </div>
+          <div class="barRow">
+            <b>Mana</b>
+            <div class="bar"><div class="fill mana" id="barMana"></div></div>
+            <div style="text-align:right" id="txtMana">15 / 15</div>
+          </div>
+          <div class="barRow">
+            <b>Stamina</b>
+            <div class="bar"><div class="fill stam" id="barStam"></div></div>
+            <div style="text-align:right" id="txtStam">25 / 25</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arena -->
+      <div class="arenaCard collapsed" id="arenaCard">
+        <div class="arenaHeader">
+          <div class="left">
+            <span>Battle View</span>
+            <span class="pill" id="arenaPill">Dormant</span>
+          </div>
+          <div class="tiny">
+            <span id="queueInfo">0 active</span> ·
+            <span id="tickInfo">next tick: 60s</span>
+          </div>
+        </div>
+
+        <div class="arenaBody">
+          <div class="viewport" id="viewport">
+            <div class="caption" id="viewportCaption">Arena idle</div>
+            <div class="enemySlots" id="enemySlots"></div>
+          </div>
+
+          <div class="log" id="log"></div>
+
+          <div class="actions">
+            <button class="btn btnStam" id="btnStam">
+              <div class="holdFill" id="holdFillStam"></div>
+              <div class="holdHint" id="holdHintStam">hold</div>
+              <span style="position:relative; z-index:2;">
+                Endure
+                <span class="sub">Hold + release · spend 1 Stamina</span>
+              </span>
+              <span class="cool" id="cdStam">CD: ready</span>
+            </button>
+
+            <button class="btn btnMana" id="btnMana">
+              <div class="holdFill" id="holdFillMana"></div>
+              <div class="holdHint" id="holdHintMana">hold</div>
+              <span style="position:relative; z-index:2;">
+                Channel
+                <span class="sub">Hold + release · spend 1 Mana</span>
+              </span>
+              <span class="cool" id="cdMana">CD: ready</span>
+            </button>
+
+            <button class="btn btnAuto btnAuto" id="btnAuto">
+              <span style="position:relative; z-index:2;">
+                Auto Resolve
+                <span class="sub" id="autoSub">OFF · skip = Health pays</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="tiny">
+            Prototype rule: one mitigation unit per minute total (attention). Auto chooses stamina then mana for the oldest enemy.
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <div class="row">
+          <input id="spendInput" type="number" min="1" step="1" value="5" />
+          <button class="btn" id="spawnBtn">Spawn</button>
+          <button class="btn" id="resetBtn">Reset Pools</button>
+        </div>
+        <div class="tiny">
+          Spawn creates an encounter with pressure = spend amount. Each minute: encounter progresses by 1. If mitigated (mana/stamina) → no health loss; else → -1 health. Encounter leaves when progress == pressure.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== CONFIG =====
+  const MAX_RENDER = 3;
+  const TICK_SECONDS = 60;                 // one "minute" = 60 seconds real time
+  const SKILL_COOLDOWN_SECONDS = 60;       // 1 minute cooldown
+  const HOLD_THRESHOLD_MS = 650;           // press/hold duration to commit
+  const MAX_LOG_LINES = 60;
+
+  // ===== STATE =====
+  const state = {
+    pools: { healthMax: 20, health: 20, manaMax: 15, mana: 15, stamMax: 25, stam: 25 },
+    enemies: [], // {id,name,pressureTotal,progress,mitigated,leaked,createdAt}
+    auto: false,
+    cd: { stamUntil: 0, manaUntil: 0 },
+    queued: null, // "stam"|"mana"|null queued for next tick
+    lastTickWall: Date.now()
+  };
+
+  // ===== DOM =====
+  const $ = (id) => document.getElementById(id);
+  const arenaCard = $("arenaCard");
+  const enemySlots = $("enemySlots");
+  const logEl = $("log");
+
+  const txtHealth = $("txtHealth");
+  const txtMana = $("txtMana");
+  const txtStam = $("txtStam");
+  const barHealth = $("barHealth");
+  const barMana = $("barMana");
+  const barStam = $("barStam");
+
+  const statusText = $("statusText");
+  const dot = $("dot");
+  const arenaPill = $("arenaPill");
+  const queueInfo = $("queueInfo");
+  const tickInfo = $("tickInfo");
+  const viewportCaption = $("viewportCaption");
+  const autoSub = $("autoSub");
+
+  const btnStam = $("btnStam");
+  const btnMana = $("btnMana");
+  const btnAuto = $("btnAuto");
+  const cdStam = $("cdStam");
+  const cdMana = $("cdMana");
+
+  const holdFillStam = $("holdFillStam");
+  const holdFillMana = $("holdFillMana");
+  const holdHintStam = $("holdHintStam");
+  const holdHintMana = $("holdHintMana");
+
+  const spendInput = $("spendInput");
+  const spawnBtn = $("spawnBtn");
+  const resetBtn = $("resetBtn");
+
+  // ===== HELPERS =====
+  const now = () => Date.now();
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const sLeft = (untilMs) => Math.max(0, Math.ceil((untilMs - now()) / 1000));
+
+  function log(line, cls="") {
+    const div = document.createElement("div");
+    div.className = `line ${cls}`;
+    div.textContent = line;
+    logEl.prepend(div);
+
+    // trim
+    while (logEl.children.length > MAX_LOG_LINES) {
+      logEl.removeChild(logEl.lastChild);
+    }
+  }
+
+  function updateHUD() {
+    const p = state.pools;
+
+    txtHealth.textContent = `${p.health} / ${p.healthMax}`;
+    txtMana.textContent = `${p.mana} / ${p.manaMax}`;
+    txtStam.textContent = `${p.stam} / ${p.stamMax}`;
+
+    barHealth.style.width = `${(p.health / p.healthMax) * 100}%`;
+    barMana.style.width = `${(p.mana / p.manaMax) * 100}%`;
+    barStam.style.width = `${(p.stam / p.stamMax) * 100}%`;
+
+    const active = state.enemies.length;
+    queueInfo.textContent = `${active} active`;
+
+    if (active === 0) {
+      statusText.textContent = "All quiet";
+      dot.style.background = "var(--good)";
+      dot.style.boxShadow = "0 0 0 4px rgba(78,230,166,.15)";
+      arenaCard.classList.add("collapsed");
+      arenaPill.textContent = "Dormant";
+      viewportCaption.textContent = "Arena idle";
+    } else {
+      statusText.textContent = `${active} encounter${active>1?"s":""} active`;
+      dot.style.background = "var(--warn)";
+      dot.style.boxShadow = "0 0 0 4px rgba(255,214,107,.15)";
+      arenaCard.classList.remove("collapsed");
+      arenaPill.textContent = "Active";
+      viewportCaption.textContent = state.auto ? "Auto-resolving…" : "Manual window open";
+    }
+  }
+
+  function updateButtons() {
+    const stamLeft = sLeft(state.cd.stamUntil);
+    const manaLeft = sLeft(state.cd.manaUntil);
+
+    cdStam.textContent = stamLeft ? `CD: ${stamLeft}s` : "CD: ready";
+    cdMana.textContent = manaLeft ? `CD: ${manaLeft}s` : "CD: ready";
+
+    const noEnemies = state.enemies.length === 0;
+
+    // Only allow holds when there are enemies and you have resource and not on cooldown
+    btnStam.disabled = noEnemies || stamLeft > 0 || state.pools.stam <= 0;
+    btnMana.disabled = noEnemies || manaLeft > 0 || state.pools.mana <= 0;
+
+    btnAuto.classList.toggle("autoOn", state.auto);
+    autoSub.textContent = state.auto ? "ON · system picks skills" : "OFF · skip = Health pays";
+
+    holdHintStam.textContent = state.queued === "stam" ? "queued" : "hold";
+    holdHintMana.textContent = state.queued === "mana" ? "queued" : "hold";
+  }
+
+  function renderEnemies() {
+    enemySlots.innerHTML = "";
+    const list = state.enemies.slice(0, MAX_RENDER);
+
+    for (let i=0; i<MAX_RENDER; i++) {
+      const e = list[i];
+      const card = document.createElement("div");
+      card.className = "enemy";
+
+      if (!e) {
+        card.innerHTML = `
+          <div class="enemyName"><b>—</b><span>empty</span></div>
+          <div class="mini"><span class="p">P: —</span><span class="m">M: —</span><span class="l">L: —</span></div>
+          <div class="prog"><div class="fill2" style="width:0%"></div></div>
+        `;
+      } else {
+        const pct = (e.progress / e.pressureTotal) * 100;
+        card.innerHTML = `
+          <div class="enemyName"><b>${e.name}</b><span>#${e.id}</span></div>
+          <div class="mini">
+            <span class="p">${e.progress}/${e.pressureTotal}</span>
+            <span class="m">Mit ${e.mitigated}</span>
+            <span class="l">Leak ${e.leaked}</span>
+          </div>
+          <div class="prog"><div class="fill2" style="width:${pct}%"></div></div>
+        `;
+      }
+
+      enemySlots.appendChild(card);
+    }
+  }
+
+  function spawnEnemy(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    const id = Math.floor(Math.random()*9000) + 1000;
+    const names = ["Cost", "Bill", "Impulse", "Leak", "Spike", "Drain", "Fee"];
+    const name = names[Math.floor(Math.random()*names.length)];
+
+    state.enemies.push({
+      id,
+      name,
+      pressureTotal: amount,
+      progress: 0,
+      mitigated: 0,
+      leaked: 0,
+      createdAt: now()
+    });
+
+    log(`Encounter spawned: ${name} (pressure ${amount}).`, "good");
+    updateAll();
+  }
+
+  function resetPools() {
+    const p = state.pools;
+    p.health = p.healthMax;
+    p.mana = p.manaMax;
+    p.stam = p.stamMax;
+    state.cd.manaUntil = 0;
+    state.cd.stamUntil = 0;
+    state.queued = null;
+    log("Pools reset. Cooldowns cleared.", "good");
+    updateAll();
+  }
+
+  function primaryEnemy() {
+    return state.enemies[0] || null;
+  }
+
+  // Apply 1 mitigation unit to the PRIMARY enemy, spending 1 mana/stam
+  function applyMitigation(kind, isAuto=false) {
+    const e = primaryEnemy();
+    if (!e) return false;
+
+    const t = now();
+
+    if (kind === "stam") {
+      if (state.pools.stam <= 0) return false;
+      if (t < state.cd.stamUntil) return false;
+
+      state.pools.stam -= 1;
+      e.mitigated += 1;
+      state.cd.stamUntil = t + SKILL_COOLDOWN_SECONDS * 1000;
+      log(`${isAuto ? "Auto" : "Manual"} Endure: mitigated 1 (${e.name}).`, "stam");
+      return true;
+    }
+
+    if (kind === "mana") {
+      if (state.pools.mana <= 0) return false;
+      if (t < state.cd.manaUntil) return false;
+
+      state.pools.mana -= 1;
+      e.mitigated += 1;
+      state.cd.manaUntil = t + SKILL_COOLDOWN_SECONDS * 1000;
+      log(`${isAuto ? "Auto" : "Manual"} Channel: mitigated 1 (${e.name}).`, "mana");
+      return true;
+    }
+
+    return false;
+  }
+
+  // Minute tick: each encounter progresses by 1 pressure unit.
+  // One mitigation action per minute total can be applied (manual queued, else auto).
+  // If an encounter is not mitigated this minute (only primary can be), it leaks to health.
+  function minuteTick() {
+    if (state.enemies.length === 0) return;
+
+    // Decide mitigation for this minute (applies only to primary enemy)
+    let mitigatedThisMinute = false;
+
+    if (state.queued) {
+      mitigatedThisMinute = applyMitigation(state.queued, false);
+      state.queued = null;
+    }
+
+    if (!mitigatedThisMinute && state.auto) {
+      mitigatedThisMinute = applyMitigation("stam", true) || applyMitigation("mana", true);
+    }
+
+    // Now each enemy accounts 1 pressure unit this minute
+    for (let i=0; i<state.enemies.length; i++) {
+      const e = state.enemies[i];
+
+      // progress always increases (pressure is "playing out")
+      e.progress += 1;
+
+      const isPrimary = i === 0;
+      const paidByMitigation = isPrimary && mitigatedThisMinute;
+
+      if (!paidByMitigation) {
+        e.leaked += 1;
+        state.pools.health = Math.max(0, state.pools.health - 1);
+        log(`${e.name} leaked 1 → -1 health.`, "bad");
+      } else {
+        log(`${e.name} contained this minute.`, "good");
+      }
+    }
+
+    // Remove resolved encounters
+    const remaining = [];
+    for (const e of state.enemies) {
+      if (e.progress >= e.pressureTotal) {
+        log(`Encounter resolved: ${e.name} (Mit ${e.mitigated}, Leak ${e.leaked}).`, "good");
+      } else {
+        remaining.push(e);
+      }
+    }
+    state.enemies = remaining;
+
+    if (state.pools.health === 0) {
+      log("Health hit 0. (Prototype: no rest/auto-revive logic yet.)", "bad");
+    }
+
+    if (state.enemies.length === 0) {
+      log("All encounters resolved. Arena collapses.", "good");
+    }
+  }
+
+  function loop() {
+    const elapsed = Math.floor((now() - state.lastTickWall) / 1000);
+    const remain = Math.max(0, TICK_SECONDS - elapsed);
+    tickInfo.textContent = `next tick: ${remain}s`;
+
+    if (elapsed >= TICK_SECONDS) {
+      state.lastTickWall = now();
+      minuteTick();
+      updateAll();
+    } else {
+      updateButtons();
+    }
+  }
+
+  function updateAll() {
+    updateHUD();
+    updateButtons();
+    renderEnemies();
+  }
+
+  // ===== Press/hold/release interaction =====
+  function bindHold(button, fillEl, kind) {
+    let holding = false;
+    let start = 0;
+    let raf = 0;
+
+    const resetFill = () => {
+      fillEl.style.width = "0%";
+    };
+
+    const step = () => {
+      if (!holding) return;
+      const pct = clamp(((now() - start) / HOLD_THRESHOLD_MS) * 100, 0, 100);
+      fillEl.style.width = `${pct}%`;
+      raf = requestAnimationFrame(step);
+    };
+
+    const cancel = () => {
+      holding = false;
+      if (raf) cancelAnimationFrame(raf);
+      resetFill();
+    };
+
+    const commit = () => {
+      // Queue for next minute tick (your intended model)
+      if (state.enemies.length === 0) return;
+      state.queued = kind;
+      log(`Queued manual ${kind === "stam" ? "Endure" : "Channel"} (applies next tick).`, kind === "stam" ? "stam" : "mana");
+      updateAll();
+    };
+
+    button.addEventListener("pointerdown", (e) => {
+      if (button.disabled) return;
+      e.preventDefault();
+      holding = true;
+      start = now();
+      resetFill();
+      step();
+      button.setPointerCapture?.(e.pointerId);
+    });
+
+    button.addEventListener("pointerup", (e) => {
+      if (!holding) return;
+      const heldMs = now() - start;
+      cancel();
+
+      if (heldMs >= HOLD_THRESHOLD_MS) {
+        commit();
+      } else {
+        // short press does nothing (keeps it intentional)
+        log("Hold longer to commit the action.", "");
+      }
+    });
+
+    button.addEventListener("pointercancel", cancel);
+    button.addEventListener("pointerleave", () => {
+      // If finger drifts off the button, cancel to allow "slide to cancel" feel
+      if (holding) cancel();
+    });
+  }
+
+  // ===== EVENTS =====
+  spawnBtn.addEventListener("click", () => {
+    const amt = parseInt(spendInput.value, 10);
+    spawnEnemy(amt);
+  });
+
+  resetBtn.addEventListener("click", resetPools);
+
+  btnAuto.addEventListener("click", () => {
+    state.auto = !state.auto;
+    log(`Auto Resolve turned ${state.auto ? "ON" : "OFF"}.`, state.auto ? "good" : "");
+    updateAll();
+  });
+
+  bindHold(btnStam, holdFillStam, "stam");
+  bindHold(btnMana, holdFillMana, "mana");
+
+  // ===== INIT =====
+  log("Prototype ready. Spawn an encounter (e.g., 5). Each minute resolves 1 pressure unit per enemy.", "good");
+  state.lastTickWall = now();
+  updateAll();
+  setInterval(loop, 200);
+})();
+</script>
+</body>
+</html>

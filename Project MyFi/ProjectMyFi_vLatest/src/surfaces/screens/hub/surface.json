@@ -1,0 +1,9 @@
+{
+  "id": "hub",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Hub" },
+  "slots": [
+    { "id": "hubPlaceholder", "card": true, "part": { "kind": "EmptyCard" } }
+  ]
+}
