@@ -1,8 +1,0 @@
-{
-  "id": "VitalsHeader",
-  "bindRequired": ["vitals"],
-  "actionsAllowed": [],
-  "vmReads": ["hub.vitals"],
-  "strictVmReads": true,
-  "editableFiles": ["uplift.css"]
-}

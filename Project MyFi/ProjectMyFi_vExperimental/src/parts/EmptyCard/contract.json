@@ -1,0 +1,11 @@
+{
+  "id": "EmptyCard",
+  "type": "part",
+  "hooks": {
+    "required": ["title", "body"]
+  },
+  "actions": {
+    "allowed": ["toast"]
+  },
+  "notes": "Placeholder card used whenever a surface slot needs a safe, visible element."
+}

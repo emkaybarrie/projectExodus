@@ -1,0 +1,19 @@
+/* ---FILE: src/parts/EmptyCard/uplift.css */
+.Part-EmptyCard.EmptyCard{
+  padding: 12px;
+}
+
+.EmptyCard__inner{
+  padding: 10px;
+}
+
+.EmptyCard__title{
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.EmptyCard__body{
+  color: var(--muted);
+  line-height: 1.35;
+  margin-bottom: 10px;
+}

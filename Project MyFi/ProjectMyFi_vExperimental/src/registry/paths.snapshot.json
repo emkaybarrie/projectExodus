@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-01-21T00:00:00.000Z",
+  "parts": [
+    "HubShell",
+    "EmptyCard"
+  ],
+  "surfaces": [
+    "hub"
+  ],
+  "journeys": [
+    "hub.openHub"
+  ]
+}

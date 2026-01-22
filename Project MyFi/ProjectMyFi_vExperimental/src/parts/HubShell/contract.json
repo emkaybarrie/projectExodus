@@ -1,0 +1,12 @@
+{
+  "id": "HubShell",
+  "type": "part",
+  "hooks": {
+    "required": ["headerTitle", "headerSubtitle", "footerLeft", "footerRight"]
+  },
+  "slots": ["main"],
+  "actions": {
+    "allowed": ["navigate"]
+  },
+  "notes": "Hub shell provides pinned header/footer with a scrollable main slot."
+}

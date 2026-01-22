@@ -1,0 +1,14 @@
+{
+  "id": "hub",
+  "type": "screen",
+  "shell": {
+    "partId": "HubShell"
+  },
+  "placements": [
+    {
+      "slot": "main",
+      "partId": "EmptyCard",
+      "slicePath": "hub"
+    }
+  ]
+}
