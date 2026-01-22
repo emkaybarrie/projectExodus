@@ -1,0 +1,62 @@
+/* ---FILE: src/parts/HubShell/uplift.css */
+.Part-HubShell.HubShell{
+  min-height: 100vh;
+  display:flex;
+  flex-direction:column;
+  gap: var(--gap);
+  padding: 14px;
+}
+
+.HubShell__header{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 12px 12px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+}
+
+.HubShell__headerInner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+.HubShell__title{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.HubShell__subtitle{
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.HubShell__main{
+  flex: 1;
+  min-height: 0; /* critical for proper scrolling flex children */
+  overflow: auto;
+  display:flex;
+  flex-direction:column;
+  gap: var(--gap);
+  padding-bottom: 10px;
+}
+
+.HubShell__footer{
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px 12px;
+  background: linear-gradient(0deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+}
+
+.HubShell__footerInner{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}

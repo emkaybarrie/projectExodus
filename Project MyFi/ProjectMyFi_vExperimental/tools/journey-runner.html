@@ -1,0 +1,93 @@
+<!-- ---FILE: tools/journey-runner.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MyFi Journey Runner</title>
+  <style>
+    body{ margin:0; font-family: ui-sans-serif, system-ui; background:#0b0d12; color:rgba(255,255,255,0.92); }
+    .wrap{ padding:16px; display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+    .card{ background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); border-radius:16px; padding:12px; }
+    select, button{ padding:10px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.92); }
+    pre{ white-space:pre-wrap; color:rgba(255,255,255,0.75); }
+    iframe{ width:min(1100px, 96vw); height: 76vh; border:0; border-radius:16px; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="font-weight:800;margin-bottom:8px;">Journey Runner</div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <select id="journeySel"></select>
+        <button id="runBtn">Run</button>
+        <button id="reloadBtn">Reload App</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+
+    <iframe id="appFrame" src="../index.html"></iframe>
+  </div>
+
+  <script type="module">
+    const sel = document.getElementById("journeySel");
+    const log = document.getElementById("log");
+    const frame = document.getElementById("appFrame");
+
+    function write(msg){ log.textContent += msg + "\\n"; }
+
+    async function fetchJson(url){
+      const r = await fetch(url, { cache:"no-store" });
+      if(!r.ok) throw new Error("Failed " + url + " (" + r.status + ")");
+      return await r.json();
+    }
+
+    async function loadManifest(){
+      const man = await fetchJson("../src/registry/manifest.json");
+      sel.innerHTML = "";
+      Object.keys(man.journeys).forEach(id => {
+        const o = document.createElement("option");
+        o.value = id;
+        o.textContent = id;
+        sel.appendChild(o);
+      });
+      return man;
+    }
+
+    async function runJourney(man, id){
+      write("Running: " + id);
+      const url = man.journeys[id].url.replace("./", "../");
+      const journey = await fetchJson(url);
+
+      const win = frame.contentWindow;
+      if(!win.__MYFI__?.rt){
+        write("App runtime not found in iframe. Try Reload App.");
+        return;
+      }
+      for(const step of (journey.steps || [])){
+        write("step: " + JSON.stringify(step));
+        if(step.op === "navigate"){
+          await win.__MYFI__.rt.router.goto(step.surfaceId);
+        } else {
+          write("Unknown op: " + step.op);
+        }
+      }
+      write("Done.");
+    }
+
+    document.getElementById("runBtn").addEventListener("click", async () => {
+      log.textContent = "";
+      const man = await loadManifest();
+      await runJourney(man, sel.value);
+    });
+
+    document.getElementById("reloadBtn").addEventListener("click", () => {
+      frame.src = "../index.html?ts=" + Date.now();
+      write("Reloading app...");
+      setTimeout(()=>write("Reloaded."), 600);
+    });
+
+    await loadManifest();
+  </script>
+</body>
+</html>
