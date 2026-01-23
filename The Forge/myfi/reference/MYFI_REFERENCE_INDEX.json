@@ -1,54 +1,109 @@
 {
   "reference": "MYFI_MASTER_REFERENCE.docx",
-  "version": "0.2",
+  "version": "1.0",
+  "lastValidatedBy": "Director",
   "sections": [
     {
-      "id": "mission",
-      "title": "Mission",
-      "type": "normative",
-      "sync": "human_to_repo",
-      "tags": ["purpose"]
+      "id": "usage",
+      "title": "How to Use This Document",
+      "classification": "descriptive",
+      "sync": "human_only",
+      "tags": ["meta", "process"]
     },
     {
-      "id": "core_model",
-      "title": "Core Model",
-      "type": "normative",
-      "sync": "bidirectional",
-      "tags": ["vitals", "loop"]
+      "id": "mission",
+      "title": "Mission & Philosophy",
+      "classification": "normative",
+      "sync": "human_to_repo",
+      "tags": ["purpose", "ethics"]
     },
     {
       "id": "ethics",
-      "title": "Ethics",
-      "type": "normative",
+      "title": "Ethics & Safeguards",
+      "classification": "normative",
       "sync": "human_to_repo",
-      "tags": ["ethics", "safety"]
+      "tags": ["ethics", "safety", "compliance"]
+    },
+    {
+      "id": "vitals",
+      "title": "The Core Behaviour Engine (Vitals)",
+      "classification": "normative",
+      "sync": "bidirectional",
+      "tags": ["vitals", "behaviour", "engine"]
+    },
+    {
+      "id": "hub",
+      "title": "The Spirit Hub — Heart of the Player Experience",
+      "classification": "normative",
+      "sync": "bidirectional",
+      "tags": ["hub", "hud", "encounters"]
+    },
+    {
+      "id": "interaction_continuum",
+      "title": "Interaction Depth Continuum",
+      "classification": "normative",
+      "sync": "human_to_repo",
+      "tags": ["interaction", "autobattler", "turn_based", "badlands"]
+    },
+    {
+      "id": "quests",
+      "title": "Quests & Behavioural Encounters",
+      "classification": "descriptive",
+      "sync": "bidirectional",
+      "tags": ["quests", "journeys"]
     },
     {
       "id": "architecture",
-      "title": "Architecture",
-      "type": "descriptive",
-      "sync": "repo_to_human",
-      "tags": ["runtime", "ui", "dsl"]
+      "title": "Architecture — Conceptual Model",
+      "classification": "normative",
+      "sync": "human_to_repo",
+      "tags": ["architecture", "surfaces", "slots", "parts", "journeys"]
     },
     {
-      "id": "product_direction",
-      "title": "Product Direction",
-      "type": "exploratory",
+      "id": "architecture_state",
+      "title": "Current Architectural Reality",
+      "classification": "descriptive",
+      "sync": "repo_to_human",
+      "tags": ["architecture", "implementation"]
+    },
+    {
+      "id": "badlands",
+      "title": "The Badlands (Action Layer)",
+      "classification": "normative",
+      "sync": "human_to_repo",
+      "tags": ["badlands", "gameplay", "identity"]
+    },
+    {
+      "id": "commercial",
+      "title": "Commercial & Partner Model",
+      "classification": "normative",
+      "sync": "human_to_repo",
+      "tags": ["monetisation", "partners"]
+    },
+    {
+      "id": "roadmap",
+      "title": "Roadmap & Open Questions",
+      "classification": "exploratory",
       "sync": "human_only",
-      "tags": ["roadmap"]
+      "tags": ["roadmap", "exploration"]
     }
   ],
-  "automation": {
-    "on_normative_change": [
+  "automationRules": {
+    "onNormativeChange": [
       "emit_work_order:spec_sync",
-      "flag_for_repo_reconciliation"
+      "require_director_ack"
     ],
-    "on_descriptive_mismatch": [
-      "update_reference_doc",
+    "onDescriptiveMismatch": [
+      "emit_work_order:reference_update",
       "log_change"
     ],
-    "on_exploratory_change": [
+    "onExploratoryChange": [
       "emit_work_order:ideation"
     ]
+  },
+  "conflictResolution": {
+    "defaultAuthority": "Director",
+    "guidance": "classification_aware",
+    "fallback": "repo_for_current_state"
   }
 }
