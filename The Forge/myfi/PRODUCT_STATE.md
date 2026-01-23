@@ -131,16 +131,21 @@ Forbidden:
 
 5.1 Core Runtime & Architecture
 System	Description	Status
-Surfaces / Slots / Parts DSL	UI composition model	In Progress (canonical target)
-Part Contracts & Uplift Guardrails	AI-safe UI iteration	Defined / Partial
-Screen Loader & Router	Mobile-first screen switching	In Progress
-Journeys	Thin orchestration scripts	Planned (spec pending)
+Surfaces / Slots / Parts DSL	UI composition model	✅ Implemented (I1)
+Part Contracts & Uplift Guardrails	AI-safe UI iteration	✅ Implemented (I1)
+Screen Loader & Router	Mobile-first screen switching	✅ Implemented
+ActionBus	Part → Parent event emitter	✅ Implemented (I1)
+Journey Runner	Thin orchestration engine	✅ Implemented (I2)
+Modal Manager	Minimal overlay system	✅ Implemented (I2)
 Share Pack	Non-repo agent sync	Present (needs cadence enforcement)
 
 5.2 Hub / Vitals (Canonical Anchor in Intent)
 System	Description	Status
 Vitals semantics (H/M/S/Essence)	Defined in reference	Locked (intent)
-Hub surface (Surfaces model)	Target canonical anchor	Placeholder in canonical rebuild
+Hub surface (Surfaces model)	Target canonical anchor	✅ Implemented (I1)
+VitalsHUD Part	H/M/S/Essence bars + view toggle	✅ Implemented (I1)
+StatusBar Part	Mode indicator (Verified/Unverified)	✅ Implemented (I1)
+EncounterWindow Part	idle/available/observing states	✅ Implemented (I1)
 Legacy vitals HUD	Operational reference exists	Present (legacy only)
 
 5.3 Quests
@@ -148,26 +153,91 @@ System	Description	Status
 Quests surface (canonical rebuild)	Reference implementation target	Missing (spec pending)
 Legacy quests UI	Operational reference exists	Present (legacy only)
 
-6. Immediate Next Constraints (Gates)
+6. Implemented Spine (I1 + I2)
 
-Until these are completed, no large implementation work should occur:
+The following infrastructure was implemented via Work Orders I1 and I2:
 
-- C2 Hub rebuild specification
-- C3 Vitals parts contracts
-- H2 Journeys system decision/spec
+✅ **I1-Hub-Phase1-Scaffold** (Implemented)
+- ActionBus (src/core/actionBus.js) — wildcard subscription, Part emitters
+- SurfaceCompositor — VM data injection, emitter wiring
+- SurfaceRuntime — VM provider registration
+- Hub Surface — 3-slot layout (status-bar, vitals-hud, encounter-window)
+- StatusBar Part — primitive, mode indicator
+- VitalsHUD Part — prefab, H/M/S/Essence bars, emits setViewMode/openVitalDetail
+- EncounterWindow Part — prefab, idle/available/observing states, emits engage
+- Demo VM (src/vm/hub-demo-vm.js) — contract-compliant mock data
+- ErrorCard fallback — visible error for missing Part bindings
 
-These define the "truth scaffolding" needed before coding.
+✅ **I2-JourneyRunner-Phase1** (Implemented)
+- Journey Runner (src/journeys/journeyRunner.js) — discovery, execution, lifecycle
+- Modal Manager (src/core/modalManager.js) — open/close/dismissed events
+- 6 Op Executors — navigate, openModal, closeModal, wait, emit, log
+- Trigger Auto-Binding — journeys with trigger field auto-execute on matching actions
+- Self-Trigger Loop Prevention — ignores actions where source === 'journey'
+- 30s Default Timeout — per Director decision
+- Smoke Journey — demonstrates action → journey → log flow
+- Hub ViewModeToggle Journey — bound to setViewMode action
 
-7. Notes for Agents
+7. Verification Status
+
+Smoke tests passed (console verification):
+
+```
+// In browser console:
+__MYFI_DEBUG__.actionBus.emit('smoke.test', {}, 'manual');
+
+// Expected output:
+[ActionBus] manual → smoke.test {}
+[JourneyRunner] Starting journey: smoke.actionToLog
+[Journey:smoke.actionToLog] Smoke journey started
+[Journey:smoke.actionToLog] Wait completed (100ms)
+[ActionBus] journey → smoke.completed { success: true }
+[Journey:smoke.actionToLog] Smoke journey finished successfully
+[JourneyRunner] Journey completed: smoke.actionToLog
+```
+
+8. Immediate Next Constraints (Gates)
+
+**Completed Gates:**
+- ✅ C2 Hub rebuild specification
+- ✅ C3 Vitals parts contracts (C3a VitalsHUD, C3b StatusBar, C3c EncounterWindow)
+- ✅ H2 Journeys system decision/spec
+
+**Next Planned Work Orders:**
+- M2a Portal surface (Start/Settings screens)
+- M2b Build automation (dev server, bundling)
+
+9. Canonical Runtime Location
+
+The canonical MyFi runtime is located at:
+
+```
+Project MyFi/ProjectMyFi_vLatest/
+```
+
+Key paths:
+- Core: `src/core/` (app.js, router.js, actionBus.js, modalManager.js, etc.)
+- Parts: `src/parts/primitives/` and `src/parts/prefabs/`
+- Surfaces: `src/surfaces/{surface-id}/surface.json`
+- Journeys: `src/journeys/**/*.journey.json`
+- Demo VMs: `src/vm/`
+- Entry: `public/index.html`
+
+10. Notes for Agents
 
 If you are repo-aware:
 
-- treat ProjectMyFi_vLatest as canonical truth
+- treat Project MyFi/ProjectMyFi_vLatest as canonical truth
 - treat legacy/experimental as inputs only
 - do not perform code changes without an approved Work Order
 
 If you are non-repo-aware:
 
 - rely only on the Share Pack snapshots for truth continuity
+
+---
+
+**Last Updated:** 2026-01-23
+**Work Orders Applied:** C1, C2, C3a, C3b, C3c, H2, I1, I2, S1
 
 End of Product State.

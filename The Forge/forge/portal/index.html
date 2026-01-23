@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Forge Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="portal">
+    <!-- Header -->
+    <header class="portal-header">
+      <div class="logo">
+        <span class="logo-icon">&#9881;</span>
+        <span class="logo-text">Forge Portal</span>
+      </div>
+      <div class="header-status">
+        <span class="status-dot online"></span>
+        <span class="status-label">Online</span>
+      </div>
+    </header>
+
+    <!-- System Status Panel -->
+    <section class="panel status-panel">
+      <h2 class="panel-title">System Status</h2>
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-icon ok">&#10003;</span>
+          <span class="status-name">Forge Kernel</span>
+          <span class="status-value">Active</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon ok">&#10003;</span>
+          <span class="status-name">MyFi Runtime</span>
+          <span class="status-value">I2 Complete</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon pending">&#8987;</span>
+          <span class="status-name">Share Pack</span>
+          <span class="status-value">Sync Pending</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon ok">&#10003;</span>
+          <span class="status-name">Work Orders</span>
+          <span class="status-value">Ready</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="panel actions-panel">
+      <h2 class="panel-title">Quick Actions</h2>
+      <div class="action-grid">
+        <a href="https://github.com/emkaybarrie/projectExodus/issues/new?template=forge_work_order.yml"
+           class="action-btn primary" target="_blank" rel="noopener">
+          <span class="action-icon">+</span>
+          <span class="action-label">Create Work Order</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/issues?q=is%3Aissue+label%3Awork-order+is%3Aopen"
+           class="action-btn" target="_blank" rel="noopener">
+          <span class="action-icon">&#9776;</span>
+          <span class="action-label">Open Work Orders</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/pulls"
+           class="action-btn" target="_blank" rel="noopener">
+          <span class="action-icon">&#8644;</span>
+          <span class="action-label">Pull Requests</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/tree/dev/The%20Forge/forge/exports"
+           class="action-btn" target="_blank" rel="noopener">
+          <span class="action-icon">&#128230;</span>
+          <span class="action-label">Share Pack</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Navigation Links -->
+    <section class="panel nav-panel">
+      <h2 class="panel-title">Navigation</h2>
+      <nav class="nav-list">
+        <a href="https://github.com/emkaybarrie/projectExodus/blob/dev/The%20Forge/myfi/PRODUCT_STATE.md"
+           class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128196;</span>
+          <span class="nav-text">MyFi Product State</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/blob/dev/The%20Forge/myfi/MIGRATION_PARITY_MATRIX.md"
+           class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128202;</span>
+          <span class="nav-text">Parity Matrix</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/blob/dev/The%20Forge/forge/FORGE_KERNEL.md"
+           class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#9881;</span>
+          <span class="nav-text">Forge Kernel</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus/tree/dev/Project%20MyFi/ProjectMyFi_vLatest"
+           class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128187;</span>
+          <span class="nav-text">Canonical Codebase</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="https://github.com/emkaybarrie/projectExodus"
+           class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128193;</span>
+          <span class="nav-text">Repository Root</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+      </nav>
+    </section>
+
+    <!-- Recent Activity (Placeholder) -->
+    <section class="panel activity-panel">
+      <h2 class="panel-title">Recent Activity</h2>
+      <div class="activity-list">
+        <div class="activity-item">
+          <span class="activity-badge wo">WO</span>
+          <div class="activity-content">
+            <span class="activity-title">S1 - Update Product State</span>
+            <span class="activity-meta">Completed today</span>
+          </div>
+        </div>
+        <div class="activity-item">
+          <span class="activity-badge impl">I2</span>
+          <div class="activity-content">
+            <span class="activity-title">Journey Runner Phase 1</span>
+            <span class="activity-meta">Implemented</span>
+          </div>
+        </div>
+        <div class="activity-item">
+          <span class="activity-badge impl">I1</span>
+          <div class="activity-content">
+            <span class="activity-title">Hub Phase 1 Scaffold</span>
+            <span class="activity-meta">Implemented</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+      <p>Forge Portal v1.0 &middot; Phone-First Governance</p>
+      <p class="footer-timestamp" id="timestamp"></p>
+    </footer>
+  </div>
+
+  <script>
+    // Update timestamp
+    document.getElementById('timestamp').textContent =
+      'Last loaded: ' + new Date().toLocaleString();
+  </script>
+</body>
+</html>
