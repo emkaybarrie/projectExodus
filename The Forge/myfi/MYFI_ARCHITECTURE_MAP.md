@@ -1,22 +1,67 @@
-# MyFi Architecture Map (High-level)
+🧭 MYFI_ARCHITECTURE_MAP.md
 
-## Layers
-1) **UI Surfaces**
-- Screens composed from slots + parts
-- Mobile-first navigation; Hub is anchor
+Status: Canonical · Architecture Orientation Map
+Audience: Director and all agents
+Purpose: Provide a shared architectural understanding, and prevent drift between intent and implementation
 
-2) **Parts & Uplift Guardrails**
-- Baseline structure is stable
-- Uplift zones allow safe styling/layout iteration
+1. Canonical Location (C1 — LOCKED)
 
-3) **Journeys**
-- Thin orchestration scripts for replayable flows and demos
-- Prefer journeys for QA and partner demos
+Canonical MyFi implementation lives in:
 
-4) **Feature Packs / Data**
-- Provide view models and actions
-- Backend adapters live behind feature APIs (future-proofing)
+✅ ProjectMyFi_vLatest/
 
-## Current reference anchors
-- Hub/Vitals: canonical baseline for screen loading and UI consistency
-- Quests: next reference screen for the production line workflow
+All architecture described here refers to this canonical rebuild unless stated otherwise.
+
+2. Architecture Concept (Normative)
+
+MyFi is built using:
+
+- Surfaces (screen/modal definitions)
+- Slots (layout regions within surfaces)
+- Parts (reusable UI units)
+- Contracts (locked baseline + controlled uplift zones)
+- Journeys (thin orchestration scripts across surfaces)
+
+This model is the intended foundation for AI-safe iteration.
+
+3. Non-Canonical Folders (Documented Status)
+
+3.1 Legacy Implementation
+
+Folder: Project MyFi/ (root)
+
+Status: Legacy · Operational reference only
+
+Purpose:
+- validate behaviours that must be preserved
+- supply "parity requirements" for rebuild
+
+3.2 Experimental
+
+Folder: ProjectMyFi_vExperimental/
+
+Status: Experimental · Idea quarry only
+
+Purpose:
+- extract useful patterns for canonical specs
+- inform journeys/contracts layouts
+
+4. Canonical Rebuild Focus Areas
+
+The rebuild proceeds by "truth scaffolding" first:
+
+- Hub rebuild spec (surface composition + slots)
+- Vitals parts contracts (VitalsHUD, bars, essence meter)
+- Journeys baseline spec (schema + runtime decision)
+- Quests surface spec (as reference implementation)
+
+Implementation follows approved Work Orders only.
+
+5. Alignment Rule
+
+If repo reality differs from this map:
+
+- repo-aware agents must raise a Work Order to reconcile
+- do not silently adjust architecture without updating canon artifacts
+
+End of Architecture Map.
