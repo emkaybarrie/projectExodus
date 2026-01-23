@@ -1,10 +1,16 @@
-name: Forge Portal → GitHub Pages
+name: Project Exodus → GitHub Pages
 
 on:
   push:
     branches: ["main"]
     paths:
+      - "index.html"
+      - "styles.css"
+      - "script.js"
+      - "img/**"
       - "The Forge/forge/portal/**"
+      - "The Forge/forge/exports/share-pack/**"
+      - "Project MyFi/**"
       - ".github/workflows/forge-portal-pages.yml"
 
 permissions:
@@ -29,11 +35,11 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
-      # Upload the portal folder as the Pages artifact
+      # Upload entire repo as Pages artifact
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "The Forge/forge/portal"
+          path: "."
 
       - name: Deploy to GitHub Pages
         id: deployment
