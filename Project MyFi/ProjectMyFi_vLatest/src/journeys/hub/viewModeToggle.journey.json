@@ -1,0 +1,14 @@
+{
+  "id": "hub.viewModeToggle",
+  "type": "journey",
+  "title": "Hub: View Mode Toggle Logging",
+  "trigger": {
+    "action": "setViewMode",
+    "from": "VitalsHUD"
+  },
+  "timeout": 5000,
+  "steps": [
+    { "op": "log", "message": "View mode toggle detected from VitalsHUD" },
+    { "op": "log", "message": "Journey demonstrates action → journey binding" }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "smoke.actionToLog",
+  "type": "journey",
+  "title": "Smoke Test: Action → Journey → Log",
+  "trigger": {
+    "action": "smoke.test"
+  },
+  "timeout": 5000,
+  "steps": [
+    { "op": "log", "message": "Smoke journey started" },
+    { "op": "wait", "ms": 100 },
+    { "op": "log", "message": "Wait completed (100ms)" },
+    { "op": "emit", "action": "smoke.completed", "params": { "success": true } },
+    { "op": "log", "message": "Smoke journey finished successfully" }
+  ]
+}

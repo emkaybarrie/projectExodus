@@ -23,7 +23,7 @@ a continuity anchor
 
 a safety boundary
 
-a shared “where we are” marker
+a shared "where we are" marker
 
 Any agent resuming MyFi work must read this first.
 
@@ -45,126 +45,129 @@ Recent work has focused on:
 
 rebuilding the core runtime and UI architecture (Surfaces · Slots · Parts)
 
-stabilising the Hub / Vitals screen as the canonical centre
+stabilising a repeatable AI-safe production line (contracts + uplift guardrails)
 
-designing a workflow that allows AI-assisted development without regressions
+creating a reference-driven truth system (Word doc + JSON index + manifests)
 
-There has been deliberate slowdown on feature expansion to:
+MyFi is intentionally in a foundational rebuild phase, not a polish phase.
 
-avoid compounding architectural debt
+3. Canonical Codebase Decision (C1 — LOCKED)
 
-establish a repeatable, AI-safe production line
+This section is canonical and governs how all agents treat the repo.
 
-and prepare for partner-facing demos and pilots
+3.1 Canonical Codebase Location
 
-MyFi is intentionally in a foundational refactor phase, not a polish phase.
+The canonical MyFi codebase is:
 
-3. System Decomposition & Status
-3.1 Core Runtime & Architecture
+✅ ProjectMyFi_vLatest/
+
+This is where "truth" is built and maintained going forward.
+
+3.2 Rebuild Strategy (Also Canonical)
+
+Implementation strategy is:
+
+✅ Rebuild-from-scratch inside the canonical codebase
+
+Inputs allowed as reference sources (non-authoritative):
+
+- Legacy folder(s): operational reference only
+- Experimental folder(s): idea quarry only
+- The MyFi Master Reference doc: canonical product intent
+
+This means:
+
+- we do not "incrementally migrate" legacy code into the new system
+- we define specs + contracts first
+- we rebuild the desired behaviour cleanly within the Surfaces/Slots/Parts model
+- we port only what matches the current vision and ethics
+
+4. Codebase Topology & Status
+
+The repo currently contains multiple MyFi implementations. Their status is:
+
+4.1 Legacy Implementation (Operational Reference)
+
+Folder: Project MyFi/ (root)
+
+Status: Legacy · Operational reference only
+
+Allowed usage:
+- verify behaviours and UI outcomes that must be preserved
+- extract requirements for parity matrix
+- copy small algorithmic ideas into specs (not code lifting as default)
+
+Forbidden:
+- new feature work
+- architecture work
+- being treated as canonical truth
+
+4.2 Canonical Rebuild (Truth Source)
+
+Folder: ProjectMyFi_vLatest/
+
+Status: Canonical · Under active rebuild
+
+Allowed usage:
+- all new work
+- specs/contracts/parts/surfaces/journeys
+- implementation once work orders are approved
+
+4.3 Experimental (Idea Quarry)
+
+Folder: ProjectMyFi_vExperimental/
+
+Status: Experimental · Non-authoritative
+
+Allowed usage:
+- extract patterns (e.g., journeys scaffolding, contract structures)
+- inform specs and guardrails
+
+Forbidden:
+- being treated as canonical truth
+- shipping "as-is" without deliberate adoption into canonical
+
+5. System Decomposition & Status
+
+5.1 Core Runtime & Architecture
 System	Description	Status
-Surfaces / Slots / Parts DSL	UI composition model	In Progress
+Surfaces / Slots / Parts DSL	UI composition model	In Progress (canonical target)
 Part Contracts & Uplift Guardrails	AI-safe UI iteration	Defined / Partial
-Screen Loader & Router	Mobile-first navigation	Operational (Hub proven)
-Manifest / Registry	Deterministic loading	Operational
+Screen Loader & Router	Mobile-first screen switching	In Progress
+Journeys	Thin orchestration scripts	Planned (spec pending)
+Share Pack	Non-repo agent sync	Present (needs cadence enforcement)
 
-Notes:
-Hub screen is the known-good reference. Other screens are migrating toward this pattern.
+5.2 Hub / Vitals (Canonical Anchor in Intent)
+System	Description	Status
+Vitals semantics (H/M/S/Essence)	Defined in reference	Locked (intent)
+Hub surface (Surfaces model)	Target canonical anchor	Placeholder in canonical rebuild
+Legacy vitals HUD	Operational reference exists	Present (legacy only)
 
-3.2 Hub / Vitals (Canonical Screen)
-Aspect	Status
-Vitals model (Health, Mana, Stamina, Essence)	Defined & Locked
-HUD rendering & animation	Operational
-Shield / Emberward concepts	Defined / Partial
-Verified vs Unverified modes	Defined / Partial
+5.3 Quests
+System	Description	Status
+Quests surface (canonical rebuild)	Reference implementation target	Missing (spec pending)
+Legacy quests UI	Operational reference exists	Present (legacy only)
 
-Notes:
-Hub is the architectural and conceptual anchor. Other systems must align to it.
+6. Immediate Next Constraints (Gates)
 
-3.3 Quests & Journeys
-Aspect	Status
-Quest concept & narrative role	Defined
-Journey orchestration pattern	Defined
-Quests screen implementation	Planned / Incomplete
-Quest ↔ Vitals linkage	Conceptual
+Until these are completed, no large implementation work should occur:
 
-Notes:
-Quests is the intended reference implementation for the new screen workflow.
+- C2 Hub rebuild specification
+- C3 Vitals parts contracts
+- H2 Journeys system decision/spec
 
-3.4 Game Layer / Badlands
-Aspect	Status
-Battle metaphors for spending	Conceptual
-Avatar progression linkage	Defined
-Gameplay implementation	Deferred
+These define the "truth scaffolding" needed before coding.
 
-Notes:
-Game layer is not required for MVP or early pilots. It remains a Phase-2+ system.
+7. Notes for Agents
 
-3.5 Data & Backend
-Aspect	Status
-Demo data mode	Operational
-Real data adapters (e.g. Firestore)	Abstracted / Planned
-Backend migration readiness	Designed, not executed
-4. Stability Boundaries
-Considered Stable (Safe to Build On)
+If you are repo-aware:
 
-Vitals philosophy and semantics
+- treat ProjectMyFi_vLatest as canonical truth
+- treat legacy/experimental as inputs only
+- do not perform code changes without an approved Work Order
 
-Hub-centric UX model
+If you are non-repo-aware:
 
-Dual-currency ethics (Essence vs premium)
+- rely only on the Share Pack snapshots for truth continuity
 
-Narrative framing of financial behaviour
-
-Considered In Flux (Handle Carefully)
-
-UI DSL exact shape
-
-Screen composition APIs
-
-Quest implementation details
-
-Automation / CI hooks
-
-Agents must flag assumptions when touching in-flux areas.
-
-5. Known Friction & Risks
-
-Regressions when iterating UI loading
-
-Over-abstracting parts too early
-
-Losing continuity across AI sessions
-
-Conflating demo needs with long-term architecture
-
-If these appear, agents must pause and surface them.
-
-6. Definition of “Continue MyFi Work”
-
-To “continue MyFi work” means:
-
-operate within the boundaries above
-
-prioritise Hub and Quests as reference implementations
-
-avoid expanding scope without specs
-
-treat architectural clarity as a deliverable
-
-Agents must challenge any request that violates this.
-
-7. Relationship to the Forge
-
-This file is the product-level equivalent of FORGE_STATE.md
-
-It is updated when:
-
-major systems change state
-
-focus shifts materially
-
-onboarding new agents or partners
-
-It is the single source of truth for MyFi’s current reality.
-
-End of Product State
+End of Product State.

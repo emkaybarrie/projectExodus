@@ -4,6 +4,8 @@
   "background": "cosmic",
   "chrome": { "showHeader": true, "showFooter": true, "title": "Hub" },
   "slots": [
-    { "id": "hubPlaceholder", "card": true, "part": { "kind": "EmptyCard" } }
+    { "id": "statusBar", "part": { "kind": "StatusBar" } },
+    { "id": "vitalsHud", "card": true, "part": { "kind": "VitalsHUD" } },
+    { "id": "encounterWindow", "card": true, "part": { "kind": "EncounterWindow" } }
   ]
 }

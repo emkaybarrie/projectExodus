@@ -1,0 +1,41 @@
+/* ErrorCard uplift.css — Visible error styling */
+/* Part of I1-Hub-Phase1-Scaffold */
+
+.Part-ErrorCard {
+  background: linear-gradient(135deg, #4a1a1a 0%, #2d1010 100%);
+  border: 2px solid #e74c3c;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.ErrorCard__icon {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.ErrorCard__title {
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  color: #e74c3c;
+  margin-bottom: 12px;
+}
+
+.ErrorCard__message {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccc;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  word-break: break-word;
+}
+
+.ErrorCard__message strong {
+  color: #f39c12;
+}
