@@ -1,8 +1,11 @@
 // Forge Portal - App Module
 // M2c: Live truth + Work Orders UX
+// M2c1: Fixed to use relative URLs for local + Pages compatibility
 
 const REPO_BASE = 'https://github.com/emkaybarrie/projectExodus';
-const SHARE_PACK_BASE = 'https://raw.githubusercontent.com/emkaybarrie/projectExodus/main/The%20Forge/forge/exports/share-pack';
+
+// Compute Share Pack base URL relative to this script (works with spaces in paths)
+const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
 
 // State
 const state = {
@@ -11,7 +14,8 @@ const state = {
   currentScreen: 'dashboard',
   woFilter: 'all',
   loading: true,
-  error: null
+  error: null,
+  errorDetails: null
 };
 
 // DOM Elements (populated on init)
@@ -20,9 +24,11 @@ let elements = {};
 // === Data Loading ===
 
 async function loadSharePack() {
+  const url = `${SHARE_PACK_BASE}/share-pack.index.json`;
   try {
-    const res = await fetch(`${SHARE_PACK_BASE}/share-pack.index.json`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    console.log('[Portal] Fetching:', url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     return await res.json();
   } catch (e) {
     console.warn('[Portal] Failed to load share-pack.index.json:', e);
@@ -31,9 +37,11 @@ async function loadSharePack() {
 }
 
 async function loadWorkOrders() {
+  const url = `${SHARE_PACK_BASE}/work-orders.index.json`;
   try {
-    const res = await fetch(`${SHARE_PACK_BASE}/work-orders.index.json`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    console.log('[Portal] Fetching:', url);
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     return await res.json();
   } catch (e) {
     console.warn('[Portal] Failed to load work-orders.index.json:', e);
@@ -44,6 +52,7 @@ async function loadWorkOrders() {
 async function loadData() {
   state.loading = true;
   state.error = null;
+  state.errorDetails = null;
   render();
 
   const [sharePack, workOrders] = await Promise.all([
@@ -56,7 +65,13 @@ async function loadData() {
   state.loading = false;
 
   if (!sharePack && !workOrders) {
-    state.error = 'Failed to load data. Check network or try again.';
+    state.error = 'Share Pack indices not found.';
+    state.errorDetails = `Looking for JSON at: ${SHARE_PACK_BASE}/
+
+To generate indices, run from repo root:
+  node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+
+Then refresh this page.`;
   }
 
   render();
@@ -457,7 +472,8 @@ function render() {
   if (state.error) {
     content.innerHTML = `
       <div class="error-state">
-        <p>${state.error}</p>
+        <p><strong>${state.error}</strong></p>
+        ${state.errorDetails ? `<pre class="error-details">${state.errorDetails}</pre>` : ''}
         <button class="btn-primary" onclick="loadData()">Retry</button>
       </div>
     `;
