@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Awakening • Onboarding</title>
+
+  <!-- Preload fantasy fonts to avoid first-line reflow -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- Your existing app styles -->
+  <link rel="stylesheet" href="../css/general.css">
+  <link rel="stylesheet" href="../css/modal.css">
+
+  <!-- Onboarding styles -->
+  <link rel="stylesheet" href="./architectOnboarding.css">
+
+  <style>
+    body{
+      background:#0b0d12; color:#e9edf1; min-height:100svh; margin:0;
+      display:grid; place-items:center;
+    }
+    .loading{opacity:.85; font:600 14px system-ui,sans-serif; letter-spacing:.02em;}
+  </style>
+</head>
+<body>
+  <div class="loading">Another spirit awakens...</div>
+
+  <script type="module">
+    import { auth} from '../ProjectMyFi_vExperimental/src/core/firestore.js';
+    import "./architectOnboarding.js"; // auto-starts if not done
+    import "./onboardingBoot.js";      // explicit start/bounce logic
+  </script>
+</body>
+</html>

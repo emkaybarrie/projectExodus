@@ -1,0 +1,155 @@
+/* EncounterWindow uplift.css — Minimal styling for Phase 1 */
+/* Part of I1-Hub-Phase1-Scaffold */
+
+.Part-EncounterWindow {
+  padding: 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #fff;
+  min-height: 150px;
+}
+
+.EncounterWindow__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.EncounterWindow__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.EncounterWindow__state {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.EncounterWindow__state--idle {
+  background: rgba(149, 165, 166, 0.3);
+  color: #95a5a6;
+}
+
+.EncounterWindow__state--available {
+  background: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.EncounterWindow__state--observing {
+  background: rgba(241, 196, 15, 0.3);
+  color: #f1c40f;
+}
+
+.EncounterWindow__content {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Idle state */
+.EncounterWindow__idle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.EncounterWindow__idleIcon {
+  font-size: 40px;
+  opacity: 0.4;
+}
+
+.EncounterWindow__idleText {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.EncounterWindow__idleSubtext {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Encounter state */
+.EncounterWindow__encounter {
+  cursor: pointer;
+  transition: background 0.2s;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.EncounterWindow__encounter:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.EncounterWindow__encounterType {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.EncounterWindow__encounterType--minor {
+  color: #95a5a6;
+}
+
+.EncounterWindow__encounterType--moderate {
+  color: #f39c12;
+}
+
+.EncounterWindow__encounterType--major {
+  color: #e74c3c;
+}
+
+.EncounterWindow__encounterSummary {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.EncounterWindow__engageBtn {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.EncounterWindow__engageBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.EncounterWindow__engageBtn:active {
+  transform: translateY(0);
+}
+
+/* State-based styling */
+.EncounterWindow--idle .EncounterWindow__content {
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.EncounterWindow--available .EncounterWindow__content {
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.EncounterWindow--observing .EncounterWindow__content {
+  border: 1px solid rgba(241, 196, 15, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}

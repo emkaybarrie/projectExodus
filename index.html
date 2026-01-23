@@ -2,16 +2,285 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Forante Hub</title>
-  <link rel="stylesheet" href="index.css" />
+  <title>Project MyFi – Behaviour-First Financial Wellbeing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="hub-container">
-    <h1>Welcome to Forante Hub</h1>
-    <p>Choose your service</p>
-    <button class="hub-button" onclick="location.href='myfi/login.html'">MyFi Dashboard</button>
-    <button class="hub-button" onclick="location.href='badlands/index.html'">The Badlands</button>
-  </div>
+  <!-- Top nav (sits above panels) -->
+  <header class="top-nav">
+    <div class="top-nav-inner">
+      <a href="#hero" class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-text">Project MyFi</span>
+      </a>
+      <nav class="top-links">
+        <a href="#hero" class="nav-link is-active">Home</a>
+        <a href="#about" class="nav-link">About MyFi</a>
+        <a href="#partnerships" class="nav-link">Partnerships</a>
+        <a href="#team" class="nav-link">Team</a>
+      </nav>
+      <a href="#hero" class="top-cta">Open MyFi / Join Pilot</a>
+      <button class="nav-toggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="page">
+    <!-- PANEL 1: HERO / LANDING -->
+    <section id="hero" class="panel panel-hero">
+      <div class="panel-inner">
+        <div class="panel-grid panel-hero-grid">
+          <!-- Left column: avatar / illustration -->
+          <div class="panel-hero-art">
+            <!-- Drop in your main avatar here -->
+            <!-- <img src="img/avatar-hero.png" alt="MyFi hero avatar" class="hero-avatar" /> -->
+          </div>
+
+          <!-- Right column: text, CTAs, bullets -->
+          <div class="panel-hero-copy">
+            <p class="eyebrow">Behaviour-first money · game-inspired</p>
+            <h1>See your money like a game, not a threat.</h1>
+            <p class="lead">
+              Project MyFi takes the chaos of everyday spending and turns it into a set of living energy bars you can actually understand. 
+              
+              Instead of staring at spreadsheets, MyFi shows you – at a glance – whether you’re protected, over-stretched or quietly levelling up.
+            </p>
+
+            <div class="hero-buttons">
+              <a href="#hero" class="btn btn-primary">Open MyFi</a>
+              <a href="#partnerships" class="btn btn-secondary">For partners</a>
+            </div>
+
+            <div class="hero-bullets">
+              <div class="hero-bullet">
+                <h3>Why MyFi exists</h3>
+                <p>Most money tools talk in graphs and guilt. MyFi speaks in stories, rhythms and small wins – a calm space to practise, slip up and try again without being judged.</p>
+              </div>
+              <div class="hero-bullet">
+                <h3>Games can teach healthier rhythms</h3>
+                <p>We borrow the good bits from games – vitals, quests and avatars – so pacing your spending feels more like managing a character than fighting your bank balance.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 2: ABOUT MYFI -->
+    <section id="about" class="panel panel-about">
+      <div class="panel-inner">
+        <div class="panel-grid panel-about-grid">
+          <div class="panel-about-copy">
+            <h2>About MyFi</h2>
+            <p class="lead">
+              The world where your money finally makes sense.
+            </p>
+
+            <div class="vitals-row">
+              <span class="vital-pill vital-health">Health</span>
+              <span class="vital-pill vital-mana">Mana</span>
+              <span class="vital-pill vital-stamina">Stamina</span>
+              <span class="vital-pill vital-essence">Essence</span>
+              <span class="vital-pill vital-emberward">Emberward</span>
+            </div>
+
+            <p class="body">
+              Behind the scenes, MyFi evens out the spikes and dips in your month and turns them into a steady rhythm 
+              – simple energy bars that show how fast you’re burning through cash and how quickly you’re recovering.
+
+              You don’t have to guess if you’re “doing okay” this month – your bars show whether you’re shielded, coasting or strong enough to take on more.
+            </p>
+
+            <ul class="about-list">
+              <li><strong>Behaviour engine</strong> – tidies up the mess of real-life spending so your month feels smoother, not like a series of mini heart attacks.</li>
+              <li><strong>Vitals HUD</strong> – turns your finances into game-style energy bars – your “health”, “power” and “stamina” – that you can read in seconds instead of decoding a spreadsheet.</li>
+              <li><strong>Quests & Avatars</strong> – a story-driven game layer to explore with your avatar, where you can reap the rewards of your improved spending and saving habits.</li>
+              <li><strong>The Badlands</strong> – build and protect the city of Myana, delve deeper into The Badlands with your avatar, and reap the rewards of your improved spending and saving habits.</li>
+            </ul>
+          </div>
+
+          <!-- Phone mock / HUD on the right -->
+          <div class="panel-about-art">
+            <!-- Drop in your HUD phone art -->
+            <div class="phone-frame">
+              <img src="img/hud-phone.png" alt="MyFi Vitals HUD on phone" class="phone-image" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 3: PARTNERSHIPS -->
+    <section id="partnerships" class="panel panel-partnerships">
+      <div class="panel-inner">
+        <div class="panel-grid panel-partnerships-grid">
+          <div class="panel-partnerships-copy">
+            <h2>Partnerships</h2>
+            <p class="lead">
+              From local pilots to nationwide rollouts.
+
+              MyFi is built to sit between young people and the systems around them – community support, public services, universities and banks – turning money stress into a calmer, more playable journey for everyone involved.
+            </p>
+
+            <div class="partner-columns">
+              <div class="partner-col">
+                <h3>Advice & community organisations</h3>
+                <p>A gentle, non-judgemental space where people can see their month as energy and breathing room, instead of pure debt and panic. 
+                    Frontline teams stay focused on the hard conversations; MyFi handles the everyday check-ins in a way that feels visual, hopeful and easy to come back to.</p>
+              </div>
+              <div class="partner-col">
+                <h3>Public sector & education</h3>
+                <p>A prevention-first tool that fits into cost-of-living, resilience and youth wellbeing programmes.  
+                    MyFi helps young people notice problems earlier, build small buffers and stay engaged between appointments, so support isn’t just a one-off moment.</p>
+              </div>
+              <div class="partner-col">
+                <h3>Banks & financial services</h3>
+                <p>A behaviour-led wellbeing layer that sits on top of existing accounts.  
+                    MyFi helps customers pace their spending, protect the essentials and actually enjoy opening your app – supporting duty, inclusion and long-term loyalty without pushing extra debt.</p>
+              </div>
+            </div>
+
+            <!-- Partner materials card (access controlled) -->
+            <div class="partner-materials-card">
+              <div class="pm-header">
+                <h3>Partner materials</h3>
+                <span class="pm-tag">Access controlled</span>
+              </div>
+              <p class="pm-copy">
+                Exploring a pilot, research project or integration?
+                Use your access code to unlock short decks, one-pagers and integration notes tailored for advice & community partners, public sector teams, and banks / consultancies.
+              </p>
+
+              <div class="pm-gate">
+                <input
+                  type="password"
+                  id="partner-code"
+                  class="pm-input"
+                  placeholder="Enter access code"
+                />
+                <button id="partner-unlock" class="btn btn-primary pm-btn">
+                  Submit
+                </button>
+              </div>
+              <p id="partner-message" class="pm-message"></p>
+
+              <!-- Tabs + content (hidden until unlocked) -->
+              <div id="partner-content" class="pm-tabs" aria-hidden="true">
+                <div class="pm-tab-row" role="tablist">
+                  <button class="pm-tab is-active" data-tab="cab" role="tab">
+                    Advice & community
+                  </button>
+                  <button class="pm-tab" data-tab="banks" role="tab">
+                    Public sector & education
+                  </button>
+                  <button class="pm-tab" data-tab="consultants" role="tab">
+                    Banks & consultancies
+                  </button>
+                </div>
+
+                <div class="pm-panels">
+                  <section class="pm-panel is-active" data-panel="cab" role="tabpanel">
+                    <p>Overview of how MyFi supports advice, youth and community settings, plus example pilot journeys and safeguarding notes.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">Partner overview (PDF)</a></li>
+                      <li><a href="#" target="_blank">Pilot outline & sample timelines</a></li>
+                    </ul>
+                  </section>
+                  <section class="pm-panel" data-panel="banks" role="tabpanel">
+                    <p>Summary of how MyFi fits into wellbeing, cost-of-living and student support programmes, with options for joint research.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">Programme overview</a></li>
+                      <li><a href="#" target="_blank">Evaluation & data approach</a></li>
+                    </ul>
+                  </section>
+                  <section class="pm-panel" data-panel="consultants" role="tabpanel">
+                    <p>Proposition snapshot, integration concepts and consulting opportunities around behaviour, open banking and financial wellbeing.</p>
+                    <ul>
+                      <li><a href="#" target="_blank">Bank / FS deck</a></li>
+                      <li><a href="#" target="_blank">Integration & experiment ideas</a></li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right side avatars / art -->
+          <div class="panel-partnerships-art">
+            <img src="img/avatar-partner-1.png" alt="Partner avatar 1" class="partner-avatar" />
+            <img src="img/avatar-partner-2.png" alt="Partner avatar 2" class="partner-avatar" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL 4: TEAM -->
+    <section id="team" class="panel panel-team">
+      <div class="panel-inner">
+        <div class="panel-grid panel-team-grid">
+          <div class="panel-team-copy">
+            <h2>The team behind MyFi</h2>
+            <p class="lead">
+              A hybrid of game-makers, financial professionals and advisors.
+            </p>
+
+            <div class="team-row">
+              <article class="team-card">
+                <img src="img/avatar-team-1.png" alt="Emkay avatar" class="team-avatar" />
+                <h3>Emkay Barrie</h3>
+                <p class="team-role">Founder, Architect &amp; Game Director</p>
+              </article>
+              <article class="team-card">
+                <img src="img/avatar-team-2.png" alt="Future co-founder avatar" class="team-avatar" />
+                <h3>Future Co-Founder</h3>
+                <p class="team-role">Engineering</p>
+              </article>
+              <article class="team-card">
+                <img src="img/avatar-team-3.png" alt="Advisory circle avatar" class="team-avatar" />
+                <h3>Advisory Circle</h3>
+                <p class="team-role">Advice, behaviour, banking</p>
+              </article>
+            </div>
+
+            <div class="team-story">
+              <h3>Why we’re building MyFi</h3>
+              <p>
+                MyFi started with a simple pattern: smart, capable people saying “I know I should look at my money, but I just can’t face it.”
+
+                We want to build a space where money feels understandable, where mistakes are part of the story not the end of it, 
+                and where banks and public bodies can genuinely help young people stay out of harm’s way while still letting them play, experiment and grow.
+              </p>
+            </div>
+
+            <div class="values-row">
+              <span>Gentle</span>
+              <span>Playful</span>
+              <span>Grounded</span>
+              <span>Protective</span>
+            </div>
+          </div>
+
+          <!-- Optional share / CTA block on right -->
+          <div class="panel-team-side">
+            <div class="share-card">
+              <p>Like what you see?</p>
+              <a href="#hero" class="btn btn-primary share-btn">Share / Get in touch</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    <div class="footer-inner">
+      <span>© <span id="year"></span> Project MyFi</span>
+      <span class="footer-note">Built for young people · CAB-first · bank-ready</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
 </body>
 </html>

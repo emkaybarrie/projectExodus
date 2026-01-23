@@ -1,0 +1,20 @@
+{
+  "forgeVersion": "1.0",
+  "root": "/forge",
+  "canonical": [
+    "FORGE_KERNEL.md",
+    "FORGE_STATE.md",
+    "FORGE_CAPSULE.md",
+    "TASK_WORK_ORDER.md",
+    "FORGE_LESSONS.md",
+    "FORGE_EVOLUTION.md",
+    "FORGE_ROADMAP.md",
+    "FORGE_INDEX.md"
+  ],
+  "policies": {
+    "workOrderRequired": true,
+    "dualTrackMode": true,
+    "authorityDefault": "Architect",
+    "underspecHandling": "ReturnPartialTemplate"
+  }
+}

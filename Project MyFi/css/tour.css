@@ -1,0 +1,79 @@
+/* --- Minimal Spotlight Tour (with arrows) --- */
+.tour-highlight {
+  position: relative !important;
+  z-index: 10002 !important;
+  border-radius: 12px;
+  /* Halo creates the spotlight; the huge spread dims the page */
+  box-shadow:
+    0 0 0 9999px rgba(10,14,25,0.55),
+    0 0 0 3px rgba(255,255,255,0.9) inset;
+}
+
+.tour-blocker {
+  position: fixed; inset: 0;
+  z-index: 10000;              /* below highlight & pop */
+  background: transparent;
+  cursor: default;
+}
+
+.tour-pop {
+  position: fixed; max-width: min(90vw, 360px);
+  z-index: 10003;
+  background: rgba(24,28,48,0.95);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(220,230,255,0.15);
+  border-radius: 16px; padding: 14px 14px 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  color: #eaf0ff; font-size: 14px; line-height: 1.35;
+}
+
+.tour-pop h4 { margin: 0 0 6px; font-size: 15px; }
+.tour-pop__actions {
+  margin-top: 10px; display: flex; gap: 8px; justify-content: flex-end;
+}
+.tour-pop__btn {
+  border: 1px solid rgba(220,230,255,0.18);
+  background: rgba(80,90,130,0.25);
+  padding: 6px 10px; border-radius: 10px;
+  color: #eaf0ff; font-size: 13px;
+}
+.tour-pop__btn--primary {
+  background: rgba(130,160,255,0.25);
+  border-color: rgba(130,160,255,0.35);
+}
+
+/* Arrow pointer (auto rotates based on data-place) */
+.tour-pop::after {
+  content: "";
+  position: absolute;
+  width: 0; height: 0;
+  border-style: solid;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+
+/* TOP: arrow points down */
+.tour-pop[data-place="top"]::after {
+  left: 50%; transform: translateX(-50%);
+  bottom: -9px;
+  border-width: 9px 8px 0 8px;
+  border-color: rgba(24,28,48,0.95) transparent transparent transparent;
+}
+/* BOTTOM: arrow points up */
+.tour-pop[data-place="bottom"]::after {
+  left: 50%; transform: translateX(-50%);
+  top: -9px;
+  border-width: 0 8px 9px 8px;
+  border-color: transparent transparent rgba(24,28,48,0.95) transparent;
+}
+/* LEFT: arrow points right */
+.tour-pop[data-place="left"]::after {
+  right: -9px; top: 50%; transform: translateY(-50%);
+  border-width: 8px 0 8px 9px;
+  border-color: transparent transparent transparent rgba(24,28,48,0.95);
+}
+/* RIGHT: arrow points left */
+.tour-pop[data-place="right"]::after {
+  left: -9px; top: 50%; transform: translateY(-50%);
+  border-width: 8px 9px 8px 0;
+  border-color: transparent rgba(24,28,48,0.95) transparent transparent;
+}

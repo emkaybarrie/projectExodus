@@ -1,0 +1,9 @@
+{
+  "id": "start",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": false, "showFooter": false, "title": "Start" },
+  "slots": [
+    { "id": "startCard", "card": true, "part": { "kind": "StartCard" } }
+  ]
+}

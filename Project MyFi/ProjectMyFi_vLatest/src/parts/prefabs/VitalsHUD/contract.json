@@ -1,0 +1,28 @@
+{
+  "_contractRef": "/The Forge/myfi/specs/parts/contracts/VITALSHUD_CONTRACT.md",
+  "_note": "Machine-readable mirror for hooks/selectors only. Canonical truth is in _contractRef.",
+  "partId": "VitalsHUD",
+  "root": ".Part-VitalsHUD",
+  "hooks": {
+    "header": ".VitalsHUD__header",
+    "title": ".VitalsHUD__title",
+    "viewToggle": ".VitalsHUD__viewToggle",
+    "toggleBtn": ".VitalsHUD__toggleBtn",
+    "bars": ".VitalsHUD__bars",
+    "vital": ".VitalsHUD__vital",
+    "vitalLabel": ".VitalsHUD__vitalLabel",
+    "barContainer": ".VitalsHUD__barContainer",
+    "barFill": ".VitalsHUD__barFill",
+    "vitalValue": ".VitalsHUD__vitalValue"
+  },
+  "vitalSelectors": {
+    "health": ".VitalsHUD__vital--health",
+    "mana": ".VitalsHUD__vital--mana",
+    "stamina": ".VitalsHUD__vital--stamina",
+    "essence": ".VitalsHUD__vital--essence"
+  },
+  "actions": ["setViewMode", "openVitalDetail"],
+  "constraints": {
+    "scope": "All selectors must start with .Part-VitalsHUD or .VitalsHUD"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "parts": [
+    { "kind": "EmptyCard", "category": "primitive", "path": "./primitives/EmptyCard/part.js" },
+    { "kind": "StartCard", "category": "primitive", "path": "./primitives/StartCard/part.js" },
+    { "kind": "AuthCard",  "category": "primitive", "path": "./primitives/AuthCard/part.js" },
+    { "kind": "ErrorCard", "category": "primitive", "path": "./primitives/ErrorCard/part.js" },
+    { "kind": "StatusBar", "category": "primitive", "path": "./primitives/StatusBar/part.js" },
+    { "kind": "VitalsHUD", "category": "prefab", "path": "./prefabs/VitalsHUD/part.js" },
+    { "kind": "EncounterWindow", "category": "prefab", "path": "./prefabs/EncounterWindow/part.js" }
+  ]
+}

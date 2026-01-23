@@ -1,0 +1,429 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>MyFi Admin Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 16px; color: #eee; background:#111; }
+    .card { max-width: 860px; margin: auto; background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:16px; }
+    label { display:block; margin:.5rem 0 .2rem; font-weight:600; }
+    input, select { width:100%; padding:.5rem .6rem; border-radius:8px; border:1px solid #333; background:#121212; color:#eee; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .row3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; }
+    button { padding:.6rem 1rem; border:1px solid #333; background:#2a2a2a; color:#fff; border-radius:10px; cursor:pointer; }
+    button.primary { background:linear-gradient(180deg,#3b82f6,#1f48a9); border:none; }
+    pre { background:#0e0e0e; border:1px solid #222; padding:12px; border-radius:10px; overflow:auto; max-height: 50vh; }
+    small { opacity:.8; }
+    .muted { opacity:.7; font-size: 12px; }
+    .sep { height:1px; background:#2b2b2b; margin:12px 0; }
+    .grid { display:grid; gap: 12px; }
+    .hidden { display:none; }
+    .pill { display:inline-block; padding:.1rem .5rem; border:1px solid #333; background:#191919; border-radius:999px; font-size:12px; margin-left: 6px; }
+    .help { margin:.15rem 0 .5rem; color:#cfcfcf; opacity:.85; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>MyFi Admin Dashboard <span class="pill">maintenance</span></h2>
+    <p class="muted">Run admin/maintenance functions. Choose a task, fill parameters, and run. Keep HTTP endpoints locked with a one-time secret; delete them after use.</p>
+
+    <!-- Task picker -->
+    <label for="task">Task</label>
+    <select id="task"></select>
+    <div id="taskHelp" class="help"></div>
+
+    <!-- Dynamic form area -->
+    <div id="form" class="grid"></div>
+
+    <div class="sep"></div>
+
+    <!-- Action buttons -->
+    <div class="row">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button id="run" class="primary">Run</button>
+        <button id="clear">Clear Output</button>
+      </div>
+      <div style="text-align:right;">
+        <small class="muted">Project: <code>myfi-app-7fa78</code> • Region: <code>europe-west2</code></small>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <pre id="out">// Output will appear here…</pre>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+    // ---- Firebase init
+    const app = initializeApp({
+      apiKey: "AIzaSyC-d6H3Fv8QXQLU83R8JiUaA9Td4PLN9RQ",
+      authDomain: "myfi-app-7fa78.firebaseapp.com",
+      projectId: "myfi-app-7fa78",
+    });
+    const auth = getAuth(app);
+    const fns  = getFunctions(app, "europe-west2");
+
+    // ---- Utilities
+    const $ = (id) => document.getElementById(id);
+    const out = $('out');
+    function log(obj) {
+      out.textContent += (typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2)) + "\n";
+      out.scrollTop = out.scrollHeight;
+    }
+    function clearOut(){ out.textContent = ''; }
+
+    // ---- Tasks
+    const TASKS = [
+      // EXISTING: Handles backfill (HTTP)
+      {
+        id: 'handlesBackfillHttp',
+        label: 'Backfill Handles (HTTP)',
+        help: 'Populate handles/{aliasLower} from players/* using HTTP onRequest function with optional pagination and dry-run.',
+        params: [
+          { key:'httpUrl',     label:'HTTP Function URL', type:'text', placeholder:'https://…/backfillHandlesFromPlayersHttp', default:'https://backfillhandlesfromplayershttp-frxqsvlhwq-nw.a.run.app' },
+          { key:'secret',      label:'Secret (query/body)', type:'text', placeholder:'Enter secret if set', default:'' },
+          { key:'pageSize',    label:'Page size', type:'number', min:100, max:1000, default:400 },
+          { key:'startAfter',  label:'Start after (aliasLower)', type:'text', placeholder:'(leave blank for first page)', default:'' },
+          { key:'dryRun',      label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',      label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, pageSize, startAfter, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          if (method === 'GET') {
+            const qs = new URLSearchParams({ secret, pageSize: String(pageSize), dryRun: String(dryRun) });
+            if (startAfter) qs.set('startAfter', startAfter);
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full);
+            return await resp.json();
+          } else {
+            const payload = { secret, pageSize: Number(pageSize), dryRun: String(dryRun) };
+            if (startAfter) payload.startAfter = startAfter;
+            log(`POST ${httpUrl}`);
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            return await resp.json();
+          }
+        }
+      },
+      // EXISTING: Handles backfill (Callable)
+      {
+        id: 'handlesBackfillCallable',
+        label: 'Backfill Handles (Callable)',
+        help: 'Populate handles/{aliasLower} via callable backfillHandlesFromPlayers. Sign in first if required.',
+        params: [
+          { key:'email',    label:'Admin Email', type:'text', placeholder:'admin@example.com', default:'' },
+          { key:'password', label:'Admin Password', type:'password', placeholder:'••••••••', default:'' },
+        ],
+        async run(v) {
+          const { email, password } = v;
+          if (email && password) {
+            log('Signing in…');
+            await signInWithEmailAndPassword(auth, email, password);
+          }
+          log('Calling callable: backfillHandlesFromPlayers …');
+          const call = httpsCallable(fns, 'backfillHandlesFromPlayers');
+          const res = await call({});
+          return res.data;
+        }
+      },
+      // EXISTING: AliasLower heal
+      {
+        id: 'aliasLowerHeal',
+        label: 'AliasLower Heal (HTTP)',
+        help: 'Set players/{uid}.aliasLower = alias.toLowerCase() when missing. Batched; dry-run supported.',
+        params: [
+          { key:'httpUrl',  label:'HTTP Function URL', type:'text', placeholder:'https://…/backfillAliasLower', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/backfillAliasLower' },
+          { key:'secret',   label:'Secret (query/body)', type:'text', placeholder:'Enter secret if set', default:'' },
+          { key:'pageSize', label:'Page size', type:'number', min:100, max:1000, default:400 },
+          { key:'dryRun',   label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',   label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, pageSize, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          if (method === 'GET') {
+            const qs = new URLSearchParams({ secret, pageSize: String(pageSize), dryRun: String(dryRun) });
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full);
+            return await resp.json();
+          } else {
+            const payload = { secret, pageSize: Number(pageSize), dryRun: String(dryRun) };
+            log(`POST ${httpUrl}`);
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            return await resp.json();
+          }
+        }
+      },
+
+      // NEW: Invites Backfill (HTTP)
+      {
+        id: 'invitesBackfill',
+        label: 'Invites Backfill (HTTP)',
+        help: 'Create invite codes/URLs for players missing them. Optionally refresh URLs to current base.',
+        params: [
+          { key:'httpUrl',        label:'HTTP Function URL', type:'text', placeholder:'https://…/backfillInvitesForPlayersHttp', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/backfillInvitesForPlayersHttp' },
+          { key:'secret',         label:'Secret (query/body)', type:'text', placeholder:'Enter secret if set', default:'' },
+          { key:'base',           label:'Base override (optional)', type:'text', placeholder:'https://emkaybarrie.github.io/projectExodus/Project%20MyFi', default:'' },
+          { key:'pageSize',       label:'Page size', type:'number', min:100, max:1000, default:400 },
+          { key:'startAfterUid',  label:'Start after (uid)', type:'text', placeholder:'(leave blank for first page)', default:'' },
+          { key:'refreshUrl',     label:'Refresh URL for existing codes', type:'select', options:[{value:'0',label:'No'},{value:'1',label:'Yes'}], default:'0' },
+          { key:'dryRun',         label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',         label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, base, pageSize, startAfterUid, refreshUrl, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          if (method === 'GET') {
+            const qs = new URLSearchParams({
+              secret, pageSize: String(pageSize), dryRun: String(dryRun), refreshUrl: String(refreshUrl)
+            });
+            if (base) qs.set('base', base);
+            if (startAfterUid) qs.set('startAfterUid', startAfterUid);
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full);
+            return await resp.json();
+          } else {
+            const payload = {
+              secret, base, pageSize: Number(pageSize),
+              startAfterUid, refreshUrl: String(refreshUrl), dryRun: String(dryRun)
+            };
+            log(`POST ${httpUrl}`);
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            return await resp.json();
+          }
+        }
+      },
+
+      // NEW: Invites Reset / Clear (HTTP)
+      {
+        id: 'invitesReset',
+        label: 'Invites Reset / Clear (HTTP)',
+        help: 'Delete all invites (batched), delete a single invite by code, clear one owner’s invite, purge owner referrals, or sweep players with stale invite codes.',
+        params: [
+          { key:'httpUrl',  label:'HTTP Function URL', type:'text', placeholder:'https://…/resetInvitesMaintenanceHttp', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/resetInvitesMaintenanceHttp' },
+          { key:'secret',   label:'Secret (query/body)', type:'text', placeholder:'RUN_ONCE_CHANGE_ME', default:'RUN_ONCE_CHANGE_ME' },
+          { key:'action',   label:'Action', type:'select', options:[
+            {value:'deleteAllInvites', label:'Delete ALL invites (batched)'},
+            {value:'deleteInviteByCode', label:'Delete ONE invite by code'},
+            {value:'clearOwnerInvite', label:'Clear one owner’s invite (and delete invite doc)'},
+            {value:'purgeOwnerReferrals', label:'Purge owner’s referrals subcollection'},
+            {value:'clearStalePlayerInviteFields', label:'SWEEP: clear player invite fields if invite doc missing'}
+          ], default:'deleteAllInvites' },
+
+          // deleteAllInvites-only extras
+          { key:'alsoClearPlayers', label:'Also clear players invite fields (when deleting ALL)', type:'select',
+            options:[{value:'0',label:'No'},{value:'1',label:'Yes'}], default:'1' },
+          { key:'pageSize', label:'Page size (deleteAllInvites)', type:'number', min:100, max:1000, default:500 },
+
+          // deleteInviteByCode
+          { key:'code',     label:'Invite code (when deleting ONE)', type:'text', placeholder:'ABC-123XYZ', default:'' },
+
+          // clearOwnerInvite / purgeOwnerReferrals
+          { key:'ownerUid', label:'Owner uid (when clearing/purging)', type:'text', placeholder:'uid_...', default:'' },
+
+          // clearStalePlayerInviteFields (sweep)
+          { key:'startAfterUid',  label:'Start after (uid) — sweep', type:'text', placeholder:'(leave blank for first page)', default:'' },
+
+          { key:'method',   label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, action, code, ownerUid, pageSize, method, alsoClearPlayers, startAfterUid } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+
+          if (method === 'GET') {
+            const qs = new URLSearchParams();
+            qs.set('secret', secret);
+            qs.set('action', action);
+            if (action === 'deleteAllInvites') {
+              qs.set('pageSize', String(pageSize));
+              qs.set('alsoClearPlayers', String(alsoClearPlayers || '0'));
+            }
+            if (action === 'deleteInviteByCode' && code) qs.set('code', code);
+            if ((action === 'clearOwnerInvite' || action === 'purgeOwnerReferrals') && ownerUid) qs.set('ownerUid', ownerUid);
+            if (action === 'clearStalePlayerInviteFields') {
+              if (startAfterUid) qs.set('startAfterUid', startAfterUid);
+              qs.set('pageSize', String(pageSize));
+            }
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full);
+            return await resp.json();
+          } else {
+            const payload = { secret, action };
+            if (action === 'deleteAllInvites') {
+              payload.pageSize = Number(pageSize);
+              payload.alsoClearPlayers = String(alsoClearPlayers || '0');
+            }
+            if (action === 'deleteInviteByCode') payload.code = code;
+            if (action === 'clearOwnerInvite' || action === 'purgeOwnerReferrals') payload.ownerUid = ownerUid;
+            if (action === 'clearStalePlayerInviteFields') {
+              payload.startAfterUid = startAfterUid;
+              payload.pageSize = Number(pageSize);
+            }
+            log(`POST ${httpUrl}`);
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            return await resp.json();
+          }
+        }
+      },
+      // NEW: Full Player Reset (HTTP)
+      {
+        id: 'fullPlayerReset',
+        label: 'Full Player Reset (HTTP)',
+        help: 'Delete a player’s Firestore graph by uid / alias / email, or batch delete everyone except an exclusion list. Auth users are NOT deleted.',
+        params: [
+          { key:'httpUrl',  label:'HTTP Function URL', type:'text', placeholder:'https://…/fullPlayerResetHttp', default:'https://europe-west2-myfi-app-7fa78.cloudfunctions.net/fullPlayerResetHttp' },
+          { key:'secret',   label:'Secret', type:'text', placeholder:'Enter secret if set', default:'' },
+          { key:'mode',     label:'Mode', type:'select', options:[
+            { value:'byUid', label:'Delete by UID' },
+            { value:'byAlias', label:'Delete by Alias' },
+            { value:'byEmail', label:'Delete by Email' },
+            { value:'batchAllExcept', label:'Batch: All except exclude list' },
+          ], default:'byUid' },
+          { key:'uid',      label:'UID (when mode = byUid)', type:'text', placeholder:'uid_...', default:'' },
+          { key:'alias',    label:'Alias (when mode = byAlias)', type:'text', placeholder:'Case-insensitive', default:'' },
+          { key:'email',    label:'Email (when mode = byEmail)', type:'text', placeholder:'user@example.com', default:'' },
+          { key:'excludeUids', label:'Exclude UIDs (CSV, when mode = batchAllExcept)', type:'text', placeholder:'uidA,uidB,uidC', default:'' },
+          { key:'pageSize', label:'Page size (batchAllExcept)', type:'number', min:100, max:1000, default:400 },
+          { key:'dryRun',   label:'Dry run', type:'select', options:[{value:'0',label:'No (write)'},{value:'1',label:'Yes (don’t write)'}], default:'0' },
+          { key:'method',   label:'HTTP Method', type:'select', options:[{value:'GET',label:'GET'},{value:'POST',label:'POST'}], default:'GET' },
+        ],
+        async run(v) {
+          const { httpUrl, secret, mode, uid, alias, email, excludeUids, pageSize, dryRun, method } = v;
+          if (!httpUrl) throw new Error('Please provide the HTTP Function URL.');
+          const basePayload = { secret, mode, uid, alias, email, excludeUids, pageSize: Number(pageSize), dryRun: String(dryRun) };
+
+          if (method === 'GET') {
+            const qs = new URLSearchParams();
+            Object.entries(basePayload).forEach(([k,val]) => {
+              if (val != null && String(val).length) qs.set(k, String(val));
+            });
+            const full = `${httpUrl}?${qs.toString()}`;
+            log(`GET ${full}`);
+            const resp = await fetch(full);
+            return await resp.json();
+          } else {
+            log(`POST ${httpUrl}`);
+            const resp = await fetch(httpUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(basePayload) });
+            return await resp.json();
+          }
+        }
+      },
+
+    ];
+
+    // ---- Render task picker
+    const taskSel = $('task');
+    TASKS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id; opt.textContent = t.label;
+      taskSel.appendChild(opt);
+    });
+
+    // ---- Dynamic form
+    function renderFormFor(task) {
+      const form = $('form');
+      form.innerHTML = '';
+      $('taskHelp').textContent = task.help || '';
+      task.params.forEach(p => {
+        const wrap = document.createElement('div');
+        const lab = document.createElement('label');
+        lab.textContent = p.label; lab.htmlFor = `p_${p.key}`;
+        let input;
+        if (p.type === 'select') {
+          input = document.createElement('select');
+          (p.options || []).forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.value; o.textContent = opt.label;
+            input.appendChild(o);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = p.type || 'text';
+          if (p.placeholder) input.placeholder = p.placeholder;
+          if (p.min != null) input.min = String(p.min);
+          if (p.max != null) input.max = String(p.max);
+        }
+        input.id = `p_${p.key}`;
+        input.value = (p.default ?? '');
+        wrap.append(lab, input);
+        form.appendChild(wrap);
+      });
+    }
+
+    const memory = new Map();
+    const getCurrentTask = () => TASKS.find(t => t.id === taskSel.value);
+    const readFormValues = (task) => {
+      const values = {};
+      task.params.forEach(p => {
+        const el = document.getElementById(`p_${p.key}`);
+        if (!el) return;
+        values[p.key] = (p.type === 'number') ? Number(el.value) : el.value;
+      });
+      return values;
+    };
+    const writeFormValues = (task, values) => {
+      task.params.forEach(p => {
+        const el = document.getElementById(`p_${p.key}`);
+        if (!el || values[p.key] == null) return;
+        el.value = values[p.key];
+      });
+    };
+
+    taskSel.addEventListener('change', () => {
+      const prevId = memory.get('__currentId');
+      if (prevId) {
+        const prevTask = TASKS.find(t => t.id === prevId);
+        if (prevTask) memory.set(prevId, readFormValues(prevTask));
+      }
+      const task = getCurrentTask();
+      renderFormFor(task);
+      const saved = memory.get(task.id);
+      if (saved) writeFormValues(task, saved);
+      memory.set('__currentId', task.id);
+    });
+
+    // Initial render
+    renderFormFor(TASKS[0]);
+    taskSel.value = TASKS[0].id;
+    memory.set('__currentId', TASKS[0].id);
+
+    // Buttons
+    $('clear').onclick = () => clearOut();
+
+    $('run').onclick = async () => {
+      const task = getCurrentTask();
+      const vals = readFormValues(task);
+      try {
+        $('run').disabled = true;
+        $('run').textContent = 'Running…';
+        const res = await task.run(vals);
+        log(res);
+        // Carry forward pagination hints
+        if (res && typeof res === 'object') {
+          if (res.nextStartAfter) {
+            const el = document.getElementById('p_startAfter');
+            if (el) el.value = res.nextStartAfter;
+          }
+          if (res.nextStartAfterUid) {
+            const el2 = document.getElementById('p_startAfterUid');
+            if (el2) el2.value = res.nextStartAfterUid;
+          }
+        }
+      } catch (e) {
+        log({ error: e?.message || String(e) });
+      } finally {
+        $('run').disabled = false;
+        $('run').textContent = 'Run';
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Project MyFi (Login)</title>
+
+  <link rel="stylesheet" href="auth.css" />
+  <link rel="stylesheet" href="./vitals/modules/truelayer.css" />
+</head>
+<body class="ready">
+
+  <!-- === Cinematic overlay stack (mirrors start_v5.html) === -->
+  <div class="stage">
+    <img id="still" class="layer still" src="./assets/start/start_still.png" alt="">
+
+    <video id="fire"  class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/fire.webm" type="video/webm" />
+    </video>
+    <video id="smoke" class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/smoke.webm" type="video/webm" />
+    </video>
+    <video id="rays"  class="layer motion" playsinline muted loop preload="auto">
+      <source src="./assets/start/rays.webm" type="video/webm" />
+    </video>
+    <video id="pulse" class="layer pulse"  playsinline muted loop preload="auto">
+      <source src="./assets/start/pulse.webm" type="video/webm" />
+    </video>
+  </div>
+
+  <script>
+    // Keep overlays running behind the forms (especially after navigation / on iOS)
+    ['fire','smoke','rays','pulse'].forEach(id=>{
+      const v = document.getElementById(id);
+      if(!v) return;
+      v.currentTime = 0;
+      const play = ()=> v.play().catch(()=>{});
+      document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) play(); }, { passive:true });
+      play();
+    });
+  </script>
+
+  <!-- Tabs -->
+  <div class="tab-toggle">
+    <button id="login-tab" class="active">Login</button>
+    <button id="signup-tab">Signup</button>
+  </div>
+
+  <!-- Login Card -->
+  <div id="login-form" class="auth-card">
+    <h1>Login</h1>
+
+    <div class="field">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <button type="button" class="info-btn" aria-label="Email help" aria-expanded="false">i</button>
+      <div class="tooltip" role="tooltip">
+        Use the email you registered with.
+      </div>
+    </div>
+
+    <div class="field">
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button type="button" class="info-btn" aria-label="Password help" aria-expanded="false">i</button>
+      <div class="tooltip" role="tooltip">
+        Enter your account password. Keep it secure and unique.
+      </div>
+    </div>
+
+
+    <button class="form-btn" id="login-btn">Login</button>
+
+    <div class="toggle-row">
+      <label class="build-toggle" title="Choose which build to use after login">
+        <input type="checkbox" id="build-toggle" />
+        <span class="track" aria-hidden="true"></span>
+        <span class="label">
+          <span class="off">Stable</span>
+          <span class="on">Experimental</span>
+        </span>
+      </label>
+    </div>
+
+  </div>
+
+  <!-- Signup Card -->
+  <div id="signup-form" class="auth-card" style="display:none">
+    <h1>Signup</h1>
+
+    <form id="signup-form-element">
+      <div class="field">
+        <input type="email" id="signup-email" placeholder="Email" required />
+        <button type="button" class="info-btn" aria-label="Email help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          You'll need this to sign in.  We’ll send password reminders to this address.
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="password" id="signup-password" placeholder="Password" required />
+        <button type="button" class="info-btn" aria-label="Password help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Choose a strong password (6 character minimum.  9+ chars recommended).
+        </div>
+      </div>
+
+
+      <div class="field">
+        <input type="text" id="firstName" placeholder="First Name" required />
+        <button type="button" class="info-btn" aria-label="First name help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Your real first name. Helps personalize your experience.
+        </div>
+      </div>
+
+      <div class="field">
+        <input type="text" id="lastName" placeholder="Last Name" required />
+        <button type="button" class="info-btn" aria-label="Last name help" aria-expanded="false">i</button>
+        <div class="tooltip" role="tooltip">
+          Your real last name. Stored securely.
+        </div>
+      </div>
+
+      <button class="form-btn" type="submit">Signup</button>
+    </form>
+  </div>
+
+  <!-- Firebase + auth helpers -->
+  <script type="module" src="./js/core/auth.js"></script>
+
+  <!-- Page logic -->
+  <script type="module">
+    import { loginUser , signupUser } from './js/core/auth.js';  /* uses your auth.js */
+
+    const loginForm = document.getElementById("login-form");
+    const signupForm = document.getElementById("signup-form");
+    const loginTab = document.getElementById("login-tab");
+    const signupTab = document.getElementById("signup-tab");
+
+    // Tab toggle (no layout jump)
+    loginTab.addEventListener("click", () => {
+      loginForm.style.display = "flex";
+      signupForm.style.display = "none";
+      loginTab.classList.add("active");
+      signupTab.classList.remove("active");
+    });
+    signupTab.addEventListener("click", () => {
+      loginForm.style.display = "none";
+      signupForm.style.display = "flex";
+      signupTab.classList.add("active");
+      loginTab.classList.remove("active");
+    });
+
+    // Login
+    // document.getElementById("login-btn").addEventListener("click", () => {
+    //   const email = document.getElementById("login-email").value;
+    //   const password = document.getElementById("login-password").value;
+    //   if (email && password) loginUser(email, password);
+    //   else alert("Please enter both email and password.");
+    // });
+
+    // Login
+    document.getElementById("login-btn").addEventListener("click", () => {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+
+      // NEW: read toggle state → variant
+      const isLatest = document.getElementById("build-toggle")?.checked === true;
+      const variant = isLatest ? 'experimental' : 'stable';
+
+      if (email && password) {
+        // Pass the variant to auth.js
+        loginUser(email, password, { variant });
+      } else {
+        alert("Please enter both email and password.");
+      }
+    });
+
+
+    // Signup
+    document.getElementById("signup-form-element").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = {
+        email: document.getElementById("signup-email").value,
+        password: document.getElementById("signup-password").value,
+        firstName: document.getElementById("firstName").value,
+        lastName: document.getElementById("lastName").value,
+      };
+      signupUser(data);
+    });
+
+    // Tooltip toggle (tap/click + ESC)
+    const fields = Array.from(document.querySelectorAll('.field'));
+    function closeAllTips(exceptBtn = null) {
+      fields.forEach(f => {
+        const btn = f.querySelector('.info-btn');
+        f.classList.remove('show-tip');
+        if (btn) btn.setAttribute('aria-expanded', (btn === exceptBtn) ? btn.getAttribute('aria-expanded') : 'false');
+      });
+    }
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.info-btn');
+      if (!btn) { closeAllTips(); return; }
+      const field = btn.closest('.field');
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      closeAllTips(btn);
+      btn.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      field.classList.toggle('show-tip', !expanded);
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllTips(); });
+
+    // Disable context menu/long-press
+    window.addEventListener("DOMContentLoaded", () => {
+      document.addEventListener("contextmenu", e => e.preventDefault());
+      document.addEventListener("touchstart", e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+      document.addEventListener("gesturestart", e => e.preventDefault());
+    });
+  </script>
+
+  <footer class="powered-by-tl">
+  Powered by
+  <img src="./assets/truelayer/truelayer-logo.jpg" alt="TrueLayer" height="16" style="vertical-align:-3px;margin-left:6px;">
+</footer>
+</body>
+
+
+</html>

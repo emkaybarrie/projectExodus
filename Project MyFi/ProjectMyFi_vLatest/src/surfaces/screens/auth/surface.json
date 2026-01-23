@@ -1,0 +1,9 @@
+{
+  "id": "auth",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": false, "title": "Sign in" },
+  "slots": [
+    { "id": "authCard", "card": true, "part": { "kind": "AuthCard" } }
+  ]
+}

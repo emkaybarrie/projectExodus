@@ -1,0 +1,16 @@
+{
+  "_contractRef": "/The Forge/myfi/specs/parts/contracts/STATUSBAR_CONTRACT.md",
+  "_note": "Machine-readable mirror for hooks/selectors only. Canonical truth is in _contractRef.",
+  "partId": "StatusBar",
+  "root": ".Part-StatusBar",
+  "hooks": {
+    "mode": ".StatusBar__mode",
+    "indicator": ".StatusBar__indicator",
+    "label": ".StatusBar__label",
+    "cycle": ".StatusBar__cycle"
+  },
+  "actions": ["openModeInfo"],
+  "constraints": {
+    "scope": "All selectors must start with .Part-StatusBar or .StatusBar"
+  }
+}

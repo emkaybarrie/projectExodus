@@ -1,0 +1,34 @@
+
+{
+  "app": {
+    "startSurfaceId": "hub"
+  },
+  "parts": {
+    "HubShell": {
+      "module": "./src/parts/HubShell/part.js",
+      "contract": "./src/parts/HubShell/contract.json",
+      "baseline": "./src/parts/HubShell/baseline.html",
+      "upliftCss": "./src/parts/HubShell/uplift.css"
+    },
+    "EmptyCard": {
+      "module": "./src/parts/EmptyCard/part.js",
+      "contract": "./src/parts/EmptyCard/contract.json",
+      "baseline": "./src/parts/EmptyCard/baseline.html",
+      "upliftCss": "./src/parts/EmptyCard/uplift.css"
+    }
+  },
+  "surfaces": {
+    "hub": {
+      "url": "./src/surfaces/screens/hub.surface.json"
+    }
+  },
+  "journeys": {
+    "hub.openHub": {
+      "url": "./src/journeys/hub/openHub.journey.json"
+    }
+  },
+  "snapshots": {
+    "paths": "./src/registry/paths.snapshot.json",
+    "expectedManifest": "./src/registry/expected-manifest.snapshot.json"
+  }
+}

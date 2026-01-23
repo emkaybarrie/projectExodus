@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Forge Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="portal">
+    <!-- Header -->
+    <header class="portal-header">
+      <div class="logo" onclick="navigateTo('dashboard')" style="cursor: pointer;">
+        <span class="logo-icon">&#9881;</span>
+        <span class="logo-text">Forge Portal</span>
+      </div>
+      <div class="header-status">
+        <span class="status-dot online"></span>
+        <span class="status-label">Online</span>
+      </div>
+    </header>
+
+    <!-- Dynamic Content Area -->
+    <main id="portal-content">
+      <!-- Content rendered by app.js -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+      <p>Forge Portal v2.0 &middot; Phone-First Governance</p>
+      <p class="footer-timestamp" id="timestamp"></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

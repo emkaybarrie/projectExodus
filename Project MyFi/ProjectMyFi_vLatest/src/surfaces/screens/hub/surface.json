@@ -1,0 +1,11 @@
+{
+  "id": "hub",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Hub" },
+  "slots": [
+    { "id": "statusBar", "part": { "kind": "StatusBar" } },
+    { "id": "vitalsHud", "card": true, "part": { "kind": "VitalsHUD" } },
+    { "id": "encounterWindow", "card": true, "part": { "kind": "EncounterWindow" } }
+  ]
+}

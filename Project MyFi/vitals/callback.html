@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Linking…</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <style>
+    :root{
+      --bg:#0f1118; --panel:#111827; --edge:#1f2937; --ink:#fff;
+      --muted:.85; --green:#10b981; --amber:#f59e0b; --red:#ef4444;
+    }
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    /* Full-screen overlay */
+    #syncOverlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:9999}
+    .box{width:min(560px,92vw);border:1px solid var(--edge);border-radius:16px;
+      padding:18px 20px;background:var(--panel);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    h1{margin:0 0 10px;font-size:20px}
+    p{margin:0 0 14px;opacity:.9;font-size:14px}
+    .disclosure{font-size:12px;opacity:.9;border:1px solid var(--edge);border-radius:12px;padding:10px;background:rgba(255,255,255,.03)}
+    .disclosure a{color:#c7d2fe;text-decoration:none}
+    .disclosure a:hover{text-decoration:underline}
+
+    .bar{height:6px;background:var(--edge);border-radius:999px;margin:12px 0;overflow:hidden}
+    .bar>div{height:100%;width:0%;background:linear-gradient(90deg,#22c55e,#06b6d4);transition:width .2s ease}
+
+    ul{list-style:none;padding:0;margin:10px 0 0}
+    li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--edge)}
+    li:first-child{border-top:none}
+    .badge{width:10px;height:10px;border-radius:50%;background:#4b5563}
+    .pending .badge{background:#4b5563}
+    .running .badge{background:var(--amber)}
+    .done .badge{background:var(--green)}
+    .fail .badge{background:var(--red)}
+    .label{flex:1;font-size:14px}
+    .hint{opacity:.8;font-size:12px}
+
+    .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+    button{appearance:none;background:#1f2937;color:#fff;border:1px solid #374151;
+      padding:8px 12px;border-radius:10px;cursor:pointer;font-size:14px}
+    button.primary{background:var(--green);border-color:var(--green);color:#0b0b0f}
+    button:disabled{opacity:.6;cursor:not-allowed}
+
+    .error{border:1px solid rgba(239,68,68,.6);background:rgba(239,68,68,.1);color:#fecaca;
+      padding:10px;border-radius:10px;margin-top:10px;display:none}
+    .powered-by-tl{position:fixed;inset:auto 12px 10px auto;opacity:.8;font-size:12px}
+    .powered-by-tl img{vertical-align:-3px;margin-left:6px}
+  </style>
+
+  <!-- Optional TL CSS you already use -->
+  <link rel="stylesheet" href="./truelayer.css" />
+</head>
+<body>
+
+  <div id="syncOverlay" aria-live="polite">
+    <div class="box">
+      <h1>Linking your bank…</h1>
+
+      <section id="tl-disclosure" class="disclosure">
+        We connect via <strong>TrueLayer</strong> and act as their <em>agent</em> to access your data with your consent.
+        <div id="legal-links" style="margin-top:6px"></div>
+      </section>
+
+      <p id="syncStatus">Getting everything ready.</p>
+
+      <div class="bar"><div id="progressFill"></div></div>
+
+      <ul id="stepsList" aria-label="Data fetch steps"></ul>
+
+      <div class="error" id="errorBox"></div>
+
+      <div class="actions">
+        <button id="restartBtn" style="display:none">Restart connection</button>
+        <button id="retryBtn" style="display:none">Retry failed step</button>
+        <button id="continueBtn" class="primary" style="display:none">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="powered-by-tl">
+    Powered by <img src="../assets/truelayer/truelayer-logo.jpg" alt="TrueLayer" height="16">
+  </footer>
+
+  <script type="module" src="./callback.js"></script>
+</body>
+</html>

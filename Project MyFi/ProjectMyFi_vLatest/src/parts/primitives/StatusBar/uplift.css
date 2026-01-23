@@ -1,0 +1,63 @@
+/* StatusBar uplift.css — Minimal styling for Phase 1 */
+/* Part of I1-Hub-Phase1-Scaffold */
+
+.Part-StatusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #fff;
+}
+
+.StatusBar__mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.StatusBar__mode:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.StatusBar__indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Verified mode — neutral positive indicator */
+.StatusBar--verified .StatusBar__indicator {
+  background: #2ecc71;
+  box-shadow: 0 0 6px rgba(46, 204, 113, 0.5);
+}
+
+.StatusBar--verified .StatusBar__label {
+  color: #2ecc71;
+}
+
+/* Unverified mode — neutral, NON-SHAMING per contract §3.3 */
+.StatusBar--unverified .StatusBar__indicator {
+  background: #95a5a6;
+}
+
+.StatusBar--unverified .StatusBar__label {
+  color: #bdc3c7;
+}
+
+.StatusBar__cycle {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}

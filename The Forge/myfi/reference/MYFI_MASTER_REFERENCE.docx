@@ -1,0 +1,301 @@
+MyFi — Master Reference
+
+Version: 1.0-draft (revised)
+Status: Living reference (human-authored, Forge-aware)
+Audience: Director, collaborators, AI agents
+Role: Canonical understanding of MyFi’s purpose, mechanics, and architecture
+
+How to Use This Document
+
+This document is the foundational reference for understanding MyFi.
+
+It serves three simultaneous purposes:
+
+A human-readable product bible — narrative, intention-driven, editable.
+
+A shared truth surface — what MyFi is, is not, and is becoming.
+
+A bridge to automation — selected sections are expected to remain aligned with the live codebase, while others intentionally describe future intent.
+
+Not every section is equally binding. Some describe non-negotiable intent, others describe current reality, and others remain exploratory.
+
+When this document and the codebase diverge, the divergence is not an error — it is a signal that reconciliation or deliberate evolution is required.
+
+1. Mission & Philosophy
+
+MyFi exists to help people build financial resilience through awareness, pacing, and intentional decision-making — not through restriction, shame, or opaque optimisation.
+
+At its core, MyFi reframes personal finance as a trainable system, not a moral test.
+
+The product treats financial behaviour as something that can be:
+
+observed without judgement
+
+influenced through feedback and reflection
+
+strengthened over time through practice
+
+Game systems are used not to distract from reality, but to translate reality into a form the human brain can feel and act on.
+
+2. Ethics & Safeguards
+
+MyFi is explicitly non-advisory.
+
+The system:
+
+does not tell users what they should do
+
+does not optimise for extraction or addiction
+
+does not reward harmful behaviour
+
+Core principles:
+
+Agency over coercion — depth increases only when the player chooses it.
+
+Readability over optimisation — signals are understandable, not hidden.
+
+Safety over growth — especially when real financial data is involved.
+
+Separation of domains — real-world financial outcomes are never gamified competitively.
+
+Any feature or monetisation mechanism must satisfy these principles or be rejected.
+
+3. The Core Behaviour Engine (Vitals)
+
+MyFi models financial behaviour through a small set of energy-like resources (“Vitals”). These are metaphors, but they map directly to real financial dynamics.
+
+3.1 The Vitals
+
+Health
+Survival and emergency capacity. Depletion signals fragility, not failure.
+
+Mana
+Intentional, high-impact spending. Mana represents choice and power.
+
+Stamina
+Day-to-day flexible spending. It regenerates frequently and absorbs routine activity.
+
+Essence
+Long-term surplus and savings potential. Essence accrues through sustained positive behaviour and is ethically ring-fenced.
+
+Vitals are designed to teach pacing, trade-offs, and recovery, not optimisation.
+
+4. The Spirit Hub — Heart of the Player Experience
+
+The Spirit Hub is the heart of MyFi from the player’s perspective.
+
+It has two inseparable functions:
+
+4.1 The Hub as a Financial HUD (Health Readout)
+
+First, the Hub functions as a living HUD for the player’s financial health.
+
+Much like a fitness wearable translates complex physiological data into readable bars and signals, the Hub translates financial reality into game-native vitals:
+
+Health, Mana, Stamina, Essence
+
+Shields, regeneration, depletion
+
+Visual states that reflect pressure or stability
+
+At this layer, the player uses the Hub as a mirror, not as a game:
+
+“My stamina is low — maybe I skip that extra drink.”
+“My health buffer is thin — I should tread carefully.”
+
+The player is influencing real-world behaviour through identification with their avatar, not through instruction.
+
+This layer is always present and always readable.
+
+4.2 The Hub as a Window into the Avatar’s World (Encounters)
+
+Second, the Hub is a window into the avatar’s lived world.
+
+Here, real financial events (especially spending events) are translated into encounters that play out using game logic.
+
+By default, encounters resolve in an autobattler-like manner:
+
+events occur
+
+vitals are impacted
+
+outcomes are visible
+
+no immediate action is required
+
+This ensures:
+
+low friction
+
+no cognitive overload
+
+continuity even when the player is busy or disengaged
+
+4.3 Interaction Depth: Autobattler → Turn-Based
+
+When the player chooses to engage with an encounter, the system collapses into a turn-based interaction regime:
+
+time slows or effectively pauses
+
+discrete choices become available
+
+tactical actions can be taken deliberately
+
+outcomes become more explicit and learnable
+
+This is not a separate mode, but a deepening of interaction.
+
+The design intent is:
+
+passive observation is always safe
+
+engagement is always rewarded with clarity and agency
+
+attention is treated as a scarce, valuable resource
+
+5. Interaction Depth Continuum
+
+MyFi is designed around a continuum of interaction depth, not discrete game modes:
+
+HUD → Autobattler → Turn-Based → Action (Badlands)
+
+HUD
+Always-on awareness and self-regulation.
+
+Autobattler
+Encounters resolve automatically, readable but low effort.
+
+Turn-Based
+Player intervention introduces tactical decision-making.
+
+Action / Badlands
+High-engagement, expressive gameplay that externalises progress and identity.
+
+Players may move forwards and backwards along this continuum at any time. No layer is mandatory.
+
+6. Quests & Behavioural Encounters
+
+Quests are structured prompts that:
+
+guide reflection
+
+encourage specific behaviours
+
+frame financial moments as meaningful experiences
+
+They are not chores, checklists, or objectives in isolation.
+
+A quest may represent:
+
+establishing a buffer
+
+surviving a difficult period
+
+reviewing spending patterns
+
+choosing restraint or intentionality
+
+Quests often act as entry points into deeper interaction along the continuum, especially into turn-based moments.
+
+7. Architecture — Conceptual Model
+
+MyFi’s UI and interaction architecture is built around a preferred conceptual model:
+
+Surfaces — high-level contexts (Hub, Quests, Profile)
+
+Slots — named layout regions within a surface
+
+Parts — reusable, self-contained UI units
+
+Journeys — thin orchestration flows across surfaces
+
+Feature Packs — stable capability providers (data + actions)
+
+This model is strongly preferred and assumed by tooling and AI workflows, but it is not immutable law. Any departure must be deliberate and explicit.
+
+8. Current Architectural Reality
+
+At present:
+
+The Hub/Vitals surface is the canonical anchor
+
+The system is mobile-first, with a no-build ESM runtime
+
+Surfaces / Slots / Parts are implemented and stabilising
+
+Quests are the intended reference implementation for repeatable workflows
+
+Backend integrations are abstracted behind feature interfaces
+
+Some architectural details remain in flux and are expected to evolve alongside the codebase.
+
+9. The Badlands (Action Layer)
+
+The Badlands represent the deepest point on the interaction continuum.
+
+They exist to:
+
+express identity
+
+externalise long-term progress
+
+provide narrative and emotional payoff
+
+They must never:
+
+create financial pressure
+
+distort real-world outcomes
+
+incentivise risky behaviour for in-game gain
+
+The Badlands consume signals from MyFi — they do not control it.
+
+10. Commercial & Partner Model
+
+MyFi supports:
+
+public-good partnerships
+
+institutional pilots
+
+ethical monetisation
+
+All monetisation must be:
+
+optional
+
+non-exploitative
+
+compatible with safeguarding
+
+never required to access core functionality
+
+11. Roadmap & Open Questions
+
+Development is structured into Acts, representing capability maturity rather than time.
+
+Some questions remain intentionally open:
+
+How deep should tactical play become for advanced users?
+
+Where is the optimal boundary between automation and reflection?
+
+How expressive should the Badlands become without distorting finance?
+
+These are not failures — they are designed spaces for learning.
+
+Closing Note
+
+This document is not static.
+
+It is expected to:
+
+evolve alongside the product
+
+be challenged by implementation reality
+
+inform and be informed by the codebase
+
+When this document and the system disagree, the disagreement is valuable.

@@ -1,0 +1,7 @@
+{
+  "id": "hub.openHub",
+  "type": "journey",
+  "steps": [
+    { "op": "navigate", "surfaceId": "hub" }
+  ]
+}

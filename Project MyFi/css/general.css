@@ -1,0 +1,208 @@
+/* General.css
+/* App-wide: disable long-press callout & selection by default */
+.app-no-context,
+.app-no-context *:not([data-allow-context]) {
+  -webkit-touch-callout: none;   /* iOS long-press menu */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Opt-outs (allowed zones): forms, editors, and any element you mark */
+.app-no-context input,
+.app-no-context textarea,
+.app-no-context select,
+.app-no-context [contenteditable="true"],
+.app-no-context .allow-select,
+.app-no-context [data-allow-context] {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Ensure elements with the hidden attribute are actually hidden */
+[hidden] { display: none !important; }
+
+
+
+/* Music toggle button (inherits your existing .btn styles) */
+.music-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  pointer-events: auto; /* ensure clickable in glass headers */
+}
+
+.music-btn.is-muted .music-btn__icon {
+  opacity: .6;
+  filter: grayscale(0.3);
+}
+
+/* If you use icon-only at small widths, you can hide the label */
+@media (max-width: 420px) {
+  .music-btn .music-btn__label { display: none; }
+}
+
+/* ===== Prevent viewport pull-to-refresh during vertical drags ===== */
+html, body { overscroll-behavior-y: none; }
+#screen-stage { touch-action: none; }
+.screen .scrollable {
+  touch-action: pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+
+/* =========================================================
+   Edge Glow (navigation affordance + notifications)
+   ========================================================= */
+.edge-glow-mount {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 120 !important; /* above HUD layers */
+}
+
+/* one layer that hosts 4 strips */
+.edge-glow {
+  position: fixed; inset: 0;
+  pointer-events: none;
+}
+
+.edge-glow__strip {
+  position: absolute;
+  pointer-events: none;
+  opacity: var(--eg-opacity, .55);
+  transition: opacity .18s ease, transform .18s ease;
+  will-change: transform;                 /* smoother per-frame transforms */
+}
+
+/* -------- Default theme variables (override per-strip with tones) -------- */
+.edge-glow__strip {
+  --eg-thickness: 6px;                    /* keep size the same */
+  --eg-color: 255, 30, 190;               /* vivid magenta */
+  --eg-alpha: 0.75;                       /* stronger visibility */
+  --eg-blur: 14px;
+}
+
+/* Top */
+.edge-glow__strip[data-dir="up"] {
+  left: 0; right: 0; top: 0; height: var(--eg-thickness);
+  background: linear-gradient(to bottom, rgba(var(--eg-color), var(--eg-alpha)), rgba(var(--eg-color), 0));
+  filter: blur(var(--eg-blur));
+}
+/* Right */
+.edge-glow__strip[data-dir="right"] {
+  top: 0; bottom: 0; right: 0; width: var(--eg-thickness);
+  background: linear-gradient(to left, rgba(var(--eg-color), var(--eg-alpha)), rgba(var(--eg-color), 0));
+  filter: blur(var(--eg-blur));
+}
+/* Bottom */
+.edge-glow__strip[data-dir="down"] {
+  left: 0; right: 0; bottom: 0; height: var(--eg-thickness);
+  background: linear-gradient(to top, rgba(var(--eg-color), var(--eg-alpha)), rgba(var(--eg-color), 0));
+  filter: blur(var(--eg-blur));
+}
+/* Left */
+.edge-glow__strip[data-dir="left"] {
+  top: 0; bottom: 0; left: 0; width: var(--eg-thickness);
+  background: linear-gradient(to right, rgba(var(--eg-color), var(--eg-alpha)), rgba(var(--eg-color), 0));
+  filter: blur(var(--eg-blur));
+}
+
+/* Hidden when navigation not available for that edge */
+.edge-glow__strip.is-disabled { opacity: 0; }
+
+/* Peek when user nears an edge or on arrow-key hint */
+.edge-glow__strip.is-peek { --eg-thickness: 10px; --eg-opacity: .98; }
+
+/* Drag progress (brief punch; kept ON during drag) */
+.edge-glow__strip.is-drag { --eg-thickness: 18px; --eg-opacity: 1; }
+
+/* Notification tones (can be set per-edge) */
+.edge-glow__strip.tone-default { --eg-color: 255, 30, 190; --eg-alpha: .75; }  /* magenta */
+.edge-glow__strip.tone-notify  { --eg-color: 255, 200, 90;  --eg-alpha: .78; } /* gold */
+.edge-glow__strip.tone-alert   { --eg-color: 255, 110, 110; --eg-alpha: .82; } /* red  */
+.edge-glow__strip.tone-okay    { --eg-color:  80, 230, 170; --eg-alpha: .80; } /* green*/
+
+/* Crisp inner core line + halo for higher contrast without increasing thickness */
+.edge-glow__strip::before {
+  content: "";
+  position: absolute;
+  background: rgba(var(--eg-color), .98);
+  opacity: .95;
+  /* strong halo: follows the core line (subtle bloom) */
+  box-shadow:
+    0 0 16px rgba(var(--eg-color), .80),
+    0 0 32px rgba(var(--eg-color), .55);
+}
+.edge-glow__strip[data-dir="left"]::before  { top: 0; bottom: 0; left: 0; width: 2px; }
+.edge-glow__strip[data-dir="right"]::before { top: 0; bottom: 0; right: 0; width: 2px; }
+.edge-glow__strip[data-dir="up"]::before    { top: 0; left: 0; right: 0; height: 2px; }
+.edge-glow__strip[data-dir="down"]::before  { bottom: 0; left: 0; right: 0; height: 2px; }
+
+/* Tiny chevron etched into the glow */
+.edge-glow__strip::after {
+  content: "";
+  position: absolute;
+  width: 0; height: 0;
+  opacity: .98;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.25));
+}
+.edge-glow__strip[data-dir="left"]::after  {
+  border-style: solid; border-width: 6px 9px 6px 0;
+  border-color: transparent rgba(255,255,255,1) transparent transparent;
+  left: 6px; top: 50%; transform: translateY(-50%);
+}
+.edge-glow__strip[data-dir="right"]::after {
+  border-style: solid; border-width: 6px 0 6px 9px;
+  border-color: transparent transparent transparent rgba(255,255,255,1);
+  right: 6px; top: 50%; transform: translateY(-50%);
+}
+.edge-glow__strip[data-dir="up"]::after    {
+  border-style: solid; border-width: 0 6px 9px 6px;
+  border-color: transparent transparent rgba(255,255,255,1) transparent;
+  top: 6px; left: 50%; transform: translateX(-50%);
+}
+.edge-glow__strip[data-dir="down"]::after  {
+  border-style: solid; border-width: 9px 6px 0 6px;
+  border-color: rgba(255,255,255,1) transparent transparent transparent;
+  bottom: 6px; left: 50%; transform: translateX(-50%);
+}
+
+/* Subtle pulse for notifications */
+@keyframes egPulse {
+  0% { --eg-thickness: 6px; --eg-opacity: .9; }
+  50% { --eg-thickness: 12px; --eg-opacity: 1; }
+  100% { --eg-thickness: 6px; --eg-opacity: .9; }
+}
+.edge-glow__strip.is-pulsing {
+  animation: egPulse 1.4s ease-in-out infinite;
+}
+
+/* Legend labels near edges (for tours / hints) */
+.edge-glow-legend {
+  position: fixed;
+  z-index: 121;
+  color: #fff;
+  font: 600 12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  background: rgba(30,35,60,.55);
+  border: 1px solid rgba(220,230,255,.18);
+  border-radius: 10px;
+  padding: 6px 9px;
+  backdrop-filter: blur(8px) saturate(120%);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+}
+.edge-glow-legend[data-dir="left"]  { left: 10px;  top: 50%; transform: translateY(-50%); }
+.edge-glow-legend[data-dir="right"] { right: 10px; top: 50%; transform: translateY(-50%); }
+.edge-glow-legend[data-dir="up"]    { top: 10px;   left: 50%; transform: translateX(-50%); }
+.edge-glow-legend[data-dir="down"]  { bottom: 10px;left: 50%; transform: translateX(-50%); }
+
+/* Hide global glow while dragging locally */
+.eg-global-hidden { visibility: hidden; }
+
+/* Local glow container lives inside a .screen so it inherits the screen’s transforms -> pixel-perfect */
+.edge-glow-local {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;              /* above screen content, below arrows */
+}
