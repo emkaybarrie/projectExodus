@@ -1,0 +1,261 @@
+MyFi — Master Reference
+
+Version: 1.0-draft
+Status: Living reference (human-authored, Forge-aware)
+Audience: Director, collaborators, AI agents
+Role: Canonical understanding of MyFi’s purpose, mechanics, and architecture
+
+How to Use This Document
+
+This document is the foundational reference for understanding MyFi.
+
+It serves three simultaneous purposes:
+
+A human-readable product bible — narrative, intention-driven, editable.
+
+A shared truth surface — what MyFi is, is not, and is becoming.
+
+A bridge to automation — sections of this document are expected to remain aligned with the live codebase, while others intentionally describe future intent.
+
+Not every section is equally binding. Some describe non-negotiable intent, others describe current reality, and others remain exploratory. This distinction is essential to keeping MyFi coherent as it evolves.
+
+Conflicts between this document and the codebase are not errors — they are signals that reconciliation or deliberate evolution is required.
+
+1. Mission & Philosophy
+
+MyFi exists to help people build financial resilience through awareness, pacing, and intentional decision-making — not through restriction, shame, or opaque optimisation.
+
+At its core, MyFi reframes personal finance as a trainable system, not a moral test.
+
+The product treats financial behaviour as something that can be:
+
+observed without judgement
+
+influenced through feedback and reflection
+
+strengthened over time through practice
+
+Game systems are used not to distract from reality, but to make reality legible and emotionally navigable.
+
+2. Ethics & Safeguards
+
+MyFi is explicitly non-advisory.
+
+The system:
+
+does not tell users what they should do
+
+does not optimise for extraction or addiction
+
+does not reward harmful behaviour
+
+Key ethical principles:
+
+Agency over coercion — engagement deepens only when the user chooses it.
+
+Transparency over optimisation — mechanics are understandable, not hidden.
+
+Safety over growth — especially in verified modes.
+
+Separation of domains — real financial outcomes are never directly gamified for competitive gain.
+
+Any monetisation or progression system must be compatible with these principles or be rejected.
+
+3. The Core Behaviour Engine (Vitals)
+
+MyFi models financial behaviour through a small set of energy-like resources (“Vitals”). These are metaphors, but they map directly to real financial dynamics.
+
+3.1 The Vitals
+
+Health
+Represents survival and emergency capacity. When Health is depleted, the system signals fragility rather than punishment.
+
+Mana
+Represents intentional, high-impact spending. Mana is about choice and power, not frequency.
+
+Stamina
+Represents day-to-day flexible spending. It regenerates more frequently and absorbs routine activity.
+
+Essence
+Represents long-term surplus, savings, and investment potential. Essence is ethically ring-fenced and accumulates through sustained positive behaviour.
+
+These resources are not arbitrary meters — they are designed to teach pacing, trade-offs, and recovery.
+
+4. The Spirit Hub — Autobattler ↔ Turn-Based Hybrid
+
+The Spirit Hub (often referred to simply as the Hub) is the core experiential surface of MyFi.
+
+It is best understood as a hybrid system:
+
+By default, the Hub behaves like an autobattler:
+
+state changes flow continuously
+
+vitals rise and fall based on real-world activity
+
+the system remains readable without constant attention
+
+When the user engages proactively, the system collapses into a turn-based mode:
+
+time effectively slows or pauses
+
+discrete choices become available
+
+tactical actions can be taken deliberately
+
+This is not a mode switch. It is a continuum of interaction depth.
+
+The design intent is that:
+
+passive users are never overwhelmed
+
+engaged users are rewarded with agency and clarity
+
+attention is treated as a scarce, valuable resource
+
+4.1 Tactical Agency
+
+When operating in the turn-based regime, the player may:
+
+tag or reclassify spending
+
+make intentional trade-offs
+
+deploy limited abilities or mitigations
+
+reflect on recent actions with clearer feedback
+
+Tactical depth is earned through engagement, not forced by default.
+
+5. Quests & Encounters
+
+Quests are structured prompts that:
+
+guide reflection
+
+encourage specific behaviours
+
+frame financial actions as meaningful events
+
+They are not chores, and they are not objectives in isolation.
+
+A quest may represent:
+
+setting a buffer
+
+reviewing a category
+
+surviving a difficult period
+
+choosing restraint or intentionality
+
+Quests operate as behavioural encounters, not traditional tasks, and often interface directly with the Hub’s turn-based moments.
+
+6. Architecture — Conceptual Model
+
+MyFi’s UI and interaction architecture is built around a preferred conceptual model:
+
+Surfaces
+High-level screens or contexts (e.g. Hub, Quests, Profile).
+
+Slots
+Named regions within a surface that define layout responsibility.
+
+Parts
+Reusable, self-contained UI units that mount into slots.
+
+Journeys
+Thin orchestration flows that move the user across surfaces and states.
+
+Feature Packs
+Stable capability providers that expose data and actions to the UI.
+
+This model is strongly preferred and assumed by tooling and AI workflows, but it is not treated as religious law. If a superior model emerges, migration is allowed — but must be deliberate and explicit.
+
+7. Current Architectural Reality
+
+As of this reference:
+
+The Hub/Vitals screen is the canonical anchor.
+
+The system is mobile-first, with a no-build, ESM-based runtime.
+
+Surfaces / Slots / Parts are implemented and stabilising.
+
+Quests are the intended reference implementation for repeatable UI and journey workflows.
+
+Backend integrations are abstracted behind feature interfaces.
+
+Some architectural details remain in flux. This document is expected to be updated as the repo evolves.
+
+8. The Game Layer (Badlands)
+
+The Badlands represent a separate but connected domain.
+
+They exist to:
+
+express identity
+
+externalise progress
+
+provide narrative continuity
+
+They must never:
+
+create financial pressure
+
+distort real-world outcomes
+
+encourage risk for in-game advantage
+
+The Badlands consume signals from MyFi, not control it.
+
+9. Commercial & Partner Model
+
+MyFi is designed to support:
+
+public-good partnerships
+
+institutional pilots
+
+ethical monetisation
+
+Monetisation principles:
+
+optional
+
+non-exploitative
+
+compatible with safeguarding
+
+never required to access core functionality
+
+Any partner integration must respect the behavioural and ethical constraints defined earlier in this document.
+
+10. Roadmap & Open Questions
+
+MyFi development is structured into Acts, representing capability maturity rather than time.
+
+Some questions remain intentionally open:
+
+How deep should tactical play become for advanced users?
+
+How much automation is appropriate before reflection is lost?
+
+Where is the optimal boundary between guidance and autonomy?
+
+These questions are not failures — they are designed spaces for learning.
+
+Closing Note
+
+This document is not static.
+
+It is expected to:
+
+evolve alongside the product
+
+be challenged by implementation reality
+
+inform and be informed by the codebase
+
+When this document and the system disagree, the disagreement is valuable.

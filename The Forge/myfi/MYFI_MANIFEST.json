@@ -15,6 +15,12 @@
   "seal": {
     "required": true,
     "file": "MYFI_SNAPSHOT_SEAL.md"
+  },
+  "reference": {
+  "human": "reference/MYFI_MASTER_REFERENCE.docx",
+  "index": "reference/MYFI_REFERENCE_INDEX.json",
+  "sync_contract": "reference/MYFI_REFERENCE_SYNC.md"
   }
+
 }
 

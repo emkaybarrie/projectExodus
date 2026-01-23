@@ -1,0 +1,54 @@
+{
+  "reference": "MYFI_MASTER_REFERENCE.docx",
+  "version": "0.2",
+  "sections": [
+    {
+      "id": "mission",
+      "title": "Mission",
+      "type": "normative",
+      "sync": "human_to_repo",
+      "tags": ["purpose"]
+    },
+    {
+      "id": "core_model",
+      "title": "Core Model",
+      "type": "normative",
+      "sync": "bidirectional",
+      "tags": ["vitals", "loop"]
+    },
+    {
+      "id": "ethics",
+      "title": "Ethics",
+      "type": "normative",
+      "sync": "human_to_repo",
+      "tags": ["ethics", "safety"]
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "type": "descriptive",
+      "sync": "repo_to_human",
+      "tags": ["runtime", "ui", "dsl"]
+    },
+    {
+      "id": "product_direction",
+      "title": "Product Direction",
+      "type": "exploratory",
+      "sync": "human_only",
+      "tags": ["roadmap"]
+    }
+  ],
+  "automation": {
+    "on_normative_change": [
+      "emit_work_order:spec_sync",
+      "flag_for_repo_reconciliation"
+    ],
+    "on_descriptive_mismatch": [
+      "update_reference_doc",
+      "log_change"
+    ],
+    "on_exploratory_change": [
+      "emit_work_order:ideation"
+    ]
+  }
+}
