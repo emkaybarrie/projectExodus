@@ -1,6 +1,6 @@
 MyFi — Master Reference
 
-Version: 1.0-draft
+Version: 1.0-draft (revised)
 Status: Living reference (human-authored, Forge-aware)
 Audience: Director, collaborators, AI agents
 Role: Canonical understanding of MyFi’s purpose, mechanics, and architecture
@@ -15,11 +15,11 @@ A human-readable product bible — narrative, intention-driven, editable.
 
 A shared truth surface — what MyFi is, is not, and is becoming.
 
-A bridge to automation — sections of this document are expected to remain aligned with the live codebase, while others intentionally describe future intent.
+A bridge to automation — selected sections are expected to remain aligned with the live codebase, while others intentionally describe future intent.
 
-Not every section is equally binding. Some describe non-negotiable intent, others describe current reality, and others remain exploratory. This distinction is essential to keeping MyFi coherent as it evolves.
+Not every section is equally binding. Some describe non-negotiable intent, others describe current reality, and others remain exploratory.
 
-Conflicts between this document and the codebase are not errors — they are signals that reconciliation or deliberate evolution is required.
+When this document and the codebase diverge, the divergence is not an error — it is a signal that reconciliation or deliberate evolution is required.
 
 1. Mission & Philosophy
 
@@ -35,7 +35,7 @@ influenced through feedback and reflection
 
 strengthened over time through practice
 
-Game systems are used not to distract from reality, but to make reality legible and emotionally navigable.
+Game systems are used not to distract from reality, but to translate reality into a form the human brain can feel and act on.
 
 2. Ethics & Safeguards
 
@@ -49,17 +49,17 @@ does not optimise for extraction or addiction
 
 does not reward harmful behaviour
 
-Key ethical principles:
+Core principles:
 
-Agency over coercion — engagement deepens only when the user chooses it.
+Agency over coercion — depth increases only when the player chooses it.
 
-Transparency over optimisation — mechanics are understandable, not hidden.
+Readability over optimisation — signals are understandable, not hidden.
 
-Safety over growth — especially in verified modes.
+Safety over growth — especially when real financial data is involved.
 
-Separation of domains — real financial outcomes are never directly gamified for competitive gain.
+Separation of domains — real-world financial outcomes are never gamified competitively.
 
-Any monetisation or progression system must be compatible with these principles or be rejected.
+Any feature or monetisation mechanism must satisfy these principles or be rejected.
 
 3. The Core Behaviour Engine (Vitals)
 
@@ -68,66 +68,113 @@ MyFi models financial behaviour through a small set of energy-like resources (�
 3.1 The Vitals
 
 Health
-Represents survival and emergency capacity. When Health is depleted, the system signals fragility rather than punishment.
+Survival and emergency capacity. Depletion signals fragility, not failure.
 
 Mana
-Represents intentional, high-impact spending. Mana is about choice and power, not frequency.
+Intentional, high-impact spending. Mana represents choice and power.
 
 Stamina
-Represents day-to-day flexible spending. It regenerates more frequently and absorbs routine activity.
+Day-to-day flexible spending. It regenerates frequently and absorbs routine activity.
 
 Essence
-Represents long-term surplus, savings, and investment potential. Essence is ethically ring-fenced and accumulates through sustained positive behaviour.
+Long-term surplus and savings potential. Essence accrues through sustained positive behaviour and is ethically ring-fenced.
 
-These resources are not arbitrary meters — they are designed to teach pacing, trade-offs, and recovery.
+Vitals are designed to teach pacing, trade-offs, and recovery, not optimisation.
 
-4. The Spirit Hub — Autobattler ↔ Turn-Based Hybrid
+4. The Spirit Hub — Heart of the Player Experience
 
-The Spirit Hub (often referred to simply as the Hub) is the core experiential surface of MyFi.
+The Spirit Hub is the heart of MyFi from the player’s perspective.
 
-It is best understood as a hybrid system:
+It has two inseparable functions:
 
-By default, the Hub behaves like an autobattler:
+4.1 The Hub as a Financial HUD (Health Readout)
 
-state changes flow continuously
+First, the Hub functions as a living HUD for the player’s financial health.
 
-vitals rise and fall based on real-world activity
+Much like a fitness wearable translates complex physiological data into readable bars and signals, the Hub translates financial reality into game-native vitals:
 
-the system remains readable without constant attention
+Health, Mana, Stamina, Essence
 
-When the user engages proactively, the system collapses into a turn-based mode:
+Shields, regeneration, depletion
 
-time effectively slows or pauses
+Visual states that reflect pressure or stability
+
+At this layer, the player uses the Hub as a mirror, not as a game:
+
+“My stamina is low — maybe I skip that extra drink.”
+“My health buffer is thin — I should tread carefully.”
+
+The player is influencing real-world behaviour through identification with their avatar, not through instruction.
+
+This layer is always present and always readable.
+
+4.2 The Hub as a Window into the Avatar’s World (Encounters)
+
+Second, the Hub is a window into the avatar’s lived world.
+
+Here, real financial events (especially spending events) are translated into encounters that play out using game logic.
+
+By default, encounters resolve in an autobattler-like manner:
+
+events occur
+
+vitals are impacted
+
+outcomes are visible
+
+no immediate action is required
+
+This ensures:
+
+low friction
+
+no cognitive overload
+
+continuity even when the player is busy or disengaged
+
+4.3 Interaction Depth: Autobattler → Turn-Based
+
+When the player chooses to engage with an encounter, the system collapses into a turn-based interaction regime:
+
+time slows or effectively pauses
 
 discrete choices become available
 
 tactical actions can be taken deliberately
 
-This is not a mode switch. It is a continuum of interaction depth.
+outcomes become more explicit and learnable
 
-The design intent is that:
+This is not a separate mode, but a deepening of interaction.
 
-passive users are never overwhelmed
+The design intent is:
 
-engaged users are rewarded with agency and clarity
+passive observation is always safe
+
+engagement is always rewarded with clarity and agency
 
 attention is treated as a scarce, valuable resource
 
-4.1 Tactical Agency
+5. Interaction Depth Continuum
 
-When operating in the turn-based regime, the player may:
+MyFi is designed around a continuum of interaction depth, not discrete game modes:
 
-tag or reclassify spending
+HUD → Autobattler → Turn-Based → Action (Badlands)
 
-make intentional trade-offs
+HUD
+Always-on awareness and self-regulation.
 
-deploy limited abilities or mitigations
+Autobattler
+Encounters resolve automatically, readable but low effort.
 
-reflect on recent actions with clearer feedback
+Turn-Based
+Player intervention introduces tactical decision-making.
 
-Tactical depth is earned through engagement, not forced by default.
+Action / Badlands
+High-engagement, expressive gameplay that externalises progress and identity.
 
-5. Quests & Encounters
+Players may move forwards and backwards along this continuum at any time. No layer is mandatory.
+
+6. Quests & Behavioural Encounters
 
 Quests are structured prompts that:
 
@@ -135,70 +182,65 @@ guide reflection
 
 encourage specific behaviours
 
-frame financial actions as meaningful events
+frame financial moments as meaningful experiences
 
-They are not chores, and they are not objectives in isolation.
+They are not chores, checklists, or objectives in isolation.
 
 A quest may represent:
 
-setting a buffer
-
-reviewing a category
+establishing a buffer
 
 surviving a difficult period
 
+reviewing spending patterns
+
 choosing restraint or intentionality
 
-Quests operate as behavioural encounters, not traditional tasks, and often interface directly with the Hub’s turn-based moments.
+Quests often act as entry points into deeper interaction along the continuum, especially into turn-based moments.
 
-6. Architecture — Conceptual Model
+7. Architecture — Conceptual Model
 
 MyFi’s UI and interaction architecture is built around a preferred conceptual model:
 
-Surfaces
-High-level screens or contexts (e.g. Hub, Quests, Profile).
+Surfaces — high-level contexts (Hub, Quests, Profile)
 
-Slots
-Named regions within a surface that define layout responsibility.
+Slots — named layout regions within a surface
 
-Parts
-Reusable, self-contained UI units that mount into slots.
+Parts — reusable, self-contained UI units
 
-Journeys
-Thin orchestration flows that move the user across surfaces and states.
+Journeys — thin orchestration flows across surfaces
 
-Feature Packs
-Stable capability providers that expose data and actions to the UI.
+Feature Packs — stable capability providers (data + actions)
 
-This model is strongly preferred and assumed by tooling and AI workflows, but it is not treated as religious law. If a superior model emerges, migration is allowed — but must be deliberate and explicit.
+This model is strongly preferred and assumed by tooling and AI workflows, but it is not immutable law. Any departure must be deliberate and explicit.
 
-7. Current Architectural Reality
+8. Current Architectural Reality
 
-As of this reference:
+At present:
 
-The Hub/Vitals screen is the canonical anchor.
+The Hub/Vitals surface is the canonical anchor
 
-The system is mobile-first, with a no-build, ESM-based runtime.
+The system is mobile-first, with a no-build ESM runtime
 
-Surfaces / Slots / Parts are implemented and stabilising.
+Surfaces / Slots / Parts are implemented and stabilising
 
-Quests are the intended reference implementation for repeatable UI and journey workflows.
+Quests are the intended reference implementation for repeatable workflows
 
-Backend integrations are abstracted behind feature interfaces.
+Backend integrations are abstracted behind feature interfaces
 
-Some architectural details remain in flux. This document is expected to be updated as the repo evolves.
+Some architectural details remain in flux and are expected to evolve alongside the codebase.
 
-8. The Game Layer (Badlands)
+9. The Badlands (Action Layer)
 
-The Badlands represent a separate but connected domain.
+The Badlands represent the deepest point on the interaction continuum.
 
 They exist to:
 
 express identity
 
-externalise progress
+externalise long-term progress
 
-provide narrative continuity
+provide narrative and emotional payoff
 
 They must never:
 
@@ -206,13 +248,13 @@ create financial pressure
 
 distort real-world outcomes
 
-encourage risk for in-game advantage
+incentivise risky behaviour for in-game gain
 
-The Badlands consume signals from MyFi, not control it.
+The Badlands consume signals from MyFi — they do not control it.
 
-9. Commercial & Partner Model
+10. Commercial & Partner Model
 
-MyFi is designed to support:
+MyFi supports:
 
 public-good partnerships
 
@@ -220,7 +262,7 @@ institutional pilots
 
 ethical monetisation
 
-Monetisation principles:
+All monetisation must be:
 
 optional
 
@@ -230,21 +272,19 @@ compatible with safeguarding
 
 never required to access core functionality
 
-Any partner integration must respect the behavioural and ethical constraints defined earlier in this document.
+11. Roadmap & Open Questions
 
-10. Roadmap & Open Questions
-
-MyFi development is structured into Acts, representing capability maturity rather than time.
+Development is structured into Acts, representing capability maturity rather than time.
 
 Some questions remain intentionally open:
 
 How deep should tactical play become for advanced users?
 
-How much automation is appropriate before reflection is lost?
+Where is the optimal boundary between automation and reflection?
 
-Where is the optimal boundary between guidance and autonomy?
+How expressive should the Badlands become without distorting finance?
 
-These questions are not failures — they are designed spaces for learning.
+These are not failures — they are designed spaces for learning.
 
 Closing Note
 
