@@ -1,0 +1,39 @@
+name: Forge Share Pack Refresh
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "The Forge/forge/**"
+      - "The Forge/myfi/**"
+      - ".github/workflows/forge-share-pack-refresh.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Refresh Share Pack
+        run: node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+
+      - name: Commit Share Pack (if changed)
+        run: |
+          git config user.name "forge-bot"
+          git config user.email "forge-bot@users.noreply.github.com"
+          git add "The Forge/forge/exports/share-pack"
+          if git diff --cached --quiet; then
+            echo "No share-pack changes."
+            exit 0
+          fi
+          git commit -m "forge: refresh share pack"
+          git push
