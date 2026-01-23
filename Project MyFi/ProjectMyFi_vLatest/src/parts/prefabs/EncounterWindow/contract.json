@@ -1,0 +1,28 @@
+{
+  "_contractRef": "/The Forge/myfi/specs/parts/contracts/ENCOUNTERWINDOW_CONTRACT.md",
+  "_note": "Machine-readable mirror for hooks/selectors only. Canonical truth is in _contractRef.",
+  "partId": "EncounterWindow",
+  "root": ".Part-EncounterWindow",
+  "hooks": {
+    "header": ".EncounterWindow__header",
+    "title": ".EncounterWindow__title",
+    "state": ".EncounterWindow__state",
+    "content": ".EncounterWindow__content",
+    "idle": ".EncounterWindow__idle",
+    "idleIcon": ".EncounterWindow__idleIcon",
+    "idleText": ".EncounterWindow__idleText",
+    "encounter": ".EncounterWindow__encounter",
+    "encounterType": ".EncounterWindow__encounterType",
+    "encounterSummary": ".EncounterWindow__encounterSummary",
+    "engageBtn": ".EncounterWindow__engageBtn"
+  },
+  "stateModifiers": {
+    "idle": ".EncounterWindow--idle",
+    "available": ".EncounterWindow--available",
+    "observing": ".EncounterWindow--observing"
+  },
+  "actions": ["engage"],
+  "constraints": {
+    "scope": "All selectors must start with .Part-EncounterWindow or .EncounterWindow"
+  }
+}

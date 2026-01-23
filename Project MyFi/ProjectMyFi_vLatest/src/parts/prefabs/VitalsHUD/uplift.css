@@ -1,0 +1,120 @@
+/* VitalsHUD uplift.css — Minimal styling for Phase 1 */
+/* Part of I1-Hub-Phase1-Scaffold */
+
+.Part-VitalsHUD {
+  padding: 16px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #fff;
+}
+
+.VitalsHUD__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.VitalsHUD__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.VitalsHUD__viewToggle {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.VitalsHUD__toggleBtn {
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.VitalsHUD__toggleBtn:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.VitalsHUD__toggleBtn--active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.VitalsHUD__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.VitalsHUD__vital {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  transition: background 0.2s;
+}
+
+.VitalsHUD__vital:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.VitalsHUD__vitalLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.VitalsHUD__barContainer {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.VitalsHUD__barFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease-out;
+}
+
+.VitalsHUD__vitalValue {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: right;
+}
+
+/* Vital-specific colors */
+.VitalsHUD__vital--health .VitalsHUD__barFill {
+  background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.VitalsHUD__vital--mana .VitalsHUD__barFill {
+  background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+}
+
+.VitalsHUD__vital--stamina .VitalsHUD__barFill {
+  background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
+}
+
+.VitalsHUD__vital--essence .VitalsHUD__barFill {
+  background: linear-gradient(90deg, #9b59b6 0%, #8e44ad 100%);
+}
+
+/* Vital-specific label colors (subtle) */
+.VitalsHUD__vital--health .VitalsHUD__vitalLabel { color: #e74c3c; }
+.VitalsHUD__vital--mana .VitalsHUD__vitalLabel { color: #3498db; }
+.VitalsHUD__vital--stamina .VitalsHUD__vitalLabel { color: #2ecc71; }
+.VitalsHUD__vital--essence .VitalsHUD__vitalLabel { color: #9b59b6; }

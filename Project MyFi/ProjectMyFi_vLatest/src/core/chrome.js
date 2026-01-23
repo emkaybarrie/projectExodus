@@ -1,3 +1,6 @@
+// chrome.js — Updated for I2-JourneyRunner-Phase1
+// Adds: modal host element
+
 export function createChrome(chromeHost){
   if (!chromeHost) throw new Error('createChrome requires chromeHost');
 
@@ -14,6 +17,9 @@ export function createChrome(chromeHost){
         <button class="chrome__navBtn" data-nav="quests">Quests</button>
         <button class="chrome__navBtn" data-nav="avatar">Avatar</button>
       </footer>
+
+      <!-- Modal overlay host (Phase 1) -->
+      <div class="chrome__modalHost" data-role="modalHost" hidden></div>
     </div>
   `;
 
@@ -22,6 +28,7 @@ export function createChrome(chromeHost){
     footer: chromeHost.querySelector('[data-role="footer"]'),
     title: chromeHost.querySelector('[data-role="title"]'),
     surfaceHost: chromeHost.querySelector('[data-role="surfaceHost"]'),
+    modalHost: chromeHost.querySelector('[data-role="modalHost"]'),
     navBtns: Array.from(chromeHost.querySelectorAll('[data-nav]')),
   };
 
@@ -47,6 +54,7 @@ export function createChrome(chromeHost){
 
   return {
     hostEl: els.surfaceHost,
+    modalHostEl: els.modalHost,
     apply,
     setTitle,
     onNav,
