@@ -4,6 +4,7 @@
 // S3: Execute loop with status chips and executor queue
 // M2c2: Deploy to Production integration
 // A1: Forante/Entity Registry integration
+// O2: Dev/Prod Environments integration
 
 const REPO_BASE = 'https://github.com/emkaybarrie/projectExodus';
 const EXECUTOR_QUEUE_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Aready-for-executor`;
@@ -15,18 +16,21 @@ const COMPARE_URL = `${REPO_BASE}/compare/main...dev`;
 const FORANTE_KERNEL_URL = `${REPO_BASE}/blob/main/Forante/FORANTE_KERNEL.md`;
 const FORANTE_INDEX_URL = `${REPO_BASE}/blob/main/Forante/FORANTE_INDEX.md`;
 const OPERATING_LANES_URL = `${REPO_BASE}/blob/main/The%20Forge/forge/ops/OPERATING_MODEL_LANES.md`;
+const DEPLOYMENT_CONTRACT_URL = `${REPO_BASE}/blob/main/The%20Forge/forge/ops/DEPLOYMENT_CONTRACT.md`;
 
 // Compute Share Pack base URL relative to this script (works with spaces in paths)
 const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
 
-// Compute entities.json URL relative to this script
+// Compute data URLs relative to this script
 const ENTITIES_URL = new URL('./data/entities.json', import.meta.url).href;
+const ENVIRONMENTS_URL = new URL('./data/environments.json', import.meta.url).href;
 
 // State
 const state = {
   sharePack: null,
   workOrders: null,
   entities: null,
+  environments: null,
   currentScreen: 'dashboard',
   woFilter: 'all',
   loading: true,
@@ -77,21 +81,35 @@ async function loadEntities() {
   }
 }
 
+async function loadEnvironments() {
+  try {
+    console.log('[Portal] Fetching:', ENVIRONMENTS_URL);
+    const res = await fetch(ENVIRONMENTS_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[Portal] Failed to load environments.json:', e);
+    return null;
+  }
+}
+
 async function loadData() {
   state.loading = true;
   state.error = null;
   state.errorDetails = null;
   render();
 
-  const [sharePack, workOrders, entities] = await Promise.all([
+  const [sharePack, workOrders, entities, environments] = await Promise.all([
     loadSharePack(),
     loadWorkOrders(),
-    loadEntities()
+    loadEntities(),
+    loadEnvironments()
   ]);
 
   state.sharePack = sharePack;
   state.workOrders = workOrders;
   state.entities = entities;
+  state.environments = environments;
   state.loading = false;
 
   if (!sharePack && !workOrders) {
@@ -560,6 +578,59 @@ function renderGovernancePanel() {
   `;
 }
 
+function renderEnvironmentsPanel() {
+  const envs = state.environments?.environments || {};
+  const prod = envs.prod;
+  const dev = envs.dev;
+
+  // Detect current environment by checking URL path
+  const currentPath = window.location.pathname;
+  const isDevEnv = currentPath.includes('/dev/');
+  const currentEnv = isDevEnv ? 'dev' : 'prod';
+
+  return `
+    <section class="panel environments-panel">
+      <h2 class="panel-title">Environments</h2>
+      <p class="panel-subtitle">You are on: <strong>${isDevEnv ? 'DEV' : 'PROD'}</strong></p>
+      <div class="env-grid">
+        <div class="env-card ${currentEnv === 'prod' ? 'current' : ''}">
+          <div class="env-header">
+            <span class="env-name">Production</span>
+            <span class="env-branch">main</span>
+          </div>
+          <div class="env-links">
+            <a href="${prod?.urls?.portal || '#'}" class="env-link" ${currentEnv === 'prod' ? '' : 'target="_blank" rel="noopener"'}>
+              Portal
+            </a>
+            <a href="${prod?.urls?.myfi || '#'}" class="env-link" target="_blank" rel="noopener">
+              MyFi
+            </a>
+          </div>
+        </div>
+        <div class="env-card ${currentEnv === 'dev' ? 'current' : ''}">
+          <div class="env-header">
+            <span class="env-name">Development</span>
+            <span class="env-branch">dev</span>
+          </div>
+          <div class="env-links">
+            <a href="${dev?.urls?.portal || '#'}" class="env-link" ${currentEnv === 'dev' ? '' : 'target="_blank" rel="noopener"'}>
+              Portal
+            </a>
+            <a href="${dev?.urls?.myfi || '#'}" class="env-link" target="_blank" rel="noopener">
+              MyFi
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="env-actions">
+        <a href="${DEPLOYMENT_CONTRACT_URL}" class="env-doc-link" target="_blank" rel="noopener">
+          Deployment Contract
+        </a>
+      </div>
+    </section>
+  `;
+}
+
 function renderNavigation() {
   return `
     <section class="panel nav-panel">
@@ -594,6 +665,7 @@ function renderDashboard() {
   return `
     ${renderStatusPanel()}
     ${renderQuickActions()}
+    ${renderEnvironmentsPanel()}
     ${renderEntitiesPanel()}
     ${renderGovernancePanel()}
     ${renderNavigation()}

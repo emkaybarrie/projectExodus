@@ -1,17 +1,26 @@
-name: Project Exodus → GitHub Pages
+name: "[DEPRECATED] Project Exodus → GitHub Pages"
+
+# ==============================================================================
+# DEPRECATED: This workflow has been superseded by forge-pages-deploy.yml
+# which deploys both PROD (/) and DEV (/dev/) in a single Pages artifact.
+# This file is kept for reference only.
+# ==============================================================================
 
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "index.html"
-      - "styles.css"
-      - "script.js"
-      - "img/**"
-      - "The Forge/forge/portal/**"
-      - "The Forge/forge/exports/share-pack/**"
-      - "Project MyFi/**"
-      - ".github/workflows/forge-portal-pages.yml"
+  workflow_dispatch:
+    inputs:
+      run_anyway:
+        description: 'This workflow is deprecated. Use forge-pages-deploy.yml instead.'
+        type: boolean
+        default: false
+
+# Disabled automatic triggers - now handled by forge-pages-deploy.yml
+# on:
+#   push:
+#     branches: ["main"]
+#     paths:
+#       - "index.html"
+#       - ... etc
 
 permissions:
   contents: read

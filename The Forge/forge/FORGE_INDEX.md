@@ -36,10 +36,12 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - [ops/OPERATING_MODEL_LANES.md](./ops/OPERATING_MODEL_LANES.md) — Parallel development governance
 - [ops/EXECUTOR_PLAYBOOK.md](./ops/EXECUTOR_PLAYBOOK.md) — AI executor protocol
 - [ops/BRANCHING_PLAYBOOK.md](./ops/BRANCHING_PLAYBOOK.md) — Git branch discipline
+- [ops/DEPLOYMENT_CONTRACT.md](./ops/DEPLOYMENT_CONTRACT.md) — Dev/Prod deployment rules
 
 ## Portal
 - [portal/index.html](./portal/index.html) — Forge Portal (governance UI)
 - [portal/data/entities.json](./portal/data/entities.json) — Entity registry
+- [portal/data/environments.json](./portal/data/environments.json) — Environment URLs (Dev/Prod)
 
 ## Exports
 - [exports/share-pack/SHARE_PACK.md](./exports/share-pack/SHARE_PACK.md) — Constitutional truth export

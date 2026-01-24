@@ -997,3 +997,103 @@ button {
   margin-top: calc(-1 * var(--spacing-sm));
   margin-bottom: var(--spacing-md);
 }
+
+/* === O2: Environments Panel === */
+
+.environments-panel {
+  background: var(--bg-secondary);
+}
+
+.env-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.env-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: border-color 0.15s ease;
+}
+
+.env-card:hover {
+  border-color: var(--accent-secondary);
+}
+
+.env-card.current {
+  border-color: var(--accent-success);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bg-primary) 100%);
+}
+
+.env-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.env-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.env-branch {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.env-links {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.env-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-sm);
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease;
+  min-height: var(--touch-target);
+}
+
+.env-link:hover,
+.env-link:focus {
+  background: var(--accent-secondary);
+  color: var(--bg-primary);
+}
+
+.env-card.current .env-link:first-child {
+  background: var(--accent-success);
+  color: var(--bg-primary);
+}
+
+.env-actions {
+  text-align: center;
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--bg-hover);
+}
+
+.env-doc-link {
+  font-size: 0.75rem;
+  color: var(--accent-secondary);
+  text-decoration: none;
+}
+
+.env-doc-link:hover {
+  text-decoration: underline;
+}
