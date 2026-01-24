@@ -1,28 +1,28 @@
 {
-  "generated": "2026-01-23T14:00:00.000Z",
-  "commit": "pending",
+  "generated": "2026-01-24T18:00:00.000Z",
+  "commit": "890b3e9",
   "workOrders": [
+    {
+      "id": "FO-Forge-S2-Branch-Protection-Verification",
+      "title": "FO-Forge-S2-Branch-Protection-Verification",
+      "status": "executed",
+      "lastUpdated": "2026-01-24T00:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-Forge-S2-Branch-Protection-Verification.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-S2-Branch-Protection-Verification.md"
+    },
     {
       "id": "FO-Forge-S1-DevMain-Branching-And-Pages-Discipline",
       "title": "FO-Forge-S1-DevMain-Branching-And-Pages-Discipline",
       "status": "executed",
-      "lastUpdated": "2026-01-23T14:00:00.000Z",
+      "lastUpdated": "2026-01-24T00:00:00.000Z",
       "filePath": "The Forge/forge/ops/FO-Forge-S1-DevMain-Branching-And-Pages-Discipline.md",
       "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-S1-DevMain-Branching-And-Pages-Discipline.md"
-    },
-    {
-      "id": "FO-Forge-M2c1-Portal-Data-Source-Fix",
-      "title": "FO-Forge-M2c1-Portal-Data-Source-Fix-And-Index-Guarantee",
-      "status": "executed",
-      "lastUpdated": "2026-01-23T12:00:00.000Z",
-      "filePath": "The Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md",
-      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md"
     },
     {
       "id": "FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX",
       "title": "FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX",
       "status": "executed",
-      "lastUpdated": "2026-01-23T11:00:00.000Z",
+      "lastUpdated": "2026-01-24T00:00:00.000Z",
       "filePath": "The Forge/forge/ops/FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX.md",
       "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX.md"
     },
@@ -30,7 +30,7 @@
       "id": "FO-Forge-M2b-Automation-Execute-And-Deploy",
       "title": "FO-Forge-M2b-Automation-Execute-And-Deploy",
       "status": "executed",
-      "lastUpdated": "2026-01-23T10:00:00.000Z",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
       "filePath": "The Forge/forge/ops/FO-Forge-M2b-Automation-Execute-And-Deploy.md",
       "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2b-Automation-Execute-And-Deploy.md"
     },
@@ -38,7 +38,7 @@
       "id": "FO-Forge-M2a-Mobile-Portal-Scaffold",
       "title": "FO-Forge-M2a-Mobile-Portal-Scaffold",
       "status": "executed",
-      "lastUpdated": "2026-01-23T09:00:00.000Z",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
       "filePath": "The Forge/forge/ops/FO-Forge-M2a-Mobile-Portal-Scaffold.md",
       "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2a-Mobile-Portal-Scaffold.md"
     },
@@ -46,16 +46,96 @@
       "id": "FO-MyFi-S1-Update-Product-State-Post-I2",
       "title": "FO-MyFi-S1-Update-Product-State-Post-I2",
       "status": "executed",
-      "lastUpdated": "2026-01-23T08:00:00.000Z",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
       "filePath": "The Forge/forge/ops/FO-MyFi-S1-Update-Product-State-Post-I2.md",
       "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-MyFi-S1-Update-Product-State-Post-I2.md"
+    },
+    {
+      "id": "FO-Forge-M2c1-Portal-Data-Source-Fix",
+      "title": "FO-Forge-M2c1-Portal-Data-Source-Fix",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
+      "filePath": "The Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md"
+    },
+    {
+      "id": "FO-MyFi-I2-JourneyRunner-Phase1",
+      "title": "FO-MyFi-I2-JourneyRunner-Phase1",
+      "status": "approved",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-I2-JourneyRunner-Phase1.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-I2-JourneyRunner-Phase1.md"
+    },
+    {
+      "id": "FO-MyFi-I1-Hub-Phase1-Scaffold",
+      "title": "FO-MyFi-I1-Hub-Phase1-Scaffold",
+      "status": "approved",
+      "lastUpdated": "2026-01-23T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-I1-Hub-Phase1-Scaffold.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-I1-Hub-Phase1-Scaffold.md"
+    },
+    {
+      "id": "FO-MyFi-H2-Journeys-System-Spec",
+      "title": "FO-MyFi-H2-Journeys-System-Spec",
+      "status": "approved",
+      "lastUpdated": "2026-01-22T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-H2-Journeys-System-Spec.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-H2-Journeys-System-Spec.md"
+    },
+    {
+      "id": "FO-MyFi-C3c-EncounterWindow-Contract",
+      "title": "FO-MyFi-C3c-EncounterWindow-Contract",
+      "status": "approved",
+      "lastUpdated": "2026-01-22T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-C3c-EncounterWindow-Contract.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-C3c-EncounterWindow-Contract.md"
+    },
+    {
+      "id": "FO-MyFi-C3b-StatusBar-Contract",
+      "title": "FO-MyFi-C3b-StatusBar-Contract",
+      "status": "approved",
+      "lastUpdated": "2026-01-22T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-C3b-StatusBar-Contract.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-C3b-StatusBar-Contract.md"
+    },
+    {
+      "id": "FO-MyFi-C3-Vitals-Parts-Contracts",
+      "title": "FO-MyFi-C3-Vitals-Parts-Contracts",
+      "status": "approved",
+      "lastUpdated": "2026-01-22T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-C3-Vitals-Parts-Contracts.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-C3-Vitals-Parts-Contracts.md"
+    },
+    {
+      "id": "FO-MyFi-C2-Hub-Rebuild-Spec",
+      "title": "FO-MyFi-C2-Hub-Rebuild-Spec",
+      "status": "approved",
+      "lastUpdated": "2026-01-21T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-C2-Hub-Rebuild-Spec.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-C2-Hub-Rebuild-Spec.md"
+    },
+    {
+      "id": "FO-MyFi-C1-Resolve-Codebase-Fragmentation",
+      "title": "FO-MyFi-C1-Resolve-Codebase-Fragmentation",
+      "status": "executed",
+      "lastUpdated": "2026-01-21T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-C1-Resolve-Codebase-Fragmentation.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-C1-Resolve-Codebase-Fragmentation.md"
+    },
+    {
+      "id": "FO-MyFi-Forge-Integration-v1",
+      "title": "FO-MyFi-Forge-Integration-v1",
+      "status": "executed",
+      "lastUpdated": "2026-01-20T00:00:00.000Z",
+      "filePath": "The Forge/forge/Work Orders/FO-MyFi-Forge-Integration-v1.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/Work%20Orders/FO-MyFi-Forge-Integration-v1.md"
     }
   ],
   "counts": {
-    "total": 6,
+    "total": 16,
     "draft": 0,
     "pendingApproval": 0,
-    "approved": 0,
-    "executed": 6
+    "approved": 7,
+    "executed": 9
   }
 }
