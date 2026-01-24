@@ -1,11 +1,12 @@
 {
-  "generated": "2026-01-24T18:00:00.000Z",
-  "commit": "890b3e9fcb2e1d8c10e03c6c47dd81e80f335e0e",
-  "commitShort": "890b3e9",
+  "generated": "2026-01-24T19:00:00.000Z",
+  "commit": "cd74398fe7504dbea37447f156395ef95ecb09b8",
+  "commitShort": "cd74398",
   "headlines": {
     "kernelVersion": "1.0 (Canonical)",
-    "myfiLastUpdated": "2026-01-23",
-    "myfiWorkOrders": "C1, C2, C3a, C3b, C3c, H2, I1, I2, S1"
+    "myfiLastUpdated": "2026-01-24",
+    "myfiWorkOrders": "C1, C2, C3a, C3b, C3c, H2, I1, I2, S1",
+    "forgeWorkOrders": "M2a, M2b, M2c, S1, S2, S3, W1"
   },
   "files": [
     {
@@ -100,5 +101,5 @@
     }
   ],
   "missing": [],
-  "signature": "manual-890b3e9-2026-01-24"
+  "signature": "manual-cd74398-2026-01-24"
 }
