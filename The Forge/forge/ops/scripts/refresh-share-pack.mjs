@@ -28,6 +28,7 @@ const INCLUDE = [
   // Forge core
   "The Forge/forge/FORGE_KERNEL.md",
   "The Forge/forge/FORGE_CAPSULE.md",
+  "The Forge/forge/FORGE_STATE.md",
 
   // Claude onboarding
   "The Forge/forge/onboarding/claude/CLAUDE_SYSTEM_PROMPT.md",

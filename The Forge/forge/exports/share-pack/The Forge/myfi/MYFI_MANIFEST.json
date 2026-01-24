@@ -1,0 +1,26 @@
+{
+  "product": "MyFi",
+  "productVersion": "state-v1.0",
+  "root": "/myfi",
+  "canonical": [
+    "PRODUCT_STATE.md",
+    "MYFI_ONBOARDING.md",
+    "MYFI_CAPSULE.md",
+    "MYFI_GLOSSARY.md",
+    "MYFI_ARCHITECTURE_MAP.md",
+    "MYFI_STATUS_MATRIX.md",
+    "MYFI_VALIDATION_CHECKLIST.md",
+    "MYFI_MANIFEST.json"
+  ],
+  "seal": {
+    "required": true,
+    "file": "MYFI_SNAPSHOT_SEAL.md"
+  },
+  "reference": {
+  "human": "reference/MYFI_MASTER_REFERENCE.docx",
+  "index": "reference/MYFI_REFERENCE_INDEX.json",
+  "sync_contract": "reference/MYFI_REFERENCE_SYNC.md"
+  }
+
+}
+

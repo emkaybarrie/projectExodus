@@ -8,6 +8,7 @@ for non-repo-aware agents.
 ### Forge Core
 - FORGE_KERNEL.md — Canonical Forge governance kernel
 - FORGE_CAPSULE.md — Forge summary capsule
+- FORGE_STATE.md — Current Forge state and focus areas
 - CLAUDE_SYSTEM_PROMPT.md — Claude onboarding context
 
 ### MyFi Canonical Truth
