@@ -251,7 +251,8 @@ function getFilteredWorkOrders(laneOverride = null) {
 
 function openEntityPortal(entityId) {
   // Navigate to entity-specific portal
-  const portalUrl = `./entity/${entityId}/`;
+  // Explicit index.html for local dev compatibility (directory listing prevention)
+  const portalUrl = `./entity/${entityId}/index.html`;
   window.location.href = portalUrl;
 }
 
