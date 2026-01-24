@@ -135,6 +135,10 @@ Check the workflow logs for specific errors:
 - Missing files → Ensure all required files exist
 - Syntax errors in app.js → Check JavaScript
 
+### "This branch has not been deployed" on PR
+
+This is **normal GitHub behavior**. PR branches don't deploy to Pages—only `main` does. The message disappears after merge when Pages deploys from `main`.
+
 ---
 
 ## GitHub Desktop Workflow
