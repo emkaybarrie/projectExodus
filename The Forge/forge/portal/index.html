@@ -5,11 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a0e17">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Forante">
+  <meta name="description" content="Institutional OS Console for Forge governance">
   <title>Forante Portal</title>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" class="pwa-banner hidden">
+    <div class="pwa-banner-content">
+      <span class="pwa-banner-icon">&#127970;</span>
+      <div class="pwa-banner-text">
+        <strong>Install Forante Portal</strong>
+        <span>Add to home screen for quick access</span>
+      </div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button id="pwa-install-btn" class="pwa-btn primary">Install</button>
+      <button id="pwa-dismiss-btn" class="pwa-btn">Later</button>
+    </div>
+  </div>
+
   <div class="portal" data-portal-type="forante">
     <!-- Header -->
     <header class="portal-header">
@@ -56,5 +79,100 @@
   </div>
 
   <script type="module" src="app.js"></script>
+
+  <!-- PWA Service Worker & Install Logic -->
+  <script>
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('[PWA] Service Worker registered:', reg.scope))
+          .catch((err) => console.warn('[PWA] Service Worker registration failed:', err));
+      });
+    }
+
+    // PWA Install Prompt
+    let deferredPrompt;
+    const installBanner = document.getElementById('pwa-install-banner');
+    const installBtn = document.getElementById('pwa-install-btn');
+    const dismissBtn = document.getElementById('pwa-dismiss-btn');
+    const DISMISS_KEY = 'forante-pwa-dismissed';
+    const DISMISS_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+    // Check if already installed or dismissed
+    function shouldShowBanner() {
+      // Check if running as PWA
+      if (window.matchMedia('(display-mode: standalone)').matches) return false;
+      if (window.navigator.standalone === true) return false;
+
+      // Check if dismissed recently
+      const dismissed = localStorage.getItem(DISMISS_KEY);
+      if (dismissed) {
+        const dismissedAt = parseInt(dismissed, 10);
+        if (Date.now() - dismissedAt < DISMISS_DURATION) return false;
+      }
+      return true;
+    }
+
+    // Show install banner
+    function showInstallBanner() {
+      if (!shouldShowBanner()) return;
+      installBanner.classList.remove('hidden');
+      installBanner.classList.add('show');
+    }
+
+    // Hide install banner
+    function hideInstallBanner() {
+      installBanner.classList.remove('show');
+      setTimeout(() => installBanner.classList.add('hidden'), 300);
+    }
+
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      showInstallBanner();
+    });
+
+    // Install button click
+    installBtn?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log('[PWA] User response:', outcome);
+      deferredPrompt = null;
+      hideInstallBanner();
+    });
+
+    // Dismiss button click
+    dismissBtn?.addEventListener('click', () => {
+      localStorage.setItem(DISMISS_KEY, Date.now().toString());
+      hideInstallBanner();
+    });
+
+    // Hide banner when app is installed
+    window.addEventListener('appinstalled', () => {
+      console.log('[PWA] App installed');
+      hideInstallBanner();
+      deferredPrompt = null;
+    });
+
+    // For iOS - show banner after delay (no beforeinstallprompt on iOS)
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+      setTimeout(() => {
+        if (shouldShowBanner()) {
+          installBanner.classList.remove('hidden');
+          installBanner.classList.add('show');
+          // Change button text for iOS
+          if (installBtn) {
+            installBtn.textContent = 'How to Install';
+            installBtn.onclick = () => {
+              alert('To install: tap the Share button, then "Add to Home Screen"');
+            };
+          }
+        }
+      }, 3000);
+    }
+  </script>
 </body>
 </html>
