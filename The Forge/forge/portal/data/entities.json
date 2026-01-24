@@ -1,0 +1,41 @@
+{
+  "$schema": "./entities.schema.json",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-24",
+  "entities": [
+    {
+      "id": "myfi",
+      "name": "MyFi",
+      "integrationTier": 2,
+      "flagship": true,
+      "status": "active",
+      "description": "Personal finance gamification platform. The flagship proving ground for Forge evolution.",
+      "portals": {
+        "forge": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/",
+        "product": null
+      },
+      "repoPaths": {
+        "root": "Project MyFi/ProjectMyFi_vLatest",
+        "specs": "Project MyFi/ProjectMyFi_vLatest/specs",
+        "src": "Project MyFi/ProjectMyFi_vLatest/src"
+      },
+      "charter": null,
+      "created": "2024-01-01",
+      "lastActivity": "2026-01-24"
+    }
+  ],
+  "tiers": {
+    "0": {
+      "name": "Independent",
+      "description": "Forge-native, independent service user"
+    },
+    "1": {
+      "name": "Network",
+      "description": "Forge-native with shared network services"
+    },
+    "2": {
+      "name": "Integrated",
+      "description": "Integrated into MyFi ecosystem"
+    }
+  }
+}

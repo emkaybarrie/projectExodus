@@ -2,7 +2,38 @@
 
 Status: Canonical
 Audience: All agents
-Last updated: 2026-01-24 (Post S3/W1)
+Last updated: 2026-01-24 (Post Foundational Alignment Pack)
+
+---
+
+## Network State
+
+### Governance Model
+**Active Model:** Model 3 — Forge as Institutional OS, MyFi as Flagship Entity
+
+See: [Forante Kernel](../../Forante/FORANTE_KERNEL.md) for constitutional governance.
+
+### Registered Entities
+
+| Entity | Integration Tier | Status | Role |
+|--------|-----------------|--------|------|
+| MyFi | Tier 2 | Active | Flagship / Proving Ground |
+
+### Flagship Entity
+**MyFi** — The primary proving ground for Forge evolution. Forge improvements are validated through MyFi development. MyFi's success is tied to Forge's success, but Forge integrity takes precedence.
+
+### Portal Status
+- **Forge Portal:** ✅ Active (GitHub Pages)
+- **Entity Registry:** ✅ Initialized (`portal/data/entities.json`)
+
+### Constitutional Documents Status
+- **Forante Kernel:** ✅ Established
+- **Forante Index:** ✅ Established
+- **Forge Kernel:** ✅ Aligned to Model 3
+- **Operating Model Lanes:** ✅ Defined
+- **Share Pack:** ✅ Includes Forante layer
+
+---
 
 1. Current Institutional Mode
 

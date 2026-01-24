@@ -1,8 +1,35 @@
 # Forge Kernel
 
-Status: Canonical  
-Audience: All agents (human and AI)  
-Scope: Governs how work enters, proceeds through, and evolves within the MyFi Forge
+Status: Canonical
+Audience: All agents (human and AI)
+Scope: Governs how work enters, proceeds through, and evolves within the Forge
+
+---
+
+## Forge as Forante's Institutional OS
+
+The Forge is **Forante's institutional SDLC operating system**.
+
+This means:
+- Forge is not a neutral tool; it embodies Forante's baseline way of building
+- Forge sets SDLC law, provides governance portals, and manages AI agents
+- Forge produces and governs entities (organisations/projects that build products)
+- Entities inherit Forge methodology; they do not modify it unilaterally
+
+**Responsibilities Boundary:**
+
+| Forge Responsibilities | Entity Responsibilities |
+|------------------------|------------------------|
+| SDLC process law | Product development |
+| Work Order lifecycle | Feature implementation |
+| Share Pack governance | Product state tracking |
+| Portal infrastructure | Product-specific UIs (if any) |
+| Agent onboarding | Domain expertise |
+| Cross-entity standards | Entity-specific decisions |
+
+Entities (including MyFi) propose Forge changes via Work Orders. They do not enact changes directly.
+
+See: [Forante Kernel](../../Forante/FORANTE_KERNEL.md) for constitutional governance.
 
 ---
 

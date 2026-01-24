@@ -3,11 +3,38 @@
 Status: Canonical · Portable
 Audience: All agents (repo-aware and non-repo-aware)
 Purpose: Shared institutional context and process enforcement
-Scope: Condensed but authoritative snapshot of the MyFi Forge
+Scope: Condensed but authoritative snapshot of the Forge
+
+---
+
+## Model 3: Forge as Institutional OS
+
+**Canonical Relationship:**
+
+```
+Forante (Steward Company / Constitutional Layer)
+    └── Forge (Institutional SDLC Operating System)
+            └── Entities (Products built using Forge)
+                    └── MyFi (Flagship Entity / Proving Ground)
+```
+
+**Key Points:**
+- Forante owns and evolves the Forge
+- Forge embodies Forante's baseline methodology for building
+- Entities inherit Forge process; they propose changes, not enact them
+- MyFi is the flagship entity — the primary proving ground for Forge evolution
+- Share Pack = constitutional law; repo docs = applied law
+
+**MyFi's Flagship Role:**
+MyFi is not just a product built by Forge — it is the **primary proving ground**. Forge improvements often originate from MyFi pain points. MyFi's success is tied to Forge's success, but Forge's institutional integrity always takes precedence.
+
+See: [Forante Kernel](../../Forante/FORANTE_KERNEL.md) for full constitutional governance.
+
+---
 
 1. What This Is
 
-The MyFi Forge is a self-aware, self-improving institution for building software and systems using humans and AI agents.
+The Forge is a self-aware, self-improving institution for building software and systems using humans and AI agents.
 
 This Capsule is a compressed, shareable representation of the Forge.
 Any agent reading this is expected to:

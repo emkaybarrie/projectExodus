@@ -3,6 +3,7 @@
 // M2c1: Fixed to use relative URLs for local + Pages compatibility
 // S3: Execute loop with status chips and executor queue
 // M2c2: Deploy to Production integration
+// A1: Forante/Entity Registry integration
 
 const REPO_BASE = 'https://github.com/emkaybarrie/projectExodus';
 const EXECUTOR_QUEUE_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Aready-for-executor`;
@@ -10,13 +11,22 @@ const APPROVED_WO_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Awork
 const DEPLOY_WORKFLOW_URL = `${REPO_BASE}/actions/workflows/forge-deploy-to-prod.yml`;
 const COMPARE_URL = `${REPO_BASE}/compare/main...dev`;
 
+// Forante governance links
+const FORANTE_KERNEL_URL = `${REPO_BASE}/blob/main/Forante/FORANTE_KERNEL.md`;
+const FORANTE_INDEX_URL = `${REPO_BASE}/blob/main/Forante/FORANTE_INDEX.md`;
+const OPERATING_LANES_URL = `${REPO_BASE}/blob/main/The%20Forge/forge/ops/OPERATING_MODEL_LANES.md`;
+
 // Compute Share Pack base URL relative to this script (works with spaces in paths)
 const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
+
+// Compute entities.json URL relative to this script
+const ENTITIES_URL = new URL('./data/entities.json', import.meta.url).href;
 
 // State
 const state = {
   sharePack: null,
   workOrders: null,
+  entities: null,
   currentScreen: 'dashboard',
   woFilter: 'all',
   loading: true,
@@ -55,19 +65,33 @@ async function loadWorkOrders() {
   }
 }
 
+async function loadEntities() {
+  try {
+    console.log('[Portal] Fetching:', ENTITIES_URL);
+    const res = await fetch(ENTITIES_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    return await res.json();
+  } catch (e) {
+    console.warn('[Portal] Failed to load entities.json:', e);
+    return null;
+  }
+}
+
 async function loadData() {
   state.loading = true;
   state.error = null;
   state.errorDetails = null;
   render();
 
-  const [sharePack, workOrders] = await Promise.all([
+  const [sharePack, workOrders, entities] = await Promise.all([
     loadSharePack(),
-    loadWorkOrders()
+    loadWorkOrders(),
+    loadEntities()
   ]);
 
   state.sharePack = sharePack;
   state.workOrders = workOrders;
+  state.entities = entities;
   state.loading = false;
 
   if (!sharePack && !workOrders) {
@@ -473,6 +497,69 @@ function renderCreateWoWizard() {
   `;
 }
 
+function renderEntitiesPanel() {
+  const entities = state.entities?.entities || [];
+
+  if (entities.length === 0) {
+    return `
+      <section class="panel entities-panel">
+        <h2 class="panel-title">Entities</h2>
+        <p class="panel-empty">No entities registered. Check data/entities.json</p>
+      </section>
+    `;
+  }
+
+  const tierLabels = state.entities?.tiers || {};
+
+  return `
+    <section class="panel entities-panel">
+      <h2 class="panel-title">Registered Entities</h2>
+      <div class="entities-list">
+        ${entities.map(entity => `
+          <div class="entity-item ${entity.flagship ? 'flagship' : ''}">
+            <div class="entity-header">
+              <span class="entity-name">${entity.name}</span>
+              ${entity.flagship ? '<span class="flagship-badge">Flagship</span>' : ''}
+              <span class="entity-tier">Tier ${entity.integrationTier}</span>
+            </div>
+            <div class="entity-desc">${entity.description || 'No description'}</div>
+            <div class="entity-meta">
+              <span class="entity-status ${entity.status}">${entity.status}</span>
+              <span class="entity-tier-name">${tierLabels[entity.integrationTier]?.name || ''}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function renderGovernancePanel() {
+  return `
+    <section class="panel governance-panel">
+      <h2 class="panel-title">Forante Governance</h2>
+      <p class="panel-subtitle">Constitutional Layer (Model 3)</p>
+      <nav class="nav-list">
+        <a href="${FORANTE_KERNEL_URL}" class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128220;</span>
+          <span class="nav-text">Forante Kernel</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="${FORANTE_INDEX_URL}" class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128269;</span>
+          <span class="nav-text">Forante Index</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+        <a href="${OPERATING_LANES_URL}" class="nav-link" target="_blank" rel="noopener">
+          <span class="nav-icon">&#128739;</span>
+          <span class="nav-text">Operating Model Lanes</span>
+          <span class="nav-arrow">&#8250;</span>
+        </a>
+      </nav>
+    </section>
+  `;
+}
+
 function renderNavigation() {
   return `
     <section class="panel nav-panel">
@@ -507,6 +594,8 @@ function renderDashboard() {
   return `
     ${renderStatusPanel()}
     ${renderQuickActions()}
+    ${renderEntitiesPanel()}
+    ${renderGovernancePanel()}
     ${renderNavigation()}
   `;
 }

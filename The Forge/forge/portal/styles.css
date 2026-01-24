@@ -878,3 +878,122 @@ button {
 .action-btn.deploy-btn .action-icon {
   font-size: 1.25rem;
 }
+
+/* === A1: Entities Panel === */
+
+.entities-panel {
+  background: var(--bg-secondary);
+}
+
+.entities-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.entity-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  transition: border-color 0.15s ease;
+}
+
+.entity-item:hover {
+  border-color: var(--accent-secondary);
+}
+
+.entity-item.flagship {
+  border-color: var(--accent-success);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, var(--bg-primary) 100%);
+}
+
+.entity-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.entity-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.flagship-badge {
+  background: var(--accent-success);
+  color: var(--bg-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.entity-tier {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-left: auto;
+  background: var(--bg-hover);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.entity-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+  line-height: 1.4;
+}
+
+.entity-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.75rem;
+}
+
+.entity-status {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.entity-status.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-success);
+}
+
+.entity-status.inactive {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.entity-tier-name {
+  color: var(--text-secondary);
+}
+
+.panel-empty {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+/* === A1: Governance Panel === */
+
+.governance-panel {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, var(--bg-secondary) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.panel-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: calc(-1 * var(--spacing-sm));
+  margin-bottom: var(--spacing-md);
+}

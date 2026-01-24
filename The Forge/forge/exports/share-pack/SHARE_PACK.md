@@ -3,13 +3,37 @@
 This folder contains a minimal, always-up-to-date snapshot of Forge + MyFi
 for non-repo-aware agents.
 
+---
+
+## Governance Model
+
+**Model 3: Forge as Institutional OS, MyFi as Flagship Entity**
+
+- **Constitutional Layer:** Forante (steward company)
+- **Institutional OS:** Forge (SDLC operating system)
+- **Flagship Entity:** MyFi (Tier 2 integration, proving ground)
+
+See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutional governance.
+
+---
+
 ## Included files
 
+### Forante Constitutional Layer
+- FORANTE_KERNEL.md — Constitutional foundation, Model 3 declaration
+- FORANTE_INDEX.md — Governance navigation and entry points
+- ENTITY_CHARTER_TEMPLATE.md — Template for new Forge entities
+
 ### Forge Core
-- FORGE_KERNEL.md — Canonical Forge governance kernel
+- FORGE_KERNEL.md — Canonical Forge governance kernel (aligned to Model 3)
 - FORGE_CAPSULE.md — Forge summary capsule
-- FORGE_STATE.md — Current Forge state and focus areas
+- FORGE_STATE.md — Current Forge state, network state, and focus areas
+- FORGE_INDEX.md — Forge navigation index
 - CLAUDE_SYSTEM_PROMPT.md — Claude onboarding context
+
+### Forge Operations
+- OPERATING_MODEL_LANES.md — Parallel development lanes and precedence law
+- EXECUTOR_PLAYBOOK.md — AI executor protocol
 
 ### MyFi Canonical Truth
 - PRODUCT_STATE.md — Current product state and applied WOs
