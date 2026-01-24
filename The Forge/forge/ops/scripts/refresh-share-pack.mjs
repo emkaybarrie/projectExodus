@@ -14,31 +14,44 @@ const OUT_MD = path.join(OUT_DIR, "SHARE_PACK.md");
 const OUT_INDEX_JSON = path.join(OUT_DIR, "share-pack.index.json");
 const OUT_WO_JSON = path.join(OUT_DIR, "work-orders.index.json");
 
-// Work Orders source directory
-const WO_DIR = path.join(REPO_ROOT, "The Forge/forge/ops");
+// Work Orders source directories (ops is canonical, others are legacy per session closeout)
+const WO_DIRS = [
+  path.join(REPO_ROOT, "The Forge/forge/ops"),          // Canonical
+  path.join(REPO_ROOT, "The Forge/forge/Work Orders"),  // Legacy
+  path.join(REPO_ROOT, "The Forge/forge/work-orders"),  // Orphan
+];
 
 // Keep this list tight and curated.
 // Repo-aware agents may expand it later by WO, but don't explode it.
+// Per SHARE_PACK.md directive: ensure CAPSULE, STATUS_MATRIX, REFERENCE_INDEX are included.
 const INCLUDE = [
   // Forge core
   "The Forge/forge/FORGE_KERNEL.md",
   "The Forge/forge/FORGE_CAPSULE.md",
+  "The Forge/forge/FORGE_STATE.md",
 
   // Claude onboarding
   "The Forge/forge/onboarding/claude/CLAUDE_SYSTEM_PROMPT.md",
 
-  // MyFi canonical truth
+  // MyFi canonical truth (per SHARE_PACK.md directive)
   "The Forge/myfi/PRODUCT_STATE.md",
+  "The Forge/myfi/MYFI_CAPSULE.md",           // Required by directive
+  "The Forge/myfi/MYFI_STATUS_MATRIX.md",     // Required by directive
   "The Forge/myfi/MIGRATION_PARITY_MATRIX.md",
   "The Forge/myfi/MYFI_ARCHITECTURE_MAP.md",
   "The Forge/myfi/MYFI_GLOSSARY.md",
+  "The Forge/myfi/MYFI_MANIFEST.json",
+  "The Forge/myfi/MYFI_CHANGELOG.md",
+  "The Forge/myfi/MYFI_MASTER_REFERENCE.md",
+
+  // MyFi reference index (per directive: MYFI_REFERENCE_INDEX.json)
+  "The Forge/myfi/reference",
 
   // MyFi specs/contracts (folder copy)
   "The Forge/myfi/specs",
 
-  // Work orders (folder copy)
-  "The Forge/forge/Work Orders",
-  "The Forge/forge/ops", // includes executed WO writeups from Claude if you keep them here
+  // Work orders (canonical location per ops consolidation)
+  "The Forge/forge/ops",
 ];
 
 // --- helpers
@@ -190,33 +203,47 @@ function parseWorkOrderTitle(content, filename) {
 
 function collectWorkOrders() {
   const workOrders = [];
+  const seenIds = new Set();
 
-  if (!exists(WO_DIR)) return workOrders;
+  for (const woDir of WO_DIRS) {
+    if (!exists(woDir)) continue;
 
-  for (const ent of fs.readdirSync(WO_DIR, { withFileTypes: true })) {
-    if (!ent.isFile()) continue;
-    if (!ent.name.endsWith(".md")) continue;
-    if (ent.name.startsWith("SYNC_") || ent.name.startsWith("LABELS_")) continue; // Skip ops notes
+    // Determine relative path prefix for this directory
+    const relDir = path.relative(REPO_ROOT, woDir).replaceAll("\\", "/");
 
-    const filePath = path.join(WO_DIR, ent.name);
-    const content = fs.readFileSync(filePath, "utf8");
-    const stat = fs.statSync(filePath);
+    for (const ent of fs.readdirSync(woDir, { withFileTypes: true })) {
+      if (!ent.isFile()) continue;
+      if (!ent.name.endsWith(".md")) continue;
+      // Skip non-WO files (ops notes, playbooks, reports, etc.)
+      if (ent.name.startsWith("SYNC_") || ent.name.startsWith("LABELS_")) continue;
+      if (ent.name.startsWith("EXECUTOR_") || ent.name.startsWith("BRANCHING_")) continue;
+      if (ent.name === "README.md") continue;
 
-    // Check if this looks like a Work Order file
-    if (!content.includes("WORK ORDER") && !content.includes("Task ID")) continue;
+      const filePath = path.join(woDir, ent.name);
+      const content = fs.readFileSync(filePath, "utf8");
+      const stat = fs.statSync(filePath);
 
-    const id = ent.name.replace(/\.md$/, "");
-    const title = parseWorkOrderTitle(content, ent.name);
-    const status = parseWorkOrderStatus(content, ent.name);
+      // Check if this looks like a Work Order file
+      if (!content.includes("WORK ORDER") && !content.includes("Task ID") && !content.includes("FO-")) continue;
 
-    workOrders.push({
-      id,
-      title,
-      status,
-      lastUpdated: stat.mtime.toISOString(),
-      filePath: rel(`The Forge/forge/ops/${ent.name}`),
-      repoUrl: `https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/${encodeURIComponent(ent.name)}`
-    });
+      const id = ent.name.replace(/\.md$/, "");
+
+      // Skip duplicates (prefer first occurrence, which is canonical ops/)
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+
+      const title = parseWorkOrderTitle(content, ent.name);
+      const status = parseWorkOrderStatus(content, ent.name);
+
+      workOrders.push({
+        id,
+        title,
+        status,
+        lastUpdated: stat.mtime.toISOString(),
+        filePath: rel(`${relDir}/${ent.name}`),
+        repoUrl: `https://github.com/emkaybarrie/projectExodus/blob/main/${encodeURIComponent(relDir)}/${encodeURIComponent(ent.name)}`
+      });
+    }
   }
 
   // Sort by lastUpdated descending

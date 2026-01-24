@@ -4,15 +4,37 @@ This folder contains a minimal, always-up-to-date snapshot of Forge + MyFi
 for non-repo-aware agents.
 
 ## Included files
-- FORGE_CAPSULE.md
-- MYFI_CAPSULE.md
-- PRODUCT_STATE.md
-- MYFI_STATUS_MATRIX.md
-- MYFI_REFERENCE_INDEX.json
-- ARCH_SNAPSHOT.md
+
+### Forge Core
+- FORGE_KERNEL.md — Canonical Forge governance kernel
+- FORGE_CAPSULE.md — Forge summary capsule
+- FORGE_STATE.md — Current Forge state and focus areas
+- CLAUDE_SYSTEM_PROMPT.md — Claude onboarding context
+
+### MyFi Canonical Truth
+- PRODUCT_STATE.md — Current product state and applied WOs
+- MYFI_CAPSULE.md — MyFi summary capsule
+- MYFI_STATUS_MATRIX.md — Feature/component status matrix
+- MIGRATION_PARITY_MATRIX.md — Migration tracking
+- MYFI_ARCHITECTURE_MAP.md — Architecture overview
+- MYFI_GLOSSARY.md — Term definitions
+- MYFI_MANIFEST.json — Product manifest
+- MYFI_CHANGELOG.md — Change history
+- MYFI_MASTER_REFERENCE.md — Master reference document
+
+### MyFi Reference
+- reference/MYFI_REFERENCE_INDEX.json — Reference index
+
+### MyFi Specs
+- specs/ — Surface and Parts contracts
+
+### Work Orders
+- ops/ — Canonical WO location (active)
+- Work Orders/ — Legacy WOs
+- work-orders/ — Orphan WOs (pending consolidation)
 
 ## Last updated
-2026-01-23
+2026-01-24
 
 ## What changed since last update
 

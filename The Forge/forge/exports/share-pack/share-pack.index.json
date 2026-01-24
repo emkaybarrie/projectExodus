@@ -1,26 +1,105 @@
 {
-  "generated": "2026-01-23T12:00:00.000Z",
-  "commit": "8e94c2d7261d4822f2e14cb38decf22800350555",
-  "commitShort": "8e94c2d",
+  "generated": "2026-01-24T19:00:00.000Z",
+  "commit": "cd74398fe7504dbea37447f156395ef95ecb09b8",
+  "commitShort": "cd74398",
   "headlines": {
     "kernelVersion": "1.0 (Canonical)",
-    "myfiLastUpdated": "2026-01-23",
-    "myfiWorkOrders": "C1, C2, C3a, C3b, C3c, H2, I1, I2, S1"
+    "myfiLastUpdated": "2026-01-24",
+    "myfiWorkOrders": "C1, C2, C3a, C3b, C3c, H2, I1, I2, S1",
+    "forgeWorkOrders": "M2a, M2b, M2c, S1, S2, S3, W1"
   },
   "files": [
     {
       "path": "The Forge/forge/FORGE_KERNEL.md",
-      "hash": "manual-generation",
+      "hash": "manual-refresh-2026-01-24",
       "size": 0,
-      "modified": "2026-01-23T12:00:00.000Z"
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/forge/FORGE_CAPSULE.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/forge/onboarding/claude/CLAUDE_SYSTEM_PROMPT.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
     },
     {
       "path": "The Forge/myfi/PRODUCT_STATE.md",
-      "hash": "manual-generation",
+      "hash": "manual-refresh-2026-01-24",
       "size": 0,
-      "modified": "2026-01-23T12:00:00.000Z"
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_CAPSULE.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_STATUS_MATRIX.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MIGRATION_PARITY_MATRIX.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_ARCHITECTURE_MAP.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_GLOSSARY.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_MANIFEST.json",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_CHANGELOG.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/MYFI_MASTER_REFERENCE.md",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/reference/MYFI_REFERENCE_INDEX.json",
+      "hash": "manual-refresh-2026-01-24",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/myfi/specs",
+      "hash": "directory",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
+    },
+    {
+      "path": "The Forge/forge/ops",
+      "hash": "directory",
+      "size": 0,
+      "modified": "2026-01-24T18:00:00.000Z"
     }
   ],
   "missing": [],
-  "signature": "manual-8e94c2d"
+  "signature": "manual-cd74398-2026-01-24"
 }

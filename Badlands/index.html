@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Badlands: Rhythm Run</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Title Screen -->
+  <div id="title-screen" class="screen">
+    <div class="title-container">
+      <h1 class="game-title">BADLANDS</h1>
+      <h2 class="game-subtitle">Rhythm Run</h2>
+      <button id="btn-start" class="action-btn pulse">TAP TO START</button>
+    </div>
+  </div>
+
+  <!-- Class Select Screen -->
+  <div id="class-select" class="screen hidden">
+    <h2 class="screen-title">Choose Your Runner</h2>
+    <div class="class-grid">
+      <div class="class-card" data-class="warrior">
+        <div class="class-icon warrior-icon"></div>
+        <h3>WARRIOR</h3>
+        <p>Heavy momentum<br>Melee strikes<br>Shield bash</p>
+        <div class="class-stats">
+          <span>SPD: ██░░░</span>
+          <span>PWR: █████</span>
+          <span>AGI: ██░░░</span>
+        </div>
+      </div>
+      <div class="class-card" data-class="mage">
+        <div class="class-icon mage-icon"></div>
+        <h3>MAGE</h3>
+        <p>Beat-sync power<br>Ranged blasts<br>Time warp</p>
+        <div class="class-stats">
+          <span>SPD: ███░░</span>
+          <span>PWR: ███░░</span>
+          <span>AGI: ███░░</span>
+        </div>
+      </div>
+      <div class="class-card" data-class="rogue">
+        <div class="class-icon rogue-icon"></div>
+        <h3>ROGUE</h3>
+        <p>Lightning fast<br>Dash strikes<br>Perfect timing</p>
+        <div class="class-stats">
+          <span>SPD: █████</span>
+          <span>PWR: ██░░░</span>
+          <span>AGI: █████</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Screen -->
+  <div id="game-screen" class="screen hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD Overlay -->
+    <div id="hud">
+      <div class="hud-left">
+        <div class="score-display">
+          <span class="label">SCORE</span>
+          <span id="score">0</span>
+        </div>
+        <div class="combo-display">
+          <span id="combo" style="display: none;">x1</span>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div id="beat-indicator" class="beat-ring"></div>
+      </div>
+      <div class="hud-right">
+        <div class="momentum-bar">
+          <div id="momentum-fill"></div>
+        </div>
+        <span class="momentum-label">FLOW</span>
+      </div>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+      <div id="touch-left" class="touch-zone">
+        <span class="touch-hint">JUMP</span>
+      </div>
+      <div id="touch-right" class="touch-zone">
+        <span class="touch-hint">SKILL</span>
+      </div>
+    </div>
+
+    <!-- Pause Button -->
+    <button id="pause-btn" class="icon-btn">❚❚</button>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="game-over" class="screen hidden">
+    <div class="gameover-container">
+      <h2 class="gameover-title">RUN ENDED</h2>
+      <div class="final-stats">
+        <div class="stat-row">
+          <span>Score</span>
+          <span id="final-score">0</span>
+        </div>
+        <div class="stat-row highlight">
+          <span>High Score</span>
+          <span id="high-score">0</span>
+        </div>
+      </div>
+      <button id="btn-retry" class="action-btn">RUN AGAIN</button>
+      <button id="btn-menu" class="secondary-btn">Change Class</button>
+    </div>
+  </div>
+
+  <!-- Pause Overlay -->
+  <div id="pause-overlay" class="screen overlay hidden">
+    <div class="pause-container">
+      <h2>PAUSED</h2>
+      <button id="btn-resume" class="action-btn">Resume</button>
+      <button id="btn-quit" class="secondary-btn">Quit Run</button>
+    </div>
+  </div>
+
+  <!-- Debug Overlay (toggle with D key) -->
+  <div id="debug-overlay" class="hidden">
+    <div id="debug-info"></div>
+  </div>
+
+  <!-- Scripts - Order matters! -->
+  <script src="js/audio.js"></script>
+  <script src="js/rhythm.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/classes.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
