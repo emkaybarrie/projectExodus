@@ -8,7 +8,13 @@
       "Bash(git pull:*)",
       "Bash(git fetch:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh run list:*)",
+      "Bash(powershell -Command \"cd ''c:\\\\Users\\\\Azakai\\\\Documents\\\\GitHub\\\\projectExodus''; gh run list --workflow=''Forge Share Pack Refresh'' --limit 5\")",
+      "Bash(powershell -Command \"cd ''c:\\\\Users\\\\Azakai\\\\Documents\\\\GitHub\\\\projectExodus''; git show ''origin/main:.github/workflows/forge-share-pack-refresh.yml''\")",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(powershell -Command \"cd ''c:\\\\Users\\\\Azakai\\\\Documents\\\\GitHub\\\\projectExodus''; node ''The Forge/forge/ops/scripts/refresh-share-pack.mjs''\")"
     ]
   }
 }
