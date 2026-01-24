@@ -44,7 +44,6 @@ const ROUTES = {
   stable: "dashboard.html",
   //experimental: "ProjectMyFi_vExperimental/index.html" 
   experimental: "ProjectMyFi_vLatest/public/index.html" // change if your experimental file has a different name/path
-  //experimental: "../../../The Forge/forge/portal/index.html"
 };
 
 // Backward-compatible signature: options is optional
