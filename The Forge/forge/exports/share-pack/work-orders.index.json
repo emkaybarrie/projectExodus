@@ -1,0 +1,61 @@
+{
+  "generated": "2026-01-23T14:00:00.000Z",
+  "commit": "pending",
+  "workOrders": [
+    {
+      "id": "FO-Forge-S1-DevMain-Branching-And-Pages-Discipline",
+      "title": "FO-Forge-S1-DevMain-Branching-And-Pages-Discipline",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T14:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-Forge-S1-DevMain-Branching-And-Pages-Discipline.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-S1-DevMain-Branching-And-Pages-Discipline.md"
+    },
+    {
+      "id": "FO-Forge-M2c1-Portal-Data-Source-Fix",
+      "title": "FO-Forge-M2c1-Portal-Data-Source-Fix-And-Index-Guarantee",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T12:00:00.000Z",
+      "filePath": "The Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/work-orders/FO-Forge-M2c1-Portal-Data-Source-Fix.md"
+    },
+    {
+      "id": "FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX",
+      "title": "FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T11:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2c-Portal-Live-Truth-And-Issues-UX.md"
+    },
+    {
+      "id": "FO-Forge-M2b-Automation-Execute-And-Deploy",
+      "title": "FO-Forge-M2b-Automation-Execute-And-Deploy",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T10:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-Forge-M2b-Automation-Execute-And-Deploy.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2b-Automation-Execute-And-Deploy.md"
+    },
+    {
+      "id": "FO-Forge-M2a-Mobile-Portal-Scaffold",
+      "title": "FO-Forge-M2a-Mobile-Portal-Scaffold",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T09:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-Forge-M2a-Mobile-Portal-Scaffold.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-Forge-M2a-Mobile-Portal-Scaffold.md"
+    },
+    {
+      "id": "FO-MyFi-S1-Update-Product-State-Post-I2",
+      "title": "FO-MyFi-S1-Update-Product-State-Post-I2",
+      "status": "executed",
+      "lastUpdated": "2026-01-23T08:00:00.000Z",
+      "filePath": "The Forge/forge/ops/FO-MyFi-S1-Update-Product-State-Post-I2.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/FO-MyFi-S1-Update-Product-State-Post-I2.md"
+    }
+  ],
+  "counts": {
+    "total": 6,
+    "draft": 0,
+    "pendingApproval": 0,
+    "approved": 0,
+    "executed": 6
+  }
+}

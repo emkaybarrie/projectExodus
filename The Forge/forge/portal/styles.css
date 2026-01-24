@@ -406,6 +406,19 @@ body {
   margin-bottom: var(--spacing-md);
 }
 
+.error-details {
+  text-align: left;
+  background: var(--bg-secondary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: var(--spacing-md);
+  color: var(--text-muted);
+}
+
 /* Status Commit */
 .status-commit {
   margin-top: var(--spacing-md);
