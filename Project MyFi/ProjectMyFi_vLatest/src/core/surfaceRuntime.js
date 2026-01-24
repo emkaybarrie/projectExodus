@@ -46,8 +46,9 @@ export async function mountScreenSurface(surfaceId, hostEl, ctx = {}) {
   if (surface._css?.upliftUrl) await ensureGlobalCSS(`surface.${surfaceId}.uplift`, surface._css.upliftUrl);
 
   // Apply background to the host that contains the surface
+  // Use classList.add to preserve existing classes (e.g., chrome__surfaceHost)
   const bgKey = surface.background || 'cosmic';
-  hostEl.className = `screen-host bg-${bgKey}`;
+  hostEl.classList.add('screen-host', `bg-${bgKey}`);
 
   // Get VM data for this surface
   const vm = getVMForSurface(surfaceId);
@@ -61,7 +62,11 @@ export async function mountScreenSurface(surfaceId, hostEl, ctx = {}) {
   return {
     unmount() {
       api?.unmount?.();
-      hostEl.className = 'screen-host';
+      // Remove only surface-specific classes, preserve chrome classes
+      hostEl.classList.remove('screen-host');
+      for (const cls of [...hostEl.classList]) {
+        if (cls.startsWith('bg-')) hostEl.classList.remove(cls);
+      }
     },
   };
 }
