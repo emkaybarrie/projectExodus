@@ -12,7 +12,8 @@
       "description": "Personal finance gamification platform. The flagship proving ground for Forge evolution.",
       "portals": {
         "forge": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/",
-        "product": null
+        "entity": "entity/myfi/",
+        "product": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/"
       },
       "repoPaths": {
         "root": "Project MyFi/ProjectMyFi_vLatest",
