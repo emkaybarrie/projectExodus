@@ -137,7 +137,7 @@ Screen Loader & Router	Mobile-first screen switching	✅ Implemented
 ActionBus	Part → Parent event emitter	✅ Implemented (I1)
 Journey Runner	Thin orchestration engine	✅ Implemented (I2)
 Modal Manager	Minimal overlay system	✅ Implemented (I2)
-Share Pack	Non-repo agent sync	Present (needs cadence enforcement)
+Share Pack	Non-repo agent sync	✅ Auto-refresh on deploy (M2c)
 
 5.2 Hub / Vitals (Canonical Anchor in Intent)
 System	Description	Status
@@ -203,9 +203,16 @@ __MYFI_DEBUG__.actionBus.emit('smoke.test', {}, 'manual');
 - ✅ C3 Vitals parts contracts (C3a VitalsHUD, C3b StatusBar, C3c EncounterWindow)
 - ✅ H2 Journeys system decision/spec
 
-**Next Planned Work Orders:**
-- M2a Portal surface (Start/Settings screens)
-- M2b Build automation (dev server, bundling)
+**Completed Forge Infrastructure (supporting MyFi):**
+- ✅ M2a Forge Portal scaffold
+- ✅ M2b Automation (workflows, Pages deploy)
+- ✅ M2c Portal live truth + Issues UX
+- ✅ S1/S2/S3 Branch discipline + Execute loop
+
+**Next Planned Work Orders (MyFi Product):**
+- I3 Real data integration (replace demo VM)
+- I4 Quest surface scaffold
+- I5 Vitals deep-dive (spending → depletion)
 
 9. Canonical Runtime Location
 
@@ -237,7 +244,8 @@ If you are non-repo-aware:
 
 ---
 
-**Last Updated:** 2026-01-23
+**Last Updated:** 2026-01-24
 **Work Orders Applied:** C1, C2, C3a, C3b, C3c, H2, I1, I2, S1
+**Forge Infrastructure WOs:** M2a, M2b, M2c, S1, S2, S3, W1
 
 End of Product State.

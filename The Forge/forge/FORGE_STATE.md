@@ -2,7 +2,7 @@
 
 Status: Canonical
 Audience: All agents
-Last updated: Initialisation (v1.0)
+Last updated: 2026-01-24 (Post S3/W1)
 
 1. Current Institutional Mode
 
@@ -27,7 +27,7 @@ If a task advances neither, it must be challenged.
 
 The Forge must remain operational under the following conditions:
 
-Repo-aware Executor (Claude): optional / not yet onboarded
+Repo-aware Executor (Claude Code): ✅ Onboarded and executing WOs
 
 Architect (non-repo AI): available
 
@@ -49,15 +49,21 @@ The Forge recognises the following as active and legitimate work domains:
 
 3.1 Institutional Build-Out
 
-Defining Forge artifacts
+✅ Forge artifacts defined (Kernel, Capsule, State)
 
-Codifying process rules
+✅ Process rules codified (Work Order lifecycle)
 
-Designing self-correction and evolution loops
+✅ Claude Code onboarded via EXECUTOR_PLAYBOOK.md
 
-Preparing Claude onboarding pathway
+✅ Forge Capsule exists (portable truth layer)
 
-Creating the Forge Capsule (portable truth layer)
+✅ Forge Portal live on GitHub Pages (mobile-first governance UI)
+
+✅ Execute loop implemented (S3: /execute → Execution Pack → Executor Queue)
+
+✅ Branch discipline established (dev → PR → main)
+
+✅ Share Pack auto-refresh on deploy
 
 3.2 MyFi Product Work
 
@@ -135,40 +141,46 @@ Proposal
 
 or Process Artifact
 
-7. Definition of “Ready for Claude”
+7. Claude Code Onboarding Status
 
-The Forge considers itself ready to onboard a repo-aware Executor when:
+✅ **ONBOARDED** — Claude Code is now the active repo-aware Executor.
 
-Forge Kernel is stable
+Criteria met:
+- ✅ Forge Kernel is stable
+- ✅ Forge State is current
+- ✅ Forge Capsule exists and is up to date
+- ✅ Work Orders are consistently used
+- ✅ Specs exist for Hub workflow (I1, I2)
+- ✅ EXECUTOR_PLAYBOOK.md provides execution protocol
 
-Forge State is current
-
-Forge Lessons contains at least initial entries
-
-Forge Capsule exists and is up to date
-
-Work Orders are consistently used
-
-Specs exist for at least one full MyFi workflow
-
-Until then, Claude onboarding is deferred by design.
+Claude executes Work Orders via:
+1. Executor Queue: `github.com/.../issues?q=label:ready-for-executor`
+2. Parse EXECUTION PACK comment for scope
+3. Follow EXECUTOR_PLAYBOOK.md discipline
 
 8. Next Required Action (Self-Signposted)
 
-Given the current state, the Forge requires the creation of a portable truth layer so that all agents—repo-aware or not—can reason coherently.
+The Forge is now operational with Claude Code executing Work Orders.
 
-The next mandatory artifact is:
+**Completed Infrastructure:**
+- ✅ FORGE_CAPSULE.md — Portable truth layer
+- ✅ Forge Portal — Mobile governance UI
+- ✅ Execute Loop (S3) — /execute → Execution Pack → Executor Queue
+- ✅ Share Pack — Auto-refresh indices on deploy
 
-📄 FORGE_CAPSULE.md
+**Next Session Menu (from NEXT_SESSION_WORK_ORDERS_MENU.md):**
+- Track A: Forge Automation (Label creation, PR bot, metrics)
+- Track B: MyFi Product Dev (Quest surface, Vitals deep-dive)
+- Track C: Stability (WO consolidation, local dev setup)
 
-This artifact will:
+**Pending PR:**
+- `sync/dev-to-main-s3-and-fixes` — Merge to deploy auth fix and S3 features
 
-summarise the Forge in a compact, shareable form
+---
 
-enable cross-agent coherence
-
-allow non-repo agents to guide process enforcement accurately
-
-No further execution work should proceed until the Capsule exists.
+**Work Orders Executed This Session:**
+- FO-Forge-S3-Execute-Loop-Mobile-Repo-Agent
+- FO-Forge-W1-Session-WindDown-Integrity-Test-And-Next-Menu
+- Share Pack Refresh (Forge Compliant)
 
 End of Forge State
