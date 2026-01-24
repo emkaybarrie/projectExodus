@@ -261,16 +261,19 @@ jobs:
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
           # Extract unique WO IDs from commit messages (pattern: FO-Something-Something)
-          WO_IDS=$(git log --oneline origin/main..dev | grep -oE 'FO-[A-Za-z0-9]+-[A-Za-z0-9-]+' | sort -u || echo "")
+          # Use grep with || true to prevent exit code 1 when no matches
+          WO_IDS=$(git log --oneline origin/main..dev | grep -oE 'FO-[A-Za-z0-9]+-[A-Za-z0-9-]+' || true)
+          WO_IDS=$(echo "$WO_IDS" | sort -u | grep -v '^$' || true)
 
           if [ -n "$WO_IDS" ]; then
             # Format as markdown list
             WO_LIST=$(echo "$WO_IDS" | sed 's/^/- /')
+            WO_COUNT=$(echo "$WO_IDS" | wc -l | tr -d ' ')
             echo "wo_list<<EOF" >> $GITHUB_OUTPUT
             echo "$WO_LIST" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-            echo "wo_count=$(echo "$WO_IDS" | wc -l)" >> $GITHUB_OUTPUT
-            echo "Found Work Orders: $WO_IDS"
+            echo "wo_count=$WO_COUNT" >> $GITHUB_OUTPUT
+            echo "Found $WO_COUNT Work Order(s): $WO_IDS"
           else
             echo "wo_list=" >> $GITHUB_OUTPUT
             echo "wo_count=0" >> $GITHUB_OUTPUT
@@ -282,44 +285,55 @@ jobs:
         if: steps.check_changes.outputs.has_changes == 'true' && steps.check_pr.outputs.existing_pr == ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WO_LIST: ${{ steps.extract_wos.outputs.wo_list }}
+          WO_COUNT: ${{ steps.extract_wos.outputs.wo_count }}
+          COMMIT_COUNT: ${{ steps.check_changes.outputs.commits_ahead }}
+          ACTOR: ${{ github.actor }}
+          CUSTOM_TITLE: ${{ inputs.pr_title }}
         run: |
           # Get commit summary
           COMMITS=$(git log --oneline origin/main..dev | head -15)
-          COMMIT_COUNT=${{ steps.check_changes.outputs.commits_ahead }}
 
           # Determine PR title
-          if [ -n "${{ inputs.pr_title }}" ]; then
-            TITLE="${{ inputs.pr_title }}"
+          if [ -n "$CUSTOM_TITLE" ]; then
+            TITLE="$CUSTOM_TITLE"
           else
             TITLE="🚀 Deploy: dev → main ($COMMIT_COUNT commits)"
           fi
 
-          # Build WO section if we have any
-          WO_SECTION=""
-          if [ -n "${{ steps.extract_wos.outputs.wo_list }}" ]; then
-            WO_SECTION="### Work Orders Included
-          ${{ steps.extract_wos.outputs.wo_list }}
+          # Build PR body using heredoc for clean multiline handling
+          cat > pr_body.md << 'BODYEOF'
+          ## Deploy: dev → main
+          BODYEOF
 
-          "
+          # Append dynamic content
+          echo "" >> pr_body.md
+          echo "**Triggered by:** @$ACTOR" >> pr_body.md
+          echo "**Commits:** $COMMIT_COUNT" >> pr_body.md
+          echo "**Work Orders:** ${WO_COUNT:-0}" >> pr_body.md
+          echo "" >> pr_body.md
+
+          # Add WO section if we have any
+          if [ -n "$WO_LIST" ]; then
+            echo "### Work Orders Included" >> pr_body.md
+            echo "$WO_LIST" >> pr_body.md
+            echo "" >> pr_body.md
           fi
 
+          echo "### Recent Changes" >> pr_body.md
+          echo '```' >> pr_body.md
+          echo "$COMMITS" >> pr_body.md
+          echo '```' >> pr_body.md
+          echo "" >> pr_body.md
+          echo "---" >> pr_body.md
+          echo "_Automated deployment via Forge Portal_" >> pr_body.md
+
+          # Create the PR
           PR_URL=$(gh pr create \
             --base main \
             --head dev \
             --title "$TITLE" \
-            --body "## Deploy: dev → main
-
-          **Triggered by:** @${{ github.actor }}
-          **Commits:** $COMMIT_COUNT
-          **Work Orders:** ${{ steps.extract_wos.outputs.wo_count }}
-
-          ${WO_SECTION}### Recent Changes
-          \`\`\`
-          $COMMITS
-          \`\`\`
-
-          ---
-          _Automated deployment via Forge Portal_")
+            --body-file pr_body.md)
 
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "✅ Created PR: $PR_URL"
@@ -328,36 +342,51 @@ jobs:
         if: inputs.auto_merge == true && steps.check_changes.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXISTING_PR: ${{ steps.check_pr.outputs.existing_pr }}
+          NEW_PR_URL: ${{ steps.create_pr.outputs.pr_url }}
         run: |
-          if [ -n "${{ steps.check_pr.outputs.existing_pr }}" ]; then
-            PR_NUMBER="${{ steps.check_pr.outputs.existing_pr }}"
+          if [ -n "$EXISTING_PR" ]; then
+            PR_NUMBER="$EXISTING_PR"
+          elif [ -n "$NEW_PR_URL" ]; then
+            PR_NUMBER=$(echo "$NEW_PR_URL" | grep -oE '[0-9]+$')
           else
-            PR_NUMBER=$(echo "${{ steps.create_pr.outputs.pr_url }}" | grep -oE '[0-9]+$')
+            echo "No PR to merge"
+            exit 0
           fi
 
           echo "Enabling auto-merge for PR #$PR_NUMBER"
           gh pr merge "$PR_NUMBER" --merge --auto || echo "Auto-merge may require branch protection rules"
 
       - name: Summary
+        env:
+          HAS_CHANGES: ${{ steps.check_changes.outputs.has_changes }}
+          COMMITS_AHEAD: ${{ steps.check_changes.outputs.commits_ahead }}
+          NEW_PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          EXISTING_PR_URL: ${{ steps.check_pr.outputs.existing_pr_url }}
+          WO_COUNT: ${{ steps.extract_wos.outputs.wo_count }}
+          WO_LIST: ${{ steps.extract_wos.outputs.wo_list }}
+          AUTO_MERGE: ${{ inputs.auto_merge }}
         run: |
           echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ steps.check_changes.outputs.has_changes }}" == "false" ]; then
+          if [ "$HAS_CHANGES" == "false" ]; then
             echo "ℹ️ No changes to deploy - dev is in sync with main" >> $GITHUB_STEP_SUMMARY
-          elif [ -n "${{ steps.create_pr.outputs.pr_url }}" ]; then
-            echo "✅ Created PR: ${{ steps.create_pr.outputs.pr_url }}" >> $GITHUB_STEP_SUMMARY
-          elif [ -n "${{ steps.check_pr.outputs.existing_pr_url }}" ]; then
-            echo "ℹ️ Existing PR: ${{ steps.check_pr.outputs.existing_pr_url }}" >> $GITHUB_STEP_SUMMARY
+          elif [ -n "$NEW_PR_URL" ]; then
+            echo "✅ Created PR: $NEW_PR_URL" >> $GITHUB_STEP_SUMMARY
+          elif [ -n "$EXISTING_PR_URL" ]; then
+            echo "ℹ️ Existing PR: $EXISTING_PR_URL" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Deploy workflow completed" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commits ahead:** ${{ steps.check_changes.outputs.commits_ahead }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Work Orders:** ${{ steps.extract_wos.outputs.wo_count }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Auto-merge:** ${{ inputs.auto_merge }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commits ahead:** ${COMMITS_AHEAD:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "**Work Orders:** ${WO_COUNT:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "**Auto-merge:** ${AUTO_MERGE:-false}" >> $GITHUB_STEP_SUMMARY
 
-          if [ -n "${{ steps.extract_wos.outputs.wo_list }}" ]; then
+          if [ -n "$WO_LIST" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Work Orders in this Deploy" >> $GITHUB_STEP_SUMMARY
-            echo "${{ steps.extract_wos.outputs.wo_list }}" >> $GITHUB_STEP_SUMMARY
+            echo "$WO_LIST" >> $GITHUB_STEP_SUMMARY
           fi
