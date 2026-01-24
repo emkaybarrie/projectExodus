@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create --base main --head merge/fixesAndFeatures-to-main --title \"Merge: Forge Portal + Branching Discipline\" --body \"$\\(cat <<''EOF''\n## Summary\n\n- Forge Portal with live data loading \\(M2c, M2c1\\)\n- Dev/main branching workflows \\(S1\\)\n- Share Pack JSON indices\n- GitHub Pages deployment with fresh index generation\n- PR preview workflow\n- Experimental mode routing to Forge Portal\n\n## Work Orders Included\n\n- FO-Forge-M2c1-Portal-Data-Source-Fix\n- FO-Forge-S1-DevMain-Branching-And-Pages-Discipline\n\n## Test Plan\n\n- [ ] Validate Forge Assets workflow passes\n- [ ] PR preview workflow runs\n- [ ] After merge, Pages deployment triggers\n- [ ] Portal loads at prod URL\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\nEOF\n\\)\")",
+      "Bash(powershell.exe -Command \"gh pr create --base main --head merge/fixesAndFeatures-to-main --title ''Merge: Forge Portal + Branching Discipline'' --body ''Forge Portal + Branching workflows''\")"
+    ]
+  }
+}
