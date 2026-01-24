@@ -50,7 +50,10 @@ body{
 .chrome__surfaceHost{
   flex: 1 1 auto;
   min-height: 0; /* important for overflow containers */
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
+  overscroll-behavior: contain; /* prevent scroll chaining */
 }
 
 .chrome__footer{
@@ -79,6 +82,7 @@ body{
 
 .surface-root{
   padding: var(--pad);
+  padding-bottom: calc(var(--pad) + 20px); /* extra bottom padding for scroll */
   display: grid;
   gap: var(--gap);
 }
@@ -88,4 +92,11 @@ body{
   border: 1px solid var(--cardBorder);
   border-radius: var(--r);
   padding: var(--pad);
+}
+
+/* Mobile touch scrolling fix */
+@media (pointer: coarse) {
+  .chrome__surfaceHost {
+    touch-action: pan-y;
+  }
 }
