@@ -256,6 +256,27 @@ jobs:
             echo "No existing PR found"
           fi
 
+      - name: Extract Work Order IDs
+        id: extract_wos
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          # Extract unique WO IDs from commit messages (pattern: FO-Something-Something)
+          WO_IDS=$(git log --oneline origin/main..dev | grep -oE 'FO-[A-Za-z0-9]+-[A-Za-z0-9-]+' | sort -u || echo "")
+
+          if [ -n "$WO_IDS" ]; then
+            # Format as markdown list
+            WO_LIST=$(echo "$WO_IDS" | sed 's/^/- /')
+            echo "wo_list<<EOF" >> $GITHUB_OUTPUT
+            echo "$WO_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "wo_count=$(echo "$WO_IDS" | wc -l)" >> $GITHUB_OUTPUT
+            echo "Found Work Orders: $WO_IDS"
+          else
+            echo "wo_list=" >> $GITHUB_OUTPUT
+            echo "wo_count=0" >> $GITHUB_OUTPUT
+            echo "No Work Order IDs found in commits"
+          fi
+
       - name: Create PR
         id: create_pr
         if: steps.check_changes.outputs.has_changes == 'true' && steps.check_pr.outputs.existing_pr == ''
@@ -273,6 +294,15 @@ jobs:
             TITLE="🚀 Deploy: dev → main ($COMMIT_COUNT commits)"
           fi
 
+          # Build WO section if we have any
+          WO_SECTION=""
+          if [ -n "${{ steps.extract_wos.outputs.wo_list }}" ]; then
+            WO_SECTION="### Work Orders Included
+          ${{ steps.extract_wos.outputs.wo_list }}
+
+          "
+          fi
+
           PR_URL=$(gh pr create \
             --base main \
             --head dev \
@@ -281,14 +311,15 @@ jobs:
 
           **Triggered by:** @${{ github.actor }}
           **Commits:** $COMMIT_COUNT
+          **Work Orders:** ${{ steps.extract_wos.outputs.wo_count }}
 
-          ### Recent Changes
+          ${WO_SECTION}### Recent Changes
           \`\`\`
           $COMMITS
           \`\`\`
 
           ---
-          _Automated deployment via Forge_")
+          _Automated deployment via Forge Portal_")
 
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "✅ Created PR: $PR_URL"
@@ -322,4 +353,11 @@ jobs:
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Commits ahead:** ${{ steps.check_changes.outputs.commits_ahead }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Work Orders:** ${{ steps.extract_wos.outputs.wo_count }}" >> $GITHUB_STEP_SUMMARY
           echo "**Auto-merge:** ${{ inputs.auto_merge }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "${{ steps.extract_wos.outputs.wo_list }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Work Orders in this Deploy" >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.extract_wos.outputs.wo_list }}" >> $GITHUB_STEP_SUMMARY
+          fi
