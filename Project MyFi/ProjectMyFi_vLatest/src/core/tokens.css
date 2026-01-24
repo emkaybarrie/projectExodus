@@ -57,13 +57,16 @@ body{
 }
 
 .chrome__footer{
+  flex-shrink: 0;  /* Prevent footer from shrinking in flex layout */
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   padding: 10px 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* Safe area for notched phones */
   border-top: 1px solid rgba(255,255,255,0.10);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  background: var(--bg0); /* Ensure footer has background */
 }
 
 .chrome__navBtn{
@@ -77,7 +80,7 @@ body{
 
 /* ---- Surfaces ---- */
 .screen-host{
-  min-height: 100%;
+  /* min-height removed: flex parent handles scroll containment (B2 fix) */
 }
 
 .surface-root{
