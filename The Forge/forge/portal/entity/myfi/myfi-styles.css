@@ -1,0 +1,262 @@
+/* MyFi Entity Portal - Additional Styles */
+
+/* Entity Header */
+.entity-header {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-primary) 100%);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.flagship-badge-sm {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--accent-success);
+  color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* Entity Welcome */
+.entity-welcome {
+  text-align: center;
+  padding: var(--spacing-xl);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-card) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.entity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: rgba(16, 185, 129, 0.2);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--spacing-sm);
+}
+
+.entity-badge-icon {
+  font-size: 1.5rem;
+}
+
+.entity-badge-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-success);
+}
+
+.entity-tagline {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Status Card Highlight */
+.status-card.highlight {
+  border-left: 3px solid var(--accent-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+/* Product Cards */
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.product-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.product-card.default {
+  border-color: var(--accent-success);
+}
+
+.product-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.product-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.default-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--accent-success);
+  color: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.product-status {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.product-status.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-success);
+}
+
+.product-status.development {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+.product-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Environment Cards */
+.env-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.env-card-large {
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+}
+
+.env-card-large.dev {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.env-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.env-icon {
+  font-size: 1.5rem;
+}
+
+.env-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.env-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.env-branch {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.env-open-btn {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--accent-success);
+  color: white;
+  text-decoration: none;
+  text-align: center;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.15s ease;
+}
+
+.env-open-btn:hover {
+  background: #059669;
+}
+
+.env-card-large.dev .env-open-btn {
+  background: var(--accent-secondary);
+}
+
+.env-card-large.dev .env-open-btn:hover {
+  background: #2563eb;
+}
+
+/* Escalate */
+.escalate-actions {
+  text-align: center;
+}
+
+.escalate-btn {
+  display: inline-block;
+  padding: var(--spacing-md) var(--spacing-xl);
+  background: var(--accent-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: var(--spacing-lg);
+  transition: background 0.15s ease;
+}
+
+.escalate-btn:hover {
+  background: #7c3aed;
+}
+
+.escalate-note {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.escalate-list {
+  text-align: left;
+  list-style: none;
+  padding: 0;
+}
+
+.escalate-list li {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: var(--spacing-xs) 0;
+  padding-left: var(--spacing-md);
+  position: relative;
+}
+
+.escalate-list li::before {
+  content: '>';
+  position: absolute;
+  left: 0;
+  color: var(--accent-primary);
+}
+
+/* Back to Forante */
+.back-to-forante {
+  display: block;
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px dashed var(--bg-hover);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-align: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.back-to-forante:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}

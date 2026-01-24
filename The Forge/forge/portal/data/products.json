@@ -1,0 +1,28 @@
+{
+  "$schema": "./products.schema.json",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-24",
+  "products": {
+    "myfi": [
+      {
+        "id": "core",
+        "name": "Core MyFi",
+        "description": "Main personal finance platform",
+        "status": "active",
+        "default": true,
+        "paths": [
+          "Project MyFi/ProjectMyFi_vLatest"
+        ]
+      },
+      {
+        "id": "badlands",
+        "name": "Badlands",
+        "description": "Experimental AI companion",
+        "status": "development",
+        "paths": [
+          "Project MyFi/Badlands"
+        ]
+      }
+    ]
+  }
+}
