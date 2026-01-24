@@ -742,3 +742,122 @@ button {
     justify-content: flex-start;
   }
 }
+
+/* === S3 Additions: Status Chips & Executor Queue === */
+
+/* Status Chips */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.status-chip.status-draft {
+  background: rgba(107, 114, 128, 0.2);
+  color: var(--text-secondary);
+}
+
+.status-chip.status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+.status-chip.status-approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-success);
+}
+
+.status-chip.status-queued {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent-secondary);
+}
+
+.status-chip.status-executing {
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--accent-primary);
+  animation: pulse-chip 2s ease-in-out infinite;
+}
+
+.status-chip.status-executed {
+  background: rgba(16, 185, 129, 0.25);
+  color: var(--accent-success);
+}
+
+.status-chip.status-blocked {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-danger);
+}
+
+@keyframes pulse-chip {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Executor Queue Button (in Quick Actions) */
+.action-btn.executor-queue {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.action-btn.executor-queue:hover,
+.action-btn.executor-queue:focus {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+/* Queued WO Action Button */
+.wo-action-btn.queued {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent-secondary);
+}
+
+.wo-action-btn.queued:hover,
+.wo-action-btn.queued:focus {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* WO Queue Link (bottom of WO list) */
+.wo-queue-link {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--bg-hover);
+  text-align: center;
+}
+
+.btn-executor-queue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px dashed rgba(59, 130, 246, 0.4);
+  border-radius: var(--radius-md);
+  color: var(--accent-secondary);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  min-height: var(--touch-target);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-executor-queue:hover,
+.btn-executor-queue:focus {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--accent-secondary);
+}
+
+/* Filter chip icons (emoji support) */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+}

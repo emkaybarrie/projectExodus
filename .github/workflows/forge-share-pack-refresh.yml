@@ -1,4 +1,10 @@
-name: Forge Share Pack Refresh
+name: Forge Share Pack Refresh (Validate Only)
+
+# NOTE: This workflow validates Share Pack generation but does NOT commit.
+# The forge-portal-pages.yml workflow generates fresh indices before deploy,
+# so auto-committing here is redundant and fails with branch protection.
+#
+# This workflow serves as a validation check only.
 
 on:
   push:
@@ -9,10 +15,11 @@ on:
       - ".github/workflows/forge-share-pack-refresh.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  refresh:
+  validate:
+    name: Validate Share Pack Generation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,17 +30,33 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Refresh Share Pack
-        run: node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
-
-      - name: Commit Share Pack (if changed)
+      - name: Generate Share Pack (validation)
         run: |
-          git config user.name "forge-bot"
-          git config user.email "forge-bot@users.noreply.github.com"
-          git add "The Forge/forge/exports/share-pack"
-          if git diff --cached --quiet; then
-            echo "No share-pack changes."
-            exit 0
+          echo "=== Generating Share Pack (validation mode) ==="
+          node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+          echo "=== Share Pack generated successfully ==="
+
+      - name: Validate outputs exist
+        run: |
+          if [ -f "The Forge/forge/exports/share-pack/share-pack.index.json" ]; then
+            echo "✅ share-pack.index.json exists"
+          else
+            echo "❌ share-pack.index.json missing"
+            exit 1
           fi
-          git commit -m "forge: refresh share pack"
-          git push
+
+          if [ -f "The Forge/forge/exports/share-pack/work-orders.index.json" ]; then
+            echo "✅ work-orders.index.json exists"
+          else
+            echo "❌ work-orders.index.json missing"
+            exit 1
+          fi
+
+          echo ""
+          echo "============================================"
+          echo "SHARE PACK VALIDATION COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "NOTE: Share Pack files are generated at deploy time"
+          echo "by forge-portal-pages.yml (no commit needed here)."
+          echo "============================================"
