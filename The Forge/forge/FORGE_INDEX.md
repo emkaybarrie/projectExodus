@@ -40,6 +40,7 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 
 ## Portal
 - [portal/index.html](./portal/index.html) — Forge Portal (governance UI)
+- [portal/DERIVED_PORTALS.md](./portal/DERIVED_PORTALS.md) — Entity drilldown and extension patterns
 - [portal/data/entities.json](./portal/data/entities.json) — Entity registry
 - [portal/data/environments.json](./portal/data/environments.json) — Environment URLs (Dev/Prod)
 

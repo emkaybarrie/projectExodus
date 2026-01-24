@@ -1097,3 +1097,209 @@ button {
 .env-doc-link:hover {
   text-decoration: underline;
 }
+
+/* === P2: Lane Chips & Entity Drilldown === */
+
+/* Lane Chips */
+.lane-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.lane-chip.lane-forge {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+.lane-chip.lane-myfi {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-success);
+}
+
+.lane-chip.lane-forante {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--accent-warning);
+}
+
+.lane-chip.lane-unknown {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+/* Filter Groups */
+.wo-filter-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.wo-filter-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-xs);
+  letter-spacing: 0.03em;
+}
+
+.wo-filters.lane-filters {
+  border-bottom: none;
+  padding-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.wo-filters.status-filters {
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+/* Lane filter chips */
+.filter-chip.lane {
+  background: var(--bg-primary);
+  border: 1px solid var(--bg-hover);
+}
+
+.filter-chip.lane:hover,
+.filter-chip.lane:focus {
+  border-color: var(--text-muted);
+}
+
+.filter-chip.lane.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.filter-chip.lane.lane-forge.active {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.filter-chip.lane.lane-myfi.active {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+}
+
+.filter-chip.lane.lane-forante.active {
+  background: var(--accent-warning);
+  border-color: var(--accent-warning);
+}
+
+/* Results Count */
+.wo-results-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+/* Entity Filter Notice */
+.entity-filter-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.clear-filter-btn {
+  background: transparent;
+  color: var(--accent-secondary);
+  font-size: 0.75rem;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.clear-filter-btn:hover,
+.clear-filter-btn:focus {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Entity Drilldown (clickable entity items) */
+.entity-item {
+  cursor: pointer;
+  position: relative;
+}
+
+.entity-wo-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--bg-hover);
+}
+
+.wo-count-badge {
+  font-size: 0.75rem;
+  color: var(--accent-secondary);
+  font-weight: 500;
+}
+
+.drilldown-arrow {
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  transition: transform 0.15s ease;
+}
+
+.entity-item:hover .drilldown-arrow {
+  transform: translateX(4px);
+  color: var(--accent-secondary);
+}
+
+.entities-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: var(--spacing-md);
+  font-style: italic;
+}
+
+/* WO Item with Lane Chip */
+.wo-item-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-xs);
+}
+
+.wo-item-header .lane-chip {
+  order: 1;
+}
+
+.wo-item-header .status-chip {
+  order: 2;
+}
+
+.wo-item-header .wo-date {
+  order: 3;
+  margin-left: auto;
+}
+
+/* Responsive adjustments for filters */
+@media (max-width: 400px) {
+  .wo-filters.lane-filters,
+  .wo-filters.status-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .filter-chip {
+    flex-shrink: 0;
+  }
+}

@@ -33,10 +33,66 @@ const state = {
   environments: null,
   currentScreen: 'dashboard',
   woFilter: 'all',
+  woLaneFilter: 'all',
+  entityFilter: null, // For entity drilldown
   loading: true,
   error: null,
   errorDetails: null
 };
+
+// === Lane Detection ===
+
+/**
+ * Parse lane (entity) from Work Order ID
+ * Pattern: FO-{Lane}-{Rest}
+ * Examples: FO-Forge-M2a → Forge, FO-MyFi-I1 → MyFi, FO-Forante-G1 → Forante
+ */
+function parseLane(woId) {
+  if (!woId) return 'unknown';
+  const match = woId.match(/^FO-([A-Za-z]+)-/);
+  if (match) {
+    return match[1]; // Forge, MyFi, Forante, etc.
+  }
+  return 'unknown';
+}
+
+/**
+ * Get lane display info
+ */
+function getLaneInfo(lane) {
+  const lanes = {
+    'Forge': { icon: '⚙️', label: 'Forge', class: 'lane-forge', color: '#6366f1' },
+    'MyFi': { icon: '📱', label: 'MyFi', class: 'lane-myfi', color: '#10b981' },
+    'Forante': { icon: '🏛️', label: 'Forante', class: 'lane-forante', color: '#f59e0b' },
+    'unknown': { icon: '❓', label: 'Other', class: 'lane-unknown', color: '#6b7280' }
+  };
+  return lanes[lane] || lanes['unknown'];
+}
+
+/**
+ * Get all unique lanes from work orders
+ */
+function getUniqueLanes() {
+  if (!state.workOrders?.workOrders) return [];
+  const lanes = new Set();
+  state.workOrders.workOrders.forEach(wo => {
+    lanes.add(parseLane(wo.id));
+  });
+  return Array.from(lanes).sort();
+}
+
+/**
+ * Count work orders by lane
+ */
+function countByLane() {
+  if (!state.workOrders?.workOrders) return {};
+  const counts = {};
+  state.workOrders.workOrders.forEach(wo => {
+    const lane = parseLane(wo.id);
+    counts[lane] = (counts[lane] || 0) + 1;
+  });
+  return counts;
+}
 
 // DOM Elements (populated on init)
 let elements = {};
@@ -139,12 +195,48 @@ function setWoFilter(filter) {
   render();
 }
 
+function setWoLaneFilter(lane) {
+  state.woLaneFilter = lane;
+  render();
+}
+
+function setEntityFilter(entityId) {
+  state.entityFilter = entityId;
+  // Map entity ID to lane name
+  if (entityId) {
+    const entity = state.entities?.entities?.find(e => e.id === entityId);
+    if (entity) {
+      // Entity name is the lane name (e.g., 'MyFi' → lane 'MyFi')
+      state.woLaneFilter = entity.name;
+    }
+  } else {
+    state.woLaneFilter = 'all';
+  }
+  state.currentScreen = 'work-orders';
+  render();
+}
+
+function clearEntityFilter() {
+  state.entityFilter = null;
+  state.woLaneFilter = 'all';
+  render();
+}
+
 function getFilteredWorkOrders() {
   if (!state.workOrders?.workOrders) return [];
-  const wos = state.workOrders.workOrders;
+  let wos = state.workOrders.workOrders;
 
-  if (state.woFilter === 'all') return wos;
-  return wos.filter(wo => wo.status === state.woFilter);
+  // Filter by status
+  if (state.woFilter !== 'all') {
+    wos = wos.filter(wo => wo.status === state.woFilter);
+  }
+
+  // Filter by lane
+  if (state.woLaneFilter !== 'all') {
+    wos = wos.filter(wo => parseLane(wo.id) === state.woLaneFilter);
+  }
+
+  return wos;
 }
 
 // === Create WO Wizard ===
@@ -399,9 +491,24 @@ function renderQuickActions() {
   `;
 }
 
+function renderLaneChip(lane) {
+  const info = getLaneInfo(lane);
+  return `<span class="lane-chip ${info.class}">${info.icon} ${info.label}</span>`;
+}
+
 function renderWorkOrdersList() {
   const wos = getFilteredWorkOrders();
   const counts = state.workOrders?.counts || {};
+  const laneCounts = countByLane();
+  const uniqueLanes = getUniqueLanes();
+
+  // Build entity filter notice
+  const entityFilterNotice = state.entityFilter ? `
+    <div class="entity-filter-notice">
+      Showing work orders for: <strong>${state.woLaneFilter}</strong>
+      <button class="clear-filter-btn" onclick="clearEntityFilter()">&#10005; Clear</button>
+    </div>
+  ` : '';
 
   return `
     <section class="panel wo-panel">
@@ -410,47 +517,77 @@ function renderWorkOrdersList() {
         <button class="back-btn" onclick="navigateTo('dashboard')">&#8592; Back</button>
       </div>
 
-      <div class="wo-filters">
-        <button class="filter-chip ${state.woFilter === 'all' ? 'active' : ''}" onclick="setWoFilter('all')">
-          All (${counts.total || 0})
-        </button>
-        <button class="filter-chip ${state.woFilter === 'pending-approval' ? 'active' : ''}" onclick="setWoFilter('pending-approval')">
-          🟡 Pending (${counts.pendingApproval || 0})
-        </button>
-        <button class="filter-chip ${state.woFilter === 'approved' ? 'active' : ''}" onclick="setWoFilter('approved')">
-          🟢 Approved (${counts.approved || 0})
-        </button>
-        <button class="filter-chip ${state.woFilter === 'ready-for-executor' ? 'active' : ''}" onclick="setWoFilter('ready-for-executor')">
-          🔵 Queued (${counts.readyForExecutor || 0})
-        </button>
-        <button class="filter-chip ${state.woFilter === 'executing' ? 'active' : ''}" onclick="setWoFilter('executing')">
-          🟣 Executing (${counts.executing || 0})
-        </button>
-        <button class="filter-chip ${state.woFilter === 'executed' ? 'active' : ''}" onclick="setWoFilter('executed')">
-          ✅ Executed (${counts.executed || 0})
-        </button>
+      ${entityFilterNotice}
+
+      <div class="wo-filter-group">
+        <div class="wo-filter-label">By Lane:</div>
+        <div class="wo-filters lane-filters">
+          <button class="filter-chip lane ${state.woLaneFilter === 'all' ? 'active' : ''}" onclick="setWoLaneFilter('all')">
+            All Lanes
+          </button>
+          ${uniqueLanes.map(lane => {
+            const info = getLaneInfo(lane);
+            return `
+              <button class="filter-chip lane ${info.class} ${state.woLaneFilter === lane ? 'active' : ''}" onclick="setWoLaneFilter('${lane}')">
+                ${info.icon} ${lane} (${laneCounts[lane] || 0})
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="wo-filter-group">
+        <div class="wo-filter-label">By Status:</div>
+        <div class="wo-filters status-filters">
+          <button class="filter-chip ${state.woFilter === 'all' ? 'active' : ''}" onclick="setWoFilter('all')">
+            All (${counts.total || 0})
+          </button>
+          <button class="filter-chip ${state.woFilter === 'pending-approval' ? 'active' : ''}" onclick="setWoFilter('pending-approval')">
+            🟡 Pending (${counts.pendingApproval || 0})
+          </button>
+          <button class="filter-chip ${state.woFilter === 'approved' ? 'active' : ''}" onclick="setWoFilter('approved')">
+            🟢 Approved (${counts.approved || 0})
+          </button>
+          <button class="filter-chip ${state.woFilter === 'ready-for-executor' ? 'active' : ''}" onclick="setWoFilter('ready-for-executor')">
+            🔵 Queued (${counts.readyForExecutor || 0})
+          </button>
+          <button class="filter-chip ${state.woFilter === 'executing' ? 'active' : ''}" onclick="setWoFilter('executing')">
+            🟣 Executing (${counts.executing || 0})
+          </button>
+          <button class="filter-chip ${state.woFilter === 'executed' ? 'active' : ''}" onclick="setWoFilter('executed')">
+            ✅ Executed (${counts.executed || 0})
+          </button>
+        </div>
+      </div>
+
+      <div class="wo-results-count">
+        Showing ${wos.length} work order${wos.length !== 1 ? 's' : ''}
       </div>
 
       <div class="wo-list">
-        ${wos.length === 0 ? '<p class="wo-empty">No work orders found.</p>' : ''}
-        ${wos.map(wo => `
-          <div class="wo-item">
-            <div class="wo-item-header">
-              ${renderStatusChip(wo.status)}
-              <span class="wo-date">${formatRelativeTime(wo.lastUpdated)}</span>
+        ${wos.length === 0 ? '<p class="wo-empty">No work orders found matching filters.</p>' : ''}
+        ${wos.map(wo => {
+          const lane = parseLane(wo.id);
+          return `
+            <div class="wo-item">
+              <div class="wo-item-header">
+                ${renderLaneChip(lane)}
+                ${renderStatusChip(wo.status)}
+                <span class="wo-date">${formatRelativeTime(wo.lastUpdated)}</span>
+              </div>
+              <div class="wo-title">${wo.title}</div>
+              <div class="wo-actions">
+                <a href="${wo.repoUrl}" class="wo-action-btn" target="_blank" rel="noopener">View</a>
+                ${wo.status === 'approved' ? `
+                  <button class="wo-action-btn execute" onclick="handleExecuteWo('${wo.id}')">Execute</button>
+                ` : ''}
+                ${wo.status === 'ready-for-executor' ? `
+                  <a href="${EXECUTOR_QUEUE_URL}" class="wo-action-btn queued" target="_blank" rel="noopener">In Queue</a>
+                ` : ''}
+              </div>
             </div>
-            <div class="wo-title">${wo.title}</div>
-            <div class="wo-actions">
-              <a href="${wo.repoUrl}" class="wo-action-btn" target="_blank" rel="noopener">View</a>
-              ${wo.status === 'approved' ? `
-                <button class="wo-action-btn execute" onclick="handleExecuteWo('${wo.id}')">Execute</button>
-              ` : ''}
-              ${wo.status === 'ready-for-executor' ? `
-                <a href="${EXECUTOR_QUEUE_URL}" class="wo-action-btn queued" target="_blank" rel="noopener">In Queue</a>
-              ` : ''}
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
 
       <div class="wo-queue-link">
@@ -528,26 +665,36 @@ function renderEntitiesPanel() {
   }
 
   const tierLabels = state.entities?.tiers || {};
+  const laneCounts = countByLane();
 
   return `
     <section class="panel entities-panel">
       <h2 class="panel-title">Registered Entities</h2>
       <div class="entities-list">
-        ${entities.map(entity => `
-          <div class="entity-item ${entity.flagship ? 'flagship' : ''}">
-            <div class="entity-header">
-              <span class="entity-name">${entity.name}</span>
-              ${entity.flagship ? '<span class="flagship-badge">Flagship</span>' : ''}
-              <span class="entity-tier">Tier ${entity.integrationTier}</span>
+        ${entities.map(entity => {
+          const woCount = laneCounts[entity.name] || 0;
+          const laneInfo = getLaneInfo(entity.name);
+          return `
+            <div class="entity-item ${entity.flagship ? 'flagship' : ''}" onclick="setEntityFilter('${entity.id}')">
+              <div class="entity-header">
+                <span class="entity-name">${laneInfo.icon} ${entity.name}</span>
+                ${entity.flagship ? '<span class="flagship-badge">Flagship</span>' : ''}
+                <span class="entity-tier">Tier ${entity.integrationTier}</span>
+              </div>
+              <div class="entity-desc">${entity.description || 'No description'}</div>
+              <div class="entity-meta">
+                <span class="entity-status ${entity.status}">${entity.status}</span>
+                <span class="entity-tier-name">${tierLabels[entity.integrationTier]?.name || ''}</span>
+              </div>
+              <div class="entity-wo-link">
+                <span class="wo-count-badge">${woCount} Work Order${woCount !== 1 ? 's' : ''}</span>
+                <span class="drilldown-arrow">&#8250;</span>
+              </div>
             </div>
-            <div class="entity-desc">${entity.description || 'No description'}</div>
-            <div class="entity-meta">
-              <span class="entity-status ${entity.status}">${entity.status}</span>
-              <span class="entity-tier-name">${tierLabels[entity.integrationTier]?.name || ''}</span>
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
+      <p class="entities-hint">Click an entity to view its Work Orders</p>
     </section>
   `;
 }
@@ -736,6 +883,9 @@ function bindCreateWoForm() {
 
 window.navigateTo = navigateTo;
 window.setWoFilter = setWoFilter;
+window.setWoLaneFilter = setWoLaneFilter;
+window.setEntityFilter = setEntityFilter;
+window.clearEntityFilter = clearEntityFilter;
 window.loadData = loadData;
 window.handleDeploy = handleDeploy;
 
