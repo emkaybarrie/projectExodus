@@ -2025,3 +2025,219 @@ button {
     flex-shrink: 0;
   }
 }
+
+/* ============================
+   Work Order Detail Modal
+   ============================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+.modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+}
+
+/* WO Detail Modal Specific */
+.wo-detail-id {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--accent-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.wo-detail-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  line-height: 1.4;
+}
+
+.wo-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+.wo-detail-chip {
+  display: inline-block;
+}
+
+.wo-detail-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.wo-detail-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.wo-detail-section h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wo-detail-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.wo-link-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wo-link-btn:hover {
+  border-color: var(--accent-secondary);
+  background: var(--bg-hover);
+}
+
+.wo-link-btn .link-icon {
+  font-size: 1.1rem;
+}
+
+.wo-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.wo-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wo-action-btn.primary {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.wo-action-btn.primary:hover {
+  background: #7c3aed;
+}
+
+.wo-action-btn.execute {
+  background: var(--accent-success);
+  color: white;
+}
+
+.wo-action-btn.execute:hover {
+  background: #059669;
+}
+
+.wo-action-btn .action-icon {
+  font-size: 1rem;
+}
+
+/* Secondary button style for WO cards */
+.wo-btn.secondary {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.wo-btn.secondary:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* Make WO cards clickable */
+.wo-card[onclick] {
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.wo-card[onclick]:hover {
+  border-color: var(--accent-primary);
+}
+
+.wo-card[onclick]:active {
+  transform: scale(0.99);
+}

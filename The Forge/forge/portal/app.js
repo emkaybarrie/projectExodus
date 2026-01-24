@@ -37,6 +37,7 @@ const state = {
   woFilter: 'all',
   woLaneFilter: 'all',
   entityFilter: null,
+  selectedWo: null,  // For detail modal
   loading: true,
   error: null,
   errorDetails: null
@@ -317,6 +318,126 @@ function buildIssueUrl(fields) {
     title: `[WO] ${fields.taskId || ''}`
   });
   return `${base}?${params.toString()}`;
+}
+
+// === Work Order Detail & Agent Pack ===
+
+function showWoDetail(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) return;
+  state.selectedWo = wo;
+  renderWoModal();
+}
+
+function closeWoDetail() {
+  state.selectedWo = null;
+  const modal = document.getElementById('wo-detail-modal');
+  if (modal) modal.remove();
+}
+
+async function copyAgentPack(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) {
+    showToast('Work order not found', 'error');
+    return;
+  }
+
+  const lane = parseLane(wo.id);
+  const agentPack = `# Agent Pack: ${wo.id}
+
+## Work Order
+- **ID:** ${wo.id}
+- **Title:** ${wo.title}
+- **Lane:** ${lane}
+- **Status:** ${wo.status}
+- **Last Updated:** ${wo.lastUpdated}
+
+## Source
+- **Document:** ${wo.repoUrl}
+
+## Instructions
+Read the full Work Order at the source URL above for:
+- Purpose / Intent
+- Scope
+- Acceptance Criteria
+- Technical Notes
+
+Execute according to EXECUTOR_PLAYBOOK.md protocol.
+`;
+
+  const copied = await copyToClipboard(agentPack);
+  showToast(copied ? 'Agent Pack copied!' : 'Copy failed', copied ? 'success' : 'error');
+}
+
+function renderWoModal() {
+  const wo = state.selectedWo;
+  if (!wo) return;
+
+  // Remove existing modal if any
+  const existing = document.getElementById('wo-detail-modal');
+  if (existing) existing.remove();
+
+  const lane = parseLane(wo.id);
+  const laneInfo = getLaneInfo(lane);
+  const statusInfo = getStatusChip(wo.status);
+
+  const modal = document.createElement('div');
+  modal.id = 'wo-detail-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content wo-detail-modal">
+      <div class="modal-header">
+        <h2>Work Order Details</h2>
+        <button class="modal-close" onclick="closeWoDetail()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="wo-detail-id">${wo.id}</div>
+        <h3 class="wo-detail-title">${wo.title}</h3>
+
+        <div class="wo-detail-meta">
+          <div class="wo-detail-chip">
+            <span class="lane-chip ${laneInfo.class}">${laneInfo.icon} ${laneInfo.label}</span>
+          </div>
+          <div class="wo-detail-chip">
+            <span class="status-chip ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>
+          </div>
+          <div class="wo-detail-date">
+            Updated: ${formatRelativeTime(wo.lastUpdated)}
+          </div>
+        </div>
+
+        <div class="wo-detail-section">
+          <h4>Links</h4>
+          <div class="wo-detail-links">
+            <a href="${wo.repoUrl}" class="wo-link-btn" target="_blank">
+              <span class="link-icon">&#128196;</span> Open WO Document
+            </a>
+          </div>
+        </div>
+
+        <div class="wo-detail-section">
+          <h4>Agent Actions</h4>
+          <div class="wo-detail-actions">
+            <button class="wo-action-btn primary" onclick="copyAgentPack('${wo.id}'); closeWoDetail();">
+              <span class="action-icon">&#128203;</span> Copy Agent Pack
+            </button>
+            ${wo.status === 'approved' ? `
+              <button class="wo-action-btn execute" onclick="handleExecuteWo('${wo.id}'); closeWoDetail();">
+                <span class="action-icon">&#9889;</span> Execute Work Order
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Close on overlay click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeWoDetail();
+  });
 }
 
 // === Render Helpers ===
@@ -819,7 +940,7 @@ function renderWorkOrdersScreen() {
         ${wos.map(wo => {
           const lane = parseLane(wo.id);
           return `
-            <div class="wo-card">
+            <div class="wo-card" onclick="showWoDetail('${wo.id}')">
               <div class="wo-card-header">
                 ${renderLaneChip(lane)}
                 ${renderStatusChip(wo.status)}
@@ -827,8 +948,9 @@ function renderWorkOrdersScreen() {
               </div>
               <p class="wo-card-title">${wo.title}</p>
               <div class="wo-card-actions">
-                <a href="${wo.repoUrl}" class="wo-btn" target="_blank">View</a>
-                ${wo.status === 'approved' ? `<button class="wo-btn primary" onclick="handleExecuteWo('${wo.id}')">Execute</button>` : ''}
+                <button class="wo-btn" onclick="event.stopPropagation(); showWoDetail('${wo.id}')">Details</button>
+                <button class="wo-btn secondary" onclick="event.stopPropagation(); copyAgentPack('${wo.id}')">Copy Pack</button>
+                ${wo.status === 'approved' ? `<button class="wo-btn primary" onclick="event.stopPropagation(); handleExecuteWo('${wo.id}')">Execute</button>` : ''}
               </div>
             </div>
           `;
@@ -974,6 +1096,9 @@ window.clearEntityFilter = clearEntityFilter;
 window.openEntityPortal = openEntityPortal;
 window.loadData = loadData;
 window.handleDeploy = handleDeploy;
+window.showWoDetail = showWoDetail;
+window.closeWoDetail = closeWoDetail;
+window.copyAgentPack = copyAgentPack;
 
 window.handleExecuteWo = function(woId) {
   const wo = state.workOrders?.workOrders?.find(w => w.id === woId);

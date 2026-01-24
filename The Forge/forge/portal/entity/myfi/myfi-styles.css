@@ -260,3 +260,178 @@
   border-color: var(--accent-primary);
   color: var(--accent-primary);
 }
+
+/* ============================
+   Work Order Control Plane
+   ============================ */
+
+/* Trigger Panel */
+.trigger-panel {
+  background: var(--bg-secondary);
+}
+
+.trigger-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.trigger-btn:hover {
+  background: var(--bg-hover);
+}
+
+.trigger-btn.myfi {
+  border-left: 3px solid var(--accent-success);
+}
+
+.trigger-btn.myfi:hover {
+  border-color: var(--accent-success);
+}
+
+.trigger-btn.forge {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.trigger-btn.forge:hover {
+  border-color: var(--accent-primary);
+}
+
+.trigger-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.trigger-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trigger-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.trigger-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.trigger-arrow {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+}
+
+/* WO Status Summary */
+.wo-status-summary {
+  background: var(--bg-secondary);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--bg-hover);
+}
+
+.status-row:last-child {
+  border-bottom: none;
+}
+
+.status-row.highlight {
+  background: rgba(16, 185, 129, 0.1);
+  margin: 0 calc(-1 * var(--spacing-md));
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+}
+
+.status-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.status-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-row.highlight .status-value {
+  color: var(--accent-success);
+}
+
+/* Lane chip for MyFi */
+.lane-chip.lane-myfi {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--accent-success);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Toast notifications */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1001;
+  box-shadow: var(--shadow-md);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.toast-success {
+  border-left: 3px solid var(--accent-success);
+}
+
+.toast-error {
+  border-left: 3px solid var(--accent-danger);
+}
+
+/* WO cards clickable */
+.wo-card[onclick] {
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.wo-card[onclick]:hover {
+  border-color: var(--accent-success);
+}
+
+/* Secondary button */
+.wo-btn.secondary {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.wo-btn.secondary:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}

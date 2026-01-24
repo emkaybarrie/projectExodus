@@ -9,6 +9,7 @@ const ENTITY_NAME = 'MyFi';
 const MYFI_PRODUCT_STATE_URL = `${REPO_BASE}/blob/main/The%20Forge/myfi/PRODUCT_STATE.md`;
 const MYFI_PARITY_MATRIX_URL = `${REPO_BASE}/blob/main/The%20Forge/myfi/MIGRATION_PARITY_MATRIX.md`;
 const FORGE_WO_URL = `${REPO_BASE}/issues/new?template=forge_work_order.yml&title=[WO]+FO-Forge-`;
+const MYFI_WO_URL = `${REPO_BASE}/issues/new?template=forge_work_order.yml&title=[WO]+FO-MyFi-`;
 
 // Compute data URLs relative to portal root
 const SHARE_PACK_BASE = new URL('../../../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
@@ -23,6 +24,7 @@ const state = {
   currentTab: 'home',
   currentScreen: 'home',
   productFilter: 'all',
+  selectedWo: null,
   loading: true,
   error: null
 };
@@ -151,6 +153,138 @@ function renderStatusChip(status) {
   return `<span class="status-chip ${chip.class}">${chip.icon} ${chip.label}</span>`;
 }
 
+// === Clipboard ===
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// === Work Order Detail & Agent Pack ===
+
+function showWoDetail(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) return;
+  state.selectedWo = wo;
+  renderWoModal();
+}
+
+function closeWoDetail() {
+  state.selectedWo = null;
+  const modal = document.getElementById('wo-detail-modal');
+  if (modal) modal.remove();
+}
+
+async function copyAgentPack(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) {
+    showToast('Work order not found', 'error');
+    return;
+  }
+
+  const agentPack = `# Agent Pack: ${wo.id}
+
+## Work Order
+- **ID:** ${wo.id}
+- **Title:** ${wo.title}
+- **Lane:** MyFi
+- **Status:** ${wo.status}
+- **Last Updated:** ${wo.lastUpdated}
+
+## Source
+- **Document:** ${wo.repoUrl}
+
+## Instructions
+Read the full Work Order at the source URL above for:
+- Purpose / Intent
+- Scope
+- Acceptance Criteria
+- Technical Notes
+
+Execute according to EXECUTOR_PLAYBOOK.md protocol.
+`;
+
+  const copied = await copyToClipboard(agentPack);
+  showToast(copied ? 'Agent Pack copied!' : 'Copy failed', copied ? 'success' : 'error');
+}
+
+function renderWoModal() {
+  const wo = state.selectedWo;
+  if (!wo) return;
+
+  const existing = document.getElementById('wo-detail-modal');
+  if (existing) existing.remove();
+
+  const statusInfo = getStatusChip(wo.status);
+
+  const modal = document.createElement('div');
+  modal.id = 'wo-detail-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content wo-detail-modal">
+      <div class="modal-header">
+        <h2>Work Order Details</h2>
+        <button class="modal-close" onclick="closeWoDetail()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="wo-detail-id">${wo.id}</div>
+        <h3 class="wo-detail-title">${wo.title}</h3>
+
+        <div class="wo-detail-meta">
+          <div class="wo-detail-chip">
+            <span class="lane-chip lane-myfi">&#128241; MyFi</span>
+          </div>
+          <div class="wo-detail-chip">
+            <span class="status-chip ${statusInfo.class}">${statusInfo.icon} ${statusInfo.label}</span>
+          </div>
+          <div class="wo-detail-date">
+            Updated: ${formatRelativeTime(wo.lastUpdated)}
+          </div>
+        </div>
+
+        <div class="wo-detail-section">
+          <h4>Links</h4>
+          <div class="wo-detail-links">
+            <a href="${wo.repoUrl}" class="wo-link-btn" target="_blank">
+              <span class="link-icon">&#128196;</span> Open WO Document
+            </a>
+          </div>
+        </div>
+
+        <div class="wo-detail-section">
+          <h4>Agent Actions</h4>
+          <div class="wo-detail-actions">
+            <button class="wo-action-btn primary" onclick="copyAgentPack('${wo.id}'); closeWoDetail();">
+              <span class="action-icon">&#128203;</span> Copy Agent Pack
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeWoDetail();
+  });
+}
+
 // === Render: Home Tab ===
 
 function renderHomeTab() {
@@ -222,6 +356,7 @@ function renderHomeTab() {
 function renderWorkTab() {
   const wo = state.workOrders;
   const wos = wo?.workOrders || [];
+  const approvedCount = wos.filter(w => w.status === 'approved').length;
 
   return `
     <section class="panel">
@@ -229,18 +364,52 @@ function renderWorkTab() {
       <p class="panel-subtitle">Scoped to MyFi entity only</p>
     </section>
 
+    <section class="panel trigger-panel">
+      <h2 class="panel-title">Propose Work</h2>
+      <div class="trigger-buttons">
+        <a href="${MYFI_WO_URL}" class="trigger-btn myfi" target="_blank">
+          <span class="trigger-icon">&#128241;</span>
+          <div class="trigger-content">
+            <span class="trigger-title">Propose MyFi Work</span>
+            <span class="trigger-desc">New feature, fix, or enhancement</span>
+          </div>
+          <span class="trigger-arrow">&#8594;</span>
+        </a>
+        <a href="${FORGE_WO_URL}" class="trigger-btn forge" target="_blank">
+          <span class="trigger-icon">&#128640;</span>
+          <div class="trigger-content">
+            <span class="trigger-title">Propose Forge Evolution</span>
+            <span class="trigger-desc">Request Forge capability or governance change</span>
+          </div>
+          <span class="trigger-arrow">&#8594;</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="panel wo-status-summary">
+      <div class="status-row">
+        <span class="status-label">Total Work Orders</span>
+        <span class="status-value">${wos.length}</span>
+      </div>
+      <div class="status-row ${approvedCount > 0 ? 'highlight' : ''}">
+        <span class="status-label">Ready to Execute</span>
+        <span class="status-value">${approvedCount}</span>
+      </div>
+    </section>
+
     <section class="panel wo-list-panel">
       ${wos.length === 0 ? '<p class="empty-text">No MyFi work orders found</p>' : ''}
       <div class="wo-list">
         ${wos.map(w => `
-          <div class="wo-card">
+          <div class="wo-card" onclick="showWoDetail('${w.id}')">
             <div class="wo-card-header">
               ${renderStatusChip(w.status)}
               <span class="wo-date">${formatRelativeTime(w.lastUpdated)}</span>
             </div>
             <p class="wo-card-title">${w.title}</p>
             <div class="wo-card-actions">
-              <a href="${w.repoUrl}" class="wo-btn" target="_blank">View</a>
+              <button class="wo-btn" onclick="event.stopPropagation(); showWoDetail('${w.id}')">Details</button>
+              <button class="wo-btn secondary" onclick="event.stopPropagation(); copyAgentPack('${w.id}')">Copy Pack</button>
             </div>
           </div>
         `).join('')}
@@ -435,6 +604,9 @@ function render() {
 window.navigateTo = navigateTo;
 window.goToForante = goToForante;
 window.loadData = loadData;
+window.showWoDetail = showWoDetail;
+window.closeWoDetail = closeWoDetail;
+window.copyAgentPack = copyAgentPack;
 
 // === Init ===
 
