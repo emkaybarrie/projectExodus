@@ -33,11 +33,18 @@ export function createChrome(chromeHost){
   };
 
   function apply(cfg = {}){
+    console.log('[Chrome] apply called with:', cfg);
+    console.log('[Chrome] Footer element exists:', !!els.footer);
+
     const showHeader = cfg.showHeader !== false;
     const showFooter = cfg.showFooter !== false;
 
+    console.log('[Chrome] showFooter resolved to:', showFooter);
+
     els.header.style.display = showHeader ? '' : 'none';
     els.footer.style.display = showFooter ? '' : 'none';
+
+    console.log('[Chrome] Footer display set to:', els.footer.style.display || '(empty string = visible)');
 
     if (typeof cfg.title === 'string') setTitle(cfg.title);
   }

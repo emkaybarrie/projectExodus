@@ -37,8 +37,13 @@ export async function mountScreenSurface(surfaceId, hostEl, ctx = {}) {
   const surface = await loadSurfaceScreen(surfaceId);
 
   // Apply chrome config (if chrome exists)
+  console.log('[SurfaceRuntime] Mounting surface:', surfaceId);
+  console.log('[SurfaceRuntime] ctx.chrome exists:', !!ctx?.chrome);
+  console.log('[SurfaceRuntime] surface.chrome config:', surface.chrome);
   if (ctx?.chrome?.apply) {
     ctx.chrome.apply(surface.chrome || {});
+  } else {
+    console.warn('[SurfaceRuntime] No chrome.apply found in ctx!');
   }
 
   // Surface CSS (optional; if missing, ignore)
