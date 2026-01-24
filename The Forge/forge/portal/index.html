@@ -6,20 +6,20 @@
   <meta name="theme-color" content="#0a0e17">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Forge Portal</title>
+  <title>Forante Portal</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="portal">
+  <div class="portal" data-portal-type="forante">
     <!-- Header -->
     <header class="portal-header">
-      <div class="logo" onclick="navigateTo('dashboard')" style="cursor: pointer;">
-        <span class="logo-icon">&#9881;</span>
-        <span class="logo-text">Forge Portal</span>
+      <div class="logo" onclick="navigateTo('home')" style="cursor: pointer;">
+        <span class="logo-icon">&#127970;</span>
+        <span class="logo-text">Forante</span>
       </div>
       <div class="header-status">
         <span class="status-dot online"></span>
-        <span class="status-label">Online</span>
+        <span class="status-label">OS Console</span>
       </div>
     </header>
 
@@ -28,9 +28,29 @@
       <!-- Content rendered by app.js -->
     </main>
 
-    <!-- Footer -->
-    <footer class="portal-footer">
-      <p>Forge Portal v2.0 &middot; Phone-First Governance</p>
+    <!-- Bottom Tab Navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-tab active" data-tab="home" onclick="navigateTo('home')">
+        <span class="nav-tab-icon">&#127968;</span>
+        <span class="nav-tab-label">Home</span>
+      </button>
+      <button class="nav-tab" data-tab="forge" onclick="navigateTo('forge')">
+        <span class="nav-tab-icon">&#9881;</span>
+        <span class="nav-tab-label">Forge OS</span>
+      </button>
+      <button class="nav-tab" data-tab="entities" onclick="navigateTo('entities')">
+        <span class="nav-tab-icon">&#128736;</span>
+        <span class="nav-tab-label">Entities</span>
+      </button>
+      <button class="nav-tab" data-tab="governance" onclick="navigateTo('governance')">
+        <span class="nav-tab-icon">&#128220;</span>
+        <span class="nav-tab-label">Governance</span>
+      </button>
+    </nav>
+
+    <!-- Footer (hidden when bottom nav active) -->
+    <footer class="portal-footer hidden-mobile">
+      <p>Forante Portal v3.0 &middot; Institutional OS Console</p>
       <p class="footer-timestamp" id="timestamp"></p>
     </footer>
   </div>

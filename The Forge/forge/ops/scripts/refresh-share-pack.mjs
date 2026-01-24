@@ -25,10 +25,20 @@ const WO_DIRS = [
 // Repo-aware agents may expand it later by WO, but don't explode it.
 // Per SHARE_PACK.md directive: ensure CAPSULE, STATUS_MATRIX, REFERENCE_INDEX are included.
 const INCLUDE = [
+  // Forante constitutional layer (Model 3 governance)
+  "Forante/FORANTE_KERNEL.md",
+  "Forante/FORANTE_INDEX.md",
+  "Forante/ENTITY_CHARTER_TEMPLATE.md",
+
   // Forge core
   "The Forge/forge/FORGE_KERNEL.md",
   "The Forge/forge/FORGE_CAPSULE.md",
   "The Forge/forge/FORGE_STATE.md",
+  "The Forge/forge/FORGE_INDEX.md",
+
+  // Forge operations (includes Operating Model Lanes)
+  "The Forge/forge/ops/OPERATING_MODEL_LANES.md",
+  "The Forge/forge/ops/EXECUTOR_PLAYBOOK.md",
 
   // Claude onboarding
   "The Forge/forge/onboarding/claude/CLAUDE_SYSTEM_PROMPT.md",
@@ -322,6 +332,13 @@ function main() {
   lines.push(``);
   lines.push(`Generated: ${now}`);
   lines.push(`Commit: ${commitShort}`);
+  lines.push(``);
+  lines.push(`## Governance Model`);
+  lines.push(`**Model 3:** Forge as Institutional OS, MyFi as Flagship Entity`);
+  lines.push(``);
+  lines.push(`Constitutional Layer: **Forante** (see Forante/FORANTE_KERNEL.md)`);
+  lines.push(`Institutional OS: **Forge** (see The Forge/forge/FORGE_KERNEL.md)`);
+  lines.push(`Flagship Entity: **MyFi** (Tier 2 integration)`);
   lines.push(``);
   lines.push(`## Headlines`);
   lines.push(`- Kernel Version: ${headlines.kernelVersion || "unknown"}`);

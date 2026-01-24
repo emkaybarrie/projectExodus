@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MyFi Portal</title>
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="myfi-styles.css">
+</head>
+<body>
+  <div class="portal" data-portal-type="entity" data-entity-id="myfi">
+    <!-- Header -->
+    <header class="portal-header entity-header">
+      <div class="logo" onclick="navigateTo('home')" style="cursor: pointer;">
+        <span class="logo-icon">&#128241;</span>
+        <span class="logo-text">MyFi</span>
+      </div>
+      <div class="header-status">
+        <span class="flagship-badge-sm">Flagship</span>
+      </div>
+    </header>
+
+    <!-- Dynamic Content Area -->
+    <main id="portal-content">
+      <!-- Content rendered by myfi-app.js -->
+    </main>
+
+    <!-- Bottom Tab Navigation -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-tab active" data-tab="home" onclick="navigateTo('home')">
+        <span class="nav-tab-icon">&#127968;</span>
+        <span class="nav-tab-label">Home</span>
+      </button>
+      <button class="nav-tab" data-tab="work" onclick="navigateTo('work')">
+        <span class="nav-tab-icon">&#128203;</span>
+        <span class="nav-tab-label">Work</span>
+      </button>
+      <button class="nav-tab" data-tab="products" onclick="navigateTo('products')">
+        <span class="nav-tab-icon">&#128230;</span>
+        <span class="nav-tab-label">Products</span>
+      </button>
+      <button class="nav-tab" data-tab="envs" onclick="navigateTo('envs')">
+        <span class="nav-tab-icon">&#127760;</span>
+        <span class="nav-tab-label">Envs</span>
+      </button>
+    </nav>
+
+    <!-- Footer -->
+    <footer class="portal-footer hidden-mobile">
+      <p>MyFi Entity Portal v1.0</p>
+    </footer>
+  </div>
+
+  <script type="module" src="myfi-app.js"></script>
+</body>
+</html>
