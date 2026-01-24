@@ -1,8 +1,11 @@
 // Forge Portal - App Module
 // M2c: Live truth + Work Orders UX
 // M2c1: Fixed to use relative URLs for local + Pages compatibility
+// S3: Execute loop with status chips and executor queue
 
 const REPO_BASE = 'https://github.com/emkaybarrie/projectExodus';
+const EXECUTOR_QUEUE_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Aready-for-executor`;
+const APPROVED_WO_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Awork-order+label%3Aapproved`;
 
 // Compute Share Pack base URL relative to this script (works with spaces in paths)
 const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
@@ -182,9 +185,15 @@ async function handleExecute(wo) {
 
   if (copied) {
     showToast('"/execute" copied! Opening issue...');
-    // Try to extract issue number from WO if available (future enhancement)
-    // For now, open the general issues page filtered by work-order label
-    window.open(`${REPO_BASE}/issues?q=is%3Aissue+label%3Awork-order+label%3Aapproved`, '_blank');
+    // If we have an issue number from the WO, go directly to that issue
+    if (wo?.issueNumber) {
+      window.open(getIssueCommentUrl(wo.issueNumber), '_blank');
+    } else if (wo?.repoUrl) {
+      window.open(wo.repoUrl, '_blank');
+    } else {
+      // Fallback to approved WOs list
+      window.open(APPROVED_WO_URL, '_blank');
+    }
   } else {
     showToast('Copy "/execute" and comment on the approved issue.', 'info');
   }
@@ -276,7 +285,29 @@ function renderStatusPanel() {
   `;
 }
 
+// === Status Chip Helper ===
+
+function getStatusChip(status) {
+  const statusMap = {
+    'draft': { icon: '📝', label: 'Draft', class: 'status-draft' },
+    'pending-approval': { icon: '🟡', label: 'Pending', class: 'status-pending' },
+    'approved': { icon: '🟢', label: 'Approved', class: 'status-approved' },
+    'ready-for-executor': { icon: '🔵', label: 'Queued', class: 'status-queued' },
+    'executing': { icon: '🟣', label: 'Executing', class: 'status-executing' },
+    'executed': { icon: '✅', label: 'Executed', class: 'status-executed' },
+    'blocked': { icon: '🔴', label: 'Blocked', class: 'status-blocked' }
+  };
+  return statusMap[status] || { icon: '❓', label: status, class: 'status-unknown' };
+}
+
+function renderStatusChip(status) {
+  const chip = getStatusChip(status);
+  return `<span class="status-chip ${chip.class}">${chip.icon} ${chip.label}</span>`;
+}
+
 function renderQuickActions() {
+  const queueCount = state.workOrders?.counts?.readyForExecutor || 0;
+
   return `
     <section class="panel actions-panel">
       <h2 class="panel-title">Quick Actions</h2>
@@ -289,6 +320,10 @@ function renderQuickActions() {
           <span class="action-icon">&#9776;</span>
           <span class="action-label">Work Orders</span>
         </button>
+        <a href="${EXECUTOR_QUEUE_URL}" class="action-btn executor-queue" target="_blank" rel="noopener">
+          <span class="action-icon">&#9881;</span>
+          <span class="action-label">Executor Queue${queueCount > 0 ? ` (${queueCount})` : ''}</span>
+        </a>
         <a href="${REPO_BASE}/pulls" class="action-btn" target="_blank" rel="noopener">
           <span class="action-icon">&#8644;</span>
           <span class="action-label">Pull Requests</span>
@@ -317,17 +352,20 @@ function renderWorkOrdersList() {
         <button class="filter-chip ${state.woFilter === 'all' ? 'active' : ''}" onclick="setWoFilter('all')">
           All (${counts.total || 0})
         </button>
-        <button class="filter-chip ${state.woFilter === 'draft' ? 'active' : ''}" onclick="setWoFilter('draft')">
-          Draft (${counts.draft || 0})
-        </button>
         <button class="filter-chip ${state.woFilter === 'pending-approval' ? 'active' : ''}" onclick="setWoFilter('pending-approval')">
-          Pending (${counts.pendingApproval || 0})
+          🟡 Pending (${counts.pendingApproval || 0})
         </button>
         <button class="filter-chip ${state.woFilter === 'approved' ? 'active' : ''}" onclick="setWoFilter('approved')">
-          Approved (${counts.approved || 0})
+          🟢 Approved (${counts.approved || 0})
+        </button>
+        <button class="filter-chip ${state.woFilter === 'ready-for-executor' ? 'active' : ''}" onclick="setWoFilter('ready-for-executor')">
+          🔵 Queued (${counts.readyForExecutor || 0})
+        </button>
+        <button class="filter-chip ${state.woFilter === 'executing' ? 'active' : ''}" onclick="setWoFilter('executing')">
+          🟣 Executing (${counts.executing || 0})
         </button>
         <button class="filter-chip ${state.woFilter === 'executed' ? 'active' : ''}" onclick="setWoFilter('executed')">
-          Executed (${counts.executed || 0})
+          ✅ Executed (${counts.executed || 0})
         </button>
       </div>
 
@@ -336,7 +374,7 @@ function renderWorkOrdersList() {
         ${wos.map(wo => `
           <div class="wo-item">
             <div class="wo-item-header">
-              <span class="wo-status-badge ${wo.status}">${wo.status.replace('-', ' ')}</span>
+              ${renderStatusChip(wo.status)}
               <span class="wo-date">${formatRelativeTime(wo.lastUpdated)}</span>
             </div>
             <div class="wo-title">${wo.title}</div>
@@ -345,9 +383,18 @@ function renderWorkOrdersList() {
               ${wo.status === 'approved' ? `
                 <button class="wo-action-btn execute" onclick="handleExecuteWo('${wo.id}')">Execute</button>
               ` : ''}
+              ${wo.status === 'ready-for-executor' ? `
+                <a href="${EXECUTOR_QUEUE_URL}" class="wo-action-btn queued" target="_blank" rel="noopener">In Queue</a>
+              ` : ''}
             </div>
           </div>
         `).join('')}
+      </div>
+
+      <div class="wo-queue-link">
+        <a href="${EXECUTOR_QUEUE_URL}" class="btn-executor-queue" target="_blank" rel="noopener">
+          &#9881; Open Executor Queue on GitHub
+        </a>
       </div>
     </section>
   `;
