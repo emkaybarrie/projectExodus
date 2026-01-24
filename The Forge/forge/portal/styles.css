@@ -861,3 +861,20 @@ button {
   align-items: center;
   gap: 0.25em;
 }
+
+/* === M2c2: Deploy Button === */
+
+.action-btn.deploy-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.action-btn.deploy-btn:hover,
+.action-btn.deploy-btn:focus {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%);
+  border-color: var(--accent-success);
+}
+
+.action-btn.deploy-btn .action-icon {
+  font-size: 1.25rem;
+}

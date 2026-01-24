@@ -2,10 +2,13 @@
 // M2c: Live truth + Work Orders UX
 // M2c1: Fixed to use relative URLs for local + Pages compatibility
 // S3: Execute loop with status chips and executor queue
+// M2c2: Deploy to Production integration
 
 const REPO_BASE = 'https://github.com/emkaybarrie/projectExodus';
 const EXECUTOR_QUEUE_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Aready-for-executor`;
 const APPROVED_WO_URL = `${REPO_BASE}/issues?q=is%3Aissue+is%3Aopen+label%3Awork-order+label%3Aapproved`;
+const DEPLOY_WORKFLOW_URL = `${REPO_BASE}/actions/workflows/forge-deploy-to-prod.yml`;
+const COMPARE_URL = `${REPO_BASE}/compare/main...dev`;
 
 // Compute Share Pack base URL relative to this script (works with spaces in paths)
 const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
@@ -199,6 +202,15 @@ async function handleExecute(wo) {
   }
 }
 
+// === Deploy to Production ===
+
+async function handleDeploy() {
+  // Open the workflow dispatch page
+  const workflowUrl = `${DEPLOY_WORKFLOW_URL}`;
+  showToast('Opening Deploy workflow...', 'info');
+  window.open(workflowUrl, '_blank');
+}
+
 // === Toast Notifications ===
 
 function showToast(message, type = 'success') {
@@ -316,6 +328,10 @@ function renderQuickActions() {
           <span class="action-icon">+</span>
           <span class="action-label">Create Work Order</span>
         </button>
+        <button class="action-btn deploy-btn" onclick="handleDeploy()">
+          <span class="action-icon">&#128640;</span>
+          <span class="action-label">Deploy to Prod</span>
+        </button>
         <button class="action-btn" onclick="navigateTo('work-orders')">
           <span class="action-icon">&#9776;</span>
           <span class="action-label">Work Orders</span>
@@ -327,6 +343,10 @@ function renderQuickActions() {
         <a href="${REPO_BASE}/pulls" class="action-btn" target="_blank" rel="noopener">
           <span class="action-icon">&#8644;</span>
           <span class="action-label">Pull Requests</span>
+        </a>
+        <a href="${COMPARE_URL}" class="action-btn" target="_blank" rel="noopener">
+          <span class="action-icon">&#8800;</span>
+          <span class="action-label">Compare Branches</span>
         </a>
         <button class="action-btn" onclick="loadData()">
           <span class="action-icon">&#8635;</span>
@@ -556,6 +576,7 @@ function bindCreateWoForm() {
 window.navigateTo = navigateTo;
 window.setWoFilter = setWoFilter;
 window.loadData = loadData;
+window.handleDeploy = handleDeploy;
 
 window.handleExecuteWo = function(woId) {
   const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
