@@ -42,9 +42,9 @@ const getUserDataFromFirestore = async (uid) => {
 // At top of auth.js (or near your imports), define the routes once
 const ROUTES = {
   stable: "dashboard.html",
-  //experimental: "ProjectMyFi_vExperimental/index.html" 
-  experimental: "ProjectMyFi_vLatest/public/index.html" // change if your experimental file has a different name/path
-  //experimental: "../../../The Forge/forge/portal/index.html"
+  //experimental: "ProjectMyFi_vExperimental/index.html"
+  //experimental: "ProjectMyFi_vLatest/public/index.html" // change if your experimental file has a different name/path
+  experimental: "../../../The Forge/forge/portal/index.html"
 };
 
 // Backward-compatible signature: options is optional
@@ -95,7 +95,7 @@ export async function signupUser(data) {
       onboarding: { welcomeDone: false }
     }, { merge: true });
 
-    await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), { 
+    await setDoc(doc(db, `players/${user.uid}/financialData/cashflowData`), {
       poolAllocations: {
         essenceAllocation: Number(0.1),
         healthAllocation: Number(0.1),
