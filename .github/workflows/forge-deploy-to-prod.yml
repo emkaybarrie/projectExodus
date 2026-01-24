@@ -1,0 +1,392 @@
+name: Forge Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      auto_merge:
+        description: 'Auto-merge PR after creation'
+        required: false
+        default: false
+        type: boolean
+      pr_title:
+        description: 'Custom PR title (optional)'
+        required: false
+        type: string
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  # Gate for issue comment trigger
+  validate-deploy-comment:
+    if: github.event_name == 'issue_comment' && contains(github.event.comment.body, '/deploy')
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.validate.outputs.should_deploy }}
+    steps:
+      - name: Validate commenter permissions
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const actor = context.actor;
+            const perm = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: actor
+            });
+            const allowed = ["admin", "maintain", "write"].includes(perm.data.permission);
+
+            if (!allowed) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body: `❌ **Deploy Failed**: User @${actor} lacks permission (${perm.data.permission}).`
+              });
+              core.setFailed(`Actor ${actor} lacks permission`);
+              return;
+            }
+
+            core.setOutput("should_deploy", "true");
+            console.log(`Deploy authorized for ${actor}`);
+
+  # Main deploy job
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || needs.validate-deploy-comment.outputs.should_deploy == 'true'
+    needs: [validate-deploy-comment]
+    # Skip needs check for workflow_dispatch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for changes between dev and main
+        id: check_changes
+        run: |
+          git fetch origin main
+          COMMITS_AHEAD=$(git rev-list --count origin/main..dev)
+          echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+
+          if [ "$COMMITS_AHEAD" -eq "0" ]; then
+            echo "No changes to deploy (dev is in sync with main)"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found $COMMITS_AHEAD commit(s) to deploy"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for existing PR
+        id: check_pr
+        if: steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr list --base main --head dev --json url,number -q '.[0]')
+          if [ -n "$PR_URL" ]; then
+            PR_NUMBER=$(echo "$PR_URL" | jq -r '.number')
+            echo "existing_pr=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "Found existing PR #$PR_NUMBER"
+          else
+            echo "existing_pr=" >> $GITHUB_OUTPUT
+            echo "No existing PR found"
+          fi
+
+      - name: Generate PR body
+        id: pr_body
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_pr.outputs.existing_pr == ''
+        run: |
+          # Get commit summary
+          COMMITS=$(git log --oneline origin/main..dev | head -20)
+          COMMIT_COUNT=$(git rev-list --count origin/main..dev)
+
+          # Build PR body
+          cat << 'PREOF' > pr_body.md
+          ## Deploy: dev → main
+
+          **Triggered by:** ${{ github.actor }}
+          **Commits:** $COMMIT_COUNT
+
+          ### Changes
+          ```
+          $COMMITS
+          ```
+
+          ### Checklist
+          - [ ] Changes tested on dev
+          - [ ] No breaking changes
+          - [ ] Ready for production
+
+          ---
+          _Automated deployment via Forge Portal_
+          PREOF
+
+          # Replace variables in the file
+          sed -i "s/\$COMMIT_COUNT/$COMMIT_COUNT/g" pr_body.md
+          sed -i "s|\$COMMITS|$COMMITS|g" pr_body.md
+
+      - name: Create PR
+        id: create_pr
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_pr.outputs.existing_pr == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Determine PR title
+          if [ -n "${{ inputs.pr_title }}" ]; then
+            TITLE="${{ inputs.pr_title }}"
+          else
+            TITLE="🚀 Deploy: dev → main"
+          fi
+
+          PR_URL=$(gh pr create \
+            --base main \
+            --head dev \
+            --title "$TITLE" \
+            --body-file pr_body.md)
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "Created PR: $PR_URL"
+
+      - name: Auto-merge PR
+        if: inputs.auto_merge == true && (steps.create_pr.outputs.pr_url != '' || steps.check_pr.outputs.existing_pr != '')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ steps.check_pr.outputs.existing_pr }}" ]; then
+            PR_NUMBER="${{ steps.check_pr.outputs.existing_pr }}"
+          else
+            PR_NUMBER=$(echo "${{ steps.create_pr.outputs.pr_url }}" | grep -oE '[0-9]+$')
+          fi
+
+          echo "Merging PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --merge --auto
+
+      - name: Post success comment (if triggered from issue)
+        if: github.event_name == 'issue_comment' && steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ steps.create_pr.outputs.pr_url }}" ]; then
+            PR_INFO="Created new PR: ${{ steps.create_pr.outputs.pr_url }}"
+          elif [ -n "${{ steps.check_pr.outputs.existing_pr }}" ]; then
+            PR_INFO="Existing PR found: #${{ steps.check_pr.outputs.existing_pr }}"
+          else
+            PR_INFO="PR status unknown"
+          fi
+
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "✅ **Deploy initiated**
+
+          $PR_INFO
+
+          Commits to deploy: ${{ steps.check_changes.outputs.commits_ahead }}
+
+          _Triggered by @${{ github.actor }}_"
+
+      - name: Post no-changes comment
+        if: github.event_name == 'issue_comment' && steps.check_changes.outputs.has_changes == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment ${{ github.event.issue.number }} \
+            --body "ℹ️ **No changes to deploy**
+
+          The \`dev\` branch is already in sync with \`main\`.
+
+          _Checked by @${{ github.actor }}_"
+
+  # Standalone job for workflow_dispatch (doesn't need validate-deploy-comment)
+  deploy-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: dev
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git fetch origin main
+          COMMITS_AHEAD=$(git rev-list --count origin/main..dev)
+          echo "commits_ahead=$COMMITS_AHEAD" >> $GITHUB_OUTPUT
+
+          if [ "$COMMITS_AHEAD" -eq "0" ]; then
+            echo "::warning::No changes to deploy (dev is in sync with main)"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Found $COMMITS_AHEAD commit(s) to deploy"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for existing PR
+        id: check_pr
+        if: steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_DATA=$(gh pr list --base main --head dev --json url,number -q '.[0]' || echo "")
+          if [ -n "$PR_DATA" ] && [ "$PR_DATA" != "null" ]; then
+            PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
+            PR_URL=$(echo "$PR_DATA" | jq -r '.url')
+            echo "existing_pr=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "existing_pr_url=$PR_URL" >> $GITHUB_OUTPUT
+            echo "Found existing PR #$PR_NUMBER: $PR_URL"
+          else
+            echo "existing_pr=" >> $GITHUB_OUTPUT
+            echo "No existing PR found"
+          fi
+
+      - name: Extract Work Order IDs
+        id: extract_wos
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          # Extract unique WO IDs from commit messages (pattern: FO-Something-Something)
+          # Use grep with || true to prevent exit code 1 when no matches
+          WO_IDS=$(git log --oneline origin/main..dev | grep -oE 'FO-[A-Za-z0-9]+-[A-Za-z0-9-]+' || true)
+          WO_IDS=$(echo "$WO_IDS" | sort -u | grep -v '^$' || true)
+
+          if [ -n "$WO_IDS" ]; then
+            # Format as markdown list
+            WO_LIST=$(echo "$WO_IDS" | sed 's/^/- /')
+            WO_COUNT=$(echo "$WO_IDS" | wc -l | tr -d ' ')
+            echo "wo_list<<EOF" >> $GITHUB_OUTPUT
+            echo "$WO_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "wo_count=$WO_COUNT" >> $GITHUB_OUTPUT
+            echo "Found $WO_COUNT Work Order(s): $WO_IDS"
+          else
+            echo "wo_list=" >> $GITHUB_OUTPUT
+            echo "wo_count=0" >> $GITHUB_OUTPUT
+            echo "No Work Order IDs found in commits"
+          fi
+
+      - name: Create PR
+        id: create_pr
+        if: steps.check_changes.outputs.has_changes == 'true' && steps.check_pr.outputs.existing_pr == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WO_LIST: ${{ steps.extract_wos.outputs.wo_list }}
+          WO_COUNT: ${{ steps.extract_wos.outputs.wo_count }}
+          COMMIT_COUNT: ${{ steps.check_changes.outputs.commits_ahead }}
+          ACTOR: ${{ github.actor }}
+          CUSTOM_TITLE: ${{ inputs.pr_title }}
+        run: |
+          # Get commit summary
+          COMMITS=$(git log --oneline origin/main..dev | head -15)
+
+          # Determine PR title
+          if [ -n "$CUSTOM_TITLE" ]; then
+            TITLE="$CUSTOM_TITLE"
+          else
+            TITLE="🚀 Deploy: dev → main ($COMMIT_COUNT commits)"
+          fi
+
+          # Build PR body using heredoc for clean multiline handling
+          cat > pr_body.md << 'BODYEOF'
+          ## Deploy: dev → main
+          BODYEOF
+
+          # Append dynamic content
+          echo "" >> pr_body.md
+          echo "**Triggered by:** @$ACTOR" >> pr_body.md
+          echo "**Commits:** $COMMIT_COUNT" >> pr_body.md
+          echo "**Work Orders:** ${WO_COUNT:-0}" >> pr_body.md
+          echo "" >> pr_body.md
+
+          # Add WO section if we have any
+          if [ -n "$WO_LIST" ]; then
+            echo "### Work Orders Included" >> pr_body.md
+            echo "$WO_LIST" >> pr_body.md
+            echo "" >> pr_body.md
+          fi
+
+          echo "### Recent Changes" >> pr_body.md
+          echo '```' >> pr_body.md
+          echo "$COMMITS" >> pr_body.md
+          echo '```' >> pr_body.md
+          echo "" >> pr_body.md
+          echo "---" >> pr_body.md
+          echo "_Automated deployment via Forge Portal_" >> pr_body.md
+
+          # Create the PR
+          PR_URL=$(gh pr create \
+            --base main \
+            --head dev \
+            --title "$TITLE" \
+            --body-file pr_body.md)
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "✅ Created PR: $PR_URL"
+
+      - name: Auto-merge PR
+        if: inputs.auto_merge == true && steps.check_changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXISTING_PR: ${{ steps.check_pr.outputs.existing_pr }}
+          NEW_PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+        run: |
+          if [ -n "$EXISTING_PR" ]; then
+            PR_NUMBER="$EXISTING_PR"
+          elif [ -n "$NEW_PR_URL" ]; then
+            PR_NUMBER=$(echo "$NEW_PR_URL" | grep -oE '[0-9]+$')
+          else
+            echo "No PR to merge"
+            exit 0
+          fi
+
+          echo "Enabling auto-merge for PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --merge --auto || echo "Auto-merge may require branch protection rules"
+
+      - name: Summary
+        env:
+          HAS_CHANGES: ${{ steps.check_changes.outputs.has_changes }}
+          COMMITS_AHEAD: ${{ steps.check_changes.outputs.commits_ahead }}
+          NEW_PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          EXISTING_PR_URL: ${{ steps.check_pr.outputs.existing_pr_url }}
+          WO_COUNT: ${{ steps.extract_wos.outputs.wo_count }}
+          WO_LIST: ${{ steps.extract_wos.outputs.wo_list }}
+          AUTO_MERGE: ${{ inputs.auto_merge }}
+        run: |
+          echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$HAS_CHANGES" == "false" ]; then
+            echo "ℹ️ No changes to deploy - dev is in sync with main" >> $GITHUB_STEP_SUMMARY
+          elif [ -n "$NEW_PR_URL" ]; then
+            echo "✅ Created PR: $NEW_PR_URL" >> $GITHUB_STEP_SUMMARY
+          elif [ -n "$EXISTING_PR_URL" ]; then
+            echo "ℹ️ Existing PR: $EXISTING_PR_URL" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ Deploy workflow completed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commits ahead:** ${COMMITS_AHEAD:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "**Work Orders:** ${WO_COUNT:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "**Auto-merge:** ${AUTO_MERGE:-false}" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "$WO_LIST" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Work Orders in this Deploy" >> $GITHUB_STEP_SUMMARY
+            echo "$WO_LIST" >> $GITHUB_STEP_SUMMARY
+          fi
