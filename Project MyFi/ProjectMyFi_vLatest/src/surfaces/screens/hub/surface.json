@@ -6,6 +6,7 @@
   "slots": [
     { "id": "statusBar", "part": { "kind": "StatusBar" } },
     { "id": "vitalsHud", "card": true, "part": { "kind": "VitalsHUD" } },
-    { "id": "encounterWindow", "card": true, "part": { "kind": "EncounterWindow" } }
+    { "id": "encounterWindow", "card": true, "part": { "kind": "EncounterWindow" } },
+    { "id": "quickLinks", "card": true, "part": { "kind": "QuickLinks" } }
   ]
 }

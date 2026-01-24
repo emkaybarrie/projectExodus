@@ -7,6 +7,7 @@
     { "kind": "ErrorCard", "category": "primitive", "path": "./primitives/ErrorCard/part.js" },
     { "kind": "StatusBar", "category": "primitive", "path": "./primitives/StatusBar/part.js" },
     { "kind": "VitalsHUD", "category": "prefab", "path": "./prefabs/VitalsHUD/part.js" },
-    { "kind": "EncounterWindow", "category": "prefab", "path": "./prefabs/EncounterWindow/part.js" }
+    { "kind": "EncounterWindow", "category": "prefab", "path": "./prefabs/EncounterWindow/part.js" },
+    { "kind": "QuickLinks", "category": "prefab", "path": "./prefabs/QuickLinks/part.js" }
   ]
 }

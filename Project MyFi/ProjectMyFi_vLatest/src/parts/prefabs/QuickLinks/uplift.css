@@ -1,0 +1,62 @@
+/* QuickLinks Part — Quick access buttons */
+
+.Part-QuickLinks {
+  padding: var(--space-md, 1rem);
+}
+
+.QuickLinks__header {
+  margin-bottom: var(--space-sm, 0.5rem);
+}
+
+.QuickLinks__title {
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--color-text-muted, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.QuickLinks__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--space-sm, 0.5rem);
+}
+
+.QuickLinks__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs, 0.25rem);
+  padding: var(--space-md, 1rem);
+  background: var(--color-surface-elevated, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.QuickLinks__link:hover {
+  background: var(--color-surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--color-accent, #ff6b35);
+  transform: translateY(-2px);
+}
+
+.QuickLinks__link:active {
+  transform: translateY(0);
+}
+
+.QuickLinks__linkIcon {
+  font-size: 1.5rem;
+}
+
+.QuickLinks__linkLabel {
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  color: var(--color-text, #fff);
+}
+
+.QuickLinks__linkSub {
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--color-text-muted, #999);
+}
