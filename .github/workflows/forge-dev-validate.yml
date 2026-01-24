@@ -1,0 +1,142 @@
+name: Forge Dev Validate
+
+on:
+  push:
+    branches: ["dev"]
+    paths:
+      - "The Forge/**"
+      - "Project MyFi/**"
+      - "index.html"
+      - "styles.css"
+      - "script.js"
+      - ".github/workflows/forge-dev-validate.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "The Forge/**"
+      - "Project MyFi/**"
+      - "index.html"
+      - "styles.css"
+      - "script.js"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Forge Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate Share Pack (validation mode)
+        id: sharepack
+        run: |
+          echo "=== Generating Share Pack (validation, no commit) ==="
+          node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+          echo "=== Share Pack generated ==="
+
+          # Check outputs exist
+          if [ -f "The Forge/forge/exports/share-pack/share-pack.index.json" ]; then
+            echo "share_pack_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ share-pack.index.json exists"
+          else
+            echo "share_pack_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ share-pack.index.json missing"
+            exit 1
+          fi
+
+          if [ -f "The Forge/forge/exports/share-pack/work-orders.index.json" ]; then
+            echo "work_orders_exists=true" >> $GITHUB_OUTPUT
+            echo "✅ work-orders.index.json exists"
+          else
+            echo "work_orders_exists=false" >> $GITHUB_OUTPUT
+            echo "❌ work-orders.index.json missing"
+            exit 1
+          fi
+
+      - name: Validate JSON syntax
+        run: |
+          echo "=== Validating JSON syntax ==="
+
+          # Validate share-pack.index.json
+          if node -e "JSON.parse(require('fs').readFileSync('The Forge/forge/exports/share-pack/share-pack.index.json'))"; then
+            echo "✅ share-pack.index.json is valid JSON"
+          else
+            echo "❌ share-pack.index.json is invalid JSON"
+            exit 1
+          fi
+
+          # Validate work-orders.index.json
+          if node -e "JSON.parse(require('fs').readFileSync('The Forge/forge/exports/share-pack/work-orders.index.json'))"; then
+            echo "✅ work-orders.index.json is valid JSON"
+          else
+            echo "❌ work-orders.index.json is invalid JSON"
+            exit 1
+          fi
+
+      - name: Validate Portal HTML
+        run: |
+          echo "=== Checking Portal files exist ==="
+
+          if [ -f "The Forge/forge/portal/index.html" ]; then
+            echo "✅ Portal index.html exists"
+          else
+            echo "❌ Portal index.html missing"
+            exit 1
+          fi
+
+          if [ -f "The Forge/forge/portal/app.js" ]; then
+            echo "✅ Portal app.js exists"
+          else
+            echo "❌ Portal app.js missing"
+            exit 1
+          fi
+
+          if [ -f "The Forge/forge/portal/styles.css" ]; then
+            echo "✅ Portal styles.css exists"
+          else
+            echo "❌ Portal styles.css missing"
+            exit 1
+          fi
+
+      - name: Validate app.js module syntax
+        run: |
+          echo "=== Checking app.js for syntax errors ==="
+          # Use Node to parse the module (won't execute, just parse)
+          node --check "The Forge/forge/portal/app.js" 2>&1 || {
+            echo "❌ app.js has syntax errors"
+            exit 1
+          }
+          echo "✅ app.js syntax OK"
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-validation-artifacts
+          path: |
+            The Forge/forge/exports/share-pack/share-pack.index.json
+            The Forge/forge/exports/share-pack/work-orders.index.json
+            The Forge/forge/exports/share-pack/SHARE_PACK.md
+          retention-days: 7
+
+      - name: Validation summary
+        run: |
+          echo "============================================"
+          echo "FORGE DEV VALIDATION COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "Share Pack: ✅ Generated"
+          echo "JSON Syntax: ✅ Valid"
+          echo "Portal Files: ✅ Present"
+          echo "App.js Syntax: ✅ OK"
+          echo ""
+          echo "Ready for PR to main or continued dev work."
+          echo "============================================"

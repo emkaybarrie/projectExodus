@@ -1,0 +1,196 @@
+name: Forge Portal Preview
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      deploy_preview:
+        description: 'Deploy dev branch as preview (replaces prod temporarily)'
+        type: boolean
+        default: false
+      source_branch:
+        description: 'Branch to preview (default: dev)'
+        type: string
+        default: 'dev'
+
+permissions:
+  contents: read
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  # Job 1: Build and validate preview (runs on PR or workflow_dispatch)
+  build-preview:
+    name: Build Preview Artifact
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - name: Checkout PR branch
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Checkout specified branch
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate Share Pack for preview
+        run: |
+          echo "=== Generating Share Pack for preview ==="
+          node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+          echo "✅ Share Pack generated"
+
+      - name: Validate JSON outputs
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('The Forge/forge/exports/share-pack/share-pack.index.json'))"
+          node -e "JSON.parse(require('fs').readFileSync('The Forge/forge/exports/share-pack/work-orders.index.json'))"
+          echo "✅ JSON indices valid"
+
+      - name: Upload preview artifact
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-preview-${{ github.event.pull_request.number || github.run_number }}
+          path: |
+            index.html
+            styles.css
+            script.js
+            img/
+            The Forge/forge/portal/
+            The Forge/forge/exports/share-pack/
+            Project MyFi/
+          retention-days: 14
+
+      - name: Comment on PR with preview instructions
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const artifactName = `forge-preview-${context.payload.pull_request.number}`;
+
+            const body = `## 🔍 Forge Portal Preview Ready
+
+            **Status:** ✅ Preview artifact built successfully
+
+            ### How to Test Locally
+
+            1. **Download the artifact** from the [workflow run](${runUrl})
+               - Scroll to "Artifacts" section
+               - Download \`${artifactName}\`
+
+            2. **Unzip and serve locally:**
+               \`\`\`bash
+               cd ~/Downloads
+               unzip ${artifactName}.zip -d preview
+               cd preview
+               python -m http.server 8080
+               \`\`\`
+
+            3. **Open in browser:**
+               - Main site: http://localhost:8080/
+               - Forge Portal: http://localhost:8080/The%20Forge/forge/portal/
+
+            ### Phone Testing (via network)
+            \`\`\`bash
+            # Find your local IP
+            ipconfig getifaddr en0  # Mac
+            hostname -I             # Linux
+
+            # Then on phone, visit:
+            # http://<your-ip>:8080/The%20Forge/forge/portal/
+            \`\`\`
+
+            ---
+
+            _Preview built from commit: \`${context.payload.pull_request.head.sha.substring(0, 7)}\`_
+            _Artifact expires in 14 days_`;
+
+            // Find and update existing comment, or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number
+            });
+
+            const botComment = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Forge Portal Preview')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: body
+              });
+            }
+
+  # Job 2: Optional deployment preview (workflow_dispatch only)
+  deploy-preview:
+    name: Deploy Preview (Manual)
+    needs: build-preview
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_preview
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout specified branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate Share Pack
+        run: node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy to GitHub Pages (Preview)
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Warn about preview deployment
+        run: |
+          echo "============================================"
+          echo "⚠️  WARNING: PREVIEW DEPLOYMENT ACTIVE"
+          echo "============================================"
+          echo ""
+          echo "The production Pages site is now showing:"
+          echo "  Branch: ${{ inputs.source_branch }}"
+          echo ""
+          echo "To restore production:"
+          echo "  1. Push to main, OR"
+          echo "  2. Re-run forge-portal-pages.yml workflow"
+          echo "============================================"
