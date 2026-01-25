@@ -2,7 +2,24 @@
 
 Status: Canonical
 Audience: All agents
-Last updated: 2026-01-24 (Post Foundational Alignment Pack)
+Last updated: 2026-01-25 (Post Agent Infrastructure & Reconciliation)
+
+---
+
+## Reconciliation Status
+
+**Latest Reconciliation:** 2026-01-25
+**Verdict:** Ready with Conditions
+
+The Forge has been audited for MyFi Hub baseline readiness.
+
+- [Reconciliation Report](./audits/RECONCILIATION_REPORT_2026-01-25.md)
+- [Reconciliation Gaps](./audits/RECONCILIATION_GAPS_2026-01-25.md)
+
+**Conditions:**
+1. FORGE_STATE.md updated (this file) ✅
+2. share-pack.index.json refresh when automation available
+3. WO location consolidation (non-blocking, backlog)
 
 ---
 
@@ -27,11 +44,19 @@ See: [Forante Kernel](../../Forante/FORANTE_KERNEL.md) for constitutional govern
 - **Entity Registry:** ✅ Initialized (`portal/data/entities.json`)
 
 ### Constitutional Documents Status
-- **Forante Kernel:** ✅ Established
+- **Forante Kernel:** ✅ Established (Section 7 added: Forge Constitutional Protections)
 - **Forante Index:** ✅ Established
-- **Forge Kernel:** ✅ Aligned to Model 3
+- **Forge Kernel:** ✅ Aligned to Model 3 (Sections 2B, 6A, 6B, 9A, 11-13 added)
 - **Operating Model Lanes:** ✅ Defined
 - **Share Pack:** ✅ Includes Forante layer
+
+### Contracts Status
+- **AGENT_ONBOARDING_CONTRACT.md:** ✅ Created (A1)
+- **WORK_ORDER_LIFECYCLE_CONTRACT.md:** ✅ Created (A2)
+- **FORGE_OS_ROLE_SYSTEM.md:** ✅ Created (G1)
+- **REPORTING_SIGNALS_CONTRACT.md:** ✅ Created (R2)
+- **WORK_ORDER_INDEX_CONTRACT.md:** ✅ Created (P3)
+- **E2E_WORKFLOW_PLAYBOOK.md:** ✅ Created (P4)
 
 ---
 
@@ -209,9 +234,27 @@ The Forge is now operational with Claude Code executing Work Orders.
 
 ---
 
-**Work Orders Executed This Session:**
-- FO-Forge-S3-Execute-Loop-Mobile-Repo-Agent
-- FO-Forge-W1-Session-WindDown-Integrity-Test-And-Next-Menu
-- Share Pack Refresh (Forge Compliant)
+**Work Orders Executed This Session (2026-01-25):**
+
+Session 3: Agent Infrastructure & Reconciliation
+- FO-Forge-C2-NonRegression-Principle — Constitutional safeguard
+- FO-Forge-P4-Director-E2E-Workflow-Guidance — Playbook + Portal UX
+- FO-Forge-RC1-Repo-Reconciliation-and-Gap-Harvest — Final audit
+
+Session 2: Agent Onboarding & Lifecycle
+- FO-Forge-A1-Agent-Onboarding-Strategy-v1 — Capability axes, trust graduation
+- FO-Forge-A2-WorkOrder-Conveyor-Orchestration — Factory conveyor model
+
+Session 1: Role System & Reporter
+- FO-Forge-G1-ForgeOS-RoleSystem-v1 — 7 canonical roles
+- FO-Forge-R1-Reporter-Role-Definition — Reporter role expansion
+- FO-Forge-R2-Reporting-Signals-Contract — Signals contract
+- FO-Forge-R3-Reporter-Evolution-Feedback-Loop — Evidence-driven evolution
+
+Earlier:
+- FO-Forge-P3-WorkOrder-Index-Enrichment — Schema extensions
+- FO-Forge-C1-Constitutional-Updates — 3 constitutional laws
+
+**MyFi Readiness:** Ready with Conditions (see Reconciliation Status)
 
 End of Forge State

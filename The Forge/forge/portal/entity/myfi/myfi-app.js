@@ -10,6 +10,20 @@ const MYFI_PRODUCT_STATE_URL = `${REPO_BASE}/blob/main/The%20Forge/myfi/PRODUCT_
 const MYFI_PARITY_MATRIX_URL = `${REPO_BASE}/blob/main/The%20Forge/myfi/MIGRATION_PARITY_MATRIX.md`;
 const FORGE_WO_URL = `${REPO_BASE}/issues/new?template=forge_work_order.yml&title=[WO]+FO-Forge-`;
 const MYFI_WO_URL = `${REPO_BASE}/issues/new?template=forge_work_order.yml&title=[WO]+FO-MyFi-`;
+const E2E_PLAYBOOK_URL = `${REPO_BASE}/blob/main/The%20Forge/forge/ops/E2E_WORKFLOW_PLAYBOOK.md`;
+
+// E2E Workflow Phases
+const E2E_PHASES = [
+  { id: 'draft', name: 'Draft', role: 'Director / Architect', icon: '&#128221;' },
+  { id: 'approved', name: 'Approved', role: 'Director → Forge', icon: '&#128994;' },
+  { id: 'executing', name: 'Executing', role: 'Executor', icon: '&#9881;' },
+  { id: 'verified', name: 'Verified', role: 'Verifier–Tester', icon: '&#128270;' },
+  { id: 'deployed-dev', name: 'Deployed Dev', role: 'Executor / Automation', icon: '&#128187;' },
+  { id: 'promoted', name: 'Promoted', role: 'Director', icon: '&#128640;' },
+  { id: 'deployed-prod', name: 'Deployed Prod', role: 'Executor / Automation', icon: '&#127919;' },
+  { id: 'observed', name: 'Observed', role: 'Reporter', icon: '&#128200;' },
+  { id: 'evolved', name: 'Evolved', role: 'Evolution Agent', icon: '&#128161;' }
+];
 
 // Compute data URLs relative to portal root
 const SHARE_PACK_BASE = new URL('../../../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
@@ -25,6 +39,7 @@ const state = {
   currentScreen: 'home',
   productFilter: 'all',
   selectedWo: null,
+  selectedE2EPhase: 'executing',
   loading: true,
   error: null
 };
@@ -224,6 +239,64 @@ Execute according to EXECUTOR_PLAYBOOK.md protocol.
   showToast(copied ? 'Agent Pack copied!' : 'Copy failed', copied ? 'success' : 'error');
 }
 
+// === E2E Workflow Functions ===
+
+function setE2EPhase(phaseId) {
+  state.selectedE2EPhase = phaseId;
+  render();
+}
+
+async function copyPhaseAgentPack(phaseId, woId = null) {
+  const phase = E2E_PHASES.find(p => p.id === phaseId);
+  if (!phase) {
+    showToast('Phase not found', 'error');
+    return;
+  }
+
+  const wo = woId ? state.workOrders?.workOrders?.find(w => w.id === woId) : null;
+  const woSection = wo ? `
+## Work Order
+- ID: ${wo.id}
+- Title: ${wo.title}
+- Status: ${wo.status}
+` : `
+## Work Order
+- ID: [SELECT A WORK ORDER]
+- Title: [WO TITLE]
+- Status: [STATUS]
+`;
+
+  const agentPack = `# Agent Pack — Phase: ${phase.name} (MyFi)
+${woSection}
+## Phase Requirements
+- Role: ${phase.role}
+- Phase: ${phase.name}
+- Lane: MyFi
+
+## Constitutional Reminders
+- **Acceptance Criteria Supremacy:** Criteria are the binding definition of done
+- **Non-Regression Principle:** Cannot weaken constitutional guarantees
+- **Provenance Required:** Record agent type, name, mode at completion
+
+## Canonical References
+- Forge Kernel: The Forge/forge/FORGE_KERNEL.md
+- Agent Onboarding: The Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md
+- WO Lifecycle: The Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md
+- Reporting Signals: The Forge/forge/contracts/REPORTING_SIGNALS_CONTRACT.md
+- E2E Playbook: The Forge/forge/ops/E2E_WORKFLOW_PLAYBOOK.md
+
+## Closure Checklist
+- [ ] All acceptance criteria addressed
+- [ ] Provenance recorded
+- [ ] Artifacts produced per phase requirements
+- [ ] No regressions introduced
+- [ ] Handoff ready for next phase
+`;
+
+  const copied = await copyToClipboard(agentPack);
+  showToast(copied ? `${phase.name} Agent Pack copied!` : 'Copy failed', copied ? 'success' : 'error');
+}
+
 function renderWoModal() {
   const wo = state.selectedWo;
   if (!wo) return;
@@ -394,6 +467,37 @@ function renderWorkTab() {
       <div class="status-row ${approvedCount > 0 ? 'highlight' : ''}">
         <span class="status-label">Ready to Execute</span>
         <span class="status-value">${approvedCount}</span>
+      </div>
+    </section>
+
+    <section class="panel forge-e2e-panel">
+      <h2 class="panel-title">E2E Workflow</h2>
+      <p class="panel-subtitle-sm">Director-triggered workflow phases</p>
+      <div class="e2e-phase-list">
+        ${E2E_PHASES.map(phase => `
+          <button class="e2e-phase-chip ${state.selectedE2EPhase === phase.id ? 'active' : ''}" onclick="setE2EPhase('${phase.id}')">
+            <span class="phase-icon">${phase.icon}</span>
+            <span class="phase-name">${phase.name}</span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="e2e-phase-detail">
+        ${(() => {
+          const phase = E2E_PHASES.find(p => p.id === state.selectedE2EPhase);
+          return phase ? `
+            <div class="phase-info">
+              <span class="phase-role">Role: <strong>${phase.role}</strong></span>
+            </div>
+          ` : '';
+        })()}
+      </div>
+      <div class="e2e-actions">
+        <button class="action-btn-sm primary" onclick="copyPhaseAgentPack('${state.selectedE2EPhase}')">
+          Copy Phase Agent Pack
+        </button>
+        <a href="${E2E_PLAYBOOK_URL}" class="action-btn-sm" target="_blank">
+          Open Playbook
+        </a>
       </div>
     </section>
 
@@ -607,6 +711,8 @@ window.loadData = loadData;
 window.showWoDetail = showWoDetail;
 window.closeWoDetail = closeWoDetail;
 window.copyAgentPack = copyAgentPack;
+window.setE2EPhase = setE2EPhase;
+window.copyPhaseAgentPack = copyPhaseAgentPack;
 
 // === Init ===
 

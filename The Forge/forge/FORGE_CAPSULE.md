@@ -248,6 +248,11 @@ request input in Forge-approved formats
 
 Teaching the process is part of the job.
 
+**Non-Regression Principle:**
+The Forge is constitutionally protected against silent drift. Any change that weakens role separation, verification gates, provenance, constitutional binding, or observability is a regression. Regressions require explicit Director approval via Work Order with stated rationale, compensating controls, and expiry plan. Verifier–Tester treats suspected regressions as blocking conditions.
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Section 9A for full definition.
+
 12. Constitutional Laws
 
 Three laws govern Work Order completion and evolution:

@@ -134,7 +134,20 @@ The Share Pack represents the canonical truth. Repo documents are applied law th
 
 ---
 
-## 7. Cross-References
+## 7. Forge Constitutional Protections
+
+Forge OS (the institutional operating system) is protected by constitutional safeguards that prevent gradual erosion of its guarantees.
+
+**Non-Regression Principle:**
+Any change to Forge that weakens authority separation, verification gates, provenance requirements, constitutional binding, or observability is considered a regression. Regressions are invalid unless explicitly approved by the Director with stated rationale, compensating controls, and rollback plan.
+
+This ensures the Forge cannot be hollowed out through incremental "small edits" or convenience changes. Entities (including MyFi) inherit these protections and cannot circumvent them.
+
+See: [Forge Kernel Section 9A](../The%20Forge/forge/FORGE_KERNEL.md) for the full Non-Regression Principle.
+
+---
+
+## 8. Cross-References
 
 - [Forge Kernel](../The%20Forge/forge/FORGE_KERNEL.md) — Operational law for the Forge
 - [Forge Index](../The%20Forge/forge/FORGE_INDEX.md) — Navigation to Forge artifacts

@@ -330,6 +330,24 @@ Reporter aggregates across all phases for evolution evidence.
 
 ---
 
+## 6B. E2E Workflow Playbook (Operational Guidance)
+
+Until Forge automation is complete, the Director triggers end-to-end workflows manually.
+
+The **E2E Workflow Playbook** provides:
+- Phase-by-phase checklist aligned to the state machine
+- Role responsibilities per phase
+- Required artifacts per phase
+- "What to do when stuck" guidance
+- Constitutional binding reminders for agent onboarding
+- Agent Pack template for each phase
+
+This is the **canonical way to work** until automation Work Orders are approved.
+
+See: [E2E_WORKFLOW_PLAYBOOK.md](./ops/E2E_WORKFLOW_PLAYBOOK.md) for the full playbook.
+
+---
+
 ## 7. Self-Improvement Mandate (Critical)
 
 The Forge is explicitly allowed—and required—to improve itself.
@@ -375,6 +393,37 @@ Agents must:
 - guide the Director back onto the process
 
 Compliance alone is insufficient; **guidance is required**.
+
+### 9A. Non-Regression Principle
+
+The Forge is constitutionally protected against silent drift or erosion of guarantees.
+
+**Definition:**
+Any change that weakens or bypasses constitutional guarantees is a **regression**. Regressions are invalid unless explicitly approved by the Director via a Work Order whose acceptance criteria calls out the regression risk.
+
+**What Constitutes Regression:**
+- Weakening role separation (e.g., allowing Executor to approve its own work)
+- Reducing verification/testing gates
+- Bypassing provenance requirements
+- Bypassing the Forge Context Envelope or constitutional binding
+- Reducing reporting/observability required for evidence-driven evolution
+- Introducing silent automation without Reporter-visible artifacts
+- Circumventing Acceptance Criteria Supremacy
+
+**Requirements for Approved Regressions:**
+If a regression is genuinely necessary, the approving Work Order MUST include:
+- Explicit rationale for why the regression is required
+- Explicit compensating controls that mitigate the risk
+- Explicit expiry or rollback plan where appropriate
+- Director sign-off with awareness of the constitutional impact
+
+**Enforcement:**
+- Verifier–Tester MUST treat suspected regressions as a **blocking condition**
+- Only a Director-approved Work Order with explicit regression acknowledgement can override
+- All regression approvals are logged as Reporter signals for institutional memory
+- Evolution Agent must flag any observed drift patterns that may constitute gradual regression
+
+This principle ensures the Forge cannot be hollowed out through incremental "small edits" or convenience changes.
 
 ---
 

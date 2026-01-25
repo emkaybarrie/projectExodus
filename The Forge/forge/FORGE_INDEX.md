@@ -33,6 +33,7 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - ONBOARDING_WIZARD.md — human + agent onboarding
 
 ## Operations
+- [ops/E2E_WORKFLOW_PLAYBOOK.md](./ops/E2E_WORKFLOW_PLAYBOOK.md) — Director E2E workflow guidance (canonical)
 - [ops/OPERATING_MODEL_LANES.md](./ops/OPERATING_MODEL_LANES.md) — Parallel development governance
 - [ops/EXECUTOR_PLAYBOOK.md](./ops/EXECUTOR_PLAYBOOK.md) — AI executor protocol
 - [ops/BRANCHING_PLAYBOOK.md](./ops/BRANCHING_PLAYBOOK.md) — Git branch discipline
