@@ -1,7 +1,67 @@
 {
-  "generated": "2026-01-25T12:00:00.000Z",
-  "commit": "98bd2e6",
+  "generated": "2026-01-25T18:00:00.000Z",
+  "commit": "c079500",
   "workOrders": [
+    {
+      "id": "FO-Forge-G1-ForgeOS-RoleSystem-v1",
+      "title": "Forge OS Role System v1",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/FORGE_OS_ROLE_SYSTEM.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/FORGE_OS_ROLE_SYSTEM.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R1-Reporter-Role-Definition",
+      "title": "Reporter Role Definition",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/FORGE_KERNEL.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/FORGE_KERNEL.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R2-Reporting-Signals-Contract",
+      "title": "Reporting Signals & Metrics Contract",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/REPORTING_SIGNALS_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/REPORTING_SIGNALS_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R3-Reporter-Evolution-Feedback-Loop",
+      "title": "Reporter-Evolution Feedback Loop",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/FORGE_KERNEL.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/FORGE_KERNEL.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
     {
       "id": "FO-Forge-P3-WorkOrder-Index-Enrichment",
       "title": "Work Order Index Enrichment",
@@ -153,10 +213,10 @@
     }
   ],
   "counts": {
-    "total": 17,
+    "total": 21,
     "draft": 0,
     "pendingApproval": 0,
     "approved": 7,
-    "executed": 10
+    "executed": 14
   }
 }

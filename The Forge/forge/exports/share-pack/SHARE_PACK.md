@@ -58,51 +58,60 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 - work-orders/ — Orphan WOs (pending consolidation)
 
 ## Last updated
-2026-01-24
+2026-01-25
 
 ## What changed since last update
 
-### Work Order: FO-MyFi-I2-JourneyRunner-Phase1 (COMPLETED)
+### Session: Forge OS Role System & Reporter Infrastructure
 
-Journey Runner implementation complete. Action → Journey → Op pipeline now functional:
+**Work Orders Executed (this session):**
 
-**New Files Created:**
-- `journeyRunner.js` — Core runner (discovery, execution, lifecycle)
-- `modalManager.js` — Minimal modal overlay manager
-- `modal.css` — Modal styling
-- Op executors: `navigate.js`, `openModal.js`, `closeModal.js`, `wait.js`, `emit.js`, `log.js`
-- `ops/index.js` — Op executor registry
-- `manifest.json` — Journey registry
-- `smoke.journey.json` — Smoke test journey
-- `hub/viewModeToggle.journey.json` — Demo journey
+1. **FO-Forge-G1-ForgeOS-RoleSystem-v1** — Forge OS Role System v1
+   - Created `contracts/FORGE_OS_ROLE_SYSTEM.md` (7 canonical roles)
+   - Updated FORGE_KERNEL.md Section 2 with expanded role definitions
+   - Added Section 2A Operating Modes (M1/M2/M3)
+   - Updated FORGE_CAPSULE.md with role system table
 
-**Files Modified:**
-- `app.js` — Journey runner and modal manager integration
-- `chrome.js` — Modal host element added
-- `index.html` — Modal CSS included
+2. **FO-Forge-R1-Reporter-Role-Definition** — Reporter Role Definition
+   - Expanded FORGE_KERNEL.md Section 2.7 with full Reporter spec
+   - Added primary consumers and explicit constraints
 
-**Key Features:**
-- Hybrid discovery (manifest + convention paths)
-- Trigger auto-binding to ActionBus
-- Self-trigger loop prevention (ignores source === 'journey')
-- 30s default timeout
-- All 6 ops: navigate, openModal, closeModal, wait, emit, log
-- Lifecycle events: start, step, complete, cancel, timeout, error
-- Debug exposure via `window.__MYFI_DEBUG__`
+3. **FO-Forge-R2-Reporting-Signals-Contract** — Reporting Signals & Metrics Contract
+   - Created `contracts/REPORTING_SIGNALS_CONTRACT.md`
+   - Defined signal categories, time semantics, phase-aware tracking
 
-### Work Order: FO-MyFi-I1-Hub-Phase1-Scaffold (COMPLETED)
+4. **FO-Forge-R3-Reporter-Evolution-Feedback-Loop** — Reporter-Evolution Feedback Loop
+   - Added FORGE_KERNEL.md Section 12A feedback loop definition
+   - Updated FORGE_CAPSULE.md with evidence-driven learning cycle
 
-Hub screen scaffolded with StatusBar, VitalsHUD, EncounterWindow Parts.
+**Previous Session Work Orders:**
+- FO-Forge-P3-WorkOrder-Index-Enrichment — Schema extensions for WO traceability
+- FO-Forge-C1-Constitutional-Updates — Added three constitutional laws
+- PWA Setup — Forante Portal installable as PWA
+- FO-Forge-P2-Portal-WorkOrder-Control-Plane — WO detail modal and agent pack copy
+- FO-MyFi-P1-EntityPortal — MyFi entity portal implementation
 
-### Previous Work Orders (this session)
-- FO-MyFi-C3c-EncounterWindow-Contract — EncounterWindow contract spec
-- FO-MyFi-C3b-StatusBar-Contract — StatusBar contract spec
-- FO-MyFi-H2-Journeys-System-Spec — Journeys orchestration spec
-- FO-MyFi-C3-Vitals-Parts-Contracts — VitalsHUD contract spec
-- FO-MyFi-C2-Hub-Rebuild-Spec — Hub surface spec
-- FO-MyFi-C1-Resolve-Codebase-Fragmentation — Canonical codebase declaration
+## Current Governance State
 
-## Current State Summary
+| System | Status |
+|--------|--------|
+| Forge OS Role System | **7 canonical roles defined** |
+| Operating Modes | M1/M2/M3 codified |
+| Reporter Role | Fully specified |
+| Reporting Signals Contract | Created |
+| Reporter-Evolution Loop | Codified |
+| Constitutional Laws | 3 laws active (Sections 11-13) |
+| Work Order Index | Enrichment schema active |
+
+## New Contracts
+
+| Contract | Purpose |
+|----------|---------|
+| FORGE_OS_ROLE_SYSTEM.md | Roles, authority, operating modes |
+| REPORTING_SIGNALS_CONTRACT.md | Signal categories, time semantics |
+| WORK_ORDER_INDEX_CONTRACT.md | WO schema and enrichment rules |
+
+## MyFi Product State (unchanged)
 
 | System | Status |
 |--------|--------|
@@ -110,26 +119,8 @@ Hub screen scaffolded with StatusBar, VitalsHUD, EncounterWindow Parts.
 | StatusBar Part | Implemented |
 | VitalsHUD Part | Implemented |
 | EncounterWindow Part | Implemented (idle placeholder) |
-| ActionBus | Implemented |
-| Demo VM | Implemented |
-| Journey Runner | **Implemented** |
-| Modal Manager | **Implemented** |
-| Real Data Integration | Not yet (demo data only) |
-
-## Verification
-
-**Smoke Test:**
-```javascript
-// In browser console:
-window.__MYFI_DEBUG__.actionBus.emit('smoke.test', {}, 'manual');
-// Observe: journey.start → journey.step (×5) → journey.complete
-```
-
-**VitalsHUD Toggle Test:**
-```javascript
-// Click view mode toggle in VitalsHUD
-// Observe: setViewMode action triggers hub.viewModeToggle journey
-```
+| Journey Runner | Implemented |
+| Modal Manager | Implemented |
 
 ## How this is maintained
 - Repo-aware agents regenerate this after:
