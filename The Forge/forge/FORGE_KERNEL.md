@@ -224,7 +224,61 @@ When resolving ambiguity, agents must defer in this order:
 
 ---
 
-## 11. Exit Condition
+## 11. Acceptance Criteria Supremacy Law
+
+Work Order acceptance criteria are the **binding definition of done**.
+
+Rules:
+- A Work Order is complete if and only if all acceptance criteria are met
+- Agents must not declare completion based on effort, time, or intent
+- Partial completion requires explicit documentation of unmet criteria
+- Acceptance criteria may be amended only by the Director prior to execution start
+
+This law ensures traceability and prevents scope ambiguity.
+
+---
+
+## 12. Forge Evolution Law
+
+The Forge evolves through structured contribution, not unilateral change.
+
+Rules:
+- All Forge changes must originate as Work Orders
+- Changes are proposed, reviewed, approved, and executed—never improvised
+- The Director holds final authority over Forge evolution
+- Agents may propose but never enact evolution without approval
+
+### Human-Agent Interaction Enhancement Clause
+
+When humans and agents collaborate on Forge evolution:
+- Agents must surface implications the human may not foresee
+- Humans must provide context agents cannot infer
+- Neither party may defer decision-making to the other without explicit handoff
+- Disagreements are resolved per the Authority Resolution Protocol (Section 3)
+
+This law codifies the collaborative governance model.
+
+---
+
+## 13. Agent Provenance Law
+
+All executed Work Orders must record **agent provenance**.
+
+Required provenance fields:
+- `agent.type`: Category of executing agent (repo-agent, cloud-agent, local-agent)
+- `agent.name`: Specific agent identifier (e.g., claude, cursor, copilot)
+- `agent.mode`: Execution environment (cloud, local, hybrid)
+
+Rules:
+- Provenance is written at execution completion, not at approval
+- Missing provenance on executed Work Orders is a process violation
+- Provenance enables audit, learning, and agent performance analysis
+
+See: [WORK_ORDER_INDEX_CONTRACT.md](./contracts/WORK_ORDER_INDEX_CONTRACT.md) for schema.
+
+---
+
+## 14. Exit Condition
 
 The Forge considers itself operational when:
 

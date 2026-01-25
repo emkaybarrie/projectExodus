@@ -1,7 +1,28 @@
 {
-  "generated": "2026-01-24T19:00:00.000Z",
-  "commit": "cd74398",
+  "generated": "2026-01-25T12:00:00.000Z",
+  "commit": "98bd2e6",
   "workOrders": [
+    {
+      "id": "FO-Forge-P3-WorkOrder-Index-Enrichment",
+      "title": "Work Order Index Enrichment",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T12:00:00.000Z",
+      "filePath": "The Forge/forge/work-orders/FO-Forge-P3-WorkOrder-Index-Enrichment.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/work-orders/FO-Forge-P3-WorkOrder-Index-Enrichment.md",
+      "issueUrl": null,
+      "prUrl": null,
+      "deploy": {
+        "dev": "https://emkaybarrie.github.io/projectExodus/dev/The%20Forge/forge/portal/",
+        "prod": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/"
+      },
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
     {
       "id": "FO-Forge-S2-Branch-Protection-Verification",
       "title": "FO-Forge-S2-Branch-Protection-Verification",
@@ -132,10 +153,10 @@
     }
   ],
   "counts": {
-    "total": 16,
+    "total": 17,
     "draft": 0,
     "pendingApproval": 0,
     "approved": 7,
-    "executed": 9
+    "executed": 10
   }
 }

@@ -220,7 +220,28 @@ request input in Forge-approved formats
 
 Teaching the process is part of the job.
 
-12. What Comes Next (Self-Signposting)
+12. Constitutional Laws
+
+Three laws govern Work Order completion and evolution:
+
+**Acceptance Criteria Supremacy Law**
+- Acceptance criteria are the binding definition of done
+- No completion without criteria met; partial work is documented
+- Criteria may only be amended by Director before execution
+
+**Forge Evolution Law**
+- All changes originate as Work Orders—no improvisation
+- Director holds final authority; agents propose, not enact
+- Human-Agent Interaction Enhancement Clause: both parties must surface what the other cannot foresee; disagreements follow Authority Resolution Protocol
+
+**Agent Provenance Law**
+- All executed Work Orders must record agent type, name, and mode
+- Provenance written at completion, not approval
+- Missing provenance on executed work is a process violation
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Sections 11–13 for full text.
+
+13. What Comes Next (Self-Signposting)
 
 With the Capsule in place, the Forge now requires:
 

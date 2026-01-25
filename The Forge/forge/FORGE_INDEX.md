@@ -44,6 +44,9 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - [portal/data/entities.json](./portal/data/entities.json) — Entity registry
 - [portal/data/environments.json](./portal/data/environments.json) — Environment URLs (Dev/Prod)
 
+## Contracts
+- [contracts/WORK_ORDER_INDEX_CONTRACT.md](./contracts/WORK_ORDER_INDEX_CONTRACT.md) — Work Order index schema and enrichment rules
+
 ## Exports
 - [exports/share-pack/SHARE_PACK.md](./exports/share-pack/SHARE_PACK.md) — Constitutional truth export
 
