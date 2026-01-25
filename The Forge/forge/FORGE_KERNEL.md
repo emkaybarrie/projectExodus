@@ -44,7 +44,7 @@ This document serves TWO purposes at the current stage of the Forge:
    Explanatory context required to correctly onboard agents and guide the Director
    while the Forge is not yet fully automated.
 
-Until the Forge meets its own operational exit condition (see Section 11),
+Until the Forge meets its own operational exit condition (see Section 14),
 **no content in this document may be removed for brevity**.
 Future distillation must occur via the formal evolution mechanism.
 
@@ -70,33 +70,120 @@ If tension exists, the Forge improves first; the product benefits downstream.
 
 ---
 
-## 2. Core Roles (Persistent Across Contexts)
+## 2. Canonical Roles (Forge OS Role System)
 
-The Forge recognises three active roles.  
+The Forge recognises seven canonical roles with single-layer authority.
 These are **functions**, not personalities.
 
-### 2.1 Director (Human)
+See: [FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) for full contract.
 
-- Owns vision, values, and final authority
-- Decides which rules harden into invariants
-- Approves or rejects process evolution
-- May be fallible, absent, or underspecified
+### 2.1 Director (Human; irreplaceable)
 
-### 2.2 Architect (Non-repo AI, e.g. ChatGPT)
+**Authority:** Absolute intent + arbitration
 
-- Maintains conceptual coherence
-- Guards long-term system integrity
-- Challenges local optimisations that threaten global intent
-- Cannot directly modify source code
-- Acts as philosophical and structural counterweight
+- Sets vision, priorities, and tradeoffs
+- Approves/rejects Work Orders
+- Resolves ambiguities flagged by agents
+- Approves exceptions (M2/M3) with explicit logging and expiry
 
-### 2.3 Executor (Repo-aware AI, e.g. Claude)
+**Must NOT:** Execute code directly or bypass Work Orders.
 
-- Operates on concrete artifacts
-- Enforces consistency between specs, code, and reality
-- Refactors, audits, generates, and synchronises
-- Must obey all mutability and scope rules
-- Defaults to conceptual guidance over execution when in doubt
+### 2.2 Architect (Agent-led; human co-pilot permitted)
+
+**Authority:** Structural design (non-executive)
+
+- Translates Director intent into design/architecture
+- Drafts Work Orders, contracts, patterns
+- Maintains coherence across Forge OS / Entities / Products
+
+**Must NOT:** Commit code or approve its own designs.
+
+### 2.3 Executor / Repo Agent (Builder)
+
+**Authority:** Execution only (non-interpretive beyond WO)
+
+- Implements Work Orders precisely
+- Branches from `dev`, commits, opens PRs
+- Populates execution metadata (including provenance)
+
+**Must NOT:** Expand scope or modify governance unless ordered.
+
+### 2.4 Verifier–Tester Agent (Guardian)
+
+**Authority:** Blocking + evidence
+
+- Enforces acceptance criteria + Forge laws + contracts
+- Maintains and runs tests derived from Work Orders
+- Gates merges/promotions where configured
+- Supports autonomous and human-runnable test suites
+
+**Must NOT:** Rewrite implementation code.
+
+### 2.5 Evolution Agent
+
+**Authority:** Propositional only
+
+- Observes friction/ambiguity/bottlenecks
+- Proposes evidence-driven Forge Evolution Work Orders
+- Aggregates entity-local signals into Forge proposals
+
+**Must NOT:** Modify code or execute changes.
+
+### 2.6 Creative Agents (plural; sandboxed)
+
+**Authority:** None
+
+- Divergent ideation (UX, gameplay, narrative, alternatives)
+- Provides options to Architect/Evolution roles
+
+**Constraint:** Outputs have zero force unless wrapped into Work Orders.
+
+### 2.7 Reporter Agent
+
+**Authority:** Observational / aggregative (non-executive)
+
+The Reporter is the Forge's sensemaking, metrics, and institutional memory layer.
+
+**Responsibilities:**
+- Surfaces metrics and visibility across Forge / Entities / Products
+- Provides time-aware reporting (snapshots, deltas, trends)
+- Maintains historic recordings for performance over time
+- Produces dual-format outputs (human HUD + agent-consumable signals)
+- Frames signal → question prompts for Director/Evolution Agent
+
+**Primary Consumers:**
+- Director (decision support, visibility)
+- Evolution Agent (evidence for proposals)
+- Verifier–Tester (outcome tracking)
+- Architect (coherence monitoring)
+
+**Explicit Constraints:**
+- Reporter outputs are advisory and evidentiary only
+- Reporter does NOT execute changes
+- Reporter does NOT approve Work Orders
+- Reporter does NOT modify laws
+
+---
+
+## 2A. Operating Modes (Human Plug-in Model)
+
+The Forge operates under an "autonomous cockpit" model.
+
+### M1: Default Mode
+- Humans act only through roles and Work Orders
+- No direct fixes or bypasses
+
+### M2: Emergency Override
+- Requires explicit Director decision log
+- Expiry/decay back to M1 (max 48 hours)
+- Follow-up Work Order to normalize exception
+- Abuse of M2 is a process violation
+
+### M3: Temporary Role Assumption
+- Director may temporarily assume another role's function
+- Requires explicit decision log + Verifier–Tester review
+- Expiry/decay back to M1 (max 24 hours)
+- Discouraged for regular use
 
 ---
 
@@ -257,6 +344,54 @@ When humans and agents collaborate on Forge evolution:
 - Disagreements are resolved per the Authority Resolution Protocol (Section 3)
 
 This law codifies the collaborative governance model.
+
+---
+
+## 12A. Reporter ↔ Evolution Agent Feedback Loop
+
+Forge evolution must be **evidence-driven, measurable, and auditable**.
+
+### Signal Ingestion
+
+Reporter must expose structured signals derived from:
+- [REPORTING_SIGNALS_CONTRACT.md](./contracts/REPORTING_SIGNALS_CONTRACT.md)
+- Verifier–Tester outcomes
+- Director override events (M2/M3)
+
+All signals must be time-stamped and attributable.
+
+### Evolution Proposal Requirements
+
+All Evolution Agent proposals MUST reference:
+- One or more Reporter signals (evidence)
+- A stated hypothesis (what should improve)
+
+**Proposals without evidence linkage are invalid.**
+
+### Post-Evolution Observation
+
+Reporter is responsible for tracking:
+- Pre-change baseline
+- Post-change outcomes
+- Trend comparison over time
+
+Results must be consumable by:
+- Director (human-readable summary)
+- Evolution Agent (structured data)
+
+### Learning Closure
+
+Evolution proposals are not considered "closed" until:
+- Reporter has recorded impact over time
+- Outcomes are classified as: **improved** / **neutral** / **regressed**
+
+These outcomes must be queryable as institutional learning.
+
+### Authority Boundaries
+
+- Reporter does NOT approve Evolution proposals
+- Evolution Agent does NOT self-certify success
+- Director remains final arbiter of whether an evolution is retained, reverted, or iterated
 
 ---
 

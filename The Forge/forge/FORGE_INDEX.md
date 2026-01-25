@@ -45,6 +45,8 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - [portal/data/environments.json](./portal/data/environments.json) — Environment URLs (Dev/Prod)
 
 ## Contracts
+- [contracts/FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) — Canonical roles, authority boundaries, operating modes
+- [contracts/REPORTING_SIGNALS_CONTRACT.md](./contracts/REPORTING_SIGNALS_CONTRACT.md) — Reporter signals, metrics, and temporal data
 - [contracts/WORK_ORDER_INDEX_CONTRACT.md](./contracts/WORK_ORDER_INDEX_CONTRACT.md) — Work Order index schema and enrichment rules
 
 ## Exports

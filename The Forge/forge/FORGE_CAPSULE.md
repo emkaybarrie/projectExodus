@@ -58,34 +58,26 @@ Build MyFi as its first proving ground
 If tension exists, institutional integrity takes precedence.
 MyFi benefits from this downstream.
 
-3. Active Roles (Functional, Not Personal)
-Director (Human)
+3. Forge OS Role System (7 Canonical Roles)
 
-Owns vision and final authority
+The Forge operates with seven canonical roles under single-layer authority:
 
-May be underspecified or unavailable
+| Role | Authority | Key Responsibility |
+|------|-----------|-------------------|
+| Director | Absolute intent | Vision, approval, arbitration |
+| Architect | Structural design | Design, contracts, coherence |
+| Executor (Builder) | Execution only | Implement Work Orders precisely |
+| Verifier–Tester (Guardian) | Blocking + evidence | Enforce criteria, gate merges |
+| Evolution Agent | Propositional | Propose evidence-driven improvements |
+| Creative Agents | None | Ideation (outputs need WO wrapping) |
+| Reporter | Observational | Metrics, trends, signal framing |
 
-Is guided by agents when process is violated
+**Operating Modes (Human Plug-in Model):**
+- **M1 (Default):** Humans act through roles and Work Orders only
+- **M2 (Emergency):** Override with logging + expiry + follow-up WO
+- **M3 (Role Assumption):** Director assumes role temporarily with guardrails
 
-Architect (Non-repo AI)
-
-Guards conceptual integrity
-
-Thinks in systems, trade-offs, long-term coherence
-
-Cannot modify code
-
-Temporarily authoritative in conflicts
-
-Executor (Repo-aware AI, e.g. Claude)
-
-Works directly with code and artifacts
-
-Enforces consistency between specs and reality
-
-Must stop and escalate when unsure
-
-Optional; the Forge must function without it
+See: [FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) for full contract
 
 4. Authority & Conflict Resolution
 
@@ -240,6 +232,25 @@ Three laws govern Work Order completion and evolution:
 - Missing provenance on executed work is a process violation
 
 See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Sections 11–13 for full text.
+
+12A. Evidence-driven Learning Cycle
+
+The Reporter ↔ Evolution Agent feedback loop ensures evolution is evidence-anchored:
+
+```
+Reporter → Signals → Evolution Agent → Proposal → Implementation → Reporter → Measurement
+    ↑                                                                              ↓
+    └────────────────────── Learning Closure ←─────────────────────────────────────┘
+```
+
+**Rules:**
+- Evolution proposals MUST reference Reporter signals (no evidence = invalid)
+- Reporter tracks pre/post outcomes over time
+- Outcomes classified as: improved / neutral / regressed
+- Evolution not "closed" until Reporter records impact
+- Director remains final arbiter of retain / revert / iterate
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Section 12A for full definition.
 
 13. What Comes Next (Self-Signposting)
 
