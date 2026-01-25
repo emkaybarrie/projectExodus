@@ -62,9 +62,31 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 
 ## What changed since last update
 
-### Session: Forge OS Role System & Reporter Infrastructure
+### Session: Agent Onboarding & Work Order Lifecycle
 
 **Work Orders Executed (this session):**
+
+1. **FO-Forge-A1-Agent-Onboarding-Strategy-v1** — Agent Onboarding Strategy v1
+   - Created `contracts/AGENT_ONBOARDING_CONTRACT.md`
+   - Defined 5 capability axes (A–E) with discrete levels
+   - Established role eligibility derivation rules
+   - Codified trust graduation mechanics
+   - Added constitutional binding requirements
+   - Added FORGE_KERNEL.md Section 2B
+   - Updated FORGE_CAPSULE.md Section 3A
+
+2. **FO-Forge-A2-WorkOrder-Conveyor-Orchestration** — Work Order Conveyor Orchestration
+   - Created `contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md`
+   - Defined factory conveyor belt state machine (9 states)
+   - Established role triggers by phase with blocking authority
+   - Codified capability-based routing rules
+   - Defined artifact handoff patterns
+   - Added FORGE_KERNEL.md Section 6A
+   - Updated FORGE_CAPSULE.md Section 6A
+
+### Previous Session: Forge OS Role System & Reporter Infrastructure
+
+**Work Orders Executed:**
 
 1. **FO-Forge-G1-ForgeOS-RoleSystem-v1** — Forge OS Role System v1
    - Created `contracts/FORGE_OS_ROLE_SYSTEM.md` (7 canonical roles)
@@ -84,7 +106,7 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
    - Added FORGE_KERNEL.md Section 12A feedback loop definition
    - Updated FORGE_CAPSULE.md with evidence-driven learning cycle
 
-**Previous Session Work Orders:**
+**Earlier Session Work Orders:**
 - FO-Forge-P3-WorkOrder-Index-Enrichment — Schema extensions for WO traceability
 - FO-Forge-C1-Constitutional-Updates — Added three constitutional laws
 - PWA Setup — Forante Portal installable as PWA
@@ -97,16 +119,22 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 |--------|--------|
 | Forge OS Role System | **7 canonical roles defined** |
 | Operating Modes | M1/M2/M3 codified |
+| Agent Onboarding | **5 capability axes defined** |
+| Trust Graduation | Evidence-based promotion codified |
+| Constitutional Binding | Forge Context Envelope required |
+| Work Order Lifecycle | **Factory conveyor model active** |
 | Reporter Role | Fully specified |
 | Reporting Signals Contract | Created |
 | Reporter-Evolution Loop | Codified |
 | Constitutional Laws | 3 laws active (Sections 11-13) |
 | Work Order Index | Enrichment schema active |
 
-## New Contracts
+## Contracts
 
 | Contract | Purpose |
 |----------|---------|
+| AGENT_ONBOARDING_CONTRACT.md | Capability axes, trust graduation, constitutional binding |
+| WORK_ORDER_LIFECYCLE_CONTRACT.md | State machine, role triggers, artifact handoffs |
 | FORGE_OS_ROLE_SYSTEM.md | Roles, authority, operating modes |
 | REPORTING_SIGNALS_CONTRACT.md | Signal categories, time semantics |
 | WORK_ORDER_INDEX_CONTRACT.md | WO schema and enrichment rules |

@@ -1,7 +1,37 @@
 {
-  "generated": "2026-01-25T18:00:00.000Z",
-  "commit": "c079500",
+  "generated": "2026-01-25T20:00:00.000Z",
+  "commit": "7c82391",
   "workOrders": [
+    {
+      "id": "FO-Forge-A1-Agent-Onboarding-Strategy-v1",
+      "title": "Agent Onboarding Strategy v1",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T20:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-A2-WorkOrder-Conveyor-Orchestration",
+      "title": "Work Order Conveyor Orchestration",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T20:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
     {
       "id": "FO-Forge-G1-ForgeOS-RoleSystem-v1",
       "title": "Forge OS Role System v1",
@@ -213,10 +243,10 @@
     }
   ],
   "counts": {
-    "total": 21,
+    "total": 23,
     "draft": 0,
     "pendingApproval": 0,
     "approved": 7,
-    "executed": 14
+    "executed": 16
   }
 }
