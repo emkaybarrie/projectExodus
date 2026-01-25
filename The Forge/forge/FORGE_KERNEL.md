@@ -187,6 +187,50 @@ The Forge operates under an "autonomous cockpit" model.
 
 ---
 
+## 2B. Agent Onboarding & Constitutional Binding
+
+All agents (human and non-human) must be onboarded into Forge OS.
+
+See: [AGENT_ONBOARDING_CONTRACT.md](./contracts/AGENT_ONBOARDING_CONTRACT.md) for full contract.
+
+### Capability Axes
+
+Agents declare capabilities across five axes:
+- **A (Repo):** None → Read → Write
+- **B (Execution):** Non-executing → Work Order bound → Limited autonomous
+- **C (Verification):** None → Test runner → Gate authority
+- **D (Propositional):** None → Suggestions → Work Orders
+- **E (Observability):** Unstructured → Structured → Metrics-grade
+
+### Role Derivation
+
+Roles are NOT manually assigned. Roles derive from declared capabilities:
+- Forge routes work based on WO phase + required role + eligible agents
+- Lack of eligible agents triggers Director prompt and WO blocking
+
+### Trust Graduation
+
+- Agents declare initial capabilities at onboarding
+- Reporter + Verifier–Tester observe performance
+- Evolution Agent may propose capability upgrades (evidence-required)
+- Director approves promotions
+- Automatic downgrades on repeated failure (3+ consecutive)
+
+### Constitutional Binding (Non-Optional)
+
+**All agents MUST operate within a Forge Context Envelope.**
+
+The envelope binds:
+- Forge Kernel
+- Role System
+- Active Laws
+- Reporting & provenance requirements
+
+Model-native conventions (system prompts, init files, etc.) are wrapped by this envelope.
+Failure to respect constitutional binding is a Verifier–Tester violation.
+
+---
+
 ## 3. Authority Resolution Protocol
 
 When agents disagree:
@@ -246,6 +290,43 @@ All meaningful work in the Forge proceeds through this lifecycle:
 6. Learning Capture  
 
 Skipping steps is a **process violation**, not an optimisation.
+
+---
+
+## 6A. Work Order State Machine (Factory Conveyor)
+
+Work Orders traverse a defined state machine with role-based routing.
+
+See: [WORK_ORDER_LIFECYCLE_CONTRACT.md](./contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md) for full contract.
+
+### Canonical States
+
+Draft → Approved → Executing → Verified/Tested → Deployed (Dev) → Promoted → Deployed (Prod) → Observed → Evolved (optional)
+
+### Role Triggers by Phase
+
+| Phase | Primary Role | Blocking Authority |
+|-------|--------------|-------------------|
+| Draft | Director / Architect | None |
+| Approved | Forge (routing) | None |
+| Executing | Executor | Clarification blocks |
+| Verified/Tested | Verifier–Tester | **Yes** — Can reject |
+| Deployed (Dev) | Executor / Automation | Failure blocks |
+| Promoted | Director | Director may hold |
+| Deployed (Prod) | Executor / Automation | Failure blocks |
+| Observed | Reporter | None |
+| Evolved | Evolution Agent | None |
+
+### Capability-based Routing
+
+- Work Orders specify required capabilities, not specific agents
+- Forge selects eligible agents automatically
+- No eligible agent → WO blocked → Director prompt
+
+### Artifact Handoffs
+
+Each phase emits artifacts consumable by downstream roles.
+Reporter aggregates across all phases for evolution evidence.
 
 ---
 

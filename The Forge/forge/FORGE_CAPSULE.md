@@ -79,6 +79,25 @@ The Forge operates with seven canonical roles under single-layer authority:
 
 See: [FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) for full contract
 
+3A. Agent Onboarding & Constitutional Binding
+
+All agents must be onboarded with declared capabilities across five axes:
+- **A (Repo):** None / Read / Write
+- **B (Execution):** Non-executing / WO-bound / Limited autonomous
+- **C (Verification):** None / Test runner / Gate authority
+- **D (Propositional):** None / Suggestions / Work Orders
+- **E (Observability):** Unstructured / Structured / Metrics-grade
+
+**Role Derivation:** Roles derive from capabilities, not manual assignment.
+
+**Trust Graduation:** Evidence-based promotion via Reporter + Verifier observation; Director approves.
+
+**Constitutional Binding (Non-Optional):**
+All agents operate within a Forge Context Envelope binding Kernel + Role System + Laws.
+Model-native conventions are wrapped by this envelope. Violations are Verifier–Tester blocks.
+
+See: [AGENT_ONBOARDING_CONTRACT.md](./contracts/AGENT_ONBOARDING_CONTRACT.md) for full contract
+
 4. Authority & Conflict Resolution
 
 Default temporary authority: Architect
@@ -128,6 +147,23 @@ Reflection – surprises, friction, drift
 Learning Capture – Forge Lessons
 
 Skipping steps is a process violation.
+
+6A. Work Order State Machine (Factory Conveyor)
+
+Work Orders traverse defined states with role-based routing:
+
+```
+Draft → Approved → Executing → Verified → Deployed Dev → Promoted → Deployed Prod → Observed → Evolved
+```
+
+**Key Rules:**
+- Each phase has assigned role(s) and blocking authority
+- Verifier–Tester can reject at Verified phase
+- WOs specify capabilities, not agents — Forge routes automatically
+- No eligible agent → WO blocked → Director prompt
+- Each phase emits artifacts for downstream roles
+
+See: [WORK_ORDER_LIFECYCLE_CONTRACT.md](./contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md) for full contract
 
 7. Self-Improvement Rule
 
