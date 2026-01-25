@@ -62,9 +62,31 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 
 ## What changed since last update
 
-### Session: Agent Onboarding & Work Order Lifecycle
+### Session: Constitutional, E2E Workflow, Reconciliation
 
 **Work Orders Executed (this session):**
+
+1. **FO-Forge-C2-NonRegression-Principle** — Non-Regression Principle
+   - Added FORGE_KERNEL.md Section 9A (constitutional safeguard)
+   - Added FORGE_CAPSULE.md Non-Regression summary
+   - Added FORANTE_KERNEL.md Section 7 (Forge Constitutional Protections)
+
+2. **FO-Forge-P4-Director-E2E-Workflow-Guidance** — E2E Workflow Playbook
+   - Created `ops/E2E_WORKFLOW_PLAYBOOK.md` (phase checklist)
+   - Added FORGE_KERNEL.md Section 6B (playbook pointer)
+   - Updated FORGE_INDEX.md with playbook link
+   - Added E2E panel to Forante Portal (phase selector + copy agent pack)
+   - Added E2E panel to MyFi Entity Portal
+
+3. **FO-Forge-RC1-Repo-Reconciliation-and-Gap-Harvest** — Reconciliation Audit
+   - Created `audits/RECONCILIATION_REPORT_2026-01-25.md`
+   - Created `audits/RECONCILIATION_GAPS_2026-01-25.md`
+   - Updated FORGE_STATE.md with reconciliation status
+   - **Verdict:** Ready with Conditions for MyFi Hub baseline
+
+### Previous Session: Agent Onboarding & Work Order Lifecycle
+
+**Work Orders Executed:**
 
 1. **FO-Forge-A1-Agent-Onboarding-Strategy-v1** — Agent Onboarding Strategy v1
    - Created `contracts/AGENT_ONBOARDING_CONTRACT.md`
@@ -84,7 +106,7 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
    - Added FORGE_KERNEL.md Section 6A
    - Updated FORGE_CAPSULE.md Section 6A
 
-### Previous Session: Forge OS Role System & Reporter Infrastructure
+### Earlier Session: Forge OS Role System & Reporter Infrastructure
 
 **Work Orders Executed:**
 
@@ -123,20 +145,24 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 | Trust Graduation | Evidence-based promotion codified |
 | Constitutional Binding | Forge Context Envelope required |
 | Work Order Lifecycle | **Factory conveyor model active** |
+| Non-Regression Principle | **Codified (Section 9A)** |
+| E2E Workflow Playbook | **Created — Portal UX active** |
 | Reporter Role | Fully specified |
 | Reporting Signals Contract | Created |
 | Reporter-Evolution Loop | Codified |
 | Constitutional Laws | 3 laws active (Sections 11-13) |
 | Work Order Index | Enrichment schema active |
+| Reconciliation Status | **Ready with Conditions** |
 
-## Contracts
+## Contracts & Operations
 
-| Contract | Purpose |
+| Document | Purpose |
 |----------|---------|
 | AGENT_ONBOARDING_CONTRACT.md | Capability axes, trust graduation, constitutional binding |
 | WORK_ORDER_LIFECYCLE_CONTRACT.md | State machine, role triggers, artifact handoffs |
 | FORGE_OS_ROLE_SYSTEM.md | Roles, authority, operating modes |
 | REPORTING_SIGNALS_CONTRACT.md | Signal categories, time semantics |
+| E2E_WORKFLOW_PLAYBOOK.md | Director E2E workflow guidance |
 | WORK_ORDER_INDEX_CONTRACT.md | WO schema and enrichment rules |
 
 ## MyFi Product State (unchanged)
