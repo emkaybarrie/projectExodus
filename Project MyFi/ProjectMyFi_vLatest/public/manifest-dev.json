@@ -1,0 +1,20 @@
+{
+  "name": "Badlands Hub (DEV)",
+  "short_name": "Badlands DEV",
+  "description": "MyFi Badlands Hub - Development Build",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0f1a",
+  "theme_color": "#1a0f30",
+  "icons": [
+    {
+      "src": "icons/icon-dev.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "entertainment"]
+}

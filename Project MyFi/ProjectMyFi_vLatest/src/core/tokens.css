@@ -24,8 +24,16 @@ body{
 }
 
 #app{
-  height: 100vh;        /* authoritative height, not min-height */
+  height: 100dvh;       /* dynamic viewport height — accounts for mobile browser chrome */
+  height: 100vh;        /* fallback for browsers that don't support dvh */
   display: block;
+}
+
+/* Mobile viewport fix — 100dvh handles address bar, with vh fallback */
+@supports (height: 100dvh) {
+  #app {
+    height: 100dvh;
+  }
 }
 
 /* ---- Chrome Shell ---- */
@@ -603,4 +611,90 @@ body{
   .chrome__surfaceHost {
     touch-action: pan-y;
   }
+}
+
+/* ---- PWA Install Banner ---- */
+.pwa-install-banner{
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(135deg, rgba(15, 22, 48, 0.98) 0%, rgba(11, 15, 26, 0.98) 100%);
+  border-top: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  transform: translateY(100%);
+  transition: transform 0.3s ease-out;
+}
+
+.pwa-install-banner--visible{
+  transform: translateY(0);
+}
+
+.pwa-install-content{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.pwa-install-icon{
+  font-size: 2rem;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+}
+
+.pwa-install-text{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pwa-install-text strong{
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.pwa-install-text span{
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.pwa-install-btn{
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pwa-install-btn:hover{
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.pwa-install-btn:active{
+  transform: scale(0.98);
+}
+
+.pwa-install-close{
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.pwa-install-close:hover{
+  opacity: 1;
 }
