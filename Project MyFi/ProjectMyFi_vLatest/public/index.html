@@ -2,14 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Project MyFi</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1630" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Badlands Hub</title>
+
+  <!-- PWA Manifest (dynamically set based on environment) -->
+  <link rel="manifest" id="pwa-manifest" href="manifest.json" />
+
+  <!-- Favicon and Apple Touch Icon -->
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
+
   <link rel="stylesheet" href="../src/core/tokens.css">
   <link rel="stylesheet" href="../src/core/background.css">
   <link rel="stylesheet" href="../src/core/modal.css">
+
+  <!-- PWA Environment Detection -->
+  <script>
+    // Detect if we're in dev environment (URL contains /dev/)
+    const isDevEnv = window.location.pathname.includes('/dev/');
+    const manifestEl = document.getElementById('pwa-manifest');
+    if (isDevEnv && manifestEl) {
+      manifestEl.href = 'manifest-dev.json';
+      document.title = 'Badlands Hub (DEV)';
+      // Update theme color for dev
+      document.querySelector('meta[name="theme-color"]').content = '#1a0f30';
+    }
+  </script>
 </head>
 <body>
   <div id="app"></div>
+
+  <!-- PWA Install Banner (hidden by default) -->
+  <div id="pwa-install-banner" class="pwa-install-banner" hidden>
+    <div class="pwa-install-content">
+      <span class="pwa-install-icon">&#127758;</span>
+      <div class="pwa-install-text">
+        <strong id="pwa-install-title">Install Badlands Hub</strong>
+        <span>Add to your home screen for the best experience</span>
+      </div>
+      <button id="pwa-install-btn" class="pwa-install-btn">Install</button>
+      <button id="pwa-install-close" class="pwa-install-close">&times;</button>
+    </div>
+  </div>
+
   <script type="module" src="../src/core/app.js"></script>
+  <script type="module" src="../src/core/pwa-install.js"></script>
 </body>
 </html>
