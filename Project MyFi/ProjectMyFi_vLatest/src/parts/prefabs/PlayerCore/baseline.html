@@ -1,0 +1,32 @@
+<!-- PlayerCore baseline.html — Avatar & Status Indicators -->
+<!-- HUB-02: Player Core — Vitals & Avatar -->
+
+<div class="PlayerCore__container">
+  <!-- Avatar Section -->
+  <div class="PlayerCore__avatar">
+    <div class="PlayerCore__portrait">
+      <span class="PlayerCore__portraitIcon">&#129489;</span>
+    </div>
+    <div class="PlayerCore__identity">
+      <span class="PlayerCore__name" data-bind="name">Wanderer</span>
+      <span class="PlayerCore__title" data-bind="title">of the Badlands</span>
+    </div>
+  </div>
+
+  <!-- Status Indicators -->
+  <div class="PlayerCore__status">
+    <div class="PlayerCore__statusItem PlayerCore__statusItem--pressure" data-status="pressure">
+      <span class="PlayerCore__statusIcon">&#127919;</span>
+      <span class="PlayerCore__statusLabel" data-bind="pressureLabel">Balanced</span>
+    </div>
+    <div class="PlayerCore__statusItem PlayerCore__statusItem--momentum" data-status="momentum">
+      <span class="PlayerCore__statusIcon">&#9889;</span>
+      <span class="PlayerCore__statusLabel" data-bind="momentumLabel">Steady</span>
+    </div>
+  </div>
+
+  <!-- Active Effects (optional) -->
+  <div class="PlayerCore__effects" data-bind="effects">
+    <!-- Dynamically populated -->
+  </div>
+</div>

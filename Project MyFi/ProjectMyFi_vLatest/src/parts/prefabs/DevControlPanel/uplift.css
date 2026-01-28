@@ -1,0 +1,168 @@
+/* DevControlPanel uplift.css — HUB-14: DEV-only Hub Flow Control */
+/* Purple theme to distinguish from production UI */
+
+.Part-DevControlPanel {
+  padding: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #fff;
+  border: 2px dashed rgba(155, 89, 182, 0.6);
+  background: rgba(155, 89, 182, 0.1);
+  border-radius: 8px;
+}
+
+.DevControlPanel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.DevControlPanel__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9b59b6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.DevControlPanel__state {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(155, 89, 182, 0.3);
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.DevControlPanel__state[data-state="idle"] {
+  background: rgba(149, 165, 166, 0.3);
+  color: #95a5a6;
+}
+
+.DevControlPanel__state[data-state="active_autobattler"] {
+  background: rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+}
+
+.DevControlPanel__state[data-state="active_turn_based"] {
+  background: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+.DevControlPanel__state[data-state="resolved"] {
+  background: rgba(52, 152, 219, 0.3);
+  color: #3498db;
+}
+
+.DevControlPanel__section {
+  margin-bottom: 10px;
+}
+
+.DevControlPanel__sectionTitle {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.DevControlPanel__buttonRow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.DevControlPanel__btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.DevControlPanel__btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.DevControlPanel__btn:active {
+  transform: scale(0.95);
+}
+
+.DevControlPanel__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Button type colors */
+.DevControlPanel__btn--spawn {
+  border-color: rgba(46, 204, 113, 0.5);
+  color: #2ecc71;
+}
+
+.DevControlPanel__btn--spawn:hover {
+  background: rgba(46, 204, 113, 0.2);
+}
+
+.DevControlPanel__btn--escalate {
+  border-color: rgba(231, 76, 60, 0.5);
+  color: #e74c3c;
+}
+
+.DevControlPanel__btn--escalate:hover {
+  background: rgba(231, 76, 60, 0.2);
+}
+
+.DevControlPanel__btn--resolve {
+  border-color: rgba(52, 152, 219, 0.5);
+  color: #3498db;
+}
+
+.DevControlPanel__btn--resolve:hover {
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.DevControlPanel__btn--clear {
+  border-color: rgba(149, 165, 166, 0.5);
+  color: #95a5a6;
+}
+
+.DevControlPanel__btn--clear:hover {
+  background: rgba(149, 165, 166, 0.2);
+}
+
+.DevControlPanel__btn--start {
+  border-color: rgba(46, 204, 113, 0.5);
+  color: #2ecc71;
+}
+
+.DevControlPanel__btn--stop {
+  border-color: rgba(241, 196, 15, 0.5);
+  color: #f1c40f;
+}
+
+.DevControlPanel__btn--world {
+  border-color: rgba(155, 89, 182, 0.5);
+  color: #9b59b6;
+}
+
+.DevControlPanel__info {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.DevControlPanel__infoLabel {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.DevControlPanel__infoValue {
+  color: rgba(255, 255, 255, 0.8);
+  margin-left: 4px;
+}

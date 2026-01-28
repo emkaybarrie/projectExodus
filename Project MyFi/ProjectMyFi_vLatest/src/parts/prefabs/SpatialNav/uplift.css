@@ -1,0 +1,90 @@
+.Part-SpatialNav {
+  padding: var(--spacing-md, 1rem);
+}
+
+.SpatialNav__compass {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm, 0.5rem);
+}
+
+.SpatialNav__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md, 1rem);
+  width: 100%;
+}
+
+.SpatialNav__dir {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 80px;
+  min-height: 60px;
+  padding: var(--spacing-sm, 0.5rem);
+  background: var(--color-surface, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-text, #fff);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.SpatialNav__dir:hover,
+.SpatialNav__dir:focus {
+  background: var(--color-primary, rgba(139, 92, 246, 0.3));
+  border-color: var(--color-primary, #8b5cf6);
+  transform: scale(1.05);
+}
+
+.SpatialNav__dir:active {
+  transform: scale(0.98);
+}
+
+.SpatialNav__arrow {
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.SpatialNav__label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.SpatialNav__center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  background: var(--color-primary, rgba(139, 92, 246, 0.2));
+  border: 2px solid var(--color-primary, #8b5cf6);
+  border-radius: 50%;
+}
+
+.SpatialNav__hubIcon {
+  font-size: 1.5rem;
+}
+
+/* Direction-specific positioning hints */
+.SpatialNav__dir--up .SpatialNav__arrow { transform: rotate(0deg); }
+.SpatialNav__dir--down .SpatialNav__arrow { transform: rotate(180deg); }
+.SpatialNav__dir--left .SpatialNav__arrow { transform: rotate(-90deg); }
+.SpatialNav__dir--right .SpatialNav__arrow { transform: rotate(90deg); }
+
+/* Touch-friendly sizing */
+@media (pointer: coarse) {
+  .SpatialNav__dir {
+    min-width: 90px;
+    min-height: 70px;
+  }
+}

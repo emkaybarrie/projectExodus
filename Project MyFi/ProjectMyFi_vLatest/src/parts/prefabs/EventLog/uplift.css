@@ -1,0 +1,153 @@
+.Part-EventLog {
+  padding: var(--spacing-sm, 0.5rem);
+}
+
+.EventLog__container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+/* Header */
+.EventLog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--spacing-xs, 0.25rem);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.EventLog__title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+}
+
+.EventLog__count {
+  padding: 0.125rem 0.375rem;
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: var(--radius-xs, 2px);
+  font-size: 0.7rem;
+  color: var(--color-text, #fff);
+}
+
+.EventLog__count:empty,
+.EventLog__count[data-count="0"] {
+  display: none;
+}
+
+/* Event List */
+.EventLog__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.25rem);
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.EventLog__list:empty + .EventLog__empty {
+  display: flex;
+}
+
+/* Event Item */
+.EventLog__event {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm, 0.5rem);
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border-radius: var(--radius-sm, 4px);
+  border-left: 3px solid rgba(139, 92, 246, 0.5);
+  transition: opacity 0.3s ease;
+}
+
+.EventLog__event--fading {
+  opacity: 0.5;
+}
+
+.EventLog__event--positive {
+  border-left-color: rgba(16, 185, 129, 0.7);
+}
+
+.EventLog__event--negative {
+  border-left-color: rgba(239, 68, 68, 0.5);
+}
+
+.EventLog__event--neutral {
+  border-left-color: rgba(156, 163, 175, 0.5);
+}
+
+.EventLog__eventIcon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.EventLog__eventContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.EventLog__eventText {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+  line-height: 1.3;
+}
+
+.EventLog__eventTime {
+  font-size: 0.65rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
+  margin-top: 0.125rem;
+}
+
+/* Empty State */
+.EventLog__empty {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs, 0.25rem);
+  padding: var(--spacing-md, 1rem);
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.EventLog__emptyIcon {
+  font-size: 1.5rem;
+  opacity: 0.5;
+}
+
+.EventLog__emptyText {
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Summary Footer */
+.EventLog__summary {
+  padding-top: var(--spacing-xs, 0.25rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+.EventLog__summaryText {
+  font-size: 0.7rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.5));
+  font-style: italic;
+}
+
+/* Hide summary when events present */
+.EventLog__list:not(:empty) ~ .EventLog__summary {
+  display: none;
+}
+
+/* Scrollbar styling */
+.EventLog__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.EventLog__list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.EventLog__list::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 2px;
+}

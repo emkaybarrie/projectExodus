@@ -47,6 +47,260 @@ body{
   letter-spacing: 0.02em;
 }
 
+/* HUB-D4/G5: DEV buttons in chrome header */
+.chrome__header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chrome__devButtons{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chrome__devSpawn{
+  padding: 6px 12px;
+  background: rgba(155, 89, 182, 0.8);
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chrome__devSpawn:hover{
+  background: rgba(155, 89, 182, 1);
+}
+
+.chrome__devSpawn:disabled{
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* HUB-G5: Dev Config button */
+.chrome__devConfig{
+  padding: 4px 8px;
+  background: rgba(100, 100, 120, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chrome__devConfig:hover{
+  background: rgba(100, 100, 120, 0.9);
+}
+
+/* HUB-G5: Dev Config Modal */
+.chrome__devConfigModal{
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__devConfigModal[hidden]{
+  display: none;
+}
+
+.chrome__devConfigOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.chrome__devConfigContent{
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 360px;
+  max-height: 80vh;
+  background: var(--bg1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chrome__devConfigHeader{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.chrome__devConfigTitle{
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.chrome__devConfigClose{
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.chrome__devConfigClose:hover{
+  color: var(--text);
+}
+
+.chrome__devConfigBody{
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.chrome__devConfigSection{
+  margin-bottom: 16px;
+}
+
+.chrome__devConfigSection:last-child{
+  margin-bottom: 0;
+}
+
+.chrome__devConfigSectionTitle{
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin: 0 0 8px 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chrome__devConfigField{
+  margin-bottom: 12px;
+}
+
+.chrome__devConfigField:last-child{
+  margin-bottom: 0;
+}
+
+.chrome__devConfigLabel{
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.chrome__devConfigSlider{
+  width: calc(100% - 40px);
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+}
+
+.chrome__devConfigSlider::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.chrome__devConfigSlider::-moz-range-thumb{
+  width: 16px;
+  height: 16px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.chrome__devConfigValue{
+  display: inline-block;
+  width: 35px;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--muted);
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+.chrome__devConfigField--checkbox{
+  display: flex;
+  align-items: center;
+}
+
+.chrome__devConfigCheckboxLabel{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.chrome__devConfigCheckbox{
+  width: 18px;
+  height: 18px;
+  accent-color: #8b5cf6;
+  cursor: pointer;
+}
+
+.chrome__devConfigFooter{
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.chrome__devConfigBtn{
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chrome__devConfigBtn--reset{
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--muted);
+}
+
+.chrome__devConfigBtn--reset:hover{
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.chrome__devConfigBtn--apply{
+  background: #8b5cf6;
+  border: none;
+  color: #fff;
+}
+
+.chrome__devConfigBtn--apply:hover{
+  background: #7c3aed;
+}
+
 .chrome__surfaceHost{
   flex: 1 1 auto;
   min-height: 0; /* important for overflow containers */
@@ -54,6 +308,13 @@ body{
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
   overscroll-behavior: contain; /* prevent scroll chaining */
+}
+
+/* Hub surface (bg-cosmic) — disable scroll, use flex fill */
+.chrome__surfaceHost.bg-cosmic{
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chrome__footer{
@@ -78,6 +339,194 @@ body{
   font-weight: 800;
 }
 
+/* HUB-E2: Compass Button in Footer */
+.chrome__navBtn--compass{
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
+  border-color: rgba(139, 92, 246, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__compassIcon{
+  font-size: 1.4em;
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.6));
+}
+
+/* HUB-E2: Compass Navigation Modal */
+.chrome__compassModal{
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__compassModal[hidden]{
+  display: none;
+}
+
+.chrome__compassOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.chrome__compassContent{
+  position: relative;
+  z-index: 1;
+  animation: compassFadeIn 0.25s ease-out;
+}
+
+@keyframes compassFadeIn{
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.chrome__compassRing{
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(20, 20, 40, 0.95) 0%, rgba(15, 22, 48, 0.98) 70%);
+  border: 3px solid rgba(139, 92, 246, 0.4);
+  box-shadow:
+    0 0 30px rgba(139, 92, 246, 0.3),
+    inset 0 0 40px rgba(139, 92, 246, 0.1);
+  position: relative;
+}
+
+.chrome__compassCenter{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.chrome__compassCenterIcon{
+  display: block;
+  font-size: 2.5rem;
+  filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.8));
+  animation: compassPulse 2s ease-in-out infinite;
+}
+
+@keyframes compassPulse{
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.chrome__compassCenterLabel{
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(139, 92, 246, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+.chrome__compassDirection{
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text);
+}
+
+.chrome__compassDirection:hover{
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(139, 92, 246, 0.6);
+  transform: scale(1.1);
+}
+
+.chrome__compassDirection:active{
+  transform: scale(0.95);
+}
+
+/* Cardinal positions */
+.chrome__compassDirection--n{
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.chrome__compassDirection--n:hover{
+  transform: translateX(-50%) scale(1.1);
+}
+
+.chrome__compassDirection--e{
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.chrome__compassDirection--e:hover{
+  transform: translateY(-50%) scale(1.1);
+}
+
+.chrome__compassDirection--s{
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.chrome__compassDirection--s:hover{
+  transform: translateX(-50%) scale(1.1);
+}
+
+.chrome__compassDirection--w{
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.chrome__compassDirection--w:hover{
+  transform: translateY(-50%) scale(1.1);
+}
+
+.chrome__compassDirIcon{
+  font-size: 1.3rem;
+}
+
+.chrome__compassDirLabel{
+  font-size: 0.55rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.chrome__compassClose{
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chrome__compassClose:hover{
+  background: rgba(255, 255, 255, 0.2);
+}
+
 /* ---- Surfaces ---- */
 .screen-host{
   /* min-height removed: flex parent handles scroll containment (B2 fix) */
@@ -90,11 +539,63 @@ body{
   gap: var(--gap);
 }
 
+/* HUB-E4: Hub Surface — Viewport-Filling Layout (no scroll) */
+/* Vitals (auto) + Map (auto) + Stage (flex fill) */
+.screen-host.bg-cosmic .surface-root{
+  flex: 1 1 auto;
+  min-height: 0; /* Allow flex shrinking */
+  padding-bottom: 0; /* Remove extra padding for hub */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden; /* Prevent scroll */
+}
+
+/* Stage slot fills remaining space */
+.screen-host.bg-cosmic .slot[data-slot-id="stage"]{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Vitals and Map stay fixed size */
+.screen-host.bg-cosmic .slot[data-slot-id="vitals"],
+.screen-host.bg-cosmic .slot[data-slot-id="map"]{
+  flex: 0 0 auto;
+}
+
+/* Stage part should fill its slot */
+.screen-host.bg-cosmic .slot[data-slot-id="stage"] > .Part-BadlandsStage{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .slot-card{
   background: var(--card);
   border: 1px solid var(--cardBorder);
   border-radius: var(--r);
   padding: var(--pad);
+}
+
+/* HUB-07/HUB-11: Overlay Slot Support — layering container
+   NOTE: Backdrop/input capture is managed by overlay parts themselves,
+   not by the slot container. This prevents dimming when overlay is closed. */
+.surface-overlay-root{
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  pointer-events: none; /* pass-through by default */
+}
+
+.slot-overlay{
+  pointer-events: none; /* HUB-11: pass-through by default; overlay parts enable when active */
+  z-index: 101;
 }
 
 /* Mobile touch scrolling fix */

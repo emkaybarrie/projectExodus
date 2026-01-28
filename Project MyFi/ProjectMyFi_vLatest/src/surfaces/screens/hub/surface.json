@@ -2,11 +2,10 @@
   "id": "hub",
   "type": "screen",
   "background": "cosmic",
-  "chrome": { "showHeader": true, "showFooter": true, "title": "Hub" },
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Badlands Hub" },
   "slots": [
-    { "id": "statusBar", "part": { "kind": "StatusBar" } },
-    { "id": "vitalsHud", "card": true, "part": { "kind": "VitalsHUD" } },
-    { "id": "encounterWindow", "card": true, "part": { "kind": "EncounterWindow" } },
-    { "id": "quickLinks", "card": true, "part": { "kind": "QuickLinks" } }
+    { "id": "vitals", "card": true, "part": { "kind": "PlayerHeader" } },
+    { "id": "map", "card": true, "part": { "kind": "WorldMap" } },
+    { "id": "stage", "card": false, "part": { "kind": "BadlandsStage" } }
   ]
 }

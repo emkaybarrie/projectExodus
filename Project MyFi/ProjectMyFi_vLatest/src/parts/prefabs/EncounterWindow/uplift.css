@@ -75,6 +75,23 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+/* HUB-12: DEV-only spawn trigger */
+.EncounterWindow__devSpawnBtn {
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: rgba(155, 89, 182, 0.3);
+  border: 1px dashed rgba(155, 89, 182, 0.6);
+  border-radius: 4px;
+  color: #9b59b6;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.EncounterWindow__devSpawnBtn:hover {
+  background: rgba(155, 89, 182, 0.5);
+}
+
 /* Encounter state */
 .EncounterWindow__encounter {
   cursor: pointer;

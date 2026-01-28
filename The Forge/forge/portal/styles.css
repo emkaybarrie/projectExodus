@@ -2348,3 +2348,114 @@ button {
     padding-top: max(var(--spacing-md), env(safe-area-inset-top));
   }
 }
+
+/* === P4: E2E Workflow Panel === */
+
+.forge-e2e-panel {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, var(--bg-card) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.panel-subtitle-sm {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: var(--spacing-md);
+}
+
+.e2e-phase-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
+}
+
+.e2e-phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-height: 32px;
+}
+
+.e2e-phase-chip:hover,
+.e2e-phase-chip:focus {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.e2e-phase-chip.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.e2e-phase-chip .phase-icon {
+  font-size: 0.9rem;
+}
+
+.e2e-phase-chip .phase-name {
+  font-weight: 500;
+}
+
+.e2e-phase-detail {
+  padding: var(--spacing-sm);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.phase-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.phase-info strong {
+  color: var(--text-primary);
+}
+
+.e2e-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.action-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--bg-hover);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  min-height: var(--touch-target);
+  transition: all 0.15s ease;
+}
+
+.action-btn-sm:hover,
+.action-btn-sm:focus {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+.action-btn-sm.primary {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.action-btn-sm.primary:hover,
+.action-btn-sm.primary:focus {
+  background: rgba(99, 102, 241, 0.3);
+}

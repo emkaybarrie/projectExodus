@@ -1,5 +1,5 @@
-// app.js — Updated for I2-JourneyRunner-Phase1
-// Adds: Journey runner, modal manager integration
+// app.js — Updated for HUB-04 Autobattler Integration
+// Adds: Journey runner, modal manager, Hub controller with autobattler
 
 import { createRouter } from './router.js';
 import { createChrome } from './chrome.js';
@@ -9,9 +9,21 @@ import { getHubDemoVM } from '../vm/hub-demo-vm.js';
 import * as actionBus from './actionBus.js';
 import * as modalManager from './modalManager.js';
 import * as journeyRunner from '../journeys/journeyRunner.js';
+import { createHubController } from '../systems/hubController.js';
+
+// Create Hub controller for integrated systems (autobattler, vitals sim)
+const hubController = createHubController({
+  actionBus,
+  onStateChange: (state) => {
+    // Broadcast state changes for parts that listen
+    actionBus.emit('hub:stateChange', state);
+  },
+});
+hubController.init();
 
 // Register demo VM providers for surfaces
-registerVMProvider('hub', getHubDemoVM);
+// Hub uses controller state if available, otherwise falls back to demo VM
+registerVMProvider('hub', () => hubController.getState() || getHubDemoVM());
 
 function ensureAppRoot(){
   const el = document.getElementById('app');
@@ -59,12 +71,32 @@ journeyRunner.loadJourneys().then(() => {
   console.error('[App] Failed to initialize journey runner:', e);
 });
 
-router.start();
-
-// Expose for debugging/testing
+// Expose for debugging/testing BEFORE router starts
+// (DevControlPanel needs this to be available at mount time)
 window.__MYFI_DEBUG__ = {
   actionBus,
   modalManager,
   journeyRunner,
   router,
+  hubController,
 };
+
+// HUB-D4: Enable DEV spawn button in chrome header
+chrome.enableDevSpawn();
+
+router.start();
+
+// Start Hub controller when on hub surface
+actionBus.subscribe('surface:mounted', ({ surfaceId }) => {
+  if (surfaceId === 'hub') {
+    hubController.start();
+    console.log('[App] Hub controller started');
+  }
+});
+
+actionBus.subscribe('surface:unmounted', ({ surfaceId }) => {
+  if (surfaceId === 'hub') {
+    hubController.stop();
+    console.log('[App] Hub controller stopped');
+  }
+});

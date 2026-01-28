@@ -1,0 +1,181 @@
+.Part-Wardwatch {
+  padding: var(--spacing-sm, 0.5rem);
+}
+
+.Wardwatch__container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 0.5rem);
+}
+
+/* Viewport Frame */
+.Wardwatch__viewport {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: linear-gradient(180deg,
+    rgba(30, 27, 75, 1) 0%,
+    rgba(49, 46, 129, 1) 30%,
+    rgba(88, 28, 135, 0.8) 60%,
+    rgba(124, 58, 237, 0.4) 100%
+  );
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+/* Terrain Layer */
+.Wardwatch__terrain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.Wardwatch__ground {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(88, 28, 135, 0.3) 20%,
+    rgba(49, 46, 129, 0.5) 100%
+  );
+}
+
+.Wardwatch__horizon {
+  position: absolute;
+  bottom: 40%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139, 92, 246, 0.4) 50%,
+    transparent 100%
+  );
+}
+
+/* Avatar Layer */
+.Wardwatch__avatarLayer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.Wardwatch__avatar {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, transparent 70%);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  transition: transform 0.8s ease-out, left 0.8s ease-out, top 0.8s ease-out;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+}
+
+.Wardwatch__avatar[data-moving="true"] {
+  animation: avatarBob 0.4s ease-in-out infinite;
+}
+
+@keyframes avatarBob {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-4px); }
+}
+
+/* World State Overlay */
+.Wardwatch__stateOverlay {
+  position: absolute;
+  top: var(--spacing-sm, 0.5rem);
+  left: var(--spacing-sm, 0.5rem);
+  right: var(--spacing-sm, 0.5rem);
+  text-align: center;
+}
+
+.Wardwatch__stateMessage {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.75rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.7));
+  font-style: italic;
+}
+
+/* Time Indicator */
+.Wardwatch__timeIndicator {
+  position: absolute;
+  top: var(--spacing-sm, 0.5rem);
+  right: var(--spacing-sm, 0.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-xs, 2px);
+  font-size: 0.7rem;
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+}
+
+.Wardwatch__timeIcon {
+  font-size: 0.9rem;
+}
+
+/* Time states */
+.Wardwatch__viewport[data-time="day"] {
+  background: linear-gradient(180deg,
+    rgba(59, 130, 246, 0.3) 0%,
+    rgba(139, 92, 246, 0.4) 50%,
+    rgba(88, 28, 135, 0.5) 100%
+  );
+}
+
+.Wardwatch__viewport[data-time="dusk"] {
+  background: linear-gradient(180deg,
+    rgba(239, 68, 68, 0.2) 0%,
+    rgba(217, 70, 239, 0.3) 30%,
+    rgba(88, 28, 135, 0.6) 100%
+  );
+}
+
+.Wardwatch__viewport[data-time="night"] {
+  background: linear-gradient(180deg,
+    rgba(15, 23, 42, 1) 0%,
+    rgba(30, 27, 75, 1) 50%,
+    rgba(49, 46, 129, 0.8) 100%
+  );
+}
+
+/* Activity Log */
+.Wardwatch__activity {
+  padding: var(--spacing-xs, 0.25rem);
+  background: var(--color-surface, rgba(255, 255, 255, 0.05));
+  border-radius: var(--radius-sm, 4px);
+}
+
+.Wardwatch__activityItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+}
+
+.Wardwatch__activityIcon {
+  font-size: 0.9rem;
+}
+
+.Wardwatch__activityText {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

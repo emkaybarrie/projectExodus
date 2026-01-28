@@ -44,7 +44,7 @@ This document serves TWO purposes at the current stage of the Forge:
    Explanatory context required to correctly onboard agents and guide the Director
    while the Forge is not yet fully automated.
 
-Until the Forge meets its own operational exit condition (see Section 11),
+Until the Forge meets its own operational exit condition (see Section 14),
 **no content in this document may be removed for brevity**.
 Future distillation must occur via the formal evolution mechanism.
 
@@ -70,33 +70,164 @@ If tension exists, the Forge improves first; the product benefits downstream.
 
 ---
 
-## 2. Core Roles (Persistent Across Contexts)
+## 2. Canonical Roles (Forge OS Role System)
 
-The Forge recognises three active roles.  
+The Forge recognises seven canonical roles with single-layer authority.
 These are **functions**, not personalities.
 
-### 2.1 Director (Human)
+See: [FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) for full contract.
 
-- Owns vision, values, and final authority
-- Decides which rules harden into invariants
-- Approves or rejects process evolution
-- May be fallible, absent, or underspecified
+### 2.1 Director (Human; irreplaceable)
 
-### 2.2 Architect (Non-repo AI, e.g. ChatGPT)
+**Authority:** Absolute intent + arbitration
 
-- Maintains conceptual coherence
-- Guards long-term system integrity
-- Challenges local optimisations that threaten global intent
-- Cannot directly modify source code
-- Acts as philosophical and structural counterweight
+- Sets vision, priorities, and tradeoffs
+- Approves/rejects Work Orders
+- Resolves ambiguities flagged by agents
+- Approves exceptions (M2/M3) with explicit logging and expiry
 
-### 2.3 Executor (Repo-aware AI, e.g. Claude)
+**Must NOT:** Execute code directly or bypass Work Orders.
 
-- Operates on concrete artifacts
-- Enforces consistency between specs, code, and reality
-- Refactors, audits, generates, and synchronises
-- Must obey all mutability and scope rules
-- Defaults to conceptual guidance over execution when in doubt
+### 2.2 Architect (Agent-led; human co-pilot permitted)
+
+**Authority:** Structural design (non-executive)
+
+- Translates Director intent into design/architecture
+- Drafts Work Orders, contracts, patterns
+- Maintains coherence across Forge OS / Entities / Products
+
+**Must NOT:** Commit code or approve its own designs.
+
+### 2.3 Executor / Repo Agent (Builder)
+
+**Authority:** Execution only (non-interpretive beyond WO)
+
+- Implements Work Orders precisely
+- Branches from `dev`, commits, opens PRs
+- Populates execution metadata (including provenance)
+
+**Must NOT:** Expand scope or modify governance unless ordered.
+
+### 2.4 Verifier–Tester Agent (Guardian)
+
+**Authority:** Blocking + evidence
+
+- Enforces acceptance criteria + Forge laws + contracts
+- Maintains and runs tests derived from Work Orders
+- Gates merges/promotions where configured
+- Supports autonomous and human-runnable test suites
+
+**Must NOT:** Rewrite implementation code.
+
+### 2.5 Evolution Agent
+
+**Authority:** Propositional only
+
+- Observes friction/ambiguity/bottlenecks
+- Proposes evidence-driven Forge Evolution Work Orders
+- Aggregates entity-local signals into Forge proposals
+
+**Must NOT:** Modify code or execute changes.
+
+### 2.6 Creative Agents (plural; sandboxed)
+
+**Authority:** None
+
+- Divergent ideation (UX, gameplay, narrative, alternatives)
+- Provides options to Architect/Evolution roles
+
+**Constraint:** Outputs have zero force unless wrapped into Work Orders.
+
+### 2.7 Reporter Agent
+
+**Authority:** Observational / aggregative (non-executive)
+
+The Reporter is the Forge's sensemaking, metrics, and institutional memory layer.
+
+**Responsibilities:**
+- Surfaces metrics and visibility across Forge / Entities / Products
+- Provides time-aware reporting (snapshots, deltas, trends)
+- Maintains historic recordings for performance over time
+- Produces dual-format outputs (human HUD + agent-consumable signals)
+- Frames signal → question prompts for Director/Evolution Agent
+
+**Primary Consumers:**
+- Director (decision support, visibility)
+- Evolution Agent (evidence for proposals)
+- Verifier–Tester (outcome tracking)
+- Architect (coherence monitoring)
+
+**Explicit Constraints:**
+- Reporter outputs are advisory and evidentiary only
+- Reporter does NOT execute changes
+- Reporter does NOT approve Work Orders
+- Reporter does NOT modify laws
+
+---
+
+## 2A. Operating Modes (Human Plug-in Model)
+
+The Forge operates under an "autonomous cockpit" model.
+
+### M1: Default Mode
+- Humans act only through roles and Work Orders
+- No direct fixes or bypasses
+
+### M2: Emergency Override
+- Requires explicit Director decision log
+- Expiry/decay back to M1 (max 48 hours)
+- Follow-up Work Order to normalize exception
+- Abuse of M2 is a process violation
+
+### M3: Temporary Role Assumption
+- Director may temporarily assume another role's function
+- Requires explicit decision log + Verifier–Tester review
+- Expiry/decay back to M1 (max 24 hours)
+- Discouraged for regular use
+
+---
+
+## 2B. Agent Onboarding & Constitutional Binding
+
+All agents (human and non-human) must be onboarded into Forge OS.
+
+See: [AGENT_ONBOARDING_CONTRACT.md](./contracts/AGENT_ONBOARDING_CONTRACT.md) for full contract.
+
+### Capability Axes
+
+Agents declare capabilities across five axes:
+- **A (Repo):** None → Read → Write
+- **B (Execution):** Non-executing → Work Order bound → Limited autonomous
+- **C (Verification):** None → Test runner → Gate authority
+- **D (Propositional):** None → Suggestions → Work Orders
+- **E (Observability):** Unstructured → Structured → Metrics-grade
+
+### Role Derivation
+
+Roles are NOT manually assigned. Roles derive from declared capabilities:
+- Forge routes work based on WO phase + required role + eligible agents
+- Lack of eligible agents triggers Director prompt and WO blocking
+
+### Trust Graduation
+
+- Agents declare initial capabilities at onboarding
+- Reporter + Verifier–Tester observe performance
+- Evolution Agent may propose capability upgrades (evidence-required)
+- Director approves promotions
+- Automatic downgrades on repeated failure (3+ consecutive)
+
+### Constitutional Binding (Non-Optional)
+
+**All agents MUST operate within a Forge Context Envelope.**
+
+The envelope binds:
+- Forge Kernel
+- Role System
+- Active Laws
+- Reporting & provenance requirements
+
+Model-native conventions (system prompts, init files, etc.) are wrapped by this envelope.
+Failure to respect constitutional binding is a Verifier–Tester violation.
 
 ---
 
@@ -162,6 +293,61 @@ Skipping steps is a **process violation**, not an optimisation.
 
 ---
 
+## 6A. Work Order State Machine (Factory Conveyor)
+
+Work Orders traverse a defined state machine with role-based routing.
+
+See: [WORK_ORDER_LIFECYCLE_CONTRACT.md](./contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md) for full contract.
+
+### Canonical States
+
+Draft → Approved → Executing → Verified/Tested → Deployed (Dev) → Promoted → Deployed (Prod) → Observed → Evolved (optional)
+
+### Role Triggers by Phase
+
+| Phase | Primary Role | Blocking Authority |
+|-------|--------------|-------------------|
+| Draft | Director / Architect | None |
+| Approved | Forge (routing) | None |
+| Executing | Executor | Clarification blocks |
+| Verified/Tested | Verifier–Tester | **Yes** — Can reject |
+| Deployed (Dev) | Executor / Automation | Failure blocks |
+| Promoted | Director | Director may hold |
+| Deployed (Prod) | Executor / Automation | Failure blocks |
+| Observed | Reporter | None |
+| Evolved | Evolution Agent | None |
+
+### Capability-based Routing
+
+- Work Orders specify required capabilities, not specific agents
+- Forge selects eligible agents automatically
+- No eligible agent → WO blocked → Director prompt
+
+### Artifact Handoffs
+
+Each phase emits artifacts consumable by downstream roles.
+Reporter aggregates across all phases for evolution evidence.
+
+---
+
+## 6B. E2E Workflow Playbook (Operational Guidance)
+
+Until Forge automation is complete, the Director triggers end-to-end workflows manually.
+
+The **E2E Workflow Playbook** provides:
+- Phase-by-phase checklist aligned to the state machine
+- Role responsibilities per phase
+- Required artifacts per phase
+- "What to do when stuck" guidance
+- Constitutional binding reminders for agent onboarding
+- Agent Pack template for each phase
+
+This is the **canonical way to work** until automation Work Orders are approved.
+
+See: [E2E_WORKFLOW_PLAYBOOK.md](./ops/E2E_WORKFLOW_PLAYBOOK.md) for the full playbook.
+
+---
+
 ## 7. Self-Improvement Mandate (Critical)
 
 The Forge is explicitly allowed—and required—to improve itself.
@@ -208,6 +394,37 @@ Agents must:
 
 Compliance alone is insufficient; **guidance is required**.
 
+### 9A. Non-Regression Principle
+
+The Forge is constitutionally protected against silent drift or erosion of guarantees.
+
+**Definition:**
+Any change that weakens or bypasses constitutional guarantees is a **regression**. Regressions are invalid unless explicitly approved by the Director via a Work Order whose acceptance criteria calls out the regression risk.
+
+**What Constitutes Regression:**
+- Weakening role separation (e.g., allowing Executor to approve its own work)
+- Reducing verification/testing gates
+- Bypassing provenance requirements
+- Bypassing the Forge Context Envelope or constitutional binding
+- Reducing reporting/observability required for evidence-driven evolution
+- Introducing silent automation without Reporter-visible artifacts
+- Circumventing Acceptance Criteria Supremacy
+
+**Requirements for Approved Regressions:**
+If a regression is genuinely necessary, the approving Work Order MUST include:
+- Explicit rationale for why the regression is required
+- Explicit compensating controls that mitigate the risk
+- Explicit expiry or rollback plan where appropriate
+- Director sign-off with awareness of the constitutional impact
+
+**Enforcement:**
+- Verifier–Tester MUST treat suspected regressions as a **blocking condition**
+- Only a Director-approved Work Order with explicit regression acknowledgement can override
+- All regression approvals are logged as Reporter signals for institutional memory
+- Evolution Agent must flag any observed drift patterns that may constitute gradual regression
+
+This principle ensures the Forge cannot be hollowed out through incremental "small edits" or convenience changes.
+
 ---
 
 ## 10. Canonical Truth Hierarchy
@@ -224,7 +441,109 @@ When resolving ambiguity, agents must defer in this order:
 
 ---
 
-## 11. Exit Condition
+## 11. Acceptance Criteria Supremacy Law
+
+Work Order acceptance criteria are the **binding definition of done**.
+
+Rules:
+- A Work Order is complete if and only if all acceptance criteria are met
+- Agents must not declare completion based on effort, time, or intent
+- Partial completion requires explicit documentation of unmet criteria
+- Acceptance criteria may be amended only by the Director prior to execution start
+
+This law ensures traceability and prevents scope ambiguity.
+
+---
+
+## 12. Forge Evolution Law
+
+The Forge evolves through structured contribution, not unilateral change.
+
+Rules:
+- All Forge changes must originate as Work Orders
+- Changes are proposed, reviewed, approved, and executed—never improvised
+- The Director holds final authority over Forge evolution
+- Agents may propose but never enact evolution without approval
+
+### Human-Agent Interaction Enhancement Clause
+
+When humans and agents collaborate on Forge evolution:
+- Agents must surface implications the human may not foresee
+- Humans must provide context agents cannot infer
+- Neither party may defer decision-making to the other without explicit handoff
+- Disagreements are resolved per the Authority Resolution Protocol (Section 3)
+
+This law codifies the collaborative governance model.
+
+---
+
+## 12A. Reporter ↔ Evolution Agent Feedback Loop
+
+Forge evolution must be **evidence-driven, measurable, and auditable**.
+
+### Signal Ingestion
+
+Reporter must expose structured signals derived from:
+- [REPORTING_SIGNALS_CONTRACT.md](./contracts/REPORTING_SIGNALS_CONTRACT.md)
+- Verifier–Tester outcomes
+- Director override events (M2/M3)
+
+All signals must be time-stamped and attributable.
+
+### Evolution Proposal Requirements
+
+All Evolution Agent proposals MUST reference:
+- One or more Reporter signals (evidence)
+- A stated hypothesis (what should improve)
+
+**Proposals without evidence linkage are invalid.**
+
+### Post-Evolution Observation
+
+Reporter is responsible for tracking:
+- Pre-change baseline
+- Post-change outcomes
+- Trend comparison over time
+
+Results must be consumable by:
+- Director (human-readable summary)
+- Evolution Agent (structured data)
+
+### Learning Closure
+
+Evolution proposals are not considered "closed" until:
+- Reporter has recorded impact over time
+- Outcomes are classified as: **improved** / **neutral** / **regressed**
+
+These outcomes must be queryable as institutional learning.
+
+### Authority Boundaries
+
+- Reporter does NOT approve Evolution proposals
+- Evolution Agent does NOT self-certify success
+- Director remains final arbiter of whether an evolution is retained, reverted, or iterated
+
+---
+
+## 13. Agent Provenance Law
+
+All executed Work Orders must record **agent provenance**.
+
+Required provenance fields:
+- `agent.type`: Category of executing agent (repo-agent, cloud-agent, local-agent)
+- `agent.name`: Specific agent identifier (e.g., claude, cursor, copilot)
+- `agent.mode`: Execution environment (cloud, local, hybrid)
+
+Rules:
+- Provenance is written at execution completion, not at approval
+- Missing provenance on executed Work Orders is a process violation
+- Provenance enables audit, learning, and agent performance analysis
+
+See: [WORK_ORDER_INDEX_CONTRACT.md](./contracts/WORK_ORDER_INDEX_CONTRACT.md) for schema.
+
+---
+
+## 14. Exit Condition
 
 The Forge considers itself operational when:
 

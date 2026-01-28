@@ -1,0 +1,118 @@
+.Part-PlayerCore {
+  padding: var(--spacing-md, 1rem);
+}
+
+.PlayerCore__container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 1rem);
+}
+
+/* Avatar Section */
+.PlayerCore__avatar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md, 1rem);
+}
+
+.PlayerCore__portrait {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(59, 130, 246, 0.3) 100%);
+  border: 2px solid var(--color-primary, #8b5cf6);
+  border-radius: 50%;
+  font-size: 2rem;
+}
+
+.PlayerCore__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.PlayerCore__name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-text, #fff);
+}
+
+.PlayerCore__title {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, rgba(255, 255, 255, 0.6));
+  font-style: italic;
+}
+
+/* Status Indicators */
+.PlayerCore__status {
+  display: flex;
+  gap: var(--spacing-md, 1rem);
+  flex-wrap: wrap;
+}
+
+.PlayerCore__statusItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  background: var(--color-surface, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-sm, 4px);
+  font-size: 0.8rem;
+}
+
+.PlayerCore__statusIcon {
+  font-size: 1rem;
+}
+
+.PlayerCore__statusLabel {
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.8));
+}
+
+/* Pressure states */
+.PlayerCore__statusItem--pressure[data-state="ahead"] {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.PlayerCore__statusItem--pressure[data-state="behind"] {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.PlayerCore__statusItem--pressure[data-state="balanced"] {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+/* Momentum states */
+.PlayerCore__statusItem--momentum[data-state="rising"] {
+  color: var(--color-success, #10b981);
+}
+
+.PlayerCore__statusItem--momentum[data-state="falling"] {
+  color: var(--color-danger, #ef4444);
+}
+
+/* Effects */
+.PlayerCore__effects {
+  display: flex;
+  gap: var(--spacing-xs, 0.25rem);
+  flex-wrap: wrap;
+  min-height: 24px;
+}
+
+.PlayerCore__effect {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-xs, 2px);
+  font-size: 0.7rem;
+}
+
+.PlayerCore__effectIcon {
+  font-size: 0.8rem;
+}

@@ -1,0 +1,11 @@
+{
+  "id": "quests",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Quests" },
+  "slots": [
+    { "id": "header", "part": { "kind": "StatusBar" } },
+    { "id": "content", "card": true, "part": { "kind": "EmptyCard", "props": { "message": "Quests - Coming Soon", "icon": "scroll" } } },
+    { "id": "returnNav", "part": { "kind": "ReturnToHub" } }
+  ]
+}

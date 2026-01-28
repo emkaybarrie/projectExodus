@@ -33,6 +33,7 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - ONBOARDING_WIZARD.md — human + agent onboarding
 
 ## Operations
+- [ops/E2E_WORKFLOW_PLAYBOOK.md](./ops/E2E_WORKFLOW_PLAYBOOK.md) — Director E2E workflow guidance (canonical)
 - [ops/OPERATING_MODEL_LANES.md](./ops/OPERATING_MODEL_LANES.md) — Parallel development governance
 - [ops/EXECUTOR_PLAYBOOK.md](./ops/EXECUTOR_PLAYBOOK.md) — AI executor protocol
 - [ops/BRANCHING_PLAYBOOK.md](./ops/BRANCHING_PLAYBOOK.md) — Git branch discipline
@@ -43,6 +44,13 @@ See Model 3 in the Forante Kernel for the relationship between Forante, Forge, a
 - [portal/DERIVED_PORTALS.md](./portal/DERIVED_PORTALS.md) — Entity drilldown and extension patterns
 - [portal/data/entities.json](./portal/data/entities.json) — Entity registry
 - [portal/data/environments.json](./portal/data/environments.json) — Environment URLs (Dev/Prod)
+
+## Contracts
+- [contracts/AGENT_ONBOARDING_CONTRACT.md](./contracts/AGENT_ONBOARDING_CONTRACT.md) — Capability axes, trust graduation, constitutional binding
+- [contracts/FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) — Canonical roles, authority boundaries, operating modes
+- [contracts/REPORTING_SIGNALS_CONTRACT.md](./contracts/REPORTING_SIGNALS_CONTRACT.md) — Reporter signals, metrics, and temporal data
+- [contracts/WORK_ORDER_INDEX_CONTRACT.md](./contracts/WORK_ORDER_INDEX_CONTRACT.md) — Work Order index schema and enrichment rules
+- [contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md](./contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md) — WO state machine, role triggers, artifact handoffs
 
 ## Exports
 - [exports/share-pack/SHARE_PACK.md](./exports/share-pack/SHARE_PACK.md) — Constitutional truth export

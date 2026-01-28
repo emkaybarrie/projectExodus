@@ -1,4 +1,5 @@
 import { mountScreenSurface } from './surfaceRuntime.js';
+import * as actionBus from './actionBus.js';
 
 export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
   if (!hostEl) throw new Error('Router requires hostEl');
@@ -22,6 +23,11 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
   async function ensureMounted(surfaceId){
     if (current?.id === surfaceId) return;
 
+    // C1-FIX: Emit surface:unmounted before unmounting
+    if (current?.id) {
+      actionBus.emit('surface:unmounted', { surfaceId: current.id });
+    }
+
     try { current?.unmount?.(); } catch(e){ console.warn('unmount failed', e); }
     hostEl.innerHTML = '';
 
@@ -32,6 +38,9 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
     });
 
     current = { id: surfaceId, unmount: api?.unmount };
+
+    // C1-FIX: Emit surface:mounted after mounting
+    actionBus.emit('surface:mounted', { surfaceId });
   }
 
   async function onHashChange(){

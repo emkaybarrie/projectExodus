@@ -1,7 +1,163 @@
 {
-  "generated": "2026-01-24T19:00:00.000Z",
-  "commit": "cd74398",
+  "generated": "2026-01-25T22:00:00.000Z",
+  "commit": "01ae232",
   "workOrders": [
+    {
+      "id": "FO-Forge-C2-NonRegression-Principle",
+      "title": "Forge Constitution Update — Non-Regression Principle",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T22:00:00.000Z",
+      "filePath": "The Forge/forge/FORGE_KERNEL.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/FORGE_KERNEL.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-P4-Director-E2E-Workflow-Guidance",
+      "title": "Director E2E Workflow Trigger Guidance",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T22:00:00.000Z",
+      "filePath": "The Forge/forge/ops/E2E_WORKFLOW_PLAYBOOK.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/ops/E2E_WORKFLOW_PLAYBOOK.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-RC1-Repo-Reconciliation-and-Gap-Harvest",
+      "title": "Final Reconciliation Audit + Gap Harvest",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T22:00:00.000Z",
+      "filePath": "The Forge/forge/audits/RECONCILIATION_REPORT_2026-01-25.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/audits/RECONCILIATION_REPORT_2026-01-25.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-A1-Agent-Onboarding-Strategy-v1",
+      "title": "Agent Onboarding Strategy v1",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T20:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-A2-WorkOrder-Conveyor-Orchestration",
+      "title": "Work Order Conveyor Orchestration",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T20:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-G1-ForgeOS-RoleSystem-v1",
+      "title": "Forge OS Role System v1",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/FORGE_OS_ROLE_SYSTEM.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/FORGE_OS_ROLE_SYSTEM.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R1-Reporter-Role-Definition",
+      "title": "Reporter Role Definition",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/FORGE_KERNEL.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/FORGE_KERNEL.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R2-Reporting-Signals-Contract",
+      "title": "Reporting Signals & Metrics Contract",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/contracts/REPORTING_SIGNALS_CONTRACT.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/contracts/REPORTING_SIGNALS_CONTRACT.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-R3-Reporter-Evolution-Feedback-Loop",
+      "title": "Reporter-Evolution Feedback Loop",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T18:00:00.000Z",
+      "filePath": "The Forge/forge/FORGE_KERNEL.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/FORGE_KERNEL.md",
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
+    {
+      "id": "FO-Forge-P3-WorkOrder-Index-Enrichment",
+      "title": "Work Order Index Enrichment",
+      "lane": "Forge",
+      "entity": null,
+      "status": "executed",
+      "lastUpdated": "2026-01-25T12:00:00.000Z",
+      "filePath": "The Forge/forge/work-orders/FO-Forge-P3-WorkOrder-Index-Enrichment.md",
+      "repoUrl": "https://github.com/emkaybarrie/projectExodus/blob/main/The%20Forge/forge/work-orders/FO-Forge-P3-WorkOrder-Index-Enrichment.md",
+      "issueUrl": null,
+      "prUrl": null,
+      "deploy": {
+        "dev": "https://emkaybarrie.github.io/projectExodus/dev/The%20Forge/forge/portal/",
+        "prod": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/"
+      },
+      "agent": {
+        "type": "cloud-agent",
+        "name": "claude",
+        "mode": "cloud"
+      }
+    },
     {
       "id": "FO-Forge-S2-Branch-Protection-Verification",
       "title": "FO-Forge-S2-Branch-Protection-Verification",
@@ -132,10 +288,10 @@
     }
   ],
   "counts": {
-    "total": 16,
+    "total": 26,
     "draft": 0,
     "pendingApproval": 0,
     "approved": 7,
-    "executed": 9
+    "executed": 19
   }
 }

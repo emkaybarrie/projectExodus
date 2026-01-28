@@ -1,0 +1,11 @@
+{
+  "id": "badlands",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Badlands" },
+  "slots": [
+    { "id": "header", "part": { "kind": "StatusBar" } },
+    { "id": "content", "card": true, "part": { "kind": "EmptyCard", "props": { "message": "Badlands Action Layer - Coming Soon", "icon": "sword" } } },
+    { "id": "returnNav", "part": { "kind": "ReturnToHub" } }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "EventLog",
+  "version": "1.0.0",
+  "description": "Recent history and temporal memory - shows encounter outcomes and state changes",
+  "category": "prefab",
+  "tags": ["log", "events", "history", "memory"],
+  "inputs": {
+    "events": {
+      "type": "array",
+      "description": "List of recent events to display",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "text": { "type": "string" },
+          "icon": { "type": "string" },
+          "sentiment": { "type": "string", "enum": ["positive", "negative", "neutral"] },
+          "timestamp": { "type": "number" }
+        }
+      },
+      "default": []
+    },
+    "maxEvents": {
+      "type": "number",
+      "description": "Maximum events to display",
+      "default": 5
+    }
+  },
+  "outputs": {
+    "onEventClick": {
+      "type": "event",
+      "description": "Fired when an event is clicked for details"
+    }
+  },
+  "baseline": "baseline.html",
+  "uplift": "uplift.css"
+}

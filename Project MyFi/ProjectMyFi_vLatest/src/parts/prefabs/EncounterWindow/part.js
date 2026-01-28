@@ -42,29 +42,58 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 }
 
 function bindInteractions(root, data, ctx) {
-  const { emitter } = ctx;
+  const { emitter, actionBus } = ctx;
 
-  // Engage button click — emit engage action (optional Phase 1)
+  // Engage button click — trigger escalation (HUB-05)
   const engageBtn = root.querySelector('.EncounterWindow__engageBtn');
-  if (engageBtn && emitter) {
+  if (engageBtn) {
     engageBtn.addEventListener('click', () => {
       const encounterId = root.dataset.encounterId;
       if (encounterId) {
-        emitter.emit('engage', { encounterId });
+        // HUB-13: Emit via scoped emitter for proper source attribution
+        if (emitter) {
+          emitter.emit('encounter:escalate', {
+            encounterId,
+            encounter: root._currentEncounter || { id: encounterId },
+          });
+          emitter.emit('engage', { encounterId });
+        }
       }
     });
   }
 
   // Click on encounter content to engage (alternative trigger)
   const encounterEl = root.querySelector('.EncounterWindow__encounter');
-  if (encounterEl && emitter) {
+  if (encounterEl) {
     encounterEl.addEventListener('click', (e) => {
       // Don't double-trigger if button was clicked
       if (e.target.closest('.EncounterWindow__engageBtn')) return;
 
       const encounterId = root.dataset.encounterId;
       if (encounterId) {
-        emitter.emit('engage', { encounterId });
+        // HUB-13: Emit via scoped emitter for proper source attribution
+        if (emitter) {
+          emitter.emit('encounter:escalate', {
+            encounterId,
+            encounter: root._currentEncounter || { id: encounterId },
+          });
+          emitter.emit('engage', { encounterId });
+        }
+      }
+    });
+  }
+
+  // HUB-12: DEV-only spawn trigger (visible only when __MYFI_DEBUG__ exists)
+  const devSpawnBtn = root.querySelector('.EncounterWindow__devSpawnBtn');
+  if (devSpawnBtn && typeof window !== 'undefined' && window.__MYFI_DEBUG__) {
+    devSpawnBtn.hidden = false;
+    devSpawnBtn.addEventListener('click', () => {
+      const hubController = window.__MYFI_DEBUG__?.hubController;
+      if (hubController && hubController.forceEncounter) {
+        hubController.forceEncounter();
+        console.log('[EncounterWindow] DEV: Spawned test encounter');
+      } else {
+        console.warn('[EncounterWindow] DEV: hubController.forceEncounter not available');
       }
     });
   }
@@ -72,6 +101,9 @@ function bindInteractions(root, data, ctx) {
 
 function render(root, data) {
   const { displayState = 'idle', encounter = null } = data;
+
+  // Store current encounter for escalation reference
+  root._currentEncounter = encounter;
 
   // Update state indicator
   const stateEl = root.querySelector('.EncounterWindow__state');

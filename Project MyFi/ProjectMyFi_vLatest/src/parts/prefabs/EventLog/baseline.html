@@ -1,0 +1,26 @@
+<!-- EventLog baseline.html — Recent History & Meaning -->
+<!-- HUB-06: Event Log & Temporal Memory -->
+
+<div class="EventLog__container">
+  <!-- Header -->
+  <div class="EventLog__header">
+    <span class="EventLog__title">Recent Events</span>
+    <span class="EventLog__count" data-bind="eventCount">0</span>
+  </div>
+
+  <!-- Event List -->
+  <div class="EventLog__list" data-bind="eventList">
+    <!-- Events populated dynamically -->
+  </div>
+
+  <!-- Empty State -->
+  <div class="EventLog__empty" data-bind="emptyState">
+    <span class="EventLog__emptyIcon">&#128203;</span>
+    <span class="EventLog__emptyText">Nothing pending — nice!</span>
+  </div>
+
+  <!-- Summary Footer -->
+  <div class="EventLog__summary" data-bind="summary">
+    <span class="EventLog__summaryText">All is well in the Badlands.</span>
+  </div>
+</div>

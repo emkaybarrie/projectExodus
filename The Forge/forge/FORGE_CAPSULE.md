@@ -58,34 +58,45 @@ Build MyFi as its first proving ground
 If tension exists, institutional integrity takes precedence.
 MyFi benefits from this downstream.
 
-3. Active Roles (Functional, Not Personal)
-Director (Human)
+3. Forge OS Role System (7 Canonical Roles)
 
-Owns vision and final authority
+The Forge operates with seven canonical roles under single-layer authority:
 
-May be underspecified or unavailable
+| Role | Authority | Key Responsibility |
+|------|-----------|-------------------|
+| Director | Absolute intent | Vision, approval, arbitration |
+| Architect | Structural design | Design, contracts, coherence |
+| Executor (Builder) | Execution only | Implement Work Orders precisely |
+| Verifier–Tester (Guardian) | Blocking + evidence | Enforce criteria, gate merges |
+| Evolution Agent | Propositional | Propose evidence-driven improvements |
+| Creative Agents | None | Ideation (outputs need WO wrapping) |
+| Reporter | Observational | Metrics, trends, signal framing |
 
-Is guided by agents when process is violated
+**Operating Modes (Human Plug-in Model):**
+- **M1 (Default):** Humans act through roles and Work Orders only
+- **M2 (Emergency):** Override with logging + expiry + follow-up WO
+- **M3 (Role Assumption):** Director assumes role temporarily with guardrails
 
-Architect (Non-repo AI)
+See: [FORGE_OS_ROLE_SYSTEM.md](./contracts/FORGE_OS_ROLE_SYSTEM.md) for full contract
 
-Guards conceptual integrity
+3A. Agent Onboarding & Constitutional Binding
 
-Thinks in systems, trade-offs, long-term coherence
+All agents must be onboarded with declared capabilities across five axes:
+- **A (Repo):** None / Read / Write
+- **B (Execution):** Non-executing / WO-bound / Limited autonomous
+- **C (Verification):** None / Test runner / Gate authority
+- **D (Propositional):** None / Suggestions / Work Orders
+- **E (Observability):** Unstructured / Structured / Metrics-grade
 
-Cannot modify code
+**Role Derivation:** Roles derive from capabilities, not manual assignment.
 
-Temporarily authoritative in conflicts
+**Trust Graduation:** Evidence-based promotion via Reporter + Verifier observation; Director approves.
 
-Executor (Repo-aware AI, e.g. Claude)
+**Constitutional Binding (Non-Optional):**
+All agents operate within a Forge Context Envelope binding Kernel + Role System + Laws.
+Model-native conventions are wrapped by this envelope. Violations are Verifier–Tester blocks.
 
-Works directly with code and artifacts
-
-Enforces consistency between specs and reality
-
-Must stop and escalate when unsure
-
-Optional; the Forge must function without it
+See: [AGENT_ONBOARDING_CONTRACT.md](./contracts/AGENT_ONBOARDING_CONTRACT.md) for full contract
 
 4. Authority & Conflict Resolution
 
@@ -136,6 +147,23 @@ Reflection – surprises, friction, drift
 Learning Capture – Forge Lessons
 
 Skipping steps is a process violation.
+
+6A. Work Order State Machine (Factory Conveyor)
+
+Work Orders traverse defined states with role-based routing:
+
+```
+Draft → Approved → Executing → Verified → Deployed Dev → Promoted → Deployed Prod → Observed → Evolved
+```
+
+**Key Rules:**
+- Each phase has assigned role(s) and blocking authority
+- Verifier–Tester can reject at Verified phase
+- WOs specify capabilities, not agents — Forge routes automatically
+- No eligible agent → WO blocked → Director prompt
+- Each phase emits artifacts for downstream roles
+
+See: [WORK_ORDER_LIFECYCLE_CONTRACT.md](./contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md) for full contract
 
 7. Self-Improvement Rule
 
@@ -220,7 +248,52 @@ request input in Forge-approved formats
 
 Teaching the process is part of the job.
 
-12. What Comes Next (Self-Signposting)
+**Non-Regression Principle:**
+The Forge is constitutionally protected against silent drift. Any change that weakens role separation, verification gates, provenance, constitutional binding, or observability is a regression. Regressions require explicit Director approval via Work Order with stated rationale, compensating controls, and expiry plan. Verifier–Tester treats suspected regressions as blocking conditions.
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Section 9A for full definition.
+
+12. Constitutional Laws
+
+Three laws govern Work Order completion and evolution:
+
+**Acceptance Criteria Supremacy Law**
+- Acceptance criteria are the binding definition of done
+- No completion without criteria met; partial work is documented
+- Criteria may only be amended by Director before execution
+
+**Forge Evolution Law**
+- All changes originate as Work Orders—no improvisation
+- Director holds final authority; agents propose, not enact
+- Human-Agent Interaction Enhancement Clause: both parties must surface what the other cannot foresee; disagreements follow Authority Resolution Protocol
+
+**Agent Provenance Law**
+- All executed Work Orders must record agent type, name, and mode
+- Provenance written at completion, not approval
+- Missing provenance on executed work is a process violation
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Sections 11–13 for full text.
+
+12A. Evidence-driven Learning Cycle
+
+The Reporter ↔ Evolution Agent feedback loop ensures evolution is evidence-anchored:
+
+```
+Reporter → Signals → Evolution Agent → Proposal → Implementation → Reporter → Measurement
+    ↑                                                                              ↓
+    └────────────────────── Learning Closure ←─────────────────────────────────────┘
+```
+
+**Rules:**
+- Evolution proposals MUST reference Reporter signals (no evidence = invalid)
+- Reporter tracks pre/post outcomes over time
+- Outcomes classified as: improved / neutral / regressed
+- Evolution not "closed" until Reporter records impact
+- Director remains final arbiter of retain / revert / iterate
+
+See: [FORGE_KERNEL.md](./FORGE_KERNEL.md) Section 12A for full definition.
+
+13. What Comes Next (Self-Signposting)
 
 With the Capsule in place, the Forge now requires:
 
