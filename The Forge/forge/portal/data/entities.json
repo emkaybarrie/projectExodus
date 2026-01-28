@@ -13,7 +13,7 @@
       "portals": {
         "forge": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/",
         "entity": "entity/myfi/",
-        "product": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/"
+        "product": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/public/"
       },
       "repoPaths": {
         "root": "Project MyFi/ProjectMyFi_vLatest",
