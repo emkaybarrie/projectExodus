@@ -1,0 +1,758 @@
+/* BadlandsStage uplift.css — HUB Refactor: 3-Tab Stage */
+/* Tabs: Current Event | Recent Events | Loadout (tab bar at bottom) */
+
+.Part-BadlandsStage {
+  padding: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Allow shrinking in flex context */
+}
+
+.BadlandsStage__container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Allow shrinking in flex context */
+  background: linear-gradient(135deg, var(--surface-1, #1a1a2e) 0%, var(--surface-2, #16213e) 100%);
+  border-radius: var(--radius-m, 12px);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TAB CONTENT AREA */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__content {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.BadlandsStage__tabContent {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Show active tab */
+.BadlandsStage__container[data-active-tab="current"] .BadlandsStage__tabContent[data-tab="current"],
+.BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__tabContent[data-tab="recent"],
+.BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__tabContent[data-tab="loadout"] {
+  display: flex;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* CURRENT EVENT TAB — Scenic + Encounter */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Scenic (idle state) */
+.BadlandsStage__scenic {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+
+.BadlandsStage__scenic[data-visible="true"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.BadlandsStage__scenicBg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 50%, rgba(10, 12, 28, 0.85) 100%),
+    url('./wardwatch-bg.svg');
+  background-size: cover;
+  background-position: center bottom;
+}
+
+.BadlandsStage__scenicOverlay {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 5;
+}
+
+.BadlandsStage__scenicTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+}
+
+.BadlandsStage__scenicSubtitle {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Encounter state */
+.BadlandsStage__encounter {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+}
+
+.BadlandsStage__encounter[data-visible="true"] {
+  display: flex;
+}
+
+.BadlandsStage__encounterBg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    rgba(60, 30, 30, 0.85) 0%,
+    rgba(40, 20, 35, 0.9) 100%
+  );
+}
+
+.BadlandsStage__encounterHeader {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.BadlandsStage__encounterIcon {
+  font-size: 2rem;
+}
+
+.BadlandsStage__encounterInfo {
+  flex: 1;
+}
+
+.BadlandsStage__encounterName {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.BadlandsStage__encounterType {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.BadlandsStage__encounterTimer {
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+}
+
+.BadlandsStage__timerValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  font-variant-numeric: tabular-nums;
+}
+
+.BadlandsStage__encounterBody {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+}
+
+.BadlandsStage__enemyVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.BadlandsStage__enemySprite {
+  font-size: 4rem;
+  animation: enemyPulse 2s ease-in-out infinite;
+}
+
+@keyframes enemyPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.BadlandsStage__enemyHealth {
+  width: 100%;
+  max-width: 200px;
+}
+
+.BadlandsStage__enemyHealthBar {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.BadlandsStage__enemyHealthFill {
+  height: 100%;
+  width: 75%;
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.BadlandsStage__autobattlerStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.BadlandsStage__statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: statusPulse 1.5s ease-out infinite;
+}
+
+@keyframes statusPulse {
+  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
+  70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+.BadlandsStage__statusText {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.BadlandsStage__timerBar {
+  position: relative;
+  z-index: 2;
+  height: 6px;
+  margin: 0 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.BadlandsStage__timerFill {
+  height: 100%;
+  width: 45%;
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.BadlandsStage__encounterCTA {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px;
+}
+
+.BadlandsStage__aidBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  min-height: 44px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(109, 40, 217, 0.4));
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.BadlandsStage__aidBtn:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(109, 40, 217, 0.6));
+  transform: translateY(-2px);
+}
+
+.BadlandsStage__aidIcon {
+  font-size: 1.1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* RECENT EVENTS TAB */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__recentHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.BadlandsStage__recentIcon {
+  font-size: 1.3rem;
+}
+
+.BadlandsStage__recentTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__recentList {
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsStage__recentItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.BadlandsStage__recentItem:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.BadlandsStage__recentItem--empty {
+  opacity: 0.5;
+  cursor: default;
+  text-align: center;
+}
+
+.BadlandsStage__recentItem--expanded {
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.BadlandsStage__recentItemMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.BadlandsStage__recentItemIcon {
+  font-size: 1.5rem;
+}
+
+.BadlandsStage__recentItemInfo {
+  flex: 1;
+}
+
+.BadlandsStage__recentItemName {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__recentItemText {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.BadlandsStage__recentItemTime {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.BadlandsStage__recentItemDetails {
+  display: none;
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.BadlandsStage__recentItem--expanded .BadlandsStage__recentItemDetails {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LOADOUT TAB */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__loadoutHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.BadlandsStage__loadoutIcon {
+  font-size: 1.3rem;
+}
+
+.BadlandsStage__loadoutTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__loadoutSections {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.BadlandsStage__loadoutSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsStage__loadoutSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.BadlandsStage__skillSlots,
+.BadlandsStage__equipSlots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.BadlandsStage__skillSlot,
+.BadlandsStage__equipSlot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.BadlandsStage__skillSlot:hover,
+.BadlandsStage__equipSlot:hover {
+  background: rgba(139, 92, 246, 0.2);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.BadlandsStage__skillSlot--empty,
+.BadlandsStage__equipSlot--empty {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  border-style: dashed;
+}
+
+.BadlandsStage__skillIcon,
+.BadlandsStage__equipIcon {
+  font-size: 1.3rem;
+}
+
+.BadlandsStage__skillName,
+.BadlandsStage__equipName {
+  flex: 1;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__equipStat {
+  font-size: 0.75rem;
+  color: #22c55e;
+  padding: 2px 6px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TAB BAR (bottom) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__tabBar {
+  display: flex;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.BadlandsStage__tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  min-height: 54px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.BadlandsStage__tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.BadlandsStage__tab--active {
+  color: #a855f7;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.BadlandsStage__tabIcon {
+  font-size: 1.2rem;
+}
+
+.BadlandsStage__tabLabel {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TOASTS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__toast {
+  position: absolute;
+  bottom: 70px;
+  left: 16px;
+  right: 16px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95), rgba(109, 40, 217, 0.95));
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 50;
+}
+
+.BadlandsStage__toast[data-visible="true"] {
+  display: flex;
+  animation: toastSlideUp 0.3s ease;
+}
+
+@keyframes toastSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.BadlandsStage__toastIcon {
+  font-size: 1.3rem;
+}
+
+.BadlandsStage__toastText {
+  flex: 1;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MODALS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__modal {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 100;
+}
+
+.BadlandsStage__modal[data-visible="true"] {
+  display: flex;
+}
+
+.BadlandsStage__modalContent {
+  width: 90%;
+  max-width: 320px;
+  max-height: 80%;
+  background: var(--surface-1, #1a1a2e);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.BadlandsStage__modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.BadlandsStage__modalTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__modalClose {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.BadlandsStage__modalClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.BadlandsStage__modalBody {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsStage__skillOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.BadlandsStage__skillOption:hover {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.BadlandsStage__skillOptionIcon {
+  font-size: 1.5rem;
+}
+
+.BadlandsStage__skillOptionName {
+  flex: 1;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__skillOptionCost {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* MOBILE RESPONSIVE */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 360px) {
+  .BadlandsStage__container {
+    min-height: 240px;
+  }
+
+  .BadlandsStage__scenicTitle {
+    font-size: 1.1rem;
+  }
+
+  .BadlandsStage__encounterHeader {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .BadlandsStage__encounterIcon {
+    font-size: 1.5rem;
+  }
+
+  .BadlandsStage__encounterName {
+    font-size: 1rem;
+  }
+
+  .BadlandsStage__timerValue {
+    font-size: 1.2rem;
+  }
+
+  .BadlandsStage__enemySprite {
+    font-size: 3rem;
+  }
+
+  .BadlandsStage__aidBtn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+
+  .BadlandsStage__tabLabel {
+    font-size: 0.65rem;
+  }
+
+  .BadlandsStage__tab {
+    min-height: 48px;
+    padding: 8px 6px;
+  }
+}
+
+@media (max-height: 500px) {
+  .BadlandsStage__container {
+    min-height: 200px;
+  }
+
+  .BadlandsStage__encounterBody {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .BadlandsStage__enemySprite {
+    font-size: 2.5rem;
+  }
+
+  .BadlandsStage__tab {
+    min-height: 44px;
+    padding: 6px 4px;
+  }
+
+  .BadlandsStage__tabIcon {
+    font-size: 1rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TOUCH TARGETS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__tab,
+.BadlandsStage__aidBtn,
+.BadlandsStage__skillSlot,
+.BadlandsStage__equipSlot,
+.BadlandsStage__recentItem,
+.BadlandsStage__skillOption,
+.BadlandsStage__modalClose {
+  min-height: 44px;
+}

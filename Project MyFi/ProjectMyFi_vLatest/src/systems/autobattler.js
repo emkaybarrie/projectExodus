@@ -1,0 +1,305 @@
+// Autobattler System — First-Contact Encounter Resolution
+// HUB-04: Autobattler — Encounter Resolution
+//
+// Handles automatic encounter spawning and resolution within Wardwatch.
+// Encounters resolve automatically without player input.
+// Outcomes affect vitals.
+
+/**
+ * Encounter types with spawn weights and resolution parameters
+ */
+const ENCOUNTER_TYPES = [
+  {
+    type: 'wanderer',
+    label: 'Wandering Spirit',
+    icon: '&#128123;',
+    spawnWeight: 30,
+    baseDifficulty: 1,
+    rewards: { essence: 50, healthRegen: 10 },
+    risks: { healthDrain: 20, manaDrain: 10 },
+  },
+  {
+    type: 'storm',
+    label: 'Dust Storm',
+    icon: '&#127786;',
+    spawnWeight: 25,
+    baseDifficulty: 2,
+    rewards: { essence: 75, staminaRegen: 15 },
+    risks: { healthDrain: 30, staminaDrain: 25 },
+  },
+  {
+    type: 'cache',
+    label: 'Hidden Cache',
+    icon: '&#128230;',
+    spawnWeight: 15,
+    baseDifficulty: 0,
+    rewards: { essence: 100, manaRegen: 25 },
+    risks: { healthDrain: 0, manaDrain: 0 },
+  },
+  {
+    type: 'beast',
+    label: 'Badlands Beast',
+    icon: '&#128058;',
+    spawnWeight: 20,
+    baseDifficulty: 3,
+    rewards: { essence: 120, healthRegen: 0 },
+    risks: { healthDrain: 50, staminaDrain: 30 },
+  },
+  {
+    type: 'anomaly',
+    label: 'Essence Anomaly',
+    icon: '&#10024;',
+    spawnWeight: 10,
+    baseDifficulty: 2,
+    rewards: { essence: 200, manaRegen: 40 },
+    risks: { healthDrain: 15, manaDrain: 30 },
+  },
+];
+
+/**
+ * Creates an Autobattler instance
+ * @param {Object} options - Configuration options
+ * @param {Function} options.onEncounterSpawn - Callback when encounter spawns
+ * @param {Function} options.onEncounterResolve - Callback when encounter resolves
+ * @param {Function} options.onVitalsImpact - Callback with vitals changes
+ * @param {Object} options.actionBus - Optional ActionBus for event dispatch
+ */
+export function createAutobattler(options = {}) {
+  const {
+    onEncounterSpawn,
+    onEncounterResolve,
+    onVitalsImpact,
+    actionBus,
+  } = options;
+
+  let currentEncounter = null;
+  let timerId = null;
+  let encounterCount = 0;
+
+  // Timing constants
+  // Encounters take ~30s to auto-resolve in the UI (BadlandsStage handles timer display)
+  // The autobattler doesn't auto-resolve - it's controlled by the stage timer or player actions
+  const SPAWN_CHECK_MS = 5000;    // Check for spawn every 5 seconds
+
+  /**
+   * Gets spawn chance from dev config or uses default
+   */
+  function getSpawnChance() {
+    const devConfig = window.__MYFI_DEV_CONFIG__ || {};
+    // encounterRate is 1-50 (percentage per tick), convert to 0-1
+    const rate = devConfig.encounterRate || 25;
+    return rate / 100;
+  }
+
+  /**
+   * Attempts to spawn a new encounter
+   */
+  function trySpawn() {
+    if (currentEncounter) return; // Already have an active encounter
+
+    if (Math.random() < getSpawnChance()) {
+      spawnEncounter();
+    }
+  }
+
+  /**
+   * Spawns a random encounter based on weighted types
+   */
+  function spawnEncounter() {
+    const totalWeight = ENCOUNTER_TYPES.reduce((sum, e) => sum + e.spawnWeight, 0);
+    let roll = Math.random() * totalWeight;
+
+    let selectedType = ENCOUNTER_TYPES[0];
+    for (const type of ENCOUNTER_TYPES) {
+      roll -= type.spawnWeight;
+      if (roll <= 0) {
+        selectedType = type;
+        break;
+      }
+    }
+
+    encounterCount++;
+    currentEncounter = {
+      id: `encounter-${Date.now()}-${encounterCount}`,
+      ...selectedType,
+      spawnedAt: Date.now(),
+      resolved: false,
+    };
+
+    // Notify spawn
+    if (onEncounterSpawn) {
+      onEncounterSpawn(currentEncounter);
+    }
+    if (actionBus) {
+      actionBus.emit('autobattler:spawn', currentEncounter);
+    }
+
+    // NOTE: Auto-resolution is handled by BadlandsStage's 60s timer
+    // The stage calls forceResolve() when timer expires and player is in autobattler mode
+    // This ensures turn-based mode is respected (timer paused during battle)
+  }
+
+  /**
+   * Resolves the current encounter automatically
+   */
+  function resolveEncounter() {
+    if (!currentEncounter) return;
+
+    const encounter = currentEncounter;
+
+    // Calculate outcome based on difficulty (simplified)
+    // Higher difficulty = more variance in outcome
+    const successRoll = Math.random();
+    const successThreshold = 0.3 + (0.1 * encounter.baseDifficulty);
+    const isVictory = successRoll > successThreshold;
+
+    // Calculate vitals impact
+    const vitalsImpact = calculateVitalsImpact(encounter, isVictory);
+
+    const outcome = {
+      encounterId: encounter.id,
+      encounterType: encounter.type,
+      encounterLabel: encounter.label,
+      isVictory,
+      summary: isVictory
+        ? `Overcame ${encounter.label}!`
+        : `Survived ${encounter.label}...`,
+      vitalsImpact,
+      timestamp: Date.now(),
+    };
+
+    encounter.resolved = true;
+
+    // Notify resolution
+    if (onEncounterResolve) {
+      onEncounterResolve(outcome);
+    }
+    if (onVitalsImpact) {
+      onVitalsImpact(vitalsImpact);
+    }
+    if (actionBus) {
+      actionBus.emit('autobattler:resolve', outcome);
+    }
+
+    // Clear encounter after brief delay
+    setTimeout(() => {
+      currentEncounter = null;
+    }, 1000);
+
+    return outcome;
+  }
+
+  /**
+   * Calculates vitals impact based on encounter and outcome
+   */
+  function calculateVitalsImpact(encounter, isVictory) {
+    const impact = {
+      health: 0,
+      mana: 0,
+      stamina: 0,
+      essence: 0,
+    };
+
+    if (isVictory) {
+      // Apply rewards
+      impact.essence = encounter.rewards.essence || 0;
+      impact.health = encounter.rewards.healthRegen || 0;
+      impact.mana = encounter.rewards.manaRegen || 0;
+      impact.stamina = encounter.rewards.staminaRegen || 0;
+    } else {
+      // Apply reduced rewards but also risks
+      impact.essence = Math.floor((encounter.rewards.essence || 0) * 0.3);
+      impact.health = -(encounter.risks.healthDrain || 0);
+      impact.mana = -(encounter.risks.manaDrain || 0);
+      impact.stamina = -(encounter.risks.staminaDrain || 0);
+    }
+
+    return impact;
+  }
+
+  /**
+   * Force spawn an encounter (for testing/escalation)
+   */
+  function forceSpawn(typeOverride = null) {
+    if (currentEncounter) {
+      resolveEncounter(); // Resolve current first
+    }
+
+    if (typeOverride) {
+      const type = ENCOUNTER_TYPES.find(t => t.type === typeOverride);
+      if (type) {
+        encounterCount++;
+        currentEncounter = {
+          id: `encounter-${Date.now()}-${encounterCount}`,
+          ...type,
+          spawnedAt: Date.now(),
+          resolved: false,
+        };
+
+        if (onEncounterSpawn) onEncounterSpawn(currentEncounter);
+        if (actionBus) actionBus.emit('autobattler:spawn', currentEncounter);
+
+        // Auto-resolution handled by BadlandsStage timer
+        return currentEncounter;
+      }
+    }
+
+    spawnEncounter();
+    return currentEncounter;
+  }
+
+  return {
+    /**
+     * Start the autobattler loop
+     */
+    start() {
+      if (timerId) return;
+      timerId = setInterval(trySpawn, SPAWN_CHECK_MS);
+    },
+
+    /**
+     * Stop the autobattler loop
+     */
+    stop() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    },
+
+    /**
+     * Get current encounter if any
+     */
+    getCurrentEncounter() {
+      return currentEncounter;
+    },
+
+    /**
+     * Force spawn an encounter
+     */
+    forceSpawn,
+
+    /**
+     * Force resolve current encounter
+     */
+    forceResolve() {
+      return resolveEncounter();
+    },
+
+    /**
+     * Get encounter count
+     */
+    getEncounterCount() {
+      return encounterCount;
+    },
+
+    /**
+     * Get available encounter types
+     */
+    getEncounterTypes() {
+      return ENCOUNTER_TYPES.map(t => ({ type: t.type, label: t.label, icon: t.icon }));
+    },
+  };
+}
+
+export default { createAutobattler };

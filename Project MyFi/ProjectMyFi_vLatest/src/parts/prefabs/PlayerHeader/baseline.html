@@ -1,0 +1,78 @@
+<!-- PlayerHeader baseline.html — HUB Refactor: Vitals + Essence -->
+<!-- Row 1: Avatar | Name/Chips | Vitals bars -->
+<!-- Row 2: Essence bar (full width) -->
+
+<div class="PlayerHeader__container">
+  <!-- Status line (thin top strip) -->
+  <div class="PlayerHeader__statusLine">
+    <button class="PlayerHeader__modeBtn" type="button" data-action="modeInfo">
+      <span class="PlayerHeader__modeIndicator"></span>
+      <span class="PlayerHeader__modeLabel" data-bind="modeLabel">Demo Mode</span>
+    </button>
+    <span class="PlayerHeader__cycleInfo" data-bind="cycleInfo"></span>
+  </div>
+
+  <!-- Row 1: Avatar + Identity + Vitals -->
+  <div class="PlayerHeader__mainRow">
+    <!-- Left: Avatar -->
+    <div class="PlayerHeader__avatar">
+      <span class="PlayerHeader__portraitIcon" data-bind="avatarIcon">&#129489;</span>
+    </div>
+
+    <!-- Center: Identity + Chips -->
+    <div class="PlayerHeader__identityBlock">
+      <div class="PlayerHeader__identity">
+        <span class="PlayerHeader__name" data-bind="name">Wanderer</span>
+        <span class="PlayerHeader__title" data-bind="title">of the Badlands</span>
+      </div>
+      <div class="PlayerHeader__chips">
+        <span class="PlayerHeader__chip PlayerHeader__chip--pressure" data-bind="pressure" data-state="balanced">
+          <span class="PlayerHeader__chipIcon">&#127919;</span>
+          <span class="PlayerHeader__chipLabel" data-bind="pressureLabel">Balanced</span>
+        </span>
+        <span class="PlayerHeader__chip PlayerHeader__chip--momentum" data-bind="momentum" data-state="steady">
+          <span class="PlayerHeader__chipIcon">&#9889;</span>
+          <span class="PlayerHeader__chipLabel" data-bind="momentumLabel">Steady</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Right: Vitals bars -->
+    <div class="PlayerHeader__vitals">
+      <div class="PlayerHeader__vital PlayerHeader__vital--health" data-vital="health">
+        <span class="PlayerHeader__vitalLabel">HP</span>
+        <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barFill" data-bind="healthFill"></div>
+        </div>
+        <span class="PlayerHeader__vitalValue" data-bind="healthValue">450/1000</span>
+      </div>
+      <div class="PlayerHeader__vital PlayerHeader__vital--mana" data-vital="mana">
+        <span class="PlayerHeader__vitalLabel">MP</span>
+        <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barFill" data-bind="manaFill"></div>
+        </div>
+        <span class="PlayerHeader__vitalValue" data-bind="manaValue">200/500</span>
+      </div>
+      <div class="PlayerHeader__vital PlayerHeader__vital--stamina" data-vital="stamina">
+        <span class="PlayerHeader__vitalLabel">ST</span>
+        <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barFill" data-bind="staminaFill"></div>
+        </div>
+        <span class="PlayerHeader__vitalValue" data-bind="staminaValue">320/400</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2: Essence bar (full width) -->
+  <div class="PlayerHeader__essenceRow">
+    <div class="PlayerHeader__essenceBar">
+      <span class="PlayerHeader__essenceIcon">&#10024;</span>
+      <span class="PlayerHeader__essenceLabel">Essence</span>
+      <div class="PlayerHeader__essenceBarContainer">
+        <div class="PlayerHeader__essenceBarFill" data-bind="essenceFill"></div>
+      </div>
+      <span class="PlayerHeader__essenceValue" data-bind="essenceValue">1.2k</span>
+      <span class="PlayerHeader__essenceAccrual" data-bind="essenceAccrual">+12.5/tick</span>
+    </div>
+  </div>
+</div>

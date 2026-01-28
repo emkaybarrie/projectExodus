@@ -1,0 +1,25 @@
+{
+  "id": "PlayerCore",
+  "type": "prefab",
+  "version": "1.0.0",
+  "description": "Avatar portrait and status indicators for player embodiment",
+  "workOrder": "MYFI-HUB-02-Player-Core-Vitals-and-Avatar",
+  "baseline": {
+    "locked": true,
+    "zones": []
+  },
+  "dataContract": {
+    "required": [],
+    "optional": [
+      { "field": "name", "type": "string", "default": "Wanderer" },
+      { "field": "title", "type": "string", "default": "of the Badlands" },
+      { "field": "pressure", "type": "enum", "values": ["ahead", "behind", "balanced"], "default": "balanced" },
+      { "field": "momentum", "type": "enum", "values": ["rising", "falling", "steady"], "default": "steady" },
+      { "field": "effects", "type": "array", "items": { "icon": "string", "label": "string" } }
+    ]
+  },
+  "behavior": {
+    "alwaysVisible": true,
+    "updatesInRealTime": true
+  }
+}

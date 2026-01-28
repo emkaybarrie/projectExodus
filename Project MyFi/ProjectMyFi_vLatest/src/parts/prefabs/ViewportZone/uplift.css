@@ -1,0 +1,429 @@
+/* ViewportZone uplift.css — HUB-19: Unified viewport */
+/* Single zone for world patrol and encounter display */
+
+.Part-ViewportZone {
+  padding: 0;
+  overflow: hidden;
+}
+
+.ViewportZone__container {
+  position: relative;
+  min-height: 180px;
+  border-radius: var(--r, 16px);
+  overflow: hidden;
+}
+
+/* World Layer */
+.ViewportZone__worldLayer {
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+}
+
+.ViewportZone__worldLayer[data-visible="false"] {
+  display: none;
+}
+
+.ViewportZone__viewport {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  overflow: hidden;
+}
+
+/* Time-based viewport colors */
+.ViewportZone__viewport[data-time="day"] {
+  background: linear-gradient(180deg, #2980b9 0%, #6dd5fa 50%, #f5f5dc 100%);
+}
+
+.ViewportZone__viewport[data-time="dusk"] {
+  background: linear-gradient(180deg, #2c3e50 0%, #e74c3c 30%, #f39c12 70%, #1a1a2e 100%);
+}
+
+.ViewportZone__viewport[data-time="night"] {
+  background: linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #2d2d44 100%);
+}
+
+/* Background parallax layers */
+.ViewportZone__bgFar,
+.ViewportZone__bgMid,
+.ViewportZone__bgNear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ViewportZone__bgFar {
+  opacity: 0.3;
+  background: radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+}
+
+.ViewportZone__bgMid {
+  background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+.ViewportZone__bgNear {
+  background: linear-gradient(transparent 80%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+/* Avatar */
+.ViewportZone__avatar {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.6), rgba(139, 92, 246, 0.2));
+  border: 2px solid rgba(139, 92, 246, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.8s ease-out, top 0.8s ease-out;
+  z-index: 5;
+  left: 50%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+}
+
+.ViewportZone__avatar[data-moving="true"] {
+  animation: avatarBob 0.4s ease-in-out;
+}
+
+@keyframes avatarBob {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, -55%); }
+}
+
+.ViewportZone__avatarIcon {
+  font-size: 16px;
+}
+
+/* Scan line */
+.ViewportZone__scanLine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.6), transparent);
+  animation: scanMove 3s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanMove {
+  0% { top: 0; opacity: 0.3; }
+  50% { opacity: 0.8; }
+  100% { top: 100%; opacity: 0.3; }
+}
+
+/* World info overlay */
+.ViewportZone__worldInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 11px;
+}
+
+.ViewportZone__timeIcon {
+  font-size: 14px;
+}
+
+.ViewportZone__timeLabel {
+  font-weight: 600;
+  color: var(--text, rgba(255, 255, 255, 0.92));
+}
+
+.ViewportZone__stateMessage {
+  flex: 1;
+  text-align: right;
+  color: var(--muted, rgba(255, 255, 255, 0.68));
+}
+
+/* Activity bar */
+.ViewportZone__activityBar {
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 10px;
+  color: var(--muted, rgba(255, 255, 255, 0.5));
+}
+
+/* Encounter Banner (shows in world mode when encounter active) */
+.ViewportZone__encounterBanner {
+  display: none;
+  position: absolute;
+  bottom: 40px;
+  left: 10px;
+  right: 10px;
+  background: rgba(139, 92, 246, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  z-index: 10;
+}
+
+.ViewportZone__encounterBanner[data-visible="true"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  animation: bannerSlideIn 0.3s ease-out;
+}
+
+@keyframes bannerSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.ViewportZone__bannerContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ViewportZone__bannerIcon {
+  font-size: 18px;
+}
+
+.ViewportZone__bannerText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ViewportZone__viewEncounterBtn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ViewportZone__viewEncounterBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.ViewportZone__timerBar {
+  width: 100%;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.ViewportZone__timerFill {
+  height: 100%;
+  background: #fff;
+  border-radius: 2px;
+  transition: width 1s linear;
+  width: 100%;
+}
+
+.ViewportZone__timerText {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Encounter Layer (full encounter view) */
+.ViewportZone__encounterLayer {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #1a1a2e 0%, #2d1b4e 50%, #1a1a2e 100%);
+}
+
+.ViewportZone__encounterLayer[data-visible="true"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.ViewportZone__encounterDisplay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.ViewportZone__encounterHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ViewportZone__encounterIcon {
+  font-size: 28px;
+}
+
+.ViewportZone__encounterInfo {
+  flex: 1;
+}
+
+.ViewportZone__encounterName {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, #fff);
+}
+
+.ViewportZone__encounterType {
+  display: block;
+  font-size: 10px;
+  color: var(--muted, rgba(255, 255, 255, 0.6));
+  text-transform: uppercase;
+}
+
+.ViewportZone__encounterTimer {
+  text-align: center;
+  padding: 4px 8px;
+  background: rgba(231, 76, 60, 0.3);
+  border-radius: 6px;
+}
+
+.ViewportZone__timerValue {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e74c3c;
+}
+
+.ViewportZone__timerUnit {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.ViewportZone__encounterBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.ViewportZone__encounterVisual {
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.3), transparent);
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: encounterPulse 2s ease-in-out infinite;
+}
+
+@keyframes encounterPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+  50% { transform: scale(1.05); box-shadow: 0 0 30px rgba(139, 92, 246, 0.5); }
+}
+
+.ViewportZone__encounterSprite {
+  font-size: 36px;
+}
+
+.ViewportZone__encounterStatus {
+  text-align: center;
+}
+
+.ViewportZone__autobattlerStatus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted, rgba(255, 255, 255, 0.6));
+}
+
+.ViewportZone__statusIndicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #95a5a6;
+}
+
+.ViewportZone__statusIndicator[data-active="true"] {
+  background: #2ecc71;
+  animation: statusBlink 1s ease-in-out infinite;
+}
+
+@keyframes statusBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Encounter action buttons */
+.ViewportZone__encounterActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ViewportZone__actionBtn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ViewportZone__actionBtn--turnBased {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.ViewportZone__actionBtn--turnBased:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226);
+  transform: translateY(-1px);
+}
+
+.ViewportZone__actionBtn--exit {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--muted, rgba(255, 255, 255, 0.7));
+}
+
+.ViewportZone__actionBtn--exit:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Mobile compact */
+@media (max-height: 600px) {
+  .ViewportZone__container {
+    min-height: 150px;
+  }
+
+  .ViewportZone__viewport {
+    height: 100px;
+  }
+
+  .ViewportZone__encounterBody {
+    padding: 8px 0;
+  }
+
+  .ViewportZone__encounterVisual {
+    width: 60px;
+    height: 60px;
+  }
+
+  .ViewportZone__encounterSprite {
+    font-size: 28px;
+  }
+}

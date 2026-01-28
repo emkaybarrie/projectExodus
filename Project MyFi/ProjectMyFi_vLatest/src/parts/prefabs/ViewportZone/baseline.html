@@ -1,0 +1,86 @@
+<!-- ViewportZone baseline.html — HUB-19: Unified Wardwatch + Encounter viewport -->
+<!-- Single coherent zone for world patrol and encounter presentation -->
+
+<div class="ViewportZone__container">
+  <!-- World patrol layer (Wardwatch content) -->
+  <div class="ViewportZone__worldLayer" data-layer="world">
+    <div class="ViewportZone__viewport" data-time="day">
+      <!-- Background layers -->
+      <div class="ViewportZone__bgFar"></div>
+      <div class="ViewportZone__bgMid"></div>
+      <div class="ViewportZone__bgNear"></div>
+
+      <!-- Avatar -->
+      <div class="ViewportZone__avatar" data-moving="false">
+        <span class="ViewportZone__avatarIcon">&#129489;</span>
+      </div>
+
+      <!-- Scan line effect -->
+      <div class="ViewportZone__scanLine"></div>
+    </div>
+
+    <!-- World info overlay -->
+    <div class="ViewportZone__worldInfo">
+      <span class="ViewportZone__timeIcon">&#9788;</span>
+      <span class="ViewportZone__timeLabel" data-bind="timeLabel">Day</span>
+      <span class="ViewportZone__stateMessage" data-bind="stateMessage">Watching the Badlands...</span>
+    </div>
+
+    <div class="ViewportZone__activityBar">
+      <span class="ViewportZone__activityText" data-bind="activityText">Scanning the horizon...</span>
+    </div>
+  </div>
+
+  <!-- Encounter banner (shows when encounter active in world mode) -->
+  <div class="ViewportZone__encounterBanner" data-visible="false">
+    <div class="ViewportZone__bannerContent">
+      <span class="ViewportZone__bannerIcon" data-bind="encounterIcon">&#128123;</span>
+      <span class="ViewportZone__bannerText" data-bind="encounterSummary">Encounter detected!</span>
+    </div>
+    <button class="ViewportZone__viewEncounterBtn" data-action="viewEncounter">
+      View Encounter
+    </button>
+    <div class="ViewportZone__timerBar">
+      <div class="ViewportZone__timerFill" data-bind="timerFill"></div>
+    </div>
+    <span class="ViewportZone__timerText" data-bind="timerText">60s</span>
+  </div>
+
+  <!-- Encounter view layer (replaces world when viewportMode="encounter") -->
+  <div class="ViewportZone__encounterLayer" data-layer="encounter" data-visible="false">
+    <div class="ViewportZone__encounterDisplay">
+      <div class="ViewportZone__encounterHeader">
+        <span class="ViewportZone__encounterIcon" data-bind="encounterIconLarge">&#128123;</span>
+        <div class="ViewportZone__encounterInfo">
+          <span class="ViewportZone__encounterName" data-bind="encounterName">Unknown Encounter</span>
+          <span class="ViewportZone__encounterType" data-bind="encounterType">Encounter</span>
+        </div>
+        <div class="ViewportZone__encounterTimer">
+          <span class="ViewportZone__timerValue" data-bind="timerValue">60</span>
+          <span class="ViewportZone__timerUnit">sec</span>
+        </div>
+      </div>
+
+      <div class="ViewportZone__encounterBody">
+        <div class="ViewportZone__encounterVisual">
+          <span class="ViewportZone__encounterSprite" data-bind="encounterSprite">&#128123;</span>
+        </div>
+        <div class="ViewportZone__encounterStatus">
+          <div class="ViewportZone__autobattlerStatus">
+            <span class="ViewportZone__statusLabel">Autobattler Active</span>
+            <div class="ViewportZone__statusIndicator" data-active="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ViewportZone__encounterActions">
+        <button class="ViewportZone__actionBtn ViewportZone__actionBtn--turnBased" data-action="enterTurnBased">
+          Enter Turn-Based
+        </button>
+        <button class="ViewportZone__actionBtn ViewportZone__actionBtn--exit" data-action="exitEncounterView">
+          Exit to World
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

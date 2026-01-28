@@ -1,0 +1,402 @@
+/* PlayerHeader uplift.css — HUB Refactor: Vitals + Essence */
+/* Row 1: Avatar | Name/Chips | Vitals bars */
+/* Row 2: Essence bar (full width) */
+
+.Part-PlayerHeader {
+  padding: 10px 14px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.PlayerHeader__container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Status Line (thin top strip) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.PlayerHeader__statusLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+}
+
+.PlayerHeader__modeBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--muted, rgba(255, 255, 255, 0.68));
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.PlayerHeader__modeBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.PlayerHeader__modeIndicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f1c40f; /* Demo mode yellow */
+}
+
+.PlayerHeader__modeIndicator[data-verified="true"] {
+  background: #2ecc71; /* Connected green */
+}
+
+.PlayerHeader__cycleInfo {
+  color: var(--muted, rgba(255, 255, 255, 0.5));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Main Row: Avatar | Identity | Vitals */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.PlayerHeader__mainRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Avatar */
+.PlayerHeader__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.3));
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.PlayerHeader__portraitIcon {
+  font-size: 26px;
+}
+
+/* Identity block */
+.PlayerHeader__identityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.PlayerHeader__identity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.PlayerHeader__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text, rgba(255, 255, 255, 0.92));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.PlayerHeader__title {
+  font-size: 10px;
+  color: var(--muted, rgba(255, 255, 255, 0.5));
+  white-space: nowrap;
+}
+
+/* Chips */
+.PlayerHeader__chips {
+  display: flex;
+  gap: 4px;
+}
+
+.PlayerHeader__chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 9px;
+}
+
+.PlayerHeader__chipIcon {
+  font-size: 10px;
+}
+
+.PlayerHeader__chipLabel {
+  color: var(--muted, rgba(255, 255, 255, 0.68));
+  font-weight: 500;
+}
+
+/* Chip states */
+.PlayerHeader__chip--pressure[data-state="ahead"] {
+  background: rgba(46, 204, 113, 0.15);
+}
+.PlayerHeader__chip--pressure[data-state="ahead"] .PlayerHeader__chipLabel {
+  color: #2ecc71;
+}
+
+.PlayerHeader__chip--pressure[data-state="behind"] {
+  background: rgba(231, 76, 60, 0.15);
+}
+.PlayerHeader__chip--pressure[data-state="behind"] .PlayerHeader__chipLabel {
+  color: #e74c3c;
+}
+
+.PlayerHeader__chip--momentum[data-state="rising"] {
+  background: rgba(46, 204, 113, 0.15);
+}
+.PlayerHeader__chip--momentum[data-state="rising"] .PlayerHeader__chipLabel {
+  color: #2ecc71;
+}
+
+.PlayerHeader__chip--momentum[data-state="falling"] {
+  background: rgba(241, 196, 15, 0.15);
+}
+.PlayerHeader__chip--momentum[data-state="falling"] .PlayerHeader__chipLabel {
+  color: #f1c40f;
+}
+
+/* Vitals section */
+.PlayerHeader__vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.PlayerHeader__vital {
+  display: grid;
+  grid-template-columns: 24px 1fr 60px;
+  gap: 6px;
+  align-items: center;
+  height: 16px;
+}
+
+.PlayerHeader__vitalLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text, rgba(255, 255, 255, 0.85));
+  text-align: left;
+}
+
+.PlayerHeader__barContainer {
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.PlayerHeader__barFill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+  width: 45%; /* Default */
+}
+
+/* Vital colors */
+.PlayerHeader__vital--health .PlayerHeader__barFill {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.PlayerHeader__vital--mana .PlayerHeader__barFill {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.PlayerHeader__vital--stamina .PlayerHeader__barFill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.PlayerHeader__vitalValue {
+  font-size: 10px;
+  color: var(--muted, rgba(255, 255, 255, 0.7));
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Essence Row (full width) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.PlayerHeader__essenceRow {
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.PlayerHeader__essenceBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.PlayerHeader__essenceIcon {
+  font-size: 14px;
+  color: #a855f7;
+}
+
+.PlayerHeader__essenceLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text, rgba(255, 255, 255, 0.85));
+  flex-shrink: 0;
+}
+
+.PlayerHeader__essenceBarContainer {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.PlayerHeader__essenceBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: 25%; /* Default */
+}
+
+.PlayerHeader__essenceValue {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a855f7;
+  min-width: 32px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.PlayerHeader__essenceAccrual {
+  font-size: 9px;
+  color: #22c55e;
+  white-space: nowrap;
+}
+
+.PlayerHeader__essenceAccrual:empty {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Mobile Responsive */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Small phones */
+@media (max-width: 360px) {
+  .Part-PlayerHeader {
+    padding: 8px 10px;
+  }
+
+  .PlayerHeader__container {
+    gap: 6px;
+  }
+
+  .PlayerHeader__mainRow {
+    gap: 8px;
+  }
+
+  .PlayerHeader__avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .PlayerHeader__portraitIcon {
+    font-size: 22px;
+  }
+
+  .PlayerHeader__name {
+    font-size: 12px;
+  }
+
+  .PlayerHeader__title {
+    font-size: 9px;
+  }
+
+  .PlayerHeader__chip {
+    padding: 1px 4px;
+    font-size: 8px;
+  }
+
+  .PlayerHeader__vital {
+    grid-template-columns: 20px 1fr 50px;
+    height: 14px;
+  }
+
+  .PlayerHeader__vitalLabel {
+    font-size: 8px;
+  }
+
+  .PlayerHeader__barContainer {
+    height: 8px;
+  }
+
+  .PlayerHeader__vitalValue {
+    font-size: 9px;
+  }
+
+  .PlayerHeader__essenceLabel {
+    font-size: 9px;
+  }
+
+  .PlayerHeader__essenceBarContainer {
+    height: 6px;
+  }
+
+  .PlayerHeader__essenceValue {
+    font-size: 10px;
+  }
+}
+
+/* Landscape */
+@media (max-height: 500px) {
+  .Part-PlayerHeader {
+    padding: 6px 10px;
+  }
+
+  .PlayerHeader__container {
+    gap: 4px;
+  }
+
+  .PlayerHeader__statusLine {
+    padding-bottom: 4px;
+  }
+
+  .PlayerHeader__avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .PlayerHeader__portraitIcon {
+    font-size: 20px;
+  }
+
+  .PlayerHeader__title {
+    display: none;
+  }
+
+  .PlayerHeader__vital {
+    height: 12px;
+  }
+
+  .PlayerHeader__barContainer {
+    height: 6px;
+  }
+
+  .PlayerHeader__essenceRow {
+    padding-top: 4px;
+  }
+
+  .PlayerHeader__essenceBarContainer {
+    height: 5px;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "Exact copy from: src/surfaces/screens/hub/surface.json (post HUB-27)",
+  "id": "hub",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Badlands Hub" },
+  "slots": [
+    { "id": "playerHeader", "card": true, "part": { "kind": "PlayerHeader" } },
+    { "id": "stage", "card": true, "part": { "kind": "BadlandsStage" } },
+    { "id": "eventLog", "card": true, "part": { "kind": "EventLog" } },
+    { "id": "spatialNav", "card": true, "part": { "kind": "SpatialNav" } }
+  ]
+}

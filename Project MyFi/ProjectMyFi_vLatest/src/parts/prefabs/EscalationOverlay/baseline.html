@@ -1,0 +1,55 @@
+<!-- EscalationOverlay baseline.html — Turn-Based Escalation UI -->
+<!-- HUB-05: Turn-Based Escalation Layer -->
+
+<div class="EscalationOverlay__container" data-state="hidden">
+  <!-- Backdrop -->
+  <div class="EscalationOverlay__backdrop"></div>
+
+  <!-- Encounter Context -->
+  <div class="EscalationOverlay__context">
+    <div class="EscalationOverlay__encounterInfo">
+      <span class="EscalationOverlay__encounterIcon" data-bind="encounterIcon">&#128123;</span>
+      <span class="EscalationOverlay__encounterName" data-bind="encounterName">Unknown Encounter</span>
+    </div>
+    <div class="EscalationOverlay__turnIndicator">
+      <span class="EscalationOverlay__turnLabel">Turn</span>
+      <span class="EscalationOverlay__turnNumber" data-bind="turnNumber">1</span>
+    </div>
+  </div>
+
+  <!-- Action Panel -->
+  <div class="EscalationOverlay__actions">
+    <button class="EscalationOverlay__action EscalationOverlay__action--attack" data-action="attack">
+      <span class="EscalationOverlay__actionIcon">&#9876;</span>
+      <span class="EscalationOverlay__actionLabel">Strike</span>
+      <span class="EscalationOverlay__actionCost">-15 Stamina</span>
+    </button>
+    <button class="EscalationOverlay__action EscalationOverlay__action--skill" data-action="skill">
+      <span class="EscalationOverlay__actionIcon">&#10024;</span>
+      <span class="EscalationOverlay__actionLabel">Channel</span>
+      <span class="EscalationOverlay__actionCost">-25 Mana</span>
+    </button>
+    <button class="EscalationOverlay__action EscalationOverlay__action--defend" data-action="defend">
+      <span class="EscalationOverlay__actionIcon">&#128737;</span>
+      <span class="EscalationOverlay__actionLabel">Brace</span>
+      <span class="EscalationOverlay__actionCost">-5 Stamina</span>
+    </button>
+    <button class="EscalationOverlay__action EscalationOverlay__action--retreat" data-action="retreat">
+      <span class="EscalationOverlay__actionIcon">&#128694;</span>
+      <span class="EscalationOverlay__actionLabel">Retreat</span>
+      <span class="EscalationOverlay__actionCost">Free</span>
+    </button>
+  </div>
+
+  <!-- Outcome Display -->
+  <div class="EscalationOverlay__outcome" data-bind="outcome">
+    <!-- Populated after action -->
+  </div>
+
+  <!-- Exit Controls -->
+  <div class="EscalationOverlay__controls">
+    <button class="EscalationOverlay__exitBtn" data-action="exit">
+      <span>&#10006;</span> Exit to Autobattler
+    </button>
+  </div>
+</div>

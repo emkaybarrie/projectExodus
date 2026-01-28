@@ -1,0 +1,121 @@
+/* EssenceBar uplift.css — HUB-E3: Bottom Essence Continuation Card */
+/* Slim bar that sits at the bottom of the viewport */
+
+.Part-EssenceBar {
+  padding: 8px 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: linear-gradient(180deg, rgba(155, 89, 182, 0.1) 0%, rgba(142, 68, 173, 0.15) 100%);
+  border-top: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.EssenceBar__container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.EssenceBar__icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 4px rgba(155, 89, 182, 0.6));
+}
+
+.EssenceBar__label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(155, 89, 182, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.EssenceBar__barContainer {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 80px;
+}
+
+.EssenceBar__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #9b59b6, #8e44ad, #a855f7);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 8px rgba(155, 89, 182, 0.5);
+}
+
+.EssenceBar__value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a855f7;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.EssenceBar__accrual {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.EssenceBar__accrual[data-trend="positive"] {
+  color: #2ecc71;
+}
+
+/* Mobile landscape */
+@media (max-height: 500px) {
+  .Part-EssenceBar {
+    padding: 4px 10px;
+  }
+
+  .EssenceBar__icon {
+    font-size: 12px;
+  }
+
+  .EssenceBar__barContainer {
+    height: 6px;
+  }
+
+  .EssenceBar__value {
+    font-size: 10px;
+  }
+}
+
+/* Small screens */
+@media (max-width: 360px) {
+  .Part-EssenceBar {
+    padding: 6px 8px;
+  }
+
+  .EssenceBar__container {
+    gap: 6px;
+  }
+
+  .EssenceBar__label {
+    display: none;
+  }
+
+  .EssenceBar__icon {
+    font-size: 12px;
+  }
+
+  .EssenceBar__barContainer {
+    height: 6px;
+  }
+
+  .EssenceBar__value {
+    font-size: 10px;
+    min-width: 30px;
+  }
+
+  .EssenceBar__accrual {
+    display: none;
+  }
+}

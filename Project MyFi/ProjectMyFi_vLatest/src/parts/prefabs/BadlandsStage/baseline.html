@@ -1,0 +1,185 @@
+<!-- BadlandsStage baseline.html — HUB Refactor: 3-Tab Stage -->
+<!-- Tabs: Current Event | Recent Events | Loadout (tab bar at bottom) -->
+
+<div class="BadlandsStage__container" data-active-tab="current" data-stage-mode="world">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB CONTENT AREA -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="BadlandsStage__content">
+
+    <!-- TAB: Current Event -->
+    <div class="BadlandsStage__tabContent" data-tab="current">
+
+      <!-- IDLE STATE: Scenic imagery -->
+      <div class="BadlandsStage__scenic" data-visible="true">
+        <div class="BadlandsStage__scenicBg"></div>
+        <div class="BadlandsStage__scenicOverlay">
+          <span class="BadlandsStage__scenicTitle" data-bind="scenicTitle">Wardwatch</span>
+          <span class="BadlandsStage__scenicSubtitle" data-bind="scenicSubtitle">— All quiet</span>
+        </div>
+      </div>
+
+      <!-- ENCOUNTER STATE: Encounter UI -->
+      <div class="BadlandsStage__encounter" data-visible="false">
+        <div class="BadlandsStage__encounterBg"></div>
+
+        <!-- Encounter header -->
+        <div class="BadlandsStage__encounterHeader">
+          <span class="BadlandsStage__encounterIcon" data-bind="encounterIcon">&#128058;</span>
+          <div class="BadlandsStage__encounterInfo">
+            <span class="BadlandsStage__encounterName" data-bind="encounterName">Badlands Beast</span>
+            <span class="BadlandsStage__encounterType" data-bind="encounterType">BEAST</span>
+          </div>
+          <div class="BadlandsStage__encounterTimer">
+            <span class="BadlandsStage__timerValue" data-bind="timerValue">27</span>
+          </div>
+        </div>
+
+        <!-- Encounter visual -->
+        <div class="BadlandsStage__encounterBody">
+          <div class="BadlandsStage__enemyVisual">
+            <span class="BadlandsStage__enemySprite" data-bind="enemySprite">&#128058;</span>
+          </div>
+          <div class="BadlandsStage__enemyHealth">
+            <div class="BadlandsStage__enemyHealthBar">
+              <div class="BadlandsStage__enemyHealthFill" data-bind="enemyHealthFill"></div>
+            </div>
+          </div>
+          <div class="BadlandsStage__autobattlerStatus">
+            <span class="BadlandsStage__statusDot"></span>
+            <span class="BadlandsStage__statusText">Autobattler Active</span>
+          </div>
+        </div>
+
+        <!-- Timer bar -->
+        <div class="BadlandsStage__timerBar">
+          <div class="BadlandsStage__timerFill" data-bind="timerFill"></div>
+        </div>
+
+        <!-- Aid Avatar CTA -->
+        <div class="BadlandsStage__encounterCTA">
+          <button class="BadlandsStage__aidBtn" data-action="aidAvatar">
+            <span class="BadlandsStage__aidIcon">&#9876;</span>
+            <span class="BadlandsStage__aidLabel">Aid Avatar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Recent Events -->
+    <div class="BadlandsStage__tabContent" data-tab="recent">
+      <div class="BadlandsStage__recentHeader">
+        <span class="BadlandsStage__recentIcon">&#128220;</span>
+        <span class="BadlandsStage__recentTitle">Recent Encounters</span>
+      </div>
+      <ul class="BadlandsStage__recentList" data-bind="recentList">
+        <li class="BadlandsStage__recentItem BadlandsStage__recentItem--empty">
+          <span class="BadlandsStage__recentItemText">No recent encounters</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- TAB: Loadout -->
+    <div class="BadlandsStage__tabContent" data-tab="loadout">
+      <div class="BadlandsStage__loadoutHeader">
+        <span class="BadlandsStage__loadoutIcon">&#9876;</span>
+        <span class="BadlandsStage__loadoutTitle">Avatar Loadout</span>
+      </div>
+
+      <div class="BadlandsStage__loadoutSections">
+        <!-- Skills section -->
+        <div class="BadlandsStage__loadoutSection">
+          <h4 class="BadlandsStage__loadoutSectionTitle">Active Skills</h4>
+          <div class="BadlandsStage__skillSlots" data-bind="skillSlots">
+            <div class="BadlandsStage__skillSlot" data-slot="1" data-action="editSkill">
+              <span class="BadlandsStage__skillIcon">&#9876;</span>
+              <span class="BadlandsStage__skillName">Strike</span>
+            </div>
+            <div class="BadlandsStage__skillSlot" data-slot="2" data-action="editSkill">
+              <span class="BadlandsStage__skillIcon">&#128737;</span>
+              <span class="BadlandsStage__skillName">Guard</span>
+            </div>
+            <div class="BadlandsStage__skillSlot BadlandsStage__skillSlot--empty" data-slot="3" data-action="editSkill">
+              <span class="BadlandsStage__skillIcon">&#10133;</span>
+              <span class="BadlandsStage__skillName">Empty</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment section -->
+        <div class="BadlandsStage__loadoutSection">
+          <h4 class="BadlandsStage__loadoutSectionTitle">Equipment</h4>
+          <div class="BadlandsStage__equipSlots" data-bind="equipSlots">
+            <div class="BadlandsStage__equipSlot" data-slot="weapon" data-action="editEquip">
+              <span class="BadlandsStage__equipIcon">&#128481;</span>
+              <span class="BadlandsStage__equipName">Iron Sword</span>
+              <span class="BadlandsStage__equipStat">+8 ATK</span>
+            </div>
+            <div class="BadlandsStage__equipSlot BadlandsStage__equipSlot--empty" data-slot="armor" data-action="editEquip">
+              <span class="BadlandsStage__equipIcon">&#128085;</span>
+              <span class="BadlandsStage__equipName">No Armor</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- TAB BAR (bottom) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="BadlandsStage__tabBar">
+    <button class="BadlandsStage__tab BadlandsStage__tab--active" data-action="switchTab" data-tab="current">
+      <span class="BadlandsStage__tabIcon">&#127758;</span>
+      <span class="BadlandsStage__tabLabel">Current</span>
+    </button>
+    <button class="BadlandsStage__tab" data-action="switchTab" data-tab="recent">
+      <span class="BadlandsStage__tabIcon">&#128220;</span>
+      <span class="BadlandsStage__tabLabel">Recent</span>
+    </button>
+    <button class="BadlandsStage__tab" data-action="switchTab" data-tab="loadout">
+      <span class="BadlandsStage__tabIcon">&#9876;</span>
+      <span class="BadlandsStage__tabLabel">Loadout</span>
+    </button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- TOASTS & MODALS -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Aid Avatar toast -->
+  <div class="BadlandsStage__toast" data-toast="aid" data-visible="false">
+    <span class="BadlandsStage__toastIcon">&#9876;</span>
+    <span class="BadlandsStage__toastText">Manual battle mode coming soon! The autobattler handles this encounter.</span>
+  </div>
+
+  <!-- Skill picker modal -->
+  <div class="BadlandsStage__modal" data-modal="skillPicker" data-visible="false">
+    <div class="BadlandsStage__modalContent">
+      <div class="BadlandsStage__modalHeader">
+        <span class="BadlandsStage__modalTitle">Select Skill</span>
+        <button class="BadlandsStage__modalClose" data-action="closeModal">&times;</button>
+      </div>
+      <div class="BadlandsStage__modalBody" data-bind="availableSkills">
+        <div class="BadlandsStage__skillOption" data-skill="strike">
+          <span class="BadlandsStage__skillOptionIcon">&#9876;</span>
+          <span class="BadlandsStage__skillOptionName">Strike</span>
+          <span class="BadlandsStage__skillOptionCost">5 ST</span>
+        </div>
+        <div class="BadlandsStage__skillOption" data-skill="guard">
+          <span class="BadlandsStage__skillOptionIcon">&#128737;</span>
+          <span class="BadlandsStage__skillOptionName">Guard</span>
+          <span class="BadlandsStage__skillOptionCost">3 ST</span>
+        </div>
+        <div class="BadlandsStage__skillOption" data-skill="heal">
+          <span class="BadlandsStage__skillOptionIcon">&#10024;</span>
+          <span class="BadlandsStage__skillOptionName">Heal</span>
+          <span class="BadlandsStage__skillOptionCost">10 MP</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

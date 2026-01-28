@@ -1,0 +1,17 @@
+<!-- DevControlPanel baseline.html — HUB-14: DEV-only Hub Flow Control -->
+<!-- VISIBLE ONLY IN DEV MODE — Simplified: Spawn only -->
+
+<div class="DevControlPanel__header">
+  <span class="DevControlPanel__title">DEV</span>
+  <span class="DevControlPanel__state" data-bind="encounterState">idle</span>
+</div>
+
+<div class="DevControlPanel__section">
+  <div class="DevControlPanel__buttonRow">
+    <button class="DevControlPanel__btn DevControlPanel__btn--spawn" data-action="spawn">Spawn Encounter</button>
+  </div>
+</div>
+
+<div class="DevControlPanel__info" data-bind="info">
+  <span class="DevControlPanel__infoValue" data-bind="currentInfo">No active encounter</span>
+</div>

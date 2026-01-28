@@ -1,0 +1,45 @@
+{
+  "id": "EscalationOverlay",
+  "version": "1.0.0",
+  "description": "Turn-based encounter escalation overlay - pauses time and allows tactical decisions",
+  "category": "prefab",
+  "tags": ["combat", "turn-based", "escalation", "overlay"],
+  "inputs": {
+    "encounter": {
+      "type": "object",
+      "description": "Current encounter being escalated",
+      "nullable": true,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "label": { "type": "string" },
+        "icon": { "type": "string" }
+      }
+    },
+    "turn": {
+      "type": "number",
+      "description": "Current turn number",
+      "default": 1
+    },
+    "playerVitals": {
+      "type": "object",
+      "description": "Current player vitals for action availability",
+      "properties": {
+        "mana": { "type": "number" },
+        "stamina": { "type": "number" }
+      }
+    }
+  },
+  "outputs": {
+    "onAction": {
+      "type": "event",
+      "description": "Fired when player takes an action"
+    },
+    "onExit": {
+      "type": "event",
+      "description": "Fired when player exits escalation"
+    }
+  },
+  "baseline": "baseline.html",
+  "uplift": "uplift.css"
+}

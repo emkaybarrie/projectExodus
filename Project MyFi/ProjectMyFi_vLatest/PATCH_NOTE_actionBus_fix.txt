@@ -1,0 +1,17 @@
+PATCH NOTE — actionBus API Fix
+==============================
+Date: 2026-01-25
+
+What Changed:
+  actionBus.on() → actionBus.subscribe()
+
+Why:
+  Fix runtime TypeError: "actionBus.on is not a function"
+  The actionBus module exports `subscribe`, not `on`.
+
+Files Touched:
+  - src/core/app.js
+  - src/systems/hubController.js
+  - src/parts/prefabs/EventLog/part.js
+
+Commit: pending

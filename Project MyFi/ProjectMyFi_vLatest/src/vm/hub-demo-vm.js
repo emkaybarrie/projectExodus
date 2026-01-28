@@ -5,6 +5,8 @@
 // - STATUSBAR_CONTRACT.md: StatusBarInput
 // - VITALSHUD_CONTRACT.md: VitalsHUDInput
 // - ENCOUNTERWINDOW_CONTRACT.md: EncounterWindowInput
+// - PLAYERCORE_CONTRACT.md: PlayerCoreInput
+// - WARDWATCH_CONTRACT.md: WardwatchInput
 
 /**
  * Returns demo VM data for the Hub surface.
@@ -20,6 +22,24 @@ export function getHubDemoVM() {
         daysRemaining: 9,
         // label: 'Pay Cycle' // optional
       },
+    },
+
+    // PlayerCore slot data (PLAYERCORE_CONTRACT.md)
+    playerCore: {
+      name: 'Wanderer',
+      title: 'of the Badlands',
+      pressure: 'balanced', // 'ahead' | 'behind' | 'balanced'
+      momentum: 'steady',   // 'rising' | 'falling' | 'steady'
+      effects: [],
+    },
+
+    // Wardwatch slot data (WARDWATCH_CONTRACT.md)
+    wardwatch: {
+      avatarPosition: { x: 50, y: 60 },
+      worldState: 'quiet', // 'quiet' | 'stirring' | 'active' | 'dangerous'
+      timeOfDay: 'day',    // 'day' | 'dusk' | 'night'
+      lastActivity: 'Watching the Badlands...',
+      encounter: null,
     },
 
     // VitalsHUD slot data (VITALSHUD_CONTRACT.md)
@@ -106,4 +126,90 @@ export function getHubDemoVMVerified() {
   };
 }
 
-export default { getHubDemoVM, getHubDemoVMWithEncounter, getHubDemoVMVerified };
+/**
+ * Creates a simulation loop that updates vitals over time.
+ * Satisfies HUB-02 acceptance criteria: "Vitals visibly change over time"
+ * @param {Function} onUpdate - Callback with updated VM snapshot
+ * @param {number} intervalMs - Update interval in ms (default 3000)
+ * @returns {{ start: Function, stop: Function, getState: Function }}
+ */
+export function createVitalsSimulation(onUpdate, intervalMs = 3000) {
+  let state = getHubDemoVM();
+  let timerId = null;
+  let tickCount = 0;
+
+  function tick() {
+    tickCount++;
+    const vitals = state.vitalsHud.vitals;
+
+    // Simulate regen/decay cycles
+    const healthDelta = Math.floor(Math.random() * 40) - 20; // -20 to +20
+    const manaDelta = Math.floor(Math.random() * 30) - 10;   // -10 to +20
+    const staminaDelta = Math.floor(Math.random() * 20) - 5; // -5 to +15
+    const essenceAccrual = 10 + Math.random() * 10;
+
+    // Apply changes with bounds
+    const newHealth = Math.max(0, Math.min(vitals.health.max, vitals.health.current + healthDelta));
+    const newMana = Math.max(0, Math.min(vitals.mana.max, vitals.mana.current + manaDelta));
+    const newStamina = Math.max(0, Math.min(vitals.stamina.max, vitals.stamina.current + staminaDelta));
+    const newEssence = vitals.essence.current + essenceAccrual;
+
+    // Derive pressure and momentum from vitals state
+    const totalPercent = (newHealth / vitals.health.max + newMana / vitals.mana.max + newStamina / vitals.stamina.max) / 3;
+    const pressure = totalPercent > 0.6 ? 'ahead' : totalPercent < 0.4 ? 'behind' : 'balanced';
+    const netDelta = healthDelta + manaDelta + staminaDelta;
+    const momentum = netDelta > 10 ? 'rising' : netDelta < -10 ? 'falling' : 'steady';
+
+    // Apply status effects based on state
+    const effects = [];
+    if (newHealth < vitals.health.max * 0.3) {
+      effects.push({ icon: '&#9888;', label: 'Low Health' });
+    }
+    if (newMana < vitals.mana.max * 0.2) {
+      effects.push({ icon: '&#10024;', label: 'Mana Drain' });
+    }
+    if (tickCount % 5 === 0) {
+      effects.push({ icon: '&#128260;', label: 'Regen Pulse' });
+    }
+
+    state = {
+      ...state,
+      playerCore: {
+        ...state.playerCore,
+        pressure,
+        momentum,
+        effects,
+      },
+      vitalsHud: {
+        ...state.vitalsHud,
+        vitals: {
+          health: { current: newHealth, max: vitals.health.max, delta: healthDelta },
+          mana: { current: newMana, max: vitals.mana.max, delta: manaDelta },
+          stamina: { current: newStamina, max: vitals.stamina.max, delta: staminaDelta },
+          essence: { current: newEssence, softCap: vitals.essence.softCap, accrual: essenceAccrual },
+        },
+      },
+    };
+
+    if (onUpdate) onUpdate(state);
+  }
+
+  return {
+    start() {
+      if (timerId) return;
+      timerId = setInterval(tick, intervalMs);
+      tick(); // Initial tick
+    },
+    stop() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    },
+    getState() {
+      return state;
+    },
+  };
+}
+
+export default { getHubDemoVM, getHubDemoVMWithEncounter, getHubDemoVMVerified, createVitalsSimulation };

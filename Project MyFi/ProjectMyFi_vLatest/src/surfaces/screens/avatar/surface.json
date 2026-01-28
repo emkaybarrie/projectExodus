@@ -1,0 +1,11 @@
+{
+  "id": "avatar",
+  "type": "screen",
+  "background": "cosmic",
+  "chrome": { "showHeader": true, "showFooter": true, "title": "Avatar" },
+  "slots": [
+    { "id": "header", "part": { "kind": "StatusBar" } },
+    { "id": "content", "card": true, "part": { "kind": "EmptyCard", "props": { "message": "Avatar - Coming Soon", "icon": "user" } } },
+    { "id": "returnNav", "part": { "kind": "ReturnToHub" } }
+  ]
+}

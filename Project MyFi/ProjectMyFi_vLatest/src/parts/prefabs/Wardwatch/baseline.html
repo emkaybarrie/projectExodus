@@ -1,0 +1,39 @@
+<!-- Wardwatch baseline.html — Badlands Viewport & Autonomous Simulation -->
+<!-- HUB-03: Wardwatch — Badlands Viewport & Simulation -->
+
+<div class="Wardwatch__container">
+  <!-- Viewport Frame -->
+  <div class="Wardwatch__viewport">
+    <!-- Terrain Layer -->
+    <div class="Wardwatch__terrain">
+      <div class="Wardwatch__ground"></div>
+      <div class="Wardwatch__horizon"></div>
+    </div>
+
+    <!-- Avatar Layer -->
+    <div class="Wardwatch__avatarLayer">
+      <div class="Wardwatch__avatar" data-bind="avatar">
+        <span class="Wardwatch__avatarIcon">&#129489;</span>
+      </div>
+    </div>
+
+    <!-- World State Overlay -->
+    <div class="Wardwatch__stateOverlay">
+      <span class="Wardwatch__stateMessage" data-bind="stateMessage">All quiet...</span>
+    </div>
+
+    <!-- Time Indicator -->
+    <div class="Wardwatch__timeIndicator">
+      <span class="Wardwatch__timeIcon">&#9788;</span>
+      <span class="Wardwatch__timeLabel" data-bind="timeLabel">Day</span>
+    </div>
+  </div>
+
+  <!-- Activity Log (mini) -->
+  <div class="Wardwatch__activity">
+    <div class="Wardwatch__activityItem" data-bind="lastActivity">
+      <span class="Wardwatch__activityIcon">&#128065;</span>
+      <span class="Wardwatch__activityText">Watching the Badlands...</span>
+    </div>
+  </div>
+</div>

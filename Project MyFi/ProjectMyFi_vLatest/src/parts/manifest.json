@@ -6,8 +6,20 @@
     { "kind": "AuthCard",  "category": "primitive", "path": "./primitives/AuthCard/part.js" },
     { "kind": "ErrorCard", "category": "primitive", "path": "./primitives/ErrorCard/part.js" },
     { "kind": "StatusBar", "category": "primitive", "path": "./primitives/StatusBar/part.js" },
+    { "kind": "ReturnToHub", "category": "primitive", "path": "./primitives/ReturnToHub/part.js" },
     { "kind": "VitalsHUD", "category": "prefab", "path": "./prefabs/VitalsHUD/part.js" },
-    { "kind": "EncounterWindow", "category": "prefab", "path": "./prefabs/EncounterWindow/part.js" },
-    { "kind": "QuickLinks", "category": "prefab", "path": "./prefabs/QuickLinks/part.js" }
+    { "kind": "EncounterWindow", "category": "prefab", "path": "./prefabs/EncounterWindow/part.js", "deprecated": "HUB-B1: Encounter UI now inline in BadlandsStage" },
+    { "kind": "QuickLinks", "category": "prefab", "path": "./prefabs/QuickLinks/part.js" },
+    { "kind": "SpatialNav", "category": "prefab", "path": "./prefabs/SpatialNav/part.js" },
+    { "kind": "PlayerCore", "category": "prefab", "path": "./prefabs/PlayerCore/part.js" },
+    { "kind": "Wardwatch", "category": "prefab", "path": "./prefabs/Wardwatch/part.js", "deprecated": "HUB-B1: World view now inline in BadlandsStage" },
+    { "kind": "EscalationOverlay", "category": "prefab", "path": "./prefabs/EscalationOverlay/part.js", "deprecated": "HUB-24: Battle UI now inline in BadlandsStage" },
+    { "kind": "EventLog", "category": "prefab", "path": "./prefabs/EventLog/part.js" },
+    { "kind": "DevControlPanel", "category": "prefab", "path": "./prefabs/DevControlPanel/part.js" },
+    { "kind": "PlayerHeader", "category": "prefab", "path": "./prefabs/PlayerHeader/part.js" },
+    { "kind": "ViewportZone", "category": "prefab", "path": "./prefabs/ViewportZone/part.js", "deprecated": "HUB-22: Use BadlandsStage" },
+    { "kind": "BadlandsStage", "category": "prefab", "path": "./prefabs/BadlandsStage/part.js" },
+    { "kind": "WorldMap", "category": "prefab", "path": "./prefabs/WorldMap/part.js" },
+    { "kind": "EssenceBar", "category": "primitive", "path": "./primitives/EssenceBar/part.js" }
   ]
 }

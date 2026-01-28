@@ -1,0 +1,60 @@
+{
+  "id": "Wardwatch",
+  "version": "1.0.0",
+  "description": "Badlands viewport with autonomous simulation - live view into the world",
+  "category": "prefab",
+  "tags": ["viewport", "simulation", "badlands", "autonomous"],
+  "inputs": {
+    "avatarPosition": {
+      "type": "object",
+      "description": "Current avatar position in viewport (x: 0-100, y: 0-100)",
+      "properties": {
+        "x": { "type": "number", "default": 50 },
+        "y": { "type": "number", "default": 60 }
+      }
+    },
+    "worldState": {
+      "type": "string",
+      "description": "Current world state message",
+      "enum": ["quiet", "stirring", "active", "dangerous"],
+      "default": "quiet"
+    },
+    "timeOfDay": {
+      "type": "string",
+      "description": "Current time period",
+      "enum": ["day", "dusk", "night"],
+      "default": "day"
+    },
+    "lastActivity": {
+      "type": "string",
+      "description": "Last activity description",
+      "default": "Watching the Badlands..."
+    },
+    "encounter": {
+      "type": "object",
+      "description": "Active encounter if any",
+      "nullable": true,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "resolved": { "type": "boolean" }
+      }
+    }
+  },
+  "outputs": {
+    "onEncounterSpawn": {
+      "type": "event",
+      "description": "Fired when an encounter spawns"
+    },
+    "onEncounterResolve": {
+      "type": "event",
+      "description": "Fired when an encounter auto-resolves"
+    },
+    "onStateChange": {
+      "type": "event",
+      "description": "Fired when world state changes"
+    }
+  },
+  "baseline": "baseline.html",
+  "uplift": "uplift.css"
+}

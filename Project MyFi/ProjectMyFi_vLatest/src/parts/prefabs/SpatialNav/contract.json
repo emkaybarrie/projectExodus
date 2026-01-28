@@ -1,0 +1,26 @@
+{
+  "id": "SpatialNav",
+  "type": "prefab",
+  "version": "1.0.0",
+  "description": "Directional compass navigation for Hub spatial movement",
+  "workOrder": "MYFI-HUB-01-Hub-Shell-and-Spatial-Navigation",
+  "baseline": {
+    "locked": true,
+    "zones": []
+  },
+  "dataContract": {
+    "required": [],
+    "optional": []
+  },
+  "directions": {
+    "up": "guidance",
+    "down": "badlands",
+    "left": "quests",
+    "right": "avatar"
+  },
+  "behavior": {
+    "clickNavigates": true,
+    "keyboardSupport": true,
+    "returnToHub": "guaranteed"
+  }
+}
