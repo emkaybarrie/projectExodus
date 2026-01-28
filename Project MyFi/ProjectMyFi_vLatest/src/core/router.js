@@ -5,6 +5,7 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
   if (!hostEl) throw new Error('Router requires hostEl');
 
   let current = null;
+  let mounting = null; // Track in-progress mount to prevent race conditions
 
   function getSurfaceIdFromHash(){
     const h = (location.hash || '').replace(/^#/, '').trim();
@@ -21,26 +22,38 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
   }
 
   async function ensureMounted(surfaceId){
+    // Already mounted to this surface
     if (current?.id === surfaceId) return;
 
-    // C1-FIX: Emit surface:unmounted before unmounting
-    if (current?.id) {
-      actionBus.emit('surface:unmounted', { surfaceId: current.id });
+    // Already mounting this surface (race condition guard)
+    if (mounting === surfaceId) return;
+
+    // Set mounting lock
+    mounting = surfaceId;
+
+    try {
+      // C1-FIX: Emit surface:unmounted before unmounting
+      if (current?.id) {
+        actionBus.emit('surface:unmounted', { surfaceId: current.id });
+      }
+
+      try { current?.unmount?.(); } catch(e){ console.warn('unmount failed', e); }
+      hostEl.innerHTML = '';
+
+      const api = await mountScreenSurface(surfaceId, hostEl, {
+        ...ctx,
+        navigate,
+        surfaceId,
+      });
+
+      current = { id: surfaceId, unmount: api?.unmount };
+
+      // C1-FIX: Emit surface:mounted after mounting
+      actionBus.emit('surface:mounted', { surfaceId });
+    } finally {
+      // Clear mounting lock
+      mounting = null;
     }
-
-    try { current?.unmount?.(); } catch(e){ console.warn('unmount failed', e); }
-    hostEl.innerHTML = '';
-
-    const api = await mountScreenSurface(surfaceId, hostEl, {
-      ...ctx,
-      navigate,
-      surfaceId,
-    });
-
-    current = { id: surfaceId, unmount: api?.unmount };
-
-    // C1-FIX: Emit surface:mounted after mounting
-    actionBus.emit('surface:mounted', { surfaceId });
   }
 
   async function onHashChange(){
