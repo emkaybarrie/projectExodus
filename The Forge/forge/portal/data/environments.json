@@ -13,7 +13,7 @@
       "urls": {
         "site": "https://emkaybarrie.github.io/projectExodus/",
         "portal": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/",
-        "myfi": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/"
+        "myfi": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/public/"
       },
       "status": "active"
     },
@@ -24,7 +24,7 @@
       "urls": {
         "site": "https://emkaybarrie.github.io/projectExodus/dev/",
         "portal": "https://emkaybarrie.github.io/projectExodus/dev/The%20Forge/forge/portal/",
-        "myfi": "https://emkaybarrie.github.io/projectExodus/dev/Project%20MyFi/ProjectMyFi_vLatest/"
+        "myfi": "https://emkaybarrie.github.io/projectExodus/dev/Project%20MyFi/ProjectMyFi_vLatest/public/"
       },
       "status": "active"
     }
