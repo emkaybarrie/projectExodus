@@ -58,9 +58,111 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 - work-orders/ — Orphan WOs (pending consolidation)
 
 ## Last updated
-2026-01-25
+2026-01-28
 
 ## What changed since last update
+
+### Session: Hub v1 Baseline Rebuild — 3-Slot Architecture, Turn-Based Combat
+
+**Commit:** `1ce1ce0` — `FO-Forge-HUB/v1: Hub Baseline Rebuild — 3-Slot Architecture, Autobattler, Turn-Based Combat`
+
+**Work Orders Implemented:**
+- **HUB-04**: Autobattler — Encounter Resolution (spawn, resolve, vitals impact)
+- **HUB-E2**: Compass Navigation Modal
+- **HUB-E4**: Hub Surface viewport-filling layout (Vitals/Map/Stage slots)
+- **HUB-D4/G5**: Dev Controls & Config Modal (spawn button, encounter rate, damage multiplier, god mode)
+- **HUB-07/HUB-11**: Overlay Slot Support
+
+**Key Features Implemented:**
+1. **BadlandsStage** — 3-tab system (Current Event, Recent Events, Loadout) with turn-based combat simulation
+   - Turn-based combat rounds (2.5s intervals) with skills, equipment, and vitals integration
+   - Wardwatch scenic SVG background for idle state
+   - Enemy HP tracking with discrete combat ticks
+2. **PlayerHeader** — Integrated EssenceBar with avatar portrait
+3. **WorldMap** — Dartboard-style radial navigation with event subscriptions
+4. **Dev Config Integration** — Runtime settings (encounterDuration, encounterRate, damageMultiplier, godMode)
+
+**ActionBus Events Added:**
+- `autobattler:spawn` — Encounter spawned
+- `autobattler:resolve` — Encounter resolved
+- `combat:tick` — Combat round executed with vitals impact
+
+**Files Changed (73 total):**
+
+| Category | Files |
+|----------|-------|
+| Core | actionBus.js, app.js, chrome.js, router.js, styleLoader.js, surfaceCompositor.js, tokens.css |
+| New Parts | BadlandsStage, PlayerHeader, WorldMap, DevControlPanel, EscalationOverlay, EventLog, PlayerCore, SpatialNav, ViewportZone, Wardwatch |
+| New Primitives | EssenceBar, ReturnToHub |
+| New Systems | autobattler.js, hubController.js |
+| New Surfaces | avatar, badlands, guidance, quests |
+| Docs | HUB_ARCHITECTURE_BREAKDOWN.md, HUB_DEV_TEST_RUNBOOK.md, HUB_IMPLEMENTATION_DOSSIER.md |
+
+**CSS Layout Updates:**
+- 3-slot architecture: Vitals (fixed) + Map (fixed) + Stage (flex fill)
+- Viewport-filling layout prevents scroll on Hub surface
+- Stage slot fills remaining vertical space
+
+---
+
+### Previous Session: MyFi Hub Baseline v1 Executed
+
+**Work Orders Executed (HUB-01 → HUB-06):**
+
+1. **MYFI-HUB-01-Hub-Shell-and-Spatial-Navigation** — Badlands Hub Shell & Spatial Navigation
+   - Created [SpatialNav](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/SpatialNav/) part (compass navigation)
+   - Created [ReturnToHub](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/primitives/ReturnToHub/) part
+   - Created stub surfaces: quests, avatar, guidance, badlands
+
+2. **MYFI-HUB-02-Player-Core-Vitals-and-Avatar** — Player Core — Vitals & Avatar
+   - Created [PlayerCore](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/PlayerCore/) part (avatar portrait, status indicators)
+   - Added vitals simulation loop with regen/decay to [hub-demo-vm.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/vm/hub-demo-vm.js)
+
+3. **MYFI-HUB-03-Badlands-Viewport-and-Simulation** — Wardwatch — Badlands Viewport & Simulation
+   - Created [Wardwatch](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/Wardwatch/) part (autonomous simulation viewport)
+   - Autonomous avatar movement, time progression (day/dusk/night), world state messaging
+
+4. **MYFI-HUB-04-Autobattler-Encounter-Resolution** — Autobattler — Encounter Resolution
+   - Created [autobattler.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/systems/autobattler.js) (5 encounter types, auto-resolution)
+   - Created [hubController.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/systems/hubController.js) (orchestrates Hub systems)
+   - Integrated autobattler with vitals impact in [app.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/core/app.js)
+
+5. **MYFI-HUB-05-Turn-Based-Escalation-Layer** — Turn-Based Escalation Layer
+   - Created [EscalationOverlay](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/EscalationOverlay/) part (turn-based combat UI)
+   - Actions: Strike, Channel, Brace, Retreat with resource costs
+   - Time pause during escalation, seamless exit to autobattler
+
+6. **MYFI-HUB-06-Event-Log-and-Temporal-Memory** — Event Log & Temporal Memory
+   - Created [EventLog](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/EventLog/) part (recent history with narrative framing)
+   - Real-time event updates, reassuring empty state
+
+**Files Changed:**
+
+| File | Change |
+|------|--------|
+| [manifest.json](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/manifest.json) | Added 6 new parts |
+| [hub/surface.json](../../../Project%20MyFi/ProjectMyFi_vLatest/src/surfaces/screens/hub/surface.json) | Added 6 new slots |
+| [hub-demo-vm.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/vm/hub-demo-vm.js) | Added simulation data |
+| [app.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/core/app.js) | Integrated HubController |
+| [EncounterWindow/part.js](../../../Project%20MyFi/ProjectMyFi_vLatest/src/parts/prefabs/EncounterWindow/part.js) | Added escalation trigger |
+
+**New Directories Created:**
+- `src/parts/prefabs/SpatialNav/`
+- `src/parts/prefabs/PlayerCore/`
+- `src/parts/prefabs/Wardwatch/`
+- `src/parts/prefabs/EscalationOverlay/`
+- `src/parts/prefabs/EventLog/`
+- `src/parts/primitives/ReturnToHub/`
+- `src/systems/`
+- `src/surfaces/screens/quests/`
+- `src/surfaces/screens/avatar/`
+- `src/surfaces/screens/guidance/`
+- `src/surfaces/screens/badlands/`
+
+**Commit:** Pending — changes staged for commit
+**PR:** N/A (direct to dev branch)
+
+---
 
 ### Session: Constitutional, E2E Workflow, Reconciliation
 
@@ -153,6 +255,7 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 | Constitutional Laws | 3 laws active (Sections 11-13) |
 | Work Order Index | Enrichment schema active |
 | Reconciliation Status | **Ready with Conditions** |
+| MyFi Hub Baseline | **v1.1 Complete (HUB-04/E2/E4/D4/G5/07/11)** |
 
 ## Contracts & Operations
 
@@ -165,14 +268,26 @@ See: [Forante Kernel](../../../Forante/FORANTE_KERNEL.md) for full constitutiona
 | E2E_WORKFLOW_PLAYBOOK.md | Director E2E workflow guidance |
 | WORK_ORDER_INDEX_CONTRACT.md | WO schema and enrichment rules |
 
-## MyFi Product State (unchanged)
+## MyFi Product State
 
 | System | Status |
 |--------|--------|
-| Hub Surface | Phase 1 complete |
+| Hub Surface | **Hub v1.1 Complete — 3-slot architecture** |
 | StatusBar Part | Implemented |
 | VitalsHUD Part | Implemented |
-| EncounterWindow Part | Implemented (idle placeholder) |
+| EncounterWindow Part | Implemented (with escalation trigger) |
+| PlayerCore Part | Implemented — Avatar & status indicators |
+| Wardwatch Part | Implemented — Autonomous viewport simulation |
+| EscalationOverlay Part | Implemented — Turn-based combat UI |
+| EventLog Part | Implemented — Recent history & narrative |
+| SpatialNav Part | Implemented — Directional compass navigation |
+| **BadlandsStage Part** | **NEW — 3-tab stage with turn-based combat** |
+| **PlayerHeader Part** | **NEW — Integrated EssenceBar** |
+| **WorldMap Part** | **NEW — Dartboard radial navigation** |
+| **DevControlPanel Part** | **NEW — Runtime config controls** |
+| **EssenceBar Primitive** | **NEW — Essence progress indicator** |
+| Autobattler System | Implemented — Encounter spawning & auto-resolution |
+| HubController System | Implemented — Hub systems orchestration |
 | Journey Runner | Implemented |
 | Modal Manager | Implemented |
 

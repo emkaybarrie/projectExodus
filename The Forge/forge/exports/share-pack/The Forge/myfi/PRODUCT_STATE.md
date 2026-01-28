@@ -142,10 +142,15 @@ Share Pack	Non-repo agent sync	✅ Auto-refresh on deploy (M2c)
 5.2 Hub / Vitals (Canonical Anchor in Intent)
 System	Description	Status
 Vitals semantics (H/M/S/Essence)	Defined in reference	Locked (intent)
-Hub surface (Surfaces model)	Target canonical anchor	✅ Implemented (I1)
+Hub surface (Surfaces model)	3-slot architecture (Vitals/Map/Stage)	✅ Implemented (HUB v1.1)
 VitalsHUD Part	H/M/S/Essence bars + view toggle	✅ Implemented (I1)
 StatusBar Part	Mode indicator (Verified/Unverified)	✅ Implemented (I1)
 EncounterWindow Part	idle/available/observing states	✅ Implemented (I1)
+BadlandsStage Part	3-tab stage with turn-based combat	✅ Implemented (HUB v1.1)
+PlayerHeader Part	Integrated EssenceBar + avatar	✅ Implemented (HUB v1.1)
+WorldMap Part	Dartboard radial navigation	✅ Implemented (HUB v1.1)
+Autobattler System	Encounter spawn & auto-resolution	✅ Implemented (HUB v1.1)
+HubController System	Hub systems orchestration	✅ Implemented (HUB v1.1)
 Legacy vitals HUD	Operational reference exists	Present (legacy only)
 
 5.3 Quests
@@ -244,8 +249,8 @@ If you are non-repo-aware:
 
 ---
 
-**Last Updated:** 2026-01-24
-**Work Orders Applied:** C1, C2, C3a, C3b, C3c, H2, I1, I2, S1
+**Last Updated:** 2026-01-28
+**Work Orders Applied:** C1, C2, C3a, C3b, C3c, H2, I1, I2, S1, HUB-04, HUB-E2, HUB-E4, HUB-D4, HUB-G5, HUB-07, HUB-11
 **Forge Infrastructure WOs:** M2a, M2b, M2c, S1, S2, S3, W1
 
 End of Product State.
