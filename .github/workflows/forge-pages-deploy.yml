@@ -63,6 +63,18 @@ jobs:
           node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
           echo "✅ Prod Share Pack generated"
 
+      - name: Generate Observations for Prod
+        working-directory: prod-source
+        env:
+          ENV_NAME: prod
+          DEPLOYED_BRANCH: main
+          COMMIT_SHA: ${{ github.sha }}
+          BASE_URL: https://emkaybarrie.github.io/projectExodus/
+        run: |
+          echo "=== Generating Observations for PROD ==="
+          node "The Forge/forge/ops/scripts/make-observation.mjs"
+          echo "✅ Prod Observations generated"
+
       - name: Copy Prod content to dist/
         run: |
           echo "=== Copying PROD content to dist/ ==="
@@ -83,6 +95,18 @@ jobs:
           echo "=== Generating Share Pack for DEV ==="
           node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
           echo "✅ Dev Share Pack generated"
+
+      - name: Generate Observations for Dev
+        working-directory: dev-source
+        env:
+          ENV_NAME: dev
+          DEPLOYED_BRANCH: dev
+          COMMIT_SHA: ${{ github.sha }}
+          BASE_URL: https://emkaybarrie.github.io/projectExodus/dev/
+        run: |
+          echo "=== Generating Observations for DEV ==="
+          node "The Forge/forge/ops/scripts/make-observation.mjs"
+          echo "✅ Dev Observations generated"
 
       - name: Copy Dev content to dist/dev/
         run: |
@@ -109,6 +133,10 @@ jobs:
             echo "❌ PROD: Share Pack index missing"
             exit 1
           fi
+          if [ ! -f "dist/The Forge/forge/exports/observations/latest.json" ]; then
+            echo "❌ PROD: Observations missing"
+            exit 1
+          fi
           echo "✅ PROD structure valid"
 
           # Check Dev
@@ -122,6 +150,10 @@ jobs:
           fi
           if [ ! -f "dist/dev/The Forge/forge/exports/share-pack/share-pack.index.json" ]; then
             echo "❌ DEV: Share Pack index missing"
+            exit 1
+          fi
+          if [ ! -f "dist/dev/The Forge/forge/exports/observations/latest.json" ]; then
+            echo "❌ DEV: Observations missing"
             exit 1
           fi
           echo "✅ DEV structure valid"

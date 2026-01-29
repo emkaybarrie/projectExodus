@@ -1,0 +1,99 @@
+name: Forge Observations Commit
+
+# P9b: Persist observations to dev branch after successful deploy
+# Trigger: After forge-pages-deploy.yml succeeds OR manual dispatch
+# Purpose: Commit ephemeral observations data back to dev branch for historical tracking
+
+on:
+  workflow_run:
+    workflows: ["Forge Pages Deploy (Dev + Prod)"]
+    types: [completed]
+    branches: [dev]
+  workflow_dispatch:
+    inputs:
+      force_commit:
+        description: 'Force commit even if no changes'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  commit-observations:
+    # Only run if the deploy workflow succeeded (or manual trigger)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Regenerate Observations
+        env:
+          ENV_NAME: dev
+          DEPLOYED_BRANCH: dev
+          COMMIT_SHA: ${{ github.sha }}
+          BASE_URL: https://emkaybarrie.github.io/projectExodus/dev/
+        run: |
+          echo "=== Regenerating Observations for commit ==="
+          node "The Forge/forge/ops/scripts/make-observation.mjs"
+          echo "Observations generated"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet "The Forge/forge/exports/observations/latest.json" 2>/dev/null; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes to observations file"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes detected in observations file"
+          fi
+
+      - name: Commit observations
+        if: ${{ steps.check_changes.outputs.has_changes == 'true' || github.event.inputs.force_commit == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Only stage the observations file
+          git add "The Forge/forge/exports/observations/latest.json"
+
+          # Create commit with metadata
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          git commit -m "chore(forge): persist observations [automated]
+
+Timestamp: ${TIMESTAMP}
+Trigger: ${{ github.event_name }}
+Run: ${{ github.run_id }}
+
+[skip ci]"
+
+          echo "Commit created"
+
+      - name: Push to dev
+        if: ${{ steps.check_changes.outputs.has_changes == 'true' || github.event.inputs.force_commit == 'true' }}
+        run: |
+          git push origin dev
+          echo "Pushed observations to dev branch"
+
+      - name: Summary
+        run: |
+          echo "## Observations Commit Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]; then
+            echo "Observations committed and pushed to dev branch." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No changes to observations file. Skipped commit." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Trigger:** \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run ID:** \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY

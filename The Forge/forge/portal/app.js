@@ -24,10 +24,27 @@ const REPORTING_SIGNALS_URL = `${REPO_BASE}/blob/main/The%20Forge/forge/contract
 // Compute Share Pack base URL relative to this script
 const SHARE_PACK_BASE = new URL('../exports/share-pack/', import.meta.url).href.replace(/\/$/, '');
 
+// P8: Compute Observations URL relative to this script
+const OBSERVATIONS_BASE = new URL('../exports/observations/', import.meta.url).href.replace(/\/$/, '');
+const OBSERVATIONS_LATEST_URL = `${OBSERVATIONS_BASE}/latest.json`;
+
 // Compute data URLs relative to this script
 const ENTITIES_URL = new URL('./data/entities.json', import.meta.url).href;
 const ENVIRONMENTS_URL = new URL('./data/environments.json', import.meta.url).href;
 const PRODUCTS_URL = new URL('./data/products.json', import.meta.url).href;
+
+// M3c: Workflow dispatch URLs
+const SHARE_PACK_REFRESH_WORKFLOW = 'forge-share-pack-refresh.yml';
+const SHARE_PACK_REFRESH_URL = `${REPO_BASE}/actions/workflows/${SHARE_PACK_REFRESH_WORKFLOW}`;
+
+// M3e: Agent Output Import storage key
+const AGENT_OUTPUTS_STORAGE_KEY = 'forge_portal_agent_outputs';
+
+// M3f: Deployment Status cache key
+const DEPLOY_STATUS_CACHE_KEY = 'forge_portal_deploy_status_cache';
+
+// M3g: Evolution Proposal storage key
+const EVOLUTION_PROPOSALS_STORAGE_KEY = 'forge_portal_evolution_proposals';
 
 // E2E Workflow Phases
 const E2E_PHASES = [
@@ -49,6 +66,11 @@ const state = {
   entities: null,
   environments: null,
   products: null,
+  observations: null,  // P8: Latest observations data
+  observationsError: null,  // P8: Observations load error (for visible feedback)
+  agentOutputs: {},  // M3e: Locally stored agent outputs by WO ID
+  deployStatusCache: null,  // M3f: Cached deployment status for offline display
+  evolutionProposals: {},  // M3g: Locally stored evolution proposals by WO ID
   currentTab: 'home',
   currentScreen: 'home',
   woFilter: 'all',
@@ -60,6 +82,462 @@ const state = {
   error: null,
   errorDetails: null
 };
+
+// === M3b: PAT Management ===
+// SECURITY NOTE: Personal Access Token is stored in localStorage (client-side only).
+// - Token is never sent to any server except GitHub API
+// - User is responsible for token security
+// - Minimum required scope: `repo` (for label management)
+// - Recommended: Use fine-grained PAT with only `issues:write` permission
+
+const PAT_STORAGE_KEY = 'forge_portal_github_pat';
+const PAT_CONSENT_KEY = 'forge_portal_pat_consent';
+
+function getStoredPAT() {
+  try {
+    return localStorage.getItem(PAT_STORAGE_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function storePAT(token) {
+  try {
+    localStorage.setItem(PAT_STORAGE_KEY, token);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function clearPAT() {
+  try {
+    localStorage.removeItem(PAT_STORAGE_KEY);
+    localStorage.removeItem(PAT_CONSENT_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasPatConsent() {
+  try {
+    return localStorage.getItem(PAT_CONSENT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function setPatConsent() {
+  try {
+    localStorage.setItem(PAT_CONSENT_KEY, 'true');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasPAT() {
+  return !!getStoredPAT();
+}
+
+// === M3b: GitHub API Helpers ===
+
+const GITHUB_API_BASE = 'https://api.github.com';
+const REPO_OWNER = 'emkaybarrie';
+const REPO_NAME = 'projectExodus';
+
+async function githubApiRequest(endpoint, method = 'GET', body = null) {
+  const token = getStoredPAT();
+  if (!token) {
+    throw new Error('No GitHub PAT configured');
+  }
+
+  const options = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28'
+    }
+  };
+
+  if (body) {
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+
+  const response = await fetch(`${GITHUB_API_BASE}${endpoint}`, options);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`GitHub API error ${response.status}: ${errorText}`);
+  }
+
+  // Some endpoints return empty body (204)
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+async function addLabelToIssue(issueNumber, label) {
+  return githubApiRequest(
+    `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issueNumber}/labels`,
+    'POST',
+    { labels: [label] }
+  );
+}
+
+async function removeLabelFromIssue(issueNumber, label) {
+  try {
+    return await githubApiRequest(
+      `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issueNumber}/labels/${encodeURIComponent(label)}`,
+      'DELETE'
+    );
+  } catch (e) {
+    // Label might not exist, which is fine
+    if (e.message.includes('404')) {
+      return null;
+    }
+    throw e;
+  }
+}
+
+async function addCommentToIssue(issueNumber, body) {
+  return githubApiRequest(
+    `/repos/${REPO_OWNER}/${REPO_NAME}/issues/${issueNumber}/comments`,
+    'POST',
+    { body }
+  );
+}
+
+// === M3b: Director Approval Actions ===
+
+async function approveWorkOrder(wo) {
+  if (!wo.issueNumber) {
+    showToast('Cannot approve: No GitHub Issue linked', 'error');
+    return false;
+  }
+
+  try {
+    // Add 'approved' label
+    await addLabelToIssue(wo.issueNumber, 'approved');
+    // Remove 'pending-approval' label
+    await removeLabelFromIssue(wo.issueNumber, 'pending-approval');
+    // Add approval comment
+    await addCommentToIssue(wo.issueNumber,
+      `## ✅ Work Order Approved\n\n` +
+      `**Approved via:** Forge Portal\n` +
+      `**Timestamp:** ${new Date().toISOString()}\n\n` +
+      `This Work Order is now approved for execution.`
+    );
+
+    showToast('Work Order approved!', 'success');
+    return true;
+  } catch (e) {
+    showToast(`Approval failed: ${e.message}`, 'error');
+    return false;
+  }
+}
+
+async function rejectWorkOrder(wo, reason = '') {
+  if (!wo.issueNumber) {
+    showToast('Cannot reject: No GitHub Issue linked', 'error');
+    return false;
+  }
+
+  try {
+    // Add 'rejected' label
+    await addLabelToIssue(wo.issueNumber, 'rejected');
+    // Remove 'pending-approval' label
+    await removeLabelFromIssue(wo.issueNumber, 'pending-approval');
+    // Add rejection comment
+    await addCommentToIssue(wo.issueNumber,
+      `## ❌ Work Order Rejected\n\n` +
+      `**Rejected via:** Forge Portal\n` +
+      `**Timestamp:** ${new Date().toISOString()}\n` +
+      (reason ? `**Reason:** ${reason}\n` : '') +
+      `\nThis Work Order has been rejected. Please revise and resubmit.`
+    );
+
+    showToast('Work Order rejected', 'success');
+    return true;
+  } catch (e) {
+    showToast(`Rejection failed: ${e.message}`, 'error');
+    return false;
+  }
+}
+
+function copyApprovalCommand(wo) {
+  const command = `/approve ${wo.id}`;
+  copyToClipboard(command);
+  showToast('Approval command copied! Paste in GitHub Issue.', 'success');
+}
+
+function copyRejectionCommand(wo) {
+  const command = `/reject ${wo.id}`;
+  copyToClipboard(command);
+  showToast('Rejection command copied! Paste in GitHub Issue.', 'success');
+}
+
+// === M3c: Share Pack Refresh Trigger ===
+
+async function triggerSharePackRefresh() {
+  const token = getStoredPAT();
+  if (!token) {
+    showToast('No PAT configured. Use fallback options.', 'error');
+    return false;
+  }
+
+  try {
+    // Trigger forge-pages-deploy.yml which regenerates share pack
+    const response = await fetch(
+      `${GITHUB_API_BASE}/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/forge-pages-deploy.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify({ ref: 'dev' })
+      }
+    );
+
+    if (response.status === 204) {
+      showToast('Share Pack refresh triggered! Check Actions for progress.', 'success');
+      return true;
+    } else {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+  } catch (e) {
+    showToast(`Refresh failed: ${e.message}`, 'error');
+    return false;
+  }
+}
+
+function showRefreshSharePackModal() {
+  const existing = document.getElementById('refresh-sharepack-modal');
+  if (existing) existing.remove();
+
+  const hasToken = hasPAT();
+
+  const modal = document.createElement('div');
+  modal.id = 'refresh-sharepack-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content refresh-modal">
+      <div class="modal-header">
+        <h2>Refresh Share Pack</h2>
+        <button class="modal-close" onclick="closeRefreshSharePackModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-card warning">
+          <span class="info-icon">&#9888;</span>
+          <div class="info-content">
+            <p><strong>This will trigger a deployment on dev branch</strong></p>
+            <p>Share Pack indices are regenerated during deployment. This action triggers a dev deploy which will refresh all indices.</p>
+            <p><strong>No production impact</strong> — only dev environment is affected.</p>
+          </div>
+        </div>
+
+        ${hasToken ? `
+          <div class="refresh-option primary-option">
+            <h4>Direct Trigger (PAT configured)</h4>
+            <button class="btn-primary" onclick="handleRefreshSharePack()">
+              <span class="action-icon">&#128640;</span> Trigger Dev Deploy
+            </button>
+            <p class="option-hint">Triggers workflow dispatch for forge-pages-deploy.yml</p>
+          </div>
+        ` : `
+          <div class="refresh-option">
+            <h4>No PAT Configured</h4>
+            <p>Configure a PAT in <a href="#" onclick="navigateTo('settings'); closeRefreshSharePackModal();">Settings</a> to trigger directly.</p>
+          </div>
+        `}
+
+        <div class="refresh-option fallback-option">
+          <h4>Manual Options</h4>
+          <div class="fallback-actions">
+            <button class="btn-secondary" onclick="copyRefreshCommand()">
+              <span class="action-icon">&#128203;</span> Copy CLI Command
+            </button>
+            <a href="${REPO_BASE}/actions/workflows/forge-pages-deploy.yml" class="btn-secondary" target="_blank">
+              <span class="action-icon">&#8599;</span> Open Actions
+            </a>
+          </div>
+          <p class="option-hint">Run locally or trigger manually from GitHub Actions</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeRefreshSharePackModal();
+  });
+}
+
+function closeRefreshSharePackModal() {
+  const modal = document.getElementById('refresh-sharepack-modal');
+  if (modal) modal.remove();
+}
+
+async function handleRefreshSharePack() {
+  const success = await triggerSharePackRefresh();
+  if (success) {
+    closeRefreshSharePackModal();
+  }
+}
+
+function copyRefreshCommand() {
+  const command = 'node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"';
+  copyToClipboard(command);
+  showToast('CLI command copied!', 'success');
+}
+
+// === M3e: Agent Output Import ===
+
+function parseAgentOutput(rawOutput, mode = 'minimal') {
+  const output = {
+    raw: rawOutput,
+    parsed: null,
+    parseMode: mode,
+    timestamp: new Date().toISOString()
+  };
+
+  if (mode === 'structured') {
+    // Attempt to extract common sections (conservative parsing)
+    const sections = {};
+
+    // Try to extract Summary
+    const summaryMatch = rawOutput.match(/(?:^|\n)#+\s*Summary[:\s]*\n([\s\S]*?)(?=\n#+|$)/i);
+    if (summaryMatch) sections.summary = summaryMatch[1].trim();
+
+    // Try to extract Files Changed/Modified/Created
+    const filesMatch = rawOutput.match(/(?:^|\n)#+\s*(?:Files?\s+(?:Changed|Modified|Created)|Changes)[:\s]*\n([\s\S]*?)(?=\n#+|$)/i);
+    if (filesMatch) sections.filesChanged = filesMatch[1].trim();
+
+    // Try to extract Risks/Issues
+    const risksMatch = rawOutput.match(/(?:^|\n)#+\s*(?:Risks?|Issues?|Concerns?)[:\s]*\n([\s\S]*?)(?=\n#+|$)/i);
+    if (risksMatch) sections.risks = risksMatch[1].trim();
+
+    // Try to extract Next Steps/Follow-up WOs
+    const nextMatch = rawOutput.match(/(?:^|\n)#+\s*(?:Next\s+(?:Steps?|WOs?)|Follow-?up)[:\s]*\n([\s\S]*?)(?=\n#+|$)/i);
+    if (nextMatch) sections.nextSteps = nextMatch[1].trim();
+
+    // Try to extract Test Results
+    const testMatch = rawOutput.match(/(?:^|\n)#+\s*(?:Test\s+Results?|Testing)[:\s]*\n([\s\S]*?)(?=\n#+|$)/i);
+    if (testMatch) sections.testResults = testMatch[1].trim();
+
+    // Only set parsed if we found at least one section
+    if (Object.keys(sections).length > 0) {
+      output.parsed = sections;
+    }
+  }
+
+  return output;
+}
+
+function saveAgentOutput(woId, agentType, output, attachments = []) {
+  const entry = {
+    woId,
+    agentType,
+    output,
+    attachments,
+    savedAt: new Date().toISOString()
+  };
+
+  const outputs = state.agentOutputs || {};
+  if (!outputs[woId]) {
+    outputs[woId] = [];
+  }
+  outputs[woId].push(entry);
+
+  // Keep only last 10 outputs per WO to prevent unbounded growth
+  if (outputs[woId].length > 10) {
+    outputs[woId] = outputs[woId].slice(-10);
+  }
+
+  state.agentOutputs = outputs;
+  saveAgentOutputs(outputs);
+
+  return entry;
+}
+
+function getAgentOutputsForWO(woId) {
+  return state.agentOutputs?.[woId] || [];
+}
+
+function formatAgentOutputForGitHub(entry) {
+  const { woId, agentType, output, attachments, savedAt } = entry;
+
+  let comment = `## Agent Execution Report\n\n`;
+  comment += `**Work Order:** ${woId}\n`;
+  comment += `**Agent Type:** ${agentType}\n`;
+  comment += `**Timestamp:** ${savedAt}\n`;
+  comment += `**Parse Mode:** ${output.parseMode}\n\n`;
+
+  comment += `---\n\n`;
+
+  if (output.parsed) {
+    if (output.parsed.summary) {
+      comment += `### Summary\n${output.parsed.summary}\n\n`;
+    }
+    if (output.parsed.filesChanged) {
+      comment += `### Files Changed\n${output.parsed.filesChanged}\n\n`;
+    }
+    if (output.parsed.testResults) {
+      comment += `### Test Results\n${output.parsed.testResults}\n\n`;
+    }
+    if (output.parsed.risks) {
+      comment += `### Risks/Issues\n${output.parsed.risks}\n\n`;
+    }
+    if (output.parsed.nextSteps) {
+      comment += `### Next Steps\n${output.parsed.nextSteps}\n\n`;
+    }
+  }
+
+  comment += `### Raw Output\n\`\`\`\n${output.raw.substring(0, 5000)}${output.raw.length > 5000 ? '\n... (truncated)' : ''}\n\`\`\`\n\n`;
+
+  if (attachments && attachments.length > 0) {
+    comment += `### Attachments\n`;
+    attachments.forEach(url => {
+      comment += `- ${url}\n`;
+    });
+    comment += `\n`;
+  }
+
+  comment += `---\n*Submitted via Forge Portal*`;
+
+  return comment;
+}
+
+async function submitAgentOutputToGitHub(woId, entry) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo || !wo.issueNumber) {
+    showToast('Cannot submit: No GitHub Issue linked to this WO', 'error');
+    return false;
+  }
+
+  if (!hasPAT()) {
+    showToast('No PAT configured. Use "Copy for GitHub" instead.', 'error');
+    return false;
+  }
+
+  try {
+    const comment = formatAgentOutputForGitHub(entry);
+    await addCommentToIssue(wo.issueNumber, comment);
+    showToast('Agent output posted to GitHub!', 'success');
+    return true;
+  } catch (e) {
+    showToast(`Failed to post: ${e.message}`, 'error');
+    return false;
+  }
+}
 
 // === Lane Detection ===
 
@@ -159,17 +637,129 @@ async function loadProducts() {
   }
 }
 
+// P8: Load observations data
+async function loadObservations() {
+  try {
+    const res = await fetch(OBSERVATIONS_LATEST_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    console.log('[Portal] Observations loaded:', data.env, data.smokePass ? 'PASS' : 'FAIL');
+    return { data, error: null };
+  } catch (e) {
+    console.warn('[Portal] Failed to load observations:', e.message);
+    // Return error info for visible feedback (not silent)
+    return { data: null, error: e.message };
+  }
+}
+
+// M3e: Load agent outputs from localStorage
+function loadAgentOutputs() {
+  try {
+    const stored = localStorage.getItem(AGENT_OUTPUTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (e) {
+    console.warn('[Portal] Failed to load agent outputs:', e);
+    return {};
+  }
+}
+
+// M3e: Save agent outputs to localStorage
+function saveAgentOutputs(outputs) {
+  try {
+    localStorage.setItem(AGENT_OUTPUTS_STORAGE_KEY, JSON.stringify(outputs));
+    return true;
+  } catch (e) {
+    console.warn('[Portal] Failed to save agent outputs:', e);
+    return false;
+  }
+}
+
+// M3f: Load cached deployment status from localStorage
+function loadDeployStatusCache() {
+  try {
+    const stored = localStorage.getItem(DEPLOY_STATUS_CACHE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    console.warn('[Portal] Failed to load deploy status cache:', e);
+    return null;
+  }
+}
+
+// M3f: Save deployment status to localStorage cache
+function saveDeployStatusCache(status) {
+  try {
+    localStorage.setItem(DEPLOY_STATUS_CACHE_KEY, JSON.stringify(status));
+    return true;
+  } catch (e) {
+    console.warn('[Portal] Failed to save deploy status cache:', e);
+    return false;
+  }
+}
+
+// M3g: Load evolution proposals from localStorage
+function loadEvolutionProposals() {
+  try {
+    const stored = localStorage.getItem(EVOLUTION_PROPOSALS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (e) {
+    console.warn('[Portal] Failed to load evolution proposals:', e);
+    return {};
+  }
+}
+
+// M3g: Save evolution proposals to localStorage
+function saveEvolutionProposals(proposals) {
+  try {
+    localStorage.setItem(EVOLUTION_PROPOSALS_STORAGE_KEY, JSON.stringify(proposals));
+    return true;
+  } catch (e) {
+    console.warn('[Portal] Failed to save evolution proposals:', e);
+    return false;
+  }
+}
+
+// M3g: Save a single evolution proposal for a WO
+function saveEvolutionProposal(woId, proposal) {
+  const proposals = state.evolutionProposals || {};
+  if (!proposals[woId]) {
+    proposals[woId] = [];
+  }
+
+  const entry = {
+    ...proposal,
+    savedAt: new Date().toISOString()
+  };
+
+  proposals[woId].unshift(entry);  // newest first
+
+  // Keep only last 10 proposals per WO to prevent unbounded growth
+  if (proposals[woId].length > 10) {
+    proposals[woId] = proposals[woId].slice(0, 10);
+  }
+
+  state.evolutionProposals = proposals;
+  saveEvolutionProposals(proposals);
+
+  return entry;
+}
+
+// M3g: Get evolution proposals for a specific WO
+function getEvolutionProposalsForWO(woId) {
+  return state.evolutionProposals?.[woId] || [];
+}
+
 async function loadData() {
   state.loading = true;
   state.error = null;
   render();
 
-  const [sharePack, workOrders, entities, environments, products] = await Promise.all([
+  const [sharePack, workOrders, entities, environments, products, observationsResult] = await Promise.all([
     loadSharePack(),
     loadWorkOrders(),
     loadEntities(),
     loadEnvironments(),
-    loadProducts()
+    loadProducts(),
+    loadObservations()
   ]);
 
   state.sharePack = sharePack;
@@ -177,6 +767,22 @@ async function loadData() {
   state.entities = entities;
   state.environments = environments;
   state.products = products;
+  state.observations = observationsResult.data;
+  state.observationsError = observationsResult.error;
+  state.agentOutputs = loadAgentOutputs();
+  state.deployStatusCache = loadDeployStatusCache();
+  state.evolutionProposals = loadEvolutionProposals();
+
+  // M3f: Update deploy status cache if we have fresh observations
+  if (observationsResult.data) {
+    const cacheEntry = {
+      ...observationsResult.data,
+      cachedAt: new Date().toISOString()
+    };
+    saveDeployStatusCache(cacheEntry);
+    state.deployStatusCache = cacheEntry;
+  }
+
   state.loading = false;
 
   if (!sharePack && !workOrders) {
@@ -202,7 +808,11 @@ function navigateTo(screen) {
     'entity-portal': 'entities',
     'governance': 'governance',
     'work-orders': 'forge',
-    'create-wo': 'forge'
+    'create-wo': 'forge',
+    'import-agent-output': 'forge',
+    'evolution-proposal': 'forge',
+    'deploy-status': 'forge',
+    'settings': 'home'
   };
 
   state.currentScreen = screen;
@@ -286,6 +896,12 @@ async function copyToClipboard(text) {
   }
 }
 
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 function showToast(message, type = 'success') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
@@ -335,7 +951,49 @@ function buildIssueUrl(fields) {
     template: 'forge_work_order.yml',
     title: `[WO] ${fields.taskId || ''}`
   });
+  // Note: GitHub Issue Forms don't support URL prefill for all fields
+  // Users will need to fill remaining fields in GitHub
   return `${base}?${params.toString()}`;
+}
+
+// M3a: Build complete WO markdown for copy-to-clipboard
+function buildWoMarkdown(fields) {
+  const lines = [
+    `## Work Order: ${fields.taskId || '[TASK ID]'}`,
+    '',
+    `**Task Type:** ${fields.taskType || 'Not specified'}`,
+    `**Execution Mode:** ${fields.executionMode || 'code'}`,
+    `**Share Pack Refresh:** ${fields.sharePackRefresh ? 'Required' : 'Not required'}`,
+    '',
+    '---',
+    '',
+    '### Intent Statement',
+    fields.intent || '_Not specified_',
+    '',
+    '### Scope of Work',
+    fields.scope || '_Not specified_',
+    '',
+    '### Allowed Files / Artifacts',
+    '```',
+    fields.allowedFiles || '_Not specified_',
+    '```',
+    '',
+    '### Forbidden Changes',
+    '```',
+    fields.forbidden || '_Not specified_',
+    '```',
+    '',
+    '### Success Criteria',
+    fields.successCriteria || '_Not specified_',
+    '',
+    '### Dependencies',
+    fields.dependencies || '_None specified_',
+    '',
+    '### Additional Notes',
+    fields.notes || '_None_',
+    ''
+  ];
+  return lines.join('\n');
 }
 
 // === Work Order Detail & Agent Pack ===
@@ -353,15 +1011,76 @@ function closeWoDetail() {
   if (modal) modal.remove();
 }
 
-async function copyAgentPack(woId) {
-  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
-  if (!wo) {
-    showToast('Work order not found', 'error');
-    return;
+// M3d: Agent Pack modes
+const AGENT_PACK_MODES = {
+  full: {
+    label: 'Full',
+    description: 'Complete pack with WO details + constitutional docs'
+  },
+  minimal: {
+    label: 'Minimal',
+    description: 'WO summary + constitutional reminders only'
+  },
+  context: {
+    label: 'Context Only',
+    description: 'Governance references for repo-aware agents'
+  }
+};
+
+// M3d: Build agent pack based on mode
+function buildAgentPackContent(wo, mode = 'full') {
+  const lane = parseLane(wo.id);
+  const issueRef = wo.issueNumber ? `\n- **GitHub Issue:** #${wo.issueNumber} (${wo.issueUrl})` : '';
+
+  const constitutionalRefs = `
+## Constitutional References
+- **Forge Kernel:** The Forge/forge/FORGE_KERNEL.md
+- **Executor Playbook:** The Forge/forge/ops/EXECUTOR_PLAYBOOK.md
+- **E2E Workflow:** The Forge/forge/ops/E2E_WORKFLOW_PLAYBOOK.md
+- **Agent Onboarding:** The Forge/forge/contracts/AGENT_ONBOARDING_CONTRACT.md
+- **WO Lifecycle:** The Forge/forge/contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md
+`;
+
+  const constitutionalReminders = `
+## Constitutional Reminders
+- **Acceptance Criteria Supremacy:** Criteria are the binding definition of done
+- **Non-Regression Principle:** Cannot weaken constitutional guarantees
+- **Provenance Required:** Record agent type, name, mode at completion
+- **Scope Discipline:** Only touch Allowed Paths, never Forbidden Paths
+`;
+
+  if (mode === 'context') {
+    // Context Only: governance refs for repo-aware agents
+    return `# Agent Context Pack
+${constitutionalRefs}
+${constitutionalReminders}
+## Work Order Reference
+- **ID:** ${wo.id}
+- **Document:** ${wo.repoUrl}${issueRef}
+
+_Repo-aware agent should read full WO from source._
+`;
   }
 
-  const lane = parseLane(wo.id);
-  const agentPack = `# Agent Pack: ${wo.id}
+  if (mode === 'minimal') {
+    // Minimal: WO summary + reminders
+    return `# Agent Pack (Minimal): ${wo.id}
+
+## Work Order Summary
+- **ID:** ${wo.id}
+- **Title:** ${wo.title}
+- **Lane:** ${lane}
+- **Status:** ${wo.status}
+- **Document:** ${wo.repoUrl}${issueRef}
+${constitutionalReminders}
+## Instructions
+Read full WO at document URL for scope and acceptance criteria.
+Execute per EXECUTOR_PLAYBOOK.md protocol.
+`;
+  }
+
+  // Full: complete pack with all details
+  return `# Agent Pack (Full): ${wo.id}
 
 ## Work Order
 - **ID:** ${wo.id}
@@ -369,22 +1088,103 @@ async function copyAgentPack(woId) {
 - **Lane:** ${lane}
 - **Status:** ${wo.status}
 - **Last Updated:** ${wo.lastUpdated}
-
-## Source
-- **Document:** ${wo.repoUrl}
+- **Document:** ${wo.repoUrl}${issueRef}
+${constitutionalRefs}
+${constitutionalReminders}
+## Closure Checklist
+- [ ] All acceptance criteria addressed
+- [ ] Provenance recorded (agent type, name, mode)
+- [ ] Artifacts produced per WO requirements
+- [ ] No regressions introduced
+- [ ] Handoff ready for next phase
 
 ## Instructions
-Read the full Work Order at the source URL above for:
-- Purpose / Intent
-- Scope
-- Acceptance Criteria
-- Technical Notes
-
-Execute according to EXECUTOR_PLAYBOOK.md protocol.
+1. Read the full Work Order at the document URL above
+2. Review Allowed Paths and Forbidden Paths
+3. Execute scope according to EXECUTOR_PLAYBOOK.md
+4. Complete closure checklist before marking done
 `;
+}
 
-  const copied = await copyToClipboard(agentPack);
-  showToast(copied ? 'Agent Pack copied!' : 'Copy failed', copied ? 'success' : 'error');
+// M3d: Show agent pack mode selector modal
+function showAgentPackModal(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) {
+    showToast('Work order not found', 'error');
+    return;
+  }
+
+  // Remove existing modal if any
+  const existing = document.getElementById('agent-pack-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'agent-pack-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content agent-pack-modal">
+      <div class="modal-header">
+        <h2>Copy Agent Pack</h2>
+        <button class="modal-close" onclick="closeAgentPackModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-wo-id">${wo.id}</p>
+        <p class="modal-subtitle">Select pack format:</p>
+        <div class="agent-pack-options">
+          <button class="agent-pack-option" onclick="copyAgentPackWithMode('${wo.id}', 'full')">
+            <span class="option-icon">&#128230;</span>
+            <div class="option-content">
+              <span class="option-label">Full Pack</span>
+              <span class="option-desc">WO details + constitutional docs + checklist</span>
+            </div>
+          </button>
+          <button class="agent-pack-option" onclick="copyAgentPackWithMode('${wo.id}', 'minimal')">
+            <span class="option-icon">&#128196;</span>
+            <div class="option-content">
+              <span class="option-label">Minimal Pack</span>
+              <span class="option-desc">WO summary + reminders only</span>
+            </div>
+          </button>
+          <button class="agent-pack-option" onclick="copyAgentPackWithMode('${wo.id}', 'context')">
+            <span class="option-icon">&#128279;</span>
+            <div class="option-content">
+              <span class="option-label">Context Only</span>
+              <span class="option-desc">Governance refs for repo-aware agents</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeAgentPackModal();
+  });
+}
+
+function closeAgentPackModal() {
+  const modal = document.getElementById('agent-pack-modal');
+  if (modal) modal.remove();
+}
+
+async function copyAgentPackWithMode(woId, mode) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (!wo) {
+    showToast('Work order not found', 'error');
+    return;
+  }
+
+  const content = buildAgentPackContent(wo, mode);
+  const copied = await copyToClipboard(content);
+  const modeLabel = AGENT_PACK_MODES[mode]?.label || mode;
+  showToast(copied ? `${modeLabel} Agent Pack copied!` : 'Copy failed', copied ? 'success' : 'error');
+  closeAgentPackModal();
+}
+
+// Legacy function: defaults to showing modal for mode selection
+async function copyAgentPack(woId) {
+  showAgentPackModal(woId);
 }
 
 // === E2E Workflow Functions ===
@@ -455,6 +1255,74 @@ function renderWoModal() {
   const lane = parseLane(wo.id);
   const laneInfo = getLaneInfo(lane);
   const statusInfo = getStatusChip(wo.status);
+  const hasToken = hasPAT();
+  const hasIssue = wo.issueNumber != null;
+  const isPendingApproval = wo.status === 'pending-approval';
+
+  // M3b: Build Director Approval section for pending-approval WOs
+  let directorSection = '';
+  if (isPendingApproval) {
+    if (hasToken && hasIssue) {
+      directorSection = `
+        <div class="wo-detail-section director-section">
+          <h4>&#128081; Director Actions</h4>
+          <p class="section-hint">Approve or reject this Work Order</p>
+          <div class="wo-detail-actions">
+            <button class="wo-action-btn approve" onclick="handleApproveWo('${wo.id}')">
+              <span class="action-icon">&#9989;</span> Approve
+            </button>
+            <button class="wo-action-btn reject" onclick="handleRejectWo('${wo.id}')">
+              <span class="action-icon">&#10060;</span> Reject
+            </button>
+          </div>
+        </div>
+      `;
+    } else if (!hasIssue) {
+      directorSection = `
+        <div class="wo-detail-section director-section">
+          <h4>&#128081; Director Actions</h4>
+          <div class="info-card warning">
+            <span class="info-icon">&#9888;</span>
+            <p>No GitHub Issue linked. Add "Issue: #123" to WO file and refresh Share Pack.</p>
+          </div>
+          <div class="wo-detail-actions">
+            <button class="wo-action-btn secondary" onclick="copyApprovalCmd('${wo.id}')">
+              <span class="action-icon">&#128203;</span> Copy Approval
+            </button>
+            <button class="wo-action-btn secondary" onclick="copyRejectionCmd('${wo.id}')">
+              <span class="action-icon">&#128203;</span> Copy Rejection
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      directorSection = `
+        <div class="wo-detail-section director-section">
+          <h4>&#128081; Director Actions</h4>
+          <div class="info-card">
+            <span class="info-icon">&#128274;</span>
+            <p>Configure a GitHub PAT in <a href="#" onclick="navigateTo('settings'); closeWoDetail();">Settings</a> to approve directly.</p>
+          </div>
+          <div class="wo-detail-actions">
+            <button class="wo-action-btn secondary" onclick="copyApprovalCmd('${wo.id}')">
+              <span class="action-icon">&#128203;</span> Copy Approval
+            </button>
+            <button class="wo-action-btn secondary" onclick="copyRejectionCmd('${wo.id}')">
+              <span class="action-icon">&#128203;</span> Copy Rejection
+            </button>
+          </div>
+          <p class="section-hint">Paste command in GitHub Issue to approve/reject manually.</p>
+        </div>
+      `;
+    }
+  }
+
+  // Issue link section
+  const issueLink = hasIssue ? `
+    <a href="${wo.issueUrl}" class="wo-link-btn" target="_blank">
+      <span class="link-icon">&#128279;</span> GitHub Issue #${wo.issueNumber}
+    </a>
+  ` : '';
 
   const modal = document.createElement('div');
   modal.id = 'wo-detail-modal';
@@ -487,8 +1355,11 @@ function renderWoModal() {
             <a href="${wo.repoUrl}" class="wo-link-btn" target="_blank">
               <span class="link-icon">&#128196;</span> Open WO Document
             </a>
+            ${issueLink}
           </div>
         </div>
+
+        ${directorSection}
 
         <div class="wo-detail-section">
           <h4>Agent Actions</h4>
@@ -538,6 +1409,423 @@ function renderStatusChip(status) {
 function renderLaneChip(lane) {
   const info = getLaneInfo(lane);
   return `<span class="lane-chip ${info.class}">${info.icon} ${info.label}</span>`;
+}
+
+// === P8: Observed Panel ===
+
+function renderObservedPanel() {
+  const obs = state.observations;
+  const error = state.observationsError;
+
+  // No data and no error means still loading or not yet fetched
+  if (!obs && !error) {
+    return `
+      <section class="panel observed-panel">
+        <h2 class="panel-title">&#128200; Observed (Latest)</h2>
+        <div class="observed-loading">
+          <span class="loading-icon">&#8987;</span>
+          <span>Loading observations...</span>
+        </div>
+      </section>
+    `;
+  }
+
+  // Error state - show visible card with guidance (NOT silent)
+  if (error) {
+    return `
+      <section class="panel observed-panel observed-error">
+        <h2 class="panel-title">&#128200; Observed (Latest)</h2>
+        <div class="observed-error-card">
+          <span class="error-icon">&#9888;</span>
+          <div class="error-content">
+            <p><strong>Observations not available</strong></p>
+            <p class="error-detail">${error}</p>
+            <p class="error-guidance">Observations are generated during deployment. Run a deploy to generate observation data.</p>
+            <p class="error-path">Expected: <code>${OBSERVATIONS_LATEST_URL}</code></p>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  // Success state - render observation data
+  const smokeClass = obs.smokePass ? 'smoke-pass' : 'smoke-fail';
+  const smokeIcon = obs.smokePass ? '&#9989;' : '&#10060;';
+  const smokeLabel = obs.smokePass ? 'PASS' : 'FAIL';
+
+  const checksHtml = (obs.checks || []).map(check => `
+    <div class="check-item ${check.ok ? 'check-pass' : 'check-fail'}">
+      <span class="check-icon">${check.ok ? '&#9989;' : '&#10060;'}</span>
+      <span class="check-name">${check.name}</span>
+      <span class="check-note">${check.note || ''}</span>
+    </div>
+  `).join('');
+
+  return `
+    <section class="panel observed-panel">
+      <h2 class="panel-title">&#128200; Observed (Latest)</h2>
+      <div class="observed-content">
+        <div class="observed-header">
+          <div class="observed-env">
+            <span class="env-badge env-${obs.env}">${obs.env.toUpperCase()}</span>
+            <span class="env-branch">${obs.deployedBranch}</span>
+          </div>
+          <div class="observed-smoke ${smokeClass}">
+            <span class="smoke-icon">${smokeIcon}</span>
+            <span class="smoke-label">${smokeLabel}</span>
+          </div>
+        </div>
+        <div class="observed-meta">
+          <div class="meta-row">
+            <span class="meta-label">Commit:</span>
+            <code class="meta-value">${obs.commitShort || obs.commitSha?.substring(0, 7) || 'unknown'}</code>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Timestamp:</span>
+            <span class="meta-value">${formatRelativeTime(obs.timestamp)}</span>
+          </div>
+          ${obs.schemaVersion ? `
+          <div class="meta-row">
+            <span class="meta-label">Schema:</span>
+            <span class="meta-value">v${obs.schemaVersion}</span>
+          </div>
+          ` : ''}
+        </div>
+        ${checksHtml ? `
+        <div class="observed-checks">
+          <h4 class="checks-title">Smoke Checks</h4>
+          ${checksHtml}
+        </div>
+        ` : ''}
+        ${obs.notes ? `
+        <div class="observed-notes">
+          <p>${obs.notes}</p>
+        </div>
+        ` : ''}
+      </div>
+    </section>
+  `;
+}
+
+// === M3f: Deployment Status Panel ===
+
+function renderDeploymentStatusPanel() {
+  const obs = state.observations;
+  const error = state.observationsError;
+  const cache = state.deployStatusCache;
+
+  // Determine data source: live observations or cache
+  const hasLiveData = obs && !error;
+  const hasCachedData = cache && !hasLiveData;
+  const displayData = hasLiveData ? obs : (hasCachedData ? cache : null);
+
+  // No data available at all
+  if (!displayData && error) {
+    return `
+      <section class="panel deploy-status-panel deploy-status-error">
+        <h2 class="panel-title">&#128640; Deployment Status</h2>
+        <div class="deploy-status-error-card">
+          <span class="error-icon">&#9888;</span>
+          <div class="error-content">
+            <p><strong>Status unavailable</strong></p>
+            <p class="error-detail">${error}</p>
+            <p class="error-guidance">Connect PAT for live GitHub Actions status, or run a deploy to generate observations.</p>
+          </div>
+        </div>
+        <div class="deploy-actions">
+          <a href="${REPO_BASE}/actions" class="btn-secondary" target="_blank">
+            <span class="action-icon">&#8599;</span> View Actions
+          </a>
+        </div>
+      </section>
+    `;
+  }
+
+  // Still loading
+  if (!displayData && !error) {
+    return `
+      <section class="panel deploy-status-panel">
+        <h2 class="panel-title">&#128640; Deployment Status</h2>
+        <div class="deploy-status-loading">
+          <span class="loading-icon">&#8987;</span>
+          <span>Loading deployment status...</span>
+        </div>
+      </section>
+    `;
+  }
+
+  // Have data (live or cached)
+  const smokeClass = displayData.smokePass ? 'smoke-pass' : 'smoke-fail';
+  const smokeIcon = displayData.smokePass ? '&#9989;' : '&#10060;';
+  const smokeLabel = displayData.smokePass ? 'PASS' : 'FAIL';
+  const commitShort = displayData.commitShort || displayData.commitSha?.substring(0, 7) || 'unknown';
+  const commitUrl = `${REPO_BASE}/commit/${displayData.commitSha || ''}`;
+
+  return `
+    <section class="panel deploy-status-panel">
+      <h2 class="panel-title">&#128640; Deployment Status</h2>
+      ${hasCachedData ? `
+        <div class="cache-notice">
+          <span class="cache-icon">&#128451;</span>
+          <span>Showing cached data (offline mode)</span>
+          <span class="cache-time">Cached: ${formatRelativeTime(cache.cachedAt)}</span>
+        </div>
+      ` : ''}
+      <div class="deploy-status-cards">
+        <div class="deploy-card env-${displayData.env}">
+          <div class="deploy-card-header">
+            <span class="env-badge env-${displayData.env}">${displayData.env.toUpperCase()}</span>
+            <div class="deploy-smoke ${smokeClass}">
+              <span class="smoke-icon">${smokeIcon}</span>
+              <span class="smoke-label">${smokeLabel}</span>
+            </div>
+          </div>
+          <div class="deploy-card-body">
+            <div class="deploy-meta-row">
+              <span class="meta-label">Branch:</span>
+              <span class="meta-value">${displayData.deployedBranch}</span>
+            </div>
+            <div class="deploy-meta-row">
+              <span class="meta-label">Commit:</span>
+              <a href="${commitUrl}" class="meta-value commit-link" target="_blank">
+                <code>${commitShort}</code>
+                <span class="link-icon">&#8599;</span>
+              </a>
+            </div>
+            <div class="deploy-meta-row">
+              <span class="meta-label">Deployed:</span>
+              <span class="meta-value">${formatRelativeTime(displayData.timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="deploy-actions">
+        <a href="${REPO_BASE}/actions/workflows/forge-pages-deploy.yml" class="btn-secondary" target="_blank">
+          <span class="action-icon">&#8599;</span> Deploy Workflow
+        </a>
+        <a href="${REPO_BASE}/actions/workflows/forge-observations-commit.yml" class="btn-secondary" target="_blank">
+          <span class="action-icon">&#8599;</span> Observations Workflow
+        </a>
+        <button class="btn-secondary" onclick="loadData()">
+          <span class="action-icon">&#8635;</span> Refresh
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+// === M3g: Evolution Proposal Screen ===
+
+function renderEvolutionProposalScreen() {
+  const workOrders = state.workOrders?.workOrders || [];
+  const proposals = state.evolutionProposals || {};
+  const totalProposals = Object.values(proposals).reduce((sum, arr) => sum + arr.length, 0);
+
+  return `
+    <section class="panel">
+      <div class="section-header">
+        <button class="back-btn" onclick="navigateTo('forge')">&#8592;</button>
+        <h2 class="panel-title">Evolution Proposal</h2>
+      </div>
+      <div class="info-card">
+        <span class="info-icon">&#128161;</span>
+        <p>Draft an evolution proposal for a Work Order. Proposals can be saved locally and optionally posted to GitHub.</p>
+      </div>
+
+      <form id="evolution-proposal-form" class="proposal-form">
+        <div class="form-group">
+          <label for="proposal-wo-select">Select Work Order</label>
+          <select id="proposal-wo-select" required>
+            <option value="">-- Select a WO --</option>
+            ${workOrders.map(wo => `
+              <option value="${wo.id}" data-issue="${wo.issueNumber || ''}">${wo.id}</option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="proposal-title">Proposal Title</label>
+          <input type="text" id="proposal-title" placeholder="e.g., Add caching layer for performance" required maxlength="200" />
+        </div>
+
+        <div class="form-group">
+          <label for="proposal-body">Proposal Body (Markdown)</label>
+          <textarea id="proposal-body" rows="10" placeholder="Describe the evolution proposal...
+
+## Motivation
+Why is this change needed?
+
+## Proposed Change
+What specifically should change?
+
+## Impact
+What areas are affected?
+
+## Acceptance Criteria
+How do we know this is complete?" required></textarea>
+          <span class="char-count" id="proposal-char-count">0 / 5000</span>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-primary" onclick="handleSaveProposal()">
+            <span class="action-icon">&#128190;</span> Save Locally
+          </button>
+          <button type="button" class="btn-secondary" onclick="handleCopyProposalMarkdown()">
+            <span class="action-icon">&#128203;</span> Copy as Markdown
+          </button>
+          ${hasPAT() ? `
+            <button type="button" class="btn-secondary" onclick="handlePostProposalToGitHub()">
+              <span class="action-icon">&#128640;</span> Post to GitHub
+            </button>
+          ` : `
+            <div class="pat-hint">
+              <span>&#128274;</span>
+              <span>Configure <a href="#" onclick="navigateTo('settings'); return false;">PAT</a> to post to GitHub</span>
+            </div>
+          `}
+        </div>
+      </form>
+
+      ${totalProposals > 0 ? `
+        <section class="saved-proposals">
+          <h3 class="panel-title">Saved Proposals (${totalProposals})</h3>
+          <div class="proposals-list">
+            ${Object.entries(proposals).map(([woId, woProposals]) => `
+              <div class="proposal-group">
+                <h4 class="proposal-group-title">${woId} (${woProposals.length})</h4>
+                ${woProposals.slice(0, 3).map((p, idx) => `
+                  <div class="proposal-item">
+                    <span class="proposal-title">${escapeHtml(p.title || 'Untitled')}</span>
+                    <span class="proposal-time">${formatRelativeTime(p.savedAt)}</span>
+                  </div>
+                `).join('')}
+                ${woProposals.length > 3 ? `<p class="more-hint">+${woProposals.length - 3} more</p>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
+    </section>
+  `;
+}
+
+function bindEvolutionProposalForm() {
+  const bodyTextarea = document.getElementById('proposal-body');
+  const charCount = document.getElementById('proposal-char-count');
+
+  if (bodyTextarea && charCount) {
+    bodyTextarea.addEventListener('input', () => {
+      const len = bodyTextarea.value.length;
+      charCount.textContent = `${len} / 5000`;
+      if (len > 5000) {
+        charCount.classList.add('over-limit');
+      } else {
+        charCount.classList.remove('over-limit');
+      }
+    });
+  }
+}
+
+function handleSaveProposal() {
+  const woId = document.getElementById('proposal-wo-select')?.value;
+  const title = document.getElementById('proposal-title')?.value?.trim();
+  const body = document.getElementById('proposal-body')?.value?.trim();
+
+  if (!woId) {
+    showToast('Please select a Work Order', 'error');
+    return;
+  }
+  if (!title) {
+    showToast('Please enter a proposal title', 'error');
+    return;
+  }
+  if (!body) {
+    showToast('Please enter proposal body', 'error');
+    return;
+  }
+
+  const proposal = { title, body };
+  saveEvolutionProposal(woId, proposal);
+  showToast('Proposal saved locally!', 'success');
+  render();  // Re-render to show updated list
+}
+
+function buildProposalMarkdown(woId, title, body) {
+  return `## Evolution Proposal
+
+**Work Order:** ${woId}
+**Title:** ${title}
+**Submitted:** ${new Date().toISOString()}
+
+---
+
+${body}
+
+---
+_Submitted via Forge Portal_`;
+}
+
+async function handleCopyProposalMarkdown() {
+  const woId = document.getElementById('proposal-wo-select')?.value;
+  const title = document.getElementById('proposal-title')?.value?.trim();
+  const body = document.getElementById('proposal-body')?.value?.trim();
+
+  if (!woId || !title || !body) {
+    showToast('Please fill all fields before copying', 'error');
+    return;
+  }
+
+  const markdown = buildProposalMarkdown(woId, title, body);
+  const copied = await copyToClipboard(markdown);
+  showToast(copied ? 'Markdown copied!' : 'Copy failed', copied ? 'success' : 'error');
+}
+
+async function handlePostProposalToGitHub() {
+  const select = document.getElementById('proposal-wo-select');
+  const woId = select?.value;
+  const issueNumber = select?.selectedOptions[0]?.dataset?.issue;
+  const title = document.getElementById('proposal-title')?.value?.trim();
+  const body = document.getElementById('proposal-body')?.value?.trim();
+
+  if (!woId || !title || !body) {
+    showToast('Please fill all fields before posting', 'error');
+    return;
+  }
+
+  if (!issueNumber) {
+    showToast('This WO has no linked GitHub Issue. Use Copy as Markdown instead.', 'error');
+    return;
+  }
+
+  try {
+    const markdown = buildProposalMarkdown(woId, title, body);
+    await addCommentToIssue(parseInt(issueNumber, 10), markdown);
+    showToast('Proposal posted to GitHub!', 'success');
+
+    // Also save locally
+    saveEvolutionProposal(woId, { title, body, postedToGitHub: true, issueNumber });
+    render();
+  } catch (e) {
+    showToast(`Failed to post: ${e.message}`, 'error');
+  }
+}
+
+// === M3f: Deployment Status Full Screen ===
+
+function renderDeploymentStatusScreen() {
+  return `
+    <section class="panel">
+      <div class="section-header">
+        <button class="back-btn" onclick="navigateTo('forge')">&#8592;</button>
+        <h2 class="panel-title">Deployment Status</h2>
+      </div>
+      <div class="info-card">
+        <span class="info-icon">&#128640;</span>
+        <p>View current deployment status for dev and prod environments. Data is sourced from deployment observations and cached for offline access.</p>
+      </div>
+    </section>
+    ${renderDeploymentStatusPanel()}
+  `;
 }
 
 // === HOME TAB ===
@@ -592,6 +1880,11 @@ function renderHomeTab() {
           <span class="nav-card-icon">&#8635;</span>
           <span class="nav-card-title">Refresh</span>
           <span class="nav-card-desc">Reload all data</span>
+        </button>
+        <button class="nav-card" onclick="navigateTo('settings')">
+          <span class="nav-card-icon">&#9881;</span>
+          <span class="nav-card-title">Settings</span>
+          <span class="nav-card-desc">${hasPAT() ? 'PAT configured' : 'Configure PAT'}</span>
         </button>
       </div>
     </section>
@@ -701,6 +1994,25 @@ function renderForgeTab() {
       </div>
     </section>
 
+    ${renderObservedPanel()}
+
+    ${renderDeploymentStatusPanel()}
+
+    <section class="panel forge-evolution">
+      <h2 class="panel-title">&#128161; Evolution</h2>
+      <p class="panel-subtitle-sm">Propose and track system evolution</p>
+      <div class="evolution-actions">
+        <button class="section-card" onclick="navigateTo('evolution-proposal')">
+          <span class="section-icon">&#128221;</span>
+          <div class="section-content">
+            <span class="section-title">New Proposal</span>
+            <span class="section-desc">Draft an evolution proposal</span>
+          </div>
+          <span class="section-arrow">&#8250;</span>
+        </button>
+      </div>
+    </section>
+
     <section class="panel forge-actions">
       <h2 class="panel-title">Quick Actions</h2>
       <div class="action-grid-compact">
@@ -798,6 +2110,14 @@ function renderForgeAgents() {
           </div>
           <span class="doc-arrow">&#8250;</span>
         </a>
+        <button class="doc-link" onclick="navigateTo('import-agent-output')">
+          <span class="doc-icon">&#128229;</span>
+          <div class="doc-content">
+            <span class="doc-title">Import Agent Output</span>
+            <span class="doc-desc">Paste execution results</span>
+          </div>
+          <span class="doc-arrow">&#8250;</span>
+        </button>
       </nav>
     </section>
   `;
@@ -827,6 +2147,13 @@ function renderForgeSharePacks() {
           </div>
         </div>
       ` : '<p class="error-text">Share Pack not loaded</p>'}
+
+      <div class="sharepack-actions">
+        <button class="btn-primary" onclick="showRefreshSharePackModal()">
+          <span class="action-icon">&#8635;</span> Refresh Share Pack
+        </button>
+      </div>
+
       <nav class="doc-list">
         <a href="${SHARE_PACK_URL}" class="doc-link" target="_blank">
           <span class="doc-icon">&#128220;</span>
@@ -1069,48 +2396,521 @@ function renderWorkOrdersScreen() {
 // === CREATE WO (sub-screen) ===
 
 function renderCreateWoScreen() {
+  // M3a: Extended WO creation form matching GitHub issue template
   return `
     <section class="panel">
       <div class="section-header">
         <button class="back-btn" onclick="navigateTo('forge')">&#8592;</button>
         <h2 class="panel-title">Create Work Order</h2>
       </div>
+      <p class="panel-subtitle-sm">Draft a Work Order for Director approval</p>
     </section>
 
     <section class="panel">
       <form id="create-wo-form" class="wo-form">
         <div class="form-group">
-          <label for="wo-task-id">Task ID</label>
+          <label for="wo-task-id">Task ID <span class="required">*</span></label>
           <input type="text" id="wo-task-id" placeholder="FO-MyFi-I3-Feature" required>
           <span class="form-hint">Format: FO-[Entity]-[Type][Num]-[Name]</span>
         </div>
-        <div class="form-group">
-          <label for="wo-task-type">Task Type</label>
-          <select id="wo-task-type" required>
-            <option value="">Select type...</option>
-            <option value="implementation">Implementation</option>
-            <option value="spec-sync">Spec Sync</option>
-            <option value="uplift">Uplift</option>
-            <option value="refactor">Refactor</option>
-            <option value="audit">Audit</option>
-            <option value="meta">Meta</option>
-          </select>
+
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="wo-task-type">Task Type <span class="required">*</span></label>
+            <select id="wo-task-type" required>
+              <option value="">Select type...</option>
+              <option value="implementation">Implementation</option>
+              <option value="spec-sync">Spec Sync</option>
+              <option value="uplift">Uplift</option>
+              <option value="refactor">Refactor</option>
+              <option value="audit">Audit</option>
+              <option value="research">Research</option>
+              <option value="docs-only">Docs Only</option>
+              <option value="meta">Meta</option>
+            </select>
+          </div>
+          <div class="form-group half">
+            <label for="wo-exec-mode">Execution Mode <span class="required">*</span></label>
+            <select id="wo-exec-mode" required>
+              <option value="code">Code</option>
+              <option value="docs-only">Docs Only</option>
+            </select>
+          </div>
         </div>
+
         <div class="form-group">
-          <label for="wo-intent">Intent Statement</label>
-          <textarea id="wo-intent" placeholder="WHY this task exists" rows="2" required></textarea>
+          <label for="wo-intent">Intent Statement <span class="required">*</span></label>
+          <textarea id="wo-intent" placeholder="Single sentence: WHY this task exists" rows="2" required></textarea>
         </div>
+
         <div class="form-group">
-          <label for="wo-scope">Scope of Work</label>
-          <textarea id="wo-scope" placeholder="What is to change" rows="3"></textarea>
+          <label for="wo-scope">Scope of Work <span class="required">*</span></label>
+          <textarea id="wo-scope" placeholder="- Create X&#10;- Modify Y&#10;- Update Z" rows="4" required></textarea>
         </div>
+
+        <div class="form-group">
+          <label for="wo-allowed">Allowed Files / Artifacts <span class="required">*</span></label>
+          <textarea id="wo-allowed" placeholder="CREATE/MODIFY:&#10;- path/to/file.js&#10;- path/to/spec.md" rows="4" required></textarea>
+          <span class="form-hint">Explicit list of files that may be read or modified</span>
+        </div>
+
+        <div class="form-group">
+          <label for="wo-forbidden">Forbidden Changes <span class="required">*</span></label>
+          <textarea id="wo-forbidden" placeholder="- No new components&#10;- No API changes" rows="3" required></textarea>
+          <span class="form-hint">Things explicitly out of scope</span>
+        </div>
+
+        <div class="form-group">
+          <label for="wo-success">Success Criteria <span class="required">*</span></label>
+          <textarea id="wo-success" placeholder="- Spec and UI match&#10;- Tests pass&#10;- No scope creep" rows="4" required></textarea>
+          <span class="form-hint">Observable conditions for completion</span>
+        </div>
+
+        <div class="form-group">
+          <label for="wo-dependencies">Dependencies</label>
+          <textarea id="wo-dependencies" placeholder="- Requires I1 complete&#10;- References PRODUCT_STATE.md" rows="2"></textarea>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="wo-sharepack">
+            <span>Share Pack refresh required after completion</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="wo-notes">Additional Notes</label>
+          <textarea id="wo-notes" placeholder="Optional additional context..." rows="2"></textarea>
+        </div>
+
         <div class="form-actions">
-          <button type="submit" class="btn-primary">Create Issue</button>
-          <button type="button" class="btn-secondary" onclick="copyWoBody()">Copy</button>
+          <button type="submit" class="btn-primary">Open in GitHub</button>
+          <button type="button" class="btn-secondary" onclick="copyWoMarkdown()">Copy Markdown</button>
         </div>
+        <p class="form-hint center">Draft only — no direct GitHub writes from portal</p>
       </form>
     </section>
   `;
+}
+
+// === M3e: Import Agent Output Screen ===
+
+function renderImportAgentOutputScreen() {
+  const wos = state.workOrders?.workOrders || [];
+  const executedWos = wos.filter(wo => ['executed', 'approved', 'executing'].includes(wo.status));
+
+  return `
+    <section class="panel">
+      <div class="section-header">
+        <button class="back-btn" onclick="navigateTo('forge')">&#8592;</button>
+        <h2 class="panel-title">Import Agent Output</h2>
+      </div>
+      <p class="panel-subtitle-sm">Paste agent execution results to attach to a Work Order</p>
+    </section>
+
+    <section class="panel">
+      <form id="import-agent-form" class="wo-form">
+        <div class="form-group">
+          <label for="import-wo-select">Work Order <span class="required">*</span></label>
+          <select id="import-wo-select" required>
+            <option value="">Select Work Order...</option>
+            ${executedWos.map(wo => `
+              <option value="${wo.id}">${wo.id} — ${wo.title}</option>
+            `).join('')}
+          </select>
+          <span class="form-hint">Select the WO this output belongs to</span>
+        </div>
+
+        <div class="form-group">
+          <label for="import-agent-type">Agent Type <span class="required">*</span></label>
+          <select id="import-agent-type" required>
+            <option value="">Select agent type...</option>
+            <option value="repo-aware">Repo-aware Executor</option>
+            <option value="non-repo-aware">Non-repo-aware Executor</option>
+            <option value="verifier">Verifier-Tester</option>
+            <option value="architect">Architect</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="import-parse-mode">Parse Mode</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="parse-mode" value="minimal" checked>
+              <span>Minimal (store raw)</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="parse-mode" value="structured">
+              <span>Structured (extract sections)</span>
+            </label>
+          </div>
+          <span class="form-hint">Structured mode attempts to extract Summary, Files Changed, Risks, etc.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="import-output">Agent Output <span class="required">*</span></label>
+          <textarea id="import-output" placeholder="Paste the agent's output here..." rows="10" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="import-attachments">Attachment URLs (optional)</label>
+          <textarea id="import-attachments" placeholder="One URL per line (PR links, screenshots, etc.)" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save Locally</button>
+          <button type="button" class="btn-secondary" onclick="handleImportAndPostToGitHub()">
+            Save & Post to GitHub
+          </button>
+          <button type="button" class="btn-secondary" onclick="copyImportForGitHub()">
+            Copy for GitHub
+          </button>
+        </div>
+        <p class="form-hint center">Outputs are stored locally first. Post to GitHub requires PAT + linked Issue.</p>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">Recently Imported</h3>
+      <div id="recent-imports-list">
+        ${renderRecentImports()}
+      </div>
+    </section>
+  `;
+}
+
+function renderRecentImports() {
+  const allOutputs = state.agentOutputs || {};
+  const recent = [];
+
+  // Flatten and sort by timestamp
+  for (const woId of Object.keys(allOutputs)) {
+    for (const entry of allOutputs[woId]) {
+      recent.push({ woId, ...entry });
+    }
+  }
+
+  recent.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+  const display = recent.slice(0, 5);
+
+  if (display.length === 0) {
+    return '<p class="empty-text">No imported outputs yet</p>';
+  }
+
+  return display.map(entry => `
+    <div class="recent-import-item">
+      <div class="import-header">
+        <span class="import-wo">${entry.woId}</span>
+        <span class="import-agent">${entry.agentType}</span>
+      </div>
+      <div class="import-meta">
+        <span class="import-time">${formatRelativeTime(entry.savedAt)}</span>
+        <span class="import-mode">${entry.output.parseMode}</span>
+      </div>
+      <div class="import-preview">${entry.output.raw.substring(0, 100)}${entry.output.raw.length > 100 ? '...' : ''}</div>
+    </div>
+  `).join('');
+}
+
+function bindImportAgentForm() {
+  const form = document.getElementById('import-agent-form');
+  if (!form) return;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleImportAgentOutput(false);
+  });
+}
+
+function handleImportAgentOutput(postToGitHub = false) {
+  const woId = document.getElementById('import-wo-select')?.value;
+  const agentType = document.getElementById('import-agent-type')?.value;
+  const rawOutput = document.getElementById('import-output')?.value;
+  const attachmentsRaw = document.getElementById('import-attachments')?.value || '';
+  const parseMode = document.querySelector('input[name="parse-mode"]:checked')?.value || 'minimal';
+
+  if (!woId || !agentType || !rawOutput) {
+    showToast('Please fill all required fields', 'error');
+    return null;
+  }
+
+  const attachments = attachmentsRaw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  const output = parseAgentOutput(rawOutput, parseMode);
+  const entry = saveAgentOutput(woId, agentType, output, attachments);
+
+  showToast('Output saved locally!', 'success');
+
+  // Clear form
+  document.getElementById('import-output').value = '';
+  document.getElementById('import-attachments').value = '';
+
+  // Re-render recent imports
+  const recentList = document.getElementById('recent-imports-list');
+  if (recentList) {
+    recentList.innerHTML = renderRecentImports();
+  }
+
+  return entry;
+}
+
+async function handleImportAndPostToGitHub() {
+  const entry = handleImportAgentOutput(true);
+  if (!entry) return;
+
+  const woId = document.getElementById('import-wo-select')?.value;
+  await submitAgentOutputToGitHub(woId, entry);
+}
+
+function copyImportForGitHub() {
+  const woId = document.getElementById('import-wo-select')?.value;
+  const agentType = document.getElementById('import-agent-type')?.value;
+  const rawOutput = document.getElementById('import-output')?.value;
+  const attachmentsRaw = document.getElementById('import-attachments')?.value || '';
+  const parseMode = document.querySelector('input[name="parse-mode"]:checked')?.value || 'minimal';
+
+  if (!woId || !agentType || !rawOutput) {
+    showToast('Please fill required fields first', 'error');
+    return;
+  }
+
+  const attachments = attachmentsRaw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  const output = parseAgentOutput(rawOutput, parseMode);
+  const entry = {
+    woId,
+    agentType,
+    output,
+    attachments,
+    savedAt: new Date().toISOString()
+  };
+
+  const comment = formatAgentOutputForGitHub(entry);
+  copyToClipboard(comment);
+  showToast('Formatted comment copied! Paste in GitHub Issue.', 'success');
+}
+
+// === M3b: Settings Screen ===
+
+function renderSettingsScreen() {
+  const hasToken = hasPAT();
+  const hasConsent = hasPatConsent();
+
+  return `
+    <section class="panel">
+      <div class="section-header">
+        <button class="back-btn" onclick="navigateTo('home')">&#8592;</button>
+        <h2 class="panel-title">Settings</h2>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">GitHub Integration</h3>
+      <div class="info-card warning">
+        <span class="info-icon">&#9888;</span>
+        <div class="info-content">
+          <p><strong>Security Notice</strong></p>
+          <p>Personal Access Token (PAT) is stored in your browser's localStorage.</p>
+          <ul>
+            <li>Token is only sent to GitHub API</li>
+            <li>Never shared with any other server</li>
+            <li>You are responsible for token security</li>
+            <li>Use a fine-grained PAT with minimal permissions</li>
+          </ul>
+        </div>
+      </div>
+
+      ${hasToken ? `
+        <div class="settings-status success">
+          <span class="status-icon">&#9989;</span>
+          <span>GitHub PAT configured</span>
+        </div>
+        <div class="settings-actions">
+          <button class="btn-danger" onclick="handleClearPAT()">
+            Forget Token
+          </button>
+          <button class="btn-secondary" onclick="showPATModal()">
+            Update Token
+          </button>
+        </div>
+      ` : `
+        <div class="settings-status warning">
+          <span class="status-icon">&#128274;</span>
+          <span>No GitHub PAT configured</span>
+        </div>
+        <p class="settings-hint">
+          Without a PAT, approval actions will copy commands for manual GitHub use.
+        </p>
+        <div class="settings-actions">
+          <button class="btn-primary" onclick="showPATModal()">
+            Configure PAT
+          </button>
+        </div>
+      `}
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">Required PAT Permissions</h3>
+      <div class="permissions-list">
+        <div class="permission-item">
+          <span class="permission-scope">repo</span>
+          <span class="permission-desc">Full repository access (classic PAT)</span>
+        </div>
+        <p class="form-hint">Or for fine-grained PAT:</p>
+        <div class="permission-item">
+          <span class="permission-scope">issues:write</span>
+          <span class="permission-desc">Manage issues and labels</span>
+        </div>
+      </div>
+      <p class="form-hint">
+        <a href="https://github.com/settings/tokens?type=beta" target="_blank">
+          Create fine-grained PAT on GitHub &#8599;
+        </a>
+      </p>
+    </section>
+
+    <section class="panel">
+      <h3 class="panel-title">Capabilities</h3>
+      <table class="capabilities-table">
+        <tr>
+          <th>Feature</th>
+          <th>Without PAT</th>
+          <th>With PAT</th>
+        </tr>
+        <tr>
+          <td>View Work Orders</td>
+          <td>&#9989;</td>
+          <td>&#9989;</td>
+        </tr>
+        <tr>
+          <td>Copy Agent Packs</td>
+          <td>&#9989;</td>
+          <td>&#9989;</td>
+        </tr>
+        <tr>
+          <td>Create WO (GitHub)</td>
+          <td>&#9989;</td>
+          <td>&#9989;</td>
+        </tr>
+        <tr>
+          <td>Approve/Reject WO</td>
+          <td>Copy command</td>
+          <td>&#9989; Direct</td>
+        </tr>
+      </table>
+    </section>
+  `;
+}
+
+function showPATModal() {
+  const existing = document.getElementById('pat-modal');
+  if (existing) existing.remove();
+
+  const hasConsent = hasPatConsent();
+
+  const modal = document.createElement('div');
+  modal.id = 'pat-modal';
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content pat-modal">
+      <div class="modal-header">
+        <h2>Configure GitHub PAT</h2>
+        <button class="modal-close" onclick="closePATModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        ${!hasConsent ? `
+          <div class="consent-section">
+            <h3>Security Acknowledgment</h3>
+            <p>Before storing a PAT, please acknowledge:</p>
+            <ul>
+              <li>Token is stored in browser localStorage (unencrypted)</li>
+              <li>Anyone with access to this browser can use the token</li>
+              <li>Only use on trusted devices</li>
+              <li>You can remove the token anytime via Settings</li>
+            </ul>
+            <label class="checkbox-label consent-checkbox">
+              <input type="checkbox" id="pat-consent-checkbox">
+              <span>I understand and accept these risks</span>
+            </label>
+          </div>
+        ` : ''}
+        <div class="form-group">
+          <label for="pat-input">Personal Access Token</label>
+          <input type="password" id="pat-input" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+          <span class="form-hint">Paste your GitHub PAT here</span>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="savePATFromModal()" id="save-pat-btn" ${!hasConsent ? 'disabled' : ''}>
+            Save Token
+          </button>
+          <button class="btn-secondary" onclick="closePATModal()">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Add consent checkbox handler
+  if (!hasConsent) {
+    const checkbox = document.getElementById('pat-consent-checkbox');
+    const saveBtn = document.getElementById('save-pat-btn');
+    checkbox?.addEventListener('change', (e) => {
+      saveBtn.disabled = !e.target.checked;
+    });
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closePATModal();
+  });
+}
+
+function closePATModal() {
+  const modal = document.getElementById('pat-modal');
+  if (modal) modal.remove();
+}
+
+function savePATFromModal() {
+  const input = document.getElementById('pat-input');
+  const token = input?.value?.trim();
+
+  if (!token) {
+    showToast('Please enter a token', 'error');
+    return;
+  }
+
+  if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+    showToast('Invalid token format. Expected ghp_... or github_pat_...', 'error');
+    return;
+  }
+
+  // Set consent if not already set
+  if (!hasPatConsent()) {
+    const checkbox = document.getElementById('pat-consent-checkbox');
+    if (!checkbox?.checked) {
+      showToast('Please acknowledge the security notice', 'error');
+      return;
+    }
+    setPatConsent();
+  }
+
+  if (storePAT(token)) {
+    showToast('PAT saved successfully', 'success');
+    closePATModal();
+    render(); // Re-render settings page
+  } else {
+    showToast('Failed to save PAT', 'error');
+  }
+}
+
+function handleClearPAT() {
+  if (clearPAT()) {
+    showToast('PAT removed', 'success');
+    render();
+  } else {
+    showToast('Failed to remove PAT', 'error');
+  }
 }
 
 // === Main Render ===
@@ -1137,6 +2937,14 @@ function renderScreen() {
       return renderWorkOrdersScreen();
     case 'create-wo':
       return renderCreateWoScreen();
+    case 'import-agent-output':
+      return renderImportAgentOutputScreen();
+    case 'evolution-proposal':
+      return renderEvolutionProposalScreen();
+    case 'deploy-status':
+      return renderDeploymentStatusScreen();
+    case 'settings':
+      return renderSettingsScreen();
     default:
       return renderHomeTab();
   }
@@ -1174,6 +2982,12 @@ function render() {
   if (state.currentScreen === 'create-wo') {
     bindCreateWoForm();
   }
+  if (state.currentScreen === 'import-agent-output') {
+    bindImportAgentForm();
+  }
+  if (state.currentScreen === 'evolution-proposal') {
+    bindEvolutionProposalForm();
+  }
 }
 
 function bindCreateWoForm() {
@@ -1208,11 +3022,95 @@ window.copyAgentPack = copyAgentPack;
 window.setE2EPhase = setE2EPhase;
 window.copyPhaseAgentPack = copyPhaseAgentPack;
 
+// M3d: Agent pack modal functions
+window.showAgentPackModal = showAgentPackModal;
+window.closeAgentPackModal = closeAgentPackModal;
+window.copyAgentPackWithMode = copyAgentPackWithMode;
+
 window.handleExecuteWo = function(woId) {
   const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
   if (wo) handleExecute(wo);
 };
 
+// M3b: PAT management and Director approval functions
+window.showPATModal = showPATModal;
+window.closePATModal = closePATModal;
+window.savePATFromModal = savePATFromModal;
+window.handleClearPAT = handleClearPAT;
+
+window.handleApproveWo = async function(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (wo) {
+    const success = await approveWorkOrder(wo);
+    if (success) {
+      closeWoDetail();
+      // Refresh data to reflect new status
+      loadData();
+    }
+  }
+};
+
+window.handleRejectWo = async function(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (wo) {
+    // Prompt for reason (optional)
+    const reason = prompt('Rejection reason (optional):');
+    const success = await rejectWorkOrder(wo, reason || '');
+    if (success) {
+      closeWoDetail();
+      // Refresh data to reflect new status
+      loadData();
+    }
+  }
+};
+
+window.copyApprovalCmd = function(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (wo) copyApprovalCommand(wo);
+};
+
+window.copyRejectionCmd = function(woId) {
+  const wo = state.workOrders?.workOrders?.find(w => w.id === woId);
+  if (wo) copyRejectionCommand(wo);
+};
+
+// M3c: Share Pack Refresh functions
+window.showRefreshSharePackModal = showRefreshSharePackModal;
+window.closeRefreshSharePackModal = closeRefreshSharePackModal;
+window.handleRefreshSharePack = handleRefreshSharePack;
+window.copyRefreshCommand = copyRefreshCommand;
+
+// M3e: Agent Output Import functions
+window.handleImportAgentOutput = handleImportAgentOutput;
+window.handleImportAndPostToGitHub = handleImportAndPostToGitHub;
+window.copyImportForGitHub = copyImportForGitHub;
+
+// M3g: Evolution Proposal functions
+window.handleSaveProposal = handleSaveProposal;
+window.handleCopyProposalMarkdown = handleCopyProposalMarkdown;
+window.handlePostProposalToGitHub = handlePostProposalToGitHub;
+
+// M3a: Extended WO markdown copy using buildWoMarkdown()
+window.copyWoMarkdown = async function() {
+  const fields = {
+    taskId: document.getElementById('wo-task-id')?.value || '',
+    taskType: document.getElementById('wo-task-type')?.value || '',
+    executionMode: document.getElementById('wo-exec-mode')?.value || 'code',
+    intent: document.getElementById('wo-intent')?.value || '',
+    scope: document.getElementById('wo-scope')?.value || '',
+    allowedFiles: document.getElementById('wo-allowed')?.value || '',
+    forbidden: document.getElementById('wo-forbidden')?.value || '',
+    successCriteria: document.getElementById('wo-success')?.value || '',
+    dependencies: document.getElementById('wo-dependencies')?.value || '',
+    sharePackRefresh: document.getElementById('wo-sharepack')?.checked || false,
+    notes: document.getElementById('wo-notes')?.value || ''
+  };
+  const markdown = buildWoMarkdown(fields);
+  const copied = await copyToClipboard(markdown);
+  showToast(copied ? 'WO Markdown copied!' : 'Copy failed', copied ? 'success' : 'error');
+};
+
+// Legacy: keep copyWoBody for backwards compatibility
 window.copyWoBody = async function() {
   const fields = {
     taskId: document.getElementById('wo-task-id')?.value || '',

@@ -199,6 +199,28 @@ function parseWorkOrderStatus(content, filename) {
   return status;
 }
 
+function parseWorkOrderIssueNumber(content) {
+  // Parse Work Order file to extract GitHub Issue number
+  // Supports formats:
+  //   Issue: #123
+  //   Issue: 123
+  //   GitHub Issue: #123
+  //   Issue Number: 123
+  //   Issue URL: https://github.com/.../issues/123
+  const issueMatch = content.match(/(?:GitHub\s+)?Issue(?:\s+(?:Number|URL))?[:\s]+#?(\d+)/i);
+  if (issueMatch) {
+    return parseInt(issueMatch[1], 10);
+  }
+
+  // Also try to extract from a full GitHub issue URL
+  const urlMatch = content.match(/github\.com\/[^\/]+\/[^\/]+\/issues\/(\d+)/i);
+  if (urlMatch) {
+    return parseInt(urlMatch[1], 10);
+  }
+
+  return null;
+}
+
 function parseWorkOrderTitle(content, filename) {
   // Try to extract title from WORK ORDER line or Task ID
   const woMatch = content.match(/WORK ORDER:\s*([^\n]+)/i);
@@ -244,15 +266,25 @@ function collectWorkOrders() {
 
       const title = parseWorkOrderTitle(content, ent.name);
       const status = parseWorkOrderStatus(content, ent.name);
+      const issueNumber = parseWorkOrderIssueNumber(content);
 
-      workOrders.push({
+      // Build WO entry with optional issueNumber and issueUrl
+      const woEntry = {
         id,
         title,
         status,
         lastUpdated: stat.mtime.toISOString(),
         filePath: rel(`${relDir}/${ent.name}`),
         repoUrl: `https://github.com/emkaybarrie/projectExodus/blob/main/${encodeURIComponent(relDir)}/${encodeURIComponent(ent.name)}`
-      });
+      };
+
+      // M3h: Add issueNumber and issueUrl if present in WO file
+      if (issueNumber !== null) {
+        woEntry.issueNumber = issueNumber;
+        woEntry.issueUrl = `https://github.com/emkaybarrie/projectExodus/issues/${issueNumber}`;
+      }
+
+      workOrders.push(woEntry);
     }
   }
 

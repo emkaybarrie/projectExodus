@@ -1,0 +1,153 @@
+name: Forge Phase Transition Notifications
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect Phase Transition
+        id: phase
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const label = context.payload.label?.name;
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+
+            // Only process Work Order issues
+            if (!labels.includes("work-order")) {
+              console.log("Not a Work Order issue, skipping");
+              return;
+            }
+
+            // E2E Phase definitions (from E2E_WORKFLOW_PLAYBOOK.md)
+            const phases = {
+              "pending-approval": {
+                phase: "Draft",
+                icon: "📝",
+                role: "Architect",
+                next: "approved",
+                message: "Work Order submitted for approval"
+              },
+              "approved": {
+                phase: "Approved",
+                icon: "✅",
+                role: "Director",
+                next: "ready-for-executor",
+                message: "Work Order APPROVED by Director"
+              },
+              "ready-for-executor": {
+                phase: "Queued",
+                icon: "📋",
+                role: "Forge",
+                next: "executing",
+                message: "Work Order queued for Executor"
+              },
+              "executing": {
+                phase: "Executing",
+                icon: "⚙️",
+                role: "Executor",
+                next: "executed",
+                message: "Executor has picked up this Work Order"
+              },
+              "executed": {
+                phase: "Executed",
+                icon: "🔧",
+                role: "Executor",
+                next: "verified",
+                message: "Execution complete, pending verification"
+              },
+              "verified": {
+                phase: "Verified",
+                icon: "🔍",
+                role: "Verifier-Tester",
+                next: "deployed-dev",
+                message: "Work Order verified by Verifier-Tester"
+              },
+              "deployed-dev": {
+                phase: "Deployed Dev",
+                icon: "🖥️",
+                role: "Automation",
+                next: "promoted",
+                message: "Deployed to DEV environment"
+              },
+              "promoted": {
+                phase: "Promoted",
+                icon: "🚀",
+                role: "Director",
+                next: "deployed-prod",
+                message: "PROMOTED to production by Director"
+              },
+              "deployed-prod": {
+                phase: "Deployed Prod",
+                icon: "🎯",
+                role: "Automation",
+                next: "observed",
+                message: "Deployed to PRODUCTION"
+              },
+              "observed": {
+                phase: "Observed",
+                icon: "📊",
+                role: "Reporter",
+                next: "evolved",
+                message: "Observation period active"
+              },
+              "evolved": {
+                phase: "Evolved",
+                icon: "💡",
+                role: "Evolution Agent",
+                next: null,
+                message: "Evolution proposals captured"
+              }
+            };
+
+            // Check if the applied label is a phase label
+            const phaseInfo = phases[label];
+            if (!phaseInfo) {
+              console.log(`Label "${label}" is not a phase label, skipping`);
+              return;
+            }
+
+            // Extract Work Order ID from issue title or body
+            const woIdMatch = issue.title.match(/\[WO\]\s*(.+)/i) ||
+                              issue.body?.match(/Work Order ID[:\s]+([^\n]+)/i);
+            const woId = woIdMatch ? woIdMatch[1].trim() : `#${issue.number}`;
+
+            // Build notification comment
+            const divider = "─".repeat(40);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const lines = [
+              `## ${phaseInfo.icon} Phase Transition: ${phaseInfo.phase}`,
+              "",
+              `**Work Order:** ${woId}`,
+              `**Phase:** \`${label}\` → ${phaseInfo.phase}`,
+              `**Role:** ${phaseInfo.role}`,
+              "",
+              divider,
+              "",
+              `### ${phaseInfo.message}`,
+              "",
+              phaseInfo.next ? `**Next Phase:** \`${phaseInfo.next}\`` : "**Final Phase** — Work Order lifecycle complete",
+              "",
+              divider,
+              `_Phase notification by Forge • [Run #${context.runId}](${runUrl})_`
+            ];
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: lines.join("\n")
+            });
+
+            console.log(`Phase transition notification posted: ${label} → ${phaseInfo.phase}`);
+            core.setOutput("phase", phaseInfo.phase);
+            core.setOutput("label", label);
