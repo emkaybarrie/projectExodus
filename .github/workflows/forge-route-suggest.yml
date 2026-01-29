@@ -1,0 +1,127 @@
+name: Forge Routing Suggestion on Approval
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  suggest-routing:
+    # Only run when 'approved' label is applied
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Suggest Executor Routing
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+
+            // Only process Work Order issues
+            if (!labels.includes("work-order")) {
+              console.log("Not a Work Order issue, skipping routing suggestion");
+              return;
+            }
+
+            // P6: Capability-based routing rules (deterministic, documented)
+            // Rule Table:
+            // | Capability Label    | Suggested Executor Type      |
+            // |---------------------|------------------------------|
+            // | repo-aware          | Repo-aware Executor          |
+            // | non-repo-aware      | Non-repo-aware Executor      |
+            // | verifier            | Verifier-Tester              |
+            // | architect           | Architect                    |
+            // | (none of above)     | Unknown — add capability label |
+
+            const routingRules = [
+              { label: "repo-aware", executor: "Repo-aware Executor", description: "Can access and modify repository files directly" },
+              { label: "non-repo-aware", executor: "Non-repo-aware Executor", description: "Works via Share Pack copy/paste workflow" },
+              { label: "verifier", executor: "Verifier-Tester", description: "Performs verification and testing" },
+              { label: "architect", executor: "Architect", description: "Designs implementation approach" }
+            ];
+
+            // Find matching capability
+            let suggestion = null;
+            let matchedLabel = null;
+
+            for (const rule of routingRules) {
+              if (labels.includes(rule.label)) {
+                suggestion = rule;
+                matchedLabel = rule.label;
+                break;
+              }
+            }
+
+            // Extract WO ID from issue title
+            const woIdMatch = issue.title.match(/\[WO\]\s*(.+)/i);
+            const woId = woIdMatch ? woIdMatch[1].trim() : `Issue #${issue.number}`;
+
+            const divider = "─".repeat(40);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const capabilityLabels = labels.filter(l => routingRules.some(r => r.label === l));
+
+            let lines;
+            if (suggestion) {
+              lines = [
+                `## 🎯 Forge Routing Suggestion`,
+                "",
+                `**Work Order:** ${woId}`,
+                `**Recommended Executor:** ${suggestion.executor}`,
+                `**Basis:** Label \`${matchedLabel}\` detected`,
+                "",
+                divider,
+                "",
+                `### Executor Description`,
+                suggestion.description,
+                "",
+                `### Detected Capability Labels`,
+                capabilityLabels.length > 0 ? capabilityLabels.map(l => `- \`${l}\``).join("\n") : "_(none)_",
+                "",
+                divider,
+                "",
+                "**Note:** This is a suggestion only. No assignment has been made.",
+                "To queue for execution, use the `/execute` command.",
+                "",
+                divider,
+                `_Routing suggestion by Forge • [Run #${context.runId}](${runUrl})_`
+              ];
+            } else {
+              lines = [
+                `## ⚠️ Forge Routing Suggestion`,
+                "",
+                `**Work Order:** ${woId}`,
+                `**Recommended Executor:** Unknown — missing capability label`,
+                "",
+                divider,
+                "",
+                "### Action Required",
+                "Add one of these capability labels to enable routing:",
+                "- `repo-aware` — Repo-aware Executor (can modify files directly)",
+                "- `non-repo-aware` — Non-repo-aware Executor (Share Pack workflow)",
+                "- `verifier` — Verifier-Tester",
+                "- `architect` — Architect",
+                "",
+                `### Current Labels`,
+                labels.length > 0 ? labels.map(l => `- \`${l}\``).join("\n") : "_(none)_",
+                "",
+                divider,
+                "",
+                "**Note:** This is a suggestion only. No assignment has been made.",
+                "",
+                divider,
+                `_Routing suggestion by Forge • [Run #${context.runId}](${runUrl})_`
+              ];
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: lines.join("\n")
+            });
+
+            console.log(`Routing suggestion posted for ${woId}: ${suggestion ? suggestion.executor : "Unknown"}`);
