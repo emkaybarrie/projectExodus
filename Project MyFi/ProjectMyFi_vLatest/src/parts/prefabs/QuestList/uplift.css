@@ -1,0 +1,200 @@
+/* QuestList Part — WO-2 */
+
+.Part-QuestList {
+  padding: 0 16px 16px;
+}
+
+.QuestList__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.QuestList__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.QuestList__empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-style: italic;
+}
+
+/* Quest Card */
+.QuestCard {
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.QuestCard:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.QuestCard[data-status="completed"] {
+  opacity: 0.7;
+  background: rgba(52, 211, 153, 0.05);
+  border-color: rgba(52, 211, 153, 0.2);
+}
+
+/* Quest type accent colors */
+.QuestCard[data-type="main"] {
+  border-left: 3px solid rgba(251, 191, 36, 0.6);
+}
+.QuestCard[data-type="daily"] {
+  border-left: 3px solid rgba(96, 165, 250, 0.6);
+}
+.QuestCard[data-type="weekly"] {
+  border-left: 3px solid rgba(139, 92, 246, 0.6);
+}
+.QuestCard[data-type="challenge"] {
+  border-left: 3px solid rgba(251, 146, 60, 0.6);
+}
+.QuestCard[data-type="side"] {
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.QuestCard__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.QuestCard__typeIcon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.QuestCard__title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.QuestCard__checkmark {
+  color: rgba(52, 211, 153, 0.9);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.QuestCard__narrative {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.4;
+}
+
+/* Progress bar */
+.QuestCard__progressRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.QuestCard__progressBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.QuestCard__progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(139, 92, 246, 0.8), rgba(96, 165, 250, 0.8));
+  border-radius: 3px;
+  transition: width 300ms ease;
+}
+
+.QuestCard[data-status="completed"] .QuestCard__progressFill {
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.8), rgba(52, 211, 153, 0.6));
+}
+
+.QuestCard__progressText {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Footer */
+.QuestCard__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.QuestCard__rewards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.QuestCard__rewardChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.QuestCard__rewardChip--xp {
+  background: rgba(139, 92, 246, 0.2);
+  color: rgba(167, 139, 250, 0.9);
+}
+
+.QuestCard__rewardChip--essence {
+  background: rgba(52, 211, 153, 0.2);
+  color: rgba(52, 211, 153, 0.9);
+}
+
+.QuestCard__rewardChip--gold {
+  background: rgba(251, 191, 36, 0.2);
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.QuestCard__rewardChip--item {
+  background: rgba(251, 146, 60, 0.2);
+  color: rgba(251, 146, 60, 0.9);
+}
+
+/* Tag Spend Button */
+.QuestCard__tagBtn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.3));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.QuestCard__tagBtn:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(96, 165, 250, 0.5));
+  border-color: rgba(139, 92, 246, 0.6);
+  transform: scale(1.02);
+}
+
+.QuestCard__tagBtn:active {
+  transform: scale(0.98);
+}
