@@ -177,8 +177,8 @@ function renderVitalBar(root, vitalName, pool) {
 
   const valueEl = el.querySelector('.PlayerHeader__vitalValue');
   if (valueEl) {
-    // Compact display: just current value
-    valueEl.textContent = formatCompact(current);
+    // Full display: current / max (like reference UI)
+    valueEl.textContent = `${formatCompact(current)} / ${formatCompact(max)}`;
   }
 }
 
