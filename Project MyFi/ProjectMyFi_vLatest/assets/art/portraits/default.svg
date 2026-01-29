@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2440"/>
+      <stop offset="100%" style="stop-color:#1e1a30"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8c4a0"/>
+      <stop offset="100%" style="stop-color:#d4a882"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="120" height="120" fill="url(#bg)"/>
+  <!-- Simple silhouette placeholder -->
+  <ellipse cx="60" cy="45" rx="22" ry="26" fill="url(#skin)"/>
+  <ellipse cx="60" cy="110" rx="35" ry="40" fill="#3a3050"/>
+  <!-- Eyes hint -->
+  <ellipse cx="52" cy="42" rx="4" ry="3" fill="#1a1825"/>
+  <ellipse cx="68" cy="42" rx="4" ry="3" fill="#1a1825"/>
+</svg>

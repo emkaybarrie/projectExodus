@@ -1,41 +1,48 @@
+/* Cinzel/Crimson Pro Typography for Fantasy RPG Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
+
 :root{
   /* Core backgrounds - deeper, richer purples */
   --bg0: #0a0812;
   --bg1: #12101f;
   --bg2: #1a1528;
 
-  /* Card styling - subtle glass effect */
+  /* Card styling - warm gold accent instead of purple */
   --card: rgba(20, 15, 35, 0.75);
-  --cardBorder: rgba(139, 92, 246, 0.15);
-  --cardGlow: 0 2px 12px rgba(139, 92, 246, 0.08);
+  --cardBorder: rgba(180, 140, 80, 0.2);
+  --cardGlow: 0 2px 12px rgba(180, 140, 80, 0.08);
 
-  /* Text */
-  --text: rgba(255,255,255,0.95);
-  --muted: rgba(255,255,255,0.6);
-  --gold: #f5a623;
-  --goldGlow: rgba(245, 166, 35, 0.4);
+  /* Text - warm cream tones */
+  --text: rgba(240, 230, 210, 0.95);
+  --muted: rgba(240, 230, 210, 0.6);
+  --gold: #d4a853;
+  --goldGlow: rgba(212, 168, 83, 0.4);
 
-  /* Stat bar colors */
-  --stat-health: #22c55e;
-  --stat-health-bg: rgba(34, 197, 94, 0.15);
-  --stat-mana: #3b82f6;
-  --stat-mana-bg: rgba(59, 130, 246, 0.15);
-  --stat-stamina: #eab308;
-  --stat-stamina-bg: rgba(234, 179, 8, 0.15);
-  --stat-shield: #a855f7;
-  --stat-shield-bg: rgba(168, 85, 247, 0.15);
+  /* Stat bar colors - muted, earthy tones */
+  --stat-health: #5cb85c;
+  --stat-health-bg: rgba(92, 184, 92, 0.15);
+  --stat-mana: #5090c4;
+  --stat-mana-bg: rgba(80, 144, 196, 0.15);
+  --stat-stamina: #d4a040;
+  --stat-stamina-bg: rgba(212, 160, 64, 0.15);
+  --stat-shield: #9070b0;
+  --stat-shield-bg: rgba(144, 112, 176, 0.15);
 
-  /* Accents */
-  --accent-purple: #8b5cf6;
-  --accent-purple-glow: rgba(139, 92, 246, 0.5);
-  --accent-orange: #fb923c;
-  --accent-teal: #34d399;
+  /* Accents - warm fantasy tones */
+  --accent-purple: #9070b0;
+  --accent-purple-glow: rgba(144, 112, 176, 0.4);
+  --accent-orange: #d4a853;
+  --accent-teal: #5cb85c;
 
   /* Layout (unchanged) */
   --r: 16px;
   --gap: 12px;
   --pad: 14px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Typography - Fantasy RPG */
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-body: 'Crimson Pro', Georgia, serif;
+  font-family: var(--font-body);
 }
 
 html, body{
@@ -78,17 +85,18 @@ body{
 .chrome__header{
   padding: 12px 14px;
   background: linear-gradient(180deg, rgba(18, 16, 31, 0.95) 0%, rgba(10, 8, 18, 0.9) 100%);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.2);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .chrome__title{
-  font-weight: 800;
-  font-style: italic;
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 12px rgba(139, 92, 246, 0.4);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  color: rgba(240, 230, 210, 0.95);
 }
 
 /* HUB-D4/G5: DEV buttons in chrome header */
@@ -369,7 +377,7 @@ body{
   padding: 10px 10px;
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* Safe area for notched phones */
   background: linear-gradient(180deg, rgba(10, 8, 18, 0.95) 0%, rgba(10, 8, 18, 0.98) 100%);
-  border-top: 1px solid rgba(139, 92, 246, 0.2);
+  border-top: 1px solid rgba(180, 140, 80, 0.2);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);

@@ -354,6 +354,10 @@ function render(root, state) {
   const container = root.querySelector('.BadlandsStage__container');
   if (!container) return;
 
+  // Set stage background URL via CSS custom property
+  const stageBgUrl = state.stageBgUrl || new URL('../../../assets/art/stages/wardwatch.svg', import.meta.url).href;
+  container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
+
   // Set active tab
   container.dataset.activeTab = state.activeTab;
   container.dataset.stageMode = state.stageMode;
