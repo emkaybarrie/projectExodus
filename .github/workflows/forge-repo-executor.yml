@@ -1,0 +1,254 @@
+name: Forge Repo-Aware Executor
+
+# M4: Repo-aware executor job envelope
+# Purpose: Provides auditable dispatch layer for repo-aware execution
+# This workflow does NOT run Claude/GPT - it creates a trace that executors claim
+
+on:
+  workflow_dispatch:
+    inputs:
+      wo_id:
+        description: 'Work Order ID (e.g., FO-Forge-M4-1a)'
+        required: true
+        type: string
+      issue_number:
+        description: 'GitHub Issue number to comment back (optional)'
+        required: false
+        type: string
+      mode:
+        description: 'Execution mode'
+        required: true
+        type: choice
+        options:
+          - execute
+          - recon
+          - verify
+        default: 'execute'
+      dry_run:
+        description: 'Dry run (no actual execution)'
+        required: false
+        type: boolean
+        default: false
+      target_branch:
+        description: 'Target branch for checkout'
+        required: true
+        type: choice
+        options:
+          - dev
+          - main
+        default: 'dev'
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  executor-envelope:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Execution Header
+        env:
+          WO_ID: ${{ inputs.wo_id }}
+          MODE: ${{ inputs.mode }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "============================================"
+          echo "FORGE REPO-AWARE EXECUTOR — DISPATCH ENVELOPE"
+          echo "============================================"
+          echo ""
+          echo "Work Order ID:  $WO_ID"
+          echo "Mode:           $MODE"
+          echo "Dry Run:        $DRY_RUN"
+          echo "Target Branch:  $TARGET_BRANCH"
+          echo "Issue Number:   ${ISSUE_NUMBER:-'(not provided)'}"
+          echo "Triggered By:   $ACTOR"
+          echo "Run ID:         $RUN_ID"
+          echo "Timestamp:      $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo ""
+          echo "============================================"
+
+          # Write to job summary
+          echo "## Execution Envelope" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Work Order | \`$WO_ID\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | $MODE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | $DRY_RUN |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | $TARGET_BRANCH |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actor | @$ACTOR |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +"%Y-%m-%dT%H:%M:%SZ") |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_branch }}
+          fetch-depth: 0
+
+      - name: Gather Repository Context
+        id: context
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=${{ inputs.target_branch }}" >> $GITHUB_OUTPUT
+
+          # Check if WO file exists (basic validation)
+          WO_FILE="The Forge/forge/ops/${{ inputs.wo_id }}.md"
+          if [ -f "$WO_FILE" ]; then
+            echo "wo_file_found=true" >> $GITHUB_OUTPUT
+            echo "wo_file_path=$WO_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "wo_file_found=false" >> $GITHUB_OUTPUT
+            echo "wo_file_path=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Execution Envelope Artifact
+        env:
+          WO_ID: ${{ inputs.wo_id }}
+          MODE: ${{ inputs.mode }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          SHA: ${{ steps.context.outputs.sha }}
+          SHA_SHORT: ${{ steps.context.outputs.sha_short }}
+          WO_FILE_FOUND: ${{ steps.context.outputs.wo_file_found }}
+          WO_FILE_PATH: ${{ steps.context.outputs.wo_file_path }}
+          ACTOR: ${{ github.actor }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/forge-exec-envelope.json << EOF
+          {
+            "schemaVersion": "1.0.0",
+            "workOrderId": "$WO_ID",
+            "mode": "$MODE",
+            "dryRun": $DRY_RUN,
+            "targetBranch": "$TARGET_BRANCH",
+            "issueNumber": ${ISSUE_NUMBER:-null},
+            "commit": {
+              "sha": "$SHA",
+              "short": "$SHA_SHORT"
+            },
+            "woFileFound": $WO_FILE_FOUND,
+            "woFilePath": "$WO_FILE_PATH",
+            "triggeredBy": "$ACTOR",
+            "runId": "$RUN_ID",
+            "runUrl": "$RUN_URL",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          }
+          EOF
+
+          echo "Envelope created:"
+          cat artifacts/forge-exec-envelope.json
+
+      - name: Upload Envelope Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-exec-envelope
+          path: artifacts/forge-exec-envelope.json
+          retention-days: 30
+
+      - name: Post Start Comment to Issue
+        if: inputs.issue_number != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = parseInt('${{ inputs.issue_number }}', 10);
+            if (isNaN(issueNumber)) {
+              console.log('Invalid issue number, skipping comment');
+              return;
+            }
+
+            const woId = '${{ inputs.wo_id }}';
+            const mode = '${{ inputs.mode }}';
+            const dryRun = '${{ inputs.dry_run }}' === 'true';
+            const branch = '${{ inputs.target_branch }}';
+            const sha = '${{ steps.context.outputs.sha_short }}';
+            const runUrl = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
+            const actor = '${{ github.actor }}';
+            const woFileFound = '${{ steps.context.outputs.wo_file_found }}' === 'true';
+
+            const divider = '─'.repeat(40);
+
+            const lines = [
+              `## ⚙️ Repo-Aware Executor Dispatched`,
+              '',
+              `**Work Order:** \`${woId}\``,
+              `**Mode:** ${mode}${dryRun ? ' (DRY RUN)' : ''}`,
+              `**Branch:** \`${branch}\` @ \`${sha}\``,
+              `**WO File Found:** ${woFileFound ? '✅ Yes' : '⚠️ No'}`,
+              '',
+              divider,
+              '',
+              `### Execution Started`,
+              '',
+              `An executor can now claim this job. The repository has been checked out and is ready for execution.`,
+              '',
+              `**Run URL:** [View Workflow Run](${runUrl})`,
+              '',
+              divider,
+              `_Dispatched by @${actor} via Forge Portal_`
+            ];
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: lines.join('\n')
+            });
+
+            console.log(`Posted start comment to issue #${issueNumber}`);
+
+      - name: Execution Placeholder
+        env:
+          MODE: ${{ inputs.mode }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo ""
+          echo "============================================"
+          echo "EXECUTOR HANDOFF POINT"
+          echo "============================================"
+          echo ""
+          echo "This is where a repo-aware executor would:"
+          echo "  1. Read the Work Order file"
+          echo "  2. Execute according to scope"
+          echo "  3. Create commits/PRs as needed"
+          echo "  4. Post completion comment"
+          echo ""
+          echo "Mode: $MODE"
+          echo "Dry Run: $DRY_RUN"
+          echo ""
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "DRY RUN: No actual execution performed."
+          else
+            echo "Ready for executor to claim and implement."
+          fi
+          echo ""
+          echo "============================================"
+
+      - name: Summary
+        env:
+          WO_ID: ${{ inputs.wo_id }}
+          MODE: ${{ inputs.mode }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. An executor (human or AI) can claim this envelope" >> $GITHUB_STEP_SUMMARY
+          echo "2. Execute per the Work Order scope" >> $GITHUB_STEP_SUMMARY
+          echo "3. Commit results and post completion comment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$ISSUE_NUMBER" ]; then
+            echo "**Issue:** [#$ISSUE_NUMBER](https://github.com/${{ github.repository }}/issues/$ISSUE_NUMBER)" >> $GITHUB_STEP_SUMMARY
+          fi

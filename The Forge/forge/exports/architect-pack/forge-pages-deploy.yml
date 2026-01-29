@@ -1,0 +1,179 @@
+name: Forge Pages Deploy (Dev + Prod)
+
+# Deploy both environments to GitHub Pages:
+# - Prod: / (from main branch)
+# - Dev: /dev/ (from dev branch)
+# Strategy A: Single Pages site with /dev/ subpath
+
+on:
+  push:
+    branches: ["main", "dev"]
+    paths:
+      - "index.html"
+      - "styles.css"
+      - "script.js"
+      - "img/**"
+      - "The Forge/forge/portal/**"
+      - "The Forge/forge/exports/share-pack/**"
+      - "Project MyFi/**"
+      - "Forante/**"
+      - ".github/workflows/forge-pages-deploy.yml"
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Force rebuild both environments'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false  # Don't cancel in-progress deployments
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Create dist directory
+        run: mkdir -p dist/dev
+
+      # === PROD: Checkout main branch ===
+      - name: Checkout main (Prod)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: prod-source
+
+      - name: Setup Node (for share-pack generation)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate Share Pack for Prod
+        working-directory: prod-source
+        run: |
+          echo "=== Generating Share Pack for PROD ==="
+          node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+          echo "✅ Prod Share Pack generated"
+
+      - name: Copy Prod content to dist/
+        run: |
+          echo "=== Copying PROD content to dist/ ==="
+          # Copy all files from prod-source to dist (excluding .git)
+          rsync -av --exclude='.git' --exclude='.github' prod-source/ dist/
+          echo "✅ Prod content copied"
+
+      # === DEV: Checkout dev branch ===
+      - name: Checkout dev (Dev)
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev-source
+
+      - name: Generate Share Pack for Dev
+        working-directory: dev-source
+        run: |
+          echo "=== Generating Share Pack for DEV ==="
+          node "The Forge/forge/ops/scripts/refresh-share-pack.mjs"
+          echo "✅ Dev Share Pack generated"
+
+      - name: Copy Dev content to dist/dev/
+        run: |
+          echo "=== Copying DEV content to dist/dev/ ==="
+          # Copy all files from dev-source to dist/dev (excluding .git)
+          rsync -av --exclude='.git' --exclude='.github' dev-source/ dist/dev/
+          echo "✅ Dev content copied"
+
+      # === VALIDATION ===
+      - name: Validate deployment structure
+        run: |
+          echo "=== Validating deployment structure ==="
+
+          # Check Prod
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ PROD: index.html missing"
+            exit 1
+          fi
+          if [ ! -f "dist/The Forge/forge/portal/index.html" ]; then
+            echo "❌ PROD: Forge Portal missing"
+            exit 1
+          fi
+          if [ ! -f "dist/The Forge/forge/exports/share-pack/share-pack.index.json" ]; then
+            echo "❌ PROD: Share Pack index missing"
+            exit 1
+          fi
+          echo "✅ PROD structure valid"
+
+          # Check Dev
+          if [ ! -f "dist/dev/index.html" ]; then
+            echo "❌ DEV: index.html missing"
+            exit 1
+          fi
+          if [ ! -f "dist/dev/The Forge/forge/portal/index.html" ]; then
+            echo "❌ DEV: Forge Portal missing"
+            exit 1
+          fi
+          if [ ! -f "dist/dev/The Forge/forge/exports/share-pack/share-pack.index.json" ]; then
+            echo "❌ DEV: Share Pack index missing"
+            exit 1
+          fi
+          echo "✅ DEV structure valid"
+
+          echo ""
+          echo "=== Deployment structure verified ==="
+
+      # === DEPLOY ===
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Deployment summary
+        env:
+          TRIGGER_BRANCH: ${{ github.ref_name }}
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          echo "============================================"
+          echo "DEPLOYMENT COMPLETE"
+          echo "============================================"
+          echo ""
+          echo "Triggered by push to: $TRIGGER_BRANCH"
+          echo ""
+          echo "PROD (main):"
+          echo "  Site: ${PAGE_URL}"
+          echo "  Portal: ${PAGE_URL}The%20Forge/forge/portal/"
+          echo "  MyFi: ${PAGE_URL}Project%20MyFi/ProjectMyFi_vLatest/"
+          echo ""
+          echo "DEV (dev):"
+          echo "  Site: ${PAGE_URL}dev/"
+          echo "  Portal: ${PAGE_URL}dev/The%20Forge/forge/portal/"
+          echo "  MyFi: ${PAGE_URL}dev/Project%20MyFi/ProjectMyFi_vLatest/"
+          echo ""
+          echo "============================================"
+
+          # Write to job summary
+          echo "## Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** \`$TRIGGER_BRANCH\` branch" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### PROD (main)" >> $GITHUB_STEP_SUMMARY
+          echo "- Site: ${PAGE_URL}" >> $GITHUB_STEP_SUMMARY
+          echo "- Portal: ${PAGE_URL}The%20Forge/forge/portal/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### DEV (dev)" >> $GITHUB_STEP_SUMMARY
+          echo "- Site: ${PAGE_URL}dev/" >> $GITHUB_STEP_SUMMARY
+          echo "- Portal: ${PAGE_URL}dev/The%20Forge/forge/portal/" >> $GITHUB_STEP_SUMMARY

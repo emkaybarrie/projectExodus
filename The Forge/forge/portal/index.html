@@ -34,40 +34,65 @@
   </div>
 
   <div class="portal" data-portal-type="forante">
-    <!-- Header -->
-    <header class="portal-header">
-      <div class="logo" onclick="navigateTo('home')" style="cursor: pointer;">
-        <span class="logo-icon">&#127970;</span>
-        <span class="logo-text">Forante</span>
+    <!-- Command Centre Header -->
+    <header class="portal-header command-header">
+      <div class="header-left">
+        <div class="logo" onclick="navigateTo('command')" style="cursor: pointer;">
+          <span class="logo-icon">&#127970;</span>
+          <span class="logo-text">Forante</span>
+        </div>
       </div>
-      <div class="header-status">
-        <span class="status-dot online"></span>
-        <span class="status-label">OS Console</span>
+      <div class="header-centre">
+        <!-- World Switcher (FCL v2 World Model) -->
+        <button class="entity-switcher" id="entity-switcher" onclick="toggleEntityPicker()">
+          <span class="entity-icon" id="current-entity-icon">&#127970;</span>
+          <span class="entity-name" id="current-entity-name">Forante</span>
+          <span class="entity-chevron">&#9662;</span>
+        </button>
+      </div>
+      <div class="header-right">
+        <!-- Network Health Dots -->
+        <div class="health-dots" id="health-dots">
+          <span class="health-dot healthy" title="Forante"></span>
+          <span class="health-dot healthy" title="Forge"></span>
+          <span class="health-dot healthy" title="Entities"></span>
+        </div>
       </div>
     </header>
+
+    <!-- World Picker Dropdown (FCL v2 World Model) -->
+    <div class="entity-picker-dropdown hidden" id="entity-picker-dropdown">
+      <div class="entity-picker-header">
+        <span>Enter World</span>
+        <button class="entity-picker-close" onclick="toggleEntityPicker()">&#10005;</button>
+      </div>
+      <div class="entity-picker-list" id="entity-picker-list">
+        <!-- Populated by app.js with Worlds and Products -->
+      </div>
+    </div>
 
     <!-- Dynamic Content Area -->
     <main id="portal-content">
       <!-- Content rendered by app.js -->
     </main>
 
-    <!-- Bottom Tab Navigation -->
+    <!-- Bottom Tab Navigation (Command Centre) -->
     <nav class="bottom-nav" id="bottom-nav">
-      <button class="nav-tab active" data-tab="home" onclick="navigateTo('home')">
-        <span class="nav-tab-icon">&#127968;</span>
-        <span class="nav-tab-label">Home</span>
+      <button class="nav-tab active" data-tab="command" onclick="navigateTo('command')">
+        <span class="nav-tab-icon">&#127970;</span>
+        <span class="nav-tab-label">Command</span>
       </button>
-      <button class="nav-tab" data-tab="forge" onclick="navigateTo('forge')">
-        <span class="nav-tab-icon">&#9881;</span>
-        <span class="nav-tab-label">Forge OS</span>
+      <button class="nav-tab" data-tab="lifecycle" onclick="navigateTo('lifecycle')">
+        <span class="nav-tab-icon">&#128260;</span>
+        <span class="nav-tab-label">Lifecycle</span>
       </button>
-      <button class="nav-tab" data-tab="entities" onclick="navigateTo('entities')">
+      <button class="nav-tab" data-tab="ops" onclick="navigateTo('ops')">
         <span class="nav-tab-icon">&#128736;</span>
-        <span class="nav-tab-label">Entities</span>
+        <span class="nav-tab-label">Ops</span>
       </button>
-      <button class="nav-tab" data-tab="governance" onclick="navigateTo('governance')">
-        <span class="nav-tab-icon">&#128220;</span>
-        <span class="nav-tab-label">Governance</span>
+      <button class="nav-tab" data-tab="config" onclick="navigateTo('config')">
+        <span class="nav-tab-icon">&#9881;</span>
+        <span class="nav-tab-label">Config</span>
       </button>
     </nav>
 

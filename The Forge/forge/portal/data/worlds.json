@@ -1,0 +1,64 @@
+{
+  "worldsType": "WorldRegistry",
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-01-29T00:00:00.000Z",
+  "worlds": [
+    {
+      "id": "forante",
+      "name": "Forante",
+      "type": "world",
+      "tier": "root",
+      "description": "Root governance world - constitutional authority",
+      "icon": "&#127970;",
+      "products": ["forge-os"],
+      "subWorlds": ["myfi"],
+      "parentWorld": null,
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "myfi",
+      "name": "MyFi",
+      "type": "world",
+      "tier": "integrated",
+      "description": "Financial gamification sub-world - flagship proving ground",
+      "icon": "&#127918;",
+      "products": ["badlands"],
+      "subWorlds": [],
+      "parentWorld": "forante",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "forge-os",
+      "name": "Forge OS",
+      "description": "Institutional SDLC Operating System",
+      "icon": "&#9881;",
+      "world": "forante",
+      "status": "active",
+      "lane": "Forge"
+    },
+    {
+      "id": "badlands",
+      "name": "Badlands",
+      "description": "Turn-based financial RPG",
+      "icon": "&#127918;",
+      "world": "myfi",
+      "status": "active",
+      "lane": "MyFi"
+    }
+  ],
+  "travelRules": {
+    "downward": {
+      "description": "Directors and Participants may travel downward into sub-worlds",
+      "requiresAuth": true
+    },
+    "upward": {
+      "description": "Upward travel requires explicit authority grant",
+      "requiresAuth": true,
+      "defaultHidden": true
+    }
+  }
+}

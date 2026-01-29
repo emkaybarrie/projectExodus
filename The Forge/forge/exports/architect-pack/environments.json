@@ -1,0 +1,40 @@
+{
+  "$schema": "./environments.schema.json",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-24",
+  "strategy": "A",
+  "strategyDescription": "Single Pages site with /dev/ subpath",
+  "baseUrl": "https://emkaybarrie.github.io/projectExodus",
+  "environments": {
+    "prod": {
+      "name": "Production",
+      "branch": "main",
+      "path": "/",
+      "urls": {
+        "site": "https://emkaybarrie.github.io/projectExodus/",
+        "portal": "https://emkaybarrie.github.io/projectExodus/The%20Forge/forge/portal/",
+        "myfi": "https://emkaybarrie.github.io/projectExodus/Project%20MyFi/ProjectMyFi_vLatest/public/"
+      },
+      "status": "active"
+    },
+    "dev": {
+      "name": "Development",
+      "branch": "dev",
+      "path": "/dev/",
+      "urls": {
+        "site": "https://emkaybarrie.github.io/projectExodus/dev/",
+        "portal": "https://emkaybarrie.github.io/projectExodus/dev/The%20Forge/forge/portal/",
+        "myfi": "https://emkaybarrie.github.io/projectExodus/dev/Project%20MyFi/ProjectMyFi_vLatest/public/"
+      },
+      "status": "active"
+    }
+  },
+  "workflow": {
+    "deployWorkflow": "forge-pages-deploy.yml",
+    "promoteWorkflow": "forge-deploy-to-prod.yml",
+    "actionsUrl": "https://github.com/emkaybarrie/projectExodus/actions"
+  },
+  "documentation": {
+    "contract": "The Forge/forge/ops/DEPLOYMENT_CONTRACT.md"
+  }
+}
