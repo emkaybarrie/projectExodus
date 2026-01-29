@@ -1,5 +1,5 @@
 // Forante Portal Service Worker
-const CACHE_NAME = 'forante-portal-v1';
+const CACHE_NAME = 'forante-portal-v2';
 const OFFLINE_URL = './offline.html';
 
 // Assets to cache on install
@@ -12,7 +12,8 @@ const PRECACHE_ASSETS = [
   './offline.html',
   './data/entities.json',
   './data/environments.json',
-  './data/products.json'
+  './data/products.json',
+  './data/worlds.json'
 ];
 
 // Install event - cache essential assets

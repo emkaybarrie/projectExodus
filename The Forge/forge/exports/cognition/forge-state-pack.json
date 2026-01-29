@@ -1,0 +1,289 @@
+{
+  "packType": "ForgeStatePack",
+  "schemaVersion": "2.0.0",
+  "generatedAt": "2026-01-29T14:00:00.000Z",
+  "generatedBy": "fcl-v2-authority-uplift",
+  "validUntil": null,
+  "refreshTrigger": "Manual (v1); Heartbeat or Director request",
+
+  "activeArc": {
+    "current": "Reliability",
+    "setBy": "Director",
+    "setAt": "2026-01-29T10:00:00.000Z",
+    "expiresAt": null,
+    "rationale": "FCL v1 default: stabilization phase post-M3 deployment"
+  },
+
+  "narrativeAnchors": [
+    {
+      "id": "anchor-reliability",
+      "name": "Reliability",
+      "description": "System correctness and stability over speed",
+      "weight": 1.0,
+      "active": true,
+      "signals": ["test.pass", "gate.passed", "wo.verified", "smoke.pass"]
+    },
+    {
+      "id": "anchor-velocity",
+      "name": "Velocity",
+      "description": "Throughput and reduced friction",
+      "weight": 0.6,
+      "active": true,
+      "signals": ["wo.executed", "throughput", "cycle_time"]
+    },
+    {
+      "id": "anchor-delight",
+      "name": "Delight",
+      "description": "User experience and polish",
+      "weight": 0.4,
+      "active": true,
+      "signals": ["user.feedback", "ux.improvement"]
+    }
+  ],
+
+  "workOrders": {
+    "source": "work-orders.index.json",
+    "lastRefreshed": "2026-01-29T12:00:00.000Z",
+    "total": 26,
+    "byStatus": {
+      "draft": 0,
+      "pendingApproval": 0,
+      "approved": 7,
+      "executed": 19
+    },
+    "missingGates": [
+      {"id": "FO-Forge-C2-NonRegression-Principle", "missing": "continuationContract"},
+      {"id": "FO-Forge-P4-Director-E2E-Workflow-Guidance", "missing": "continuationContract"},
+      {"id": "FO-Forge-RC1-Repo-Reconciliation-and-Gap-Harvest", "missing": "continuationContract"}
+    ],
+    "stuckWOs": []
+  },
+
+  "observations": {
+    "env": "prod",
+    "smokePass": true,
+    "timestamp": "2026-01-29T08:54:32.969Z",
+    "commitShort": "2817e6a",
+    "checksCount": 3
+  },
+
+  "risks": [
+    {
+      "id": "risk-missing-gates-1706522400000",
+      "category": "compliance",
+      "description": "19 executed WO(s) lack Continuation Contract (FCL v1 requirement)",
+      "severity": "medium",
+      "detectedAt": "2026-01-29T10:00:00.000Z",
+      "remediation": "Add Continuation Contracts to executed WOs as part of FCL-4 implementation",
+      "status": "acknowledged"
+    },
+    {
+      "id": "risk-wo-consolidation-pending",
+      "category": "process",
+      "description": "WO files scattered across multiple directories (Work Orders/, work-orders/, ops/)",
+      "severity": "low",
+      "detectedAt": "2026-01-25T00:00:00.000Z",
+      "remediation": "Consolidate to single work-orders/ directory (backlog)",
+      "status": "acknowledged"
+    }
+  ],
+
+  "genome": {
+    "stable": [
+      {
+        "path": "FORGE_KERNEL.md",
+        "name": "Forge Kernel",
+        "graduatedAt": "2026-01-15T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": null
+      },
+      {
+        "path": "FORGE_STATE.md",
+        "name": "Forge State",
+        "graduatedAt": "2026-01-15T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": null
+      },
+      {
+        "path": "FORGE_CAPSULE.md",
+        "name": "Forge Capsule",
+        "graduatedAt": "2026-01-20T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": null
+      },
+      {
+        "path": "contracts/WORK_ORDER_LIFECYCLE_CONTRACT.md",
+        "name": "WO Lifecycle Contract",
+        "graduatedAt": "2026-01-25T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": "FO-Forge-A2"
+      },
+      {
+        "path": "contracts/AGENT_ONBOARDING_CONTRACT.md",
+        "name": "Agent Onboarding Contract",
+        "graduatedAt": "2026-01-25T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": "FO-Forge-A1"
+      },
+      {
+        "path": "contracts/FORGE_OS_ROLE_SYSTEM.md",
+        "name": "Role System Contract",
+        "graduatedAt": "2026-01-25T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": "FO-Forge-G1"
+      },
+      {
+        "path": "contracts/REPORTING_SIGNALS_CONTRACT.md",
+        "name": "Reporting Signals Contract",
+        "graduatedAt": "2026-01-25T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": "FO-Forge-R2"
+      },
+      {
+        "path": "ops/E2E_WORKFLOW_PLAYBOOK.md",
+        "name": "E2E Workflow Playbook",
+        "graduatedAt": "2026-01-25T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": "FO-Forge-P4"
+      },
+      {
+        "path": "ops/EXECUTOR_PLAYBOOK.md",
+        "name": "Executor Playbook",
+        "graduatedAt": "2026-01-20T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": null
+      },
+      {
+        "path": "ops/DEPLOYMENT_CONTRACT.md",
+        "name": "Deployment Contract",
+        "graduatedAt": "2026-01-20T00:00:00.000Z",
+        "graduatedBy": "director",
+        "woId": null
+      }
+    ],
+    "experimental": [
+      {
+        "path": "portal/app.js",
+        "name": "Portal App (M3/M4/FCL features)",
+        "introducedAt": "2026-01-20T00:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FO-Forge-M3",
+        "observationStart": "2026-01-20T00:00:00.000Z"
+      },
+      {
+        "path": "workflows/forge-observations-commit.yml",
+        "name": "Observations Commit Workflow",
+        "introducedAt": "2026-01-25T00:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FO-Forge-S3",
+        "observationStart": "2026-01-25T00:00:00.000Z"
+      },
+      {
+        "path": "exports/cognition/forge-state-pack.json",
+        "name": "Forge State Pack (FCL-1)",
+        "introducedAt": "2026-01-29T10:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-1",
+        "observationStart": "2026-01-29T10:00:00.000Z"
+      },
+      {
+        "path": "exports/cognition/chronicler.jsonl",
+        "name": "Chronicler (FCL-3)",
+        "introducedAt": "2026-01-29T10:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-3",
+        "observationStart": "2026-01-29T10:00:00.000Z"
+      },
+      {
+        "path": "contracts/HEARTBEAT_CONTRACT.md",
+        "name": "Heartbeat Contract (FCL-2)",
+        "introducedAt": "2026-01-29T10:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-2",
+        "observationStart": "2026-01-29T10:00:00.000Z"
+      },
+      {
+        "path": "contracts/CONTINUATION_CONTRACT.md",
+        "name": "Continuation Contract (FCL-4)",
+        "introducedAt": "2026-01-29T11:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-4",
+        "observationStart": "2026-01-29T11:00:00.000Z"
+      },
+      {
+        "path": "contracts/REFLEX_RULES_CONTRACT.md",
+        "name": "Reflex Rules Contract (FCL-4)",
+        "introducedAt": "2026-01-29T11:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-4",
+        "observationStart": "2026-01-29T11:00:00.000Z"
+      },
+      {
+        "path": "contracts/GENOME_CONTRACT.md",
+        "name": "Genome Contract (FCL-5)",
+        "introducedAt": "2026-01-29T12:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-5",
+        "observationStart": "2026-01-29T12:00:00.000Z"
+      },
+      {
+        "path": "contracts/DIRECTOR_INTENT_CONTRACT.md",
+        "name": "Director Intent Contract (FCL v2)",
+        "introducedAt": "2026-01-29T14:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "WO-FCL-A2",
+        "observationStart": "2026-01-29T14:00:00.000Z"
+      },
+      {
+        "path": "exports/cognition/FCL_V1_TO_V2_DELTA.md",
+        "name": "FCL v1 to v2 Delta Analysis",
+        "introducedAt": "2026-01-29T13:00:00.000Z",
+        "introducedBy": "executor",
+        "woId": "FCL-V2-AUDIT",
+        "observationStart": "2026-01-29T13:00:00.000Z"
+      }
+    ],
+    "graduationPending": []
+  },
+
+  "intents": [],
+
+  "agentBindingRules": [
+    {
+      "id": "rule-wip-harvest",
+      "rule": "WIP Harvest Required",
+      "description": "Before proposing new work, surface all work-in-progress",
+      "enforcement": "mandatory"
+    },
+    {
+      "id": "rule-no-implicit-context",
+      "rule": "No Implicit Context",
+      "description": "All context must be loaded from canonical packs",
+      "enforcement": "mandatory"
+    },
+    {
+      "id": "rule-pack-missing-stop",
+      "rule": "Pack-Missing Detection",
+      "description": "If required pack unavailable, STOP and request",
+      "enforcement": "mandatory"
+    },
+    {
+      "id": "rule-constitutional-binding",
+      "rule": "Constitutional Binding",
+      "description": "Forge Kernel is authoritative; role boundaries are absolute",
+      "enforcement": "mandatory"
+    },
+    {
+      "id": "rule-heartbeat-participation",
+      "rule": "Heartbeat Participation",
+      "description": "Agents must respond to Heartbeat requests",
+      "enforcement": "mandatory"
+    }
+  ],
+
+  "sourceRefs": {
+    "sharePack": "/The Forge/forge/exports/share-pack/share-pack.index.json",
+    "workOrders": "/The Forge/forge/exports/share-pack/work-orders.index.json",
+    "observations": "/The Forge/forge/exports/observations/latest.json"
+  }
+}

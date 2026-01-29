@@ -1,0 +1,165 @@
+name: Forge Work Order Execute (Issue → Executor Queue)
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  execute:
+    if: contains(github.event.comment.body, '/execute')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate - Only repo members
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const actor = context.actor;
+            const perm = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: actor
+            });
+            const allowed = ["admin", "maintain", "write"].includes(perm.data.permission);
+            if (!allowed) {
+              core.setFailed(`Actor ${actor} lacks permission: ${perm.data.permission}`);
+            }
+
+      - name: Gate - Validate labels
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+
+            // Must have approved
+            if (!labels.includes("approved")) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ **Execute Failed**: Work Order must have \`approved\` label.\n\nCurrent labels: ${labels.join(", ") || "(none)"}`
+              });
+              core.setFailed("Missing required label: approved");
+              return;
+            }
+
+            // Must NOT have pending-approval
+            if (labels.includes("pending-approval")) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `❌ **Execute Failed**: Work Order still has \`pending-approval\` label. Remove it first.`
+              });
+              core.setFailed("Cannot execute: pending-approval label present");
+              return;
+            }
+
+            // Already in executor queue?
+            if (labels.includes("ready-for-executor") || labels.includes("executing") || labels.includes("executed")) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `⚠️ **Execute Skipped**: Work Order already in execution pipeline (${labels.filter(l => ["ready-for-executor", "executing", "executed"].includes(l)).join(", ")}).`
+              });
+              core.setFailed("Already in execution pipeline");
+              return;
+            }
+
+            core.setOutput("validated", "true");
+
+      - name: Apply ready-for-executor label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ["ready-for-executor"]
+            });
+
+      - name: Post Execution Pack comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || "";
+
+            // Extract key fields using regex (matches Issue Form structure)
+            const extractField = (label) => {
+              const regex = new RegExp(`### ${label}\\s*\\n\\s*([\\s\\S]*?)(?=\\n###|$)`, 'i');
+              const match = body.match(regex);
+              return match ? match[1].trim() : "_Not specified_";
+            };
+
+            const woId = extractField("Work Order ID");
+            const objective = extractField("Objective");
+            const allowedPaths = extractField("Allowed Paths");
+            const forbiddenPaths = extractField("Forbidden Paths");
+            const successCriteria = extractField("Success Criteria");
+            const notes = extractField("Notes / Context");
+
+            const divider = "—".repeat(40);
+            const queueUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/issues?q=is%3Aissue+is%3Aopen+label%3Aready-for-executor`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Build Execution Pack comment (avoid YAML-problematic characters at line starts)
+            const lines = [
+              "## 📦 EXECUTION PACK",
+              "",
+              `**Work Order:** ${woId}`,
+              `**Issue:** #${issue.number}`,
+              "**Status:** `ready-for-executor`",
+              "",
+              divider,
+              "",
+              "### 🎯 Objective",
+              objective,
+              "",
+              "### ✅ Allowed Paths",
+              "```",
+              allowedPaths,
+              "```",
+              "",
+              "### 🚫 Forbidden Paths",
+              "```",
+              forbiddenPaths,
+              "```",
+              "",
+              "### 📋 Success Criteria",
+              successCriteria,
+              "",
+              "### 📝 Notes",
+              notes,
+              "",
+              divider,
+              "",
+              "### 🤖 Executor Instructions",
+              "",
+              "1. **Pick up this WO** by applying `executing` label and removing `ready-for-executor`",
+              "2. **Execute** per the scope above (respect allowed/forbidden paths)",
+              "3. **On completion**: Apply `executed` label, create PR or commit",
+              "4. **If blocked**: Apply `blocked` label, comment with blocker details",
+              "",
+              `**Executor Queue:** [View Queue](${queueUrl})`,
+              "",
+              divider,
+              `_Generated by Forge Execute Workflow • Run [#${context.runId}](${runUrl})_`
+            ];
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: lines.join("\n")
+            });
+
+            console.log("Execution Pack posted");
+            console.log(`Work Order ${woId} queued for execution`);

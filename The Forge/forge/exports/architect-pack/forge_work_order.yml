@@ -1,0 +1,141 @@
+name: Forge Work Order
+description: Submit a formal Work Order for the Forge system
+title: "[WO] "
+labels: ["work-order", "pending-approval"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Forge Work Order
+        No work begins without a completed Work Order. Fill all required fields below.
+
+  - type: input
+    id: task-id
+    attributes:
+      label: Task ID
+      description: Unique identifier (e.g., FO-MyFi-I3-QuestsSurface)
+      placeholder: "FO-[Product]-[Type][Number]-[Name]"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: task-type
+    attributes:
+      label: Task Type
+      description: Classification of the work
+      options:
+        - implementation
+        - spec-sync
+        - uplift
+        - refactor
+        - audit
+        - research
+        - docs-only
+        - meta
+    validations:
+      required: true
+
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent Statement
+      description: Single sentence describing WHY this task exists
+      placeholder: "Align Quest UI spec with latest Vitals layout."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope of Work
+      description: Exactly what is to change or be produced
+      placeholder: |
+        - Create X
+        - Modify Y
+        - Update Z
+    validations:
+      required: true
+
+  - type: textarea
+    id: allowed-files
+    attributes:
+      label: Allowed Files / Artifacts
+      description: Explicit list of files that may be read or modified
+      placeholder: |
+        CREATE/MODIFY:
+        - path/to/file.js
+        - path/to/spec.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: forbidden
+    attributes:
+      label: Forbidden Changes
+      description: Things explicitly out of scope
+      placeholder: |
+        - No new components
+        - No API changes
+    validations:
+      required: true
+
+  - type: textarea
+    id: success-criteria
+    attributes:
+      label: Success Criteria
+      description: Observable conditions for completion
+      placeholder: |
+        - Spec and UI match
+        - Tests pass
+        - No scope creep
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Known prerequisites, references, or prior Work Orders
+      placeholder: |
+        - Requires I1 complete
+        - References PRODUCT_STATE.md
+    validations:
+      required: false
+
+  - type: dropdown
+    id: execution-mode
+    attributes:
+      label: Execution Mode
+      description: Does this involve code changes?
+      options:
+        - code
+        - docs-only
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: share-pack
+    attributes:
+      label: Share Pack
+      description: Does completion require a Share Pack refresh?
+      options:
+        - label: Share Pack refresh required after completion
+
+  - type: checkboxes
+    id: director-approval
+    attributes:
+      label: Director Approval
+      description: Work Order approval status
+      options:
+        - label: "Director Approval: I approve this Work Order for execution"
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes
+      description: Any other context or decision points
+      placeholder: Optional additional context...
+    validations:
+      required: false
