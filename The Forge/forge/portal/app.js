@@ -1230,6 +1230,79 @@ function enterWorld(worldId) {
   return true;
 }
 
+// FCL v2: Get world by ID
+function getWorldById(worldId) {
+  const worlds = state.worlds?.worlds || [];
+  return worlds.find(w => w.id === worldId) || null;
+}
+
+// FCL v2: Alias for getProductsForWorld (consistent naming)
+function getWorldProducts(worldId) {
+  return getProductsForWorld(worldId);
+}
+
+// FCL v2: Get world-specific rules
+function getWorldRules(worldId) {
+  const world = getWorldById(worldId);
+  return world?.rules || [];
+}
+
+// FCL v2: Check overall gate status
+function getGateStatus() {
+  const warnings = state.reflexWarnings || [];
+  const blockers = warnings.filter(w =>
+    w.enforcement === 'hard' && w.violation?.severity === 'alert'
+  );
+  return blockers.length > 0 ? 'blocked' : 'open';
+}
+
+// FCL v2: Get overall system health
+function getSystemHealth() {
+  const warnings = state.reflexWarnings || [];
+  const alerts = warnings.filter(w => w.violation?.severity === 'alert').length;
+  const cautions = warnings.filter(w => w.violation?.severity === 'warning').length;
+
+  if (alerts > 0) return 'critical';
+  if (cautions > 0) return 'warning';
+  return 'healthy';
+}
+
+// FCL v2: Get lifecycle phases (unified reference)
+function getLifecyclePhases() {
+  return E2E_PHASES;
+}
+
+// FCL v2: Get phase by ID
+function getPhaseById(phaseId) {
+  return E2E_PHASES.find(p => p.id === phaseId) || null;
+}
+
+// FCL v2: Check if a phase is unlocked based on WO progression
+function isPhaseUnlocked(phaseId) {
+  const phases = E2E_PHASES;
+  const phaseIndex = phases.findIndex(p => p.id === phaseId);
+
+  // First phase always unlocked
+  if (phaseIndex <= 0) return true;
+
+  // Check if any WO has reached this phase or beyond
+  const wos = state.workOrders?.workOrders || [];
+  return wos.some(w => {
+    const woPhaseIndex = phases.findIndex(p => p.id === w.status);
+    return woPhaseIndex >= phaseIndex;
+  });
+}
+
+// FCL v2: Select active phase
+function selectPhase(phaseId) {
+  if (!isPhaseUnlocked(phaseId)) {
+    showToast('Phase is locked. Complete previous phases first.', 'warning');
+    return;
+  }
+  state.selectedE2EPhase = phaseId;
+  render();
+}
+
 async function loadEnvironments() {
   try {
     const res = await fetch(ENVIRONMENTS_URL);
@@ -5497,55 +5570,217 @@ function renderDeploymentStatusScreen() {
  * Shows: World overview, health status, next best actions, activity feed
  */
 function renderCommandScreen() {
-  const sp = state.sharePack;
-  const wo = state.workOrders;
-  const fsp = state.forgeStatePack;
-  const entities = state.entities?.entities || [];
-  const currentEntity = state.currentEntity || 'forge';
-
-  // Entity-specific title
-  const entityTitle = currentEntity === 'forante' ? 'Forante Network' :
-                      currentEntity === 'forge' ? 'Forge OS' :
-                      entities.find(e => e.id === currentEntity)?.name || 'Entity';
+  const world = getCurrentWorld();
+  const worldTitle = world?.name || 'Forante';
+  const worldIcon = world?.icon || '&#127970;';
 
   return `
-    <section class="panel command-welcome">
+    <section class="panel command-welcome world-scoped">
       <div class="command-header-row">
-        <h2 class="panel-title-large">&#127970; ${entityTitle}</h2>
+        <h2 class="panel-title-large">${worldIcon} ${worldTitle}</h2>
         ${renderEnvironmentBadge()}
       </div>
       <p class="panel-subtitle">Command Centre &mdash; ${formatRelativeTime(new Date().toISOString())}</p>
     </section>
 
-    ${renderWorldOverview()}
+    ${renderCommandWorldDashboard()}
+
+    ${renderFCLNervousSystem()}
+
+    ${renderSubWorldPortals()}
+
+    ${renderWorldProductsPanel()}
 
     ${renderNextBestActions()}
 
     ${renderActivityFeed()}
 
+    ${renderFastTravelActions()}
+  `;
+}
+
+/**
+ * World Dashboard - Stats grid showing world health at a glance
+ */
+function renderCommandWorldDashboard() {
+  const world = getCurrentWorld();
+  const intents = (state.intents || []).filter(i =>
+    !world || world.id === 'forante' || i.world === world.id
+  );
+  const activeIntents = intents.filter(i => i.status === 'active');
+  const wos = state.workOrders?.workOrders || [];
+  const gateStatus = getGateStatus();
+  const systemHealth = getSystemHealth();
+
+  return `
+    <section class="panel living-control-room">
+      <h2 class="panel-title">&#128200; World Status</h2>
+      <div class="world-stats-grid">
+        <div class="stat-node ${activeIntents.length > 0 ? 'pulsing' : ''}">
+          <span class="stat-value">${activeIntents.length}</span>
+          <span class="stat-label">Active Intents</span>
+        </div>
+        <div class="stat-node ${wos.length > 0 ? 'active' : ''}">
+          <span class="stat-value">${wos.length}</span>
+          <span class="stat-label">Work Orders</span>
+        </div>
+        <div class="stat-node ${gateStatus === 'open' ? 'healthy' : 'warning'}">
+          <span class="stat-value">${gateStatus === 'open' ? '&#128275;' : '&#128274;'}</span>
+          <span class="stat-label">Gate ${gateStatus}</span>
+        </div>
+        <div class="stat-node ${systemHealth}">
+          <span class="stat-value">${systemHealth === 'healthy' ? '&#10004;' : systemHealth === 'warning' ? '&#9888;' : '&#10060;'}</span>
+          <span class="stat-label">${systemHealth}</span>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * FCL Nervous System - Core cognition surfaces
+ */
+function renderFCLNervousSystem() {
+  return `
+    <section class="panel fcl-nervous-system">
+      <h2 class="panel-title">&#128147; World Nervous System <span class="fcl-badge">FCL</span></h2>
+      <div class="fcl-grid living">
+        ${renderHeartbeatPanel()}
+        ${renderSentinelPanel()}
+        ${renderNavigatorPanel()}
+        ${renderChroniclerPanel()}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Sub-World Portals - Visualize and enter sub-worlds
+ */
+function renderSubWorldPortals() {
+  const world = getCurrentWorld();
+  const subWorlds = getSubWorlds(world?.id || 'forante');
+
+  if (!subWorlds || subWorlds.length === 0) {
+    return '';
+  }
+
+  return `
+    <section class="panel subworld-portals">
+      <h2 class="panel-title">&#127758; Sub-Worlds</h2>
+      <div class="portal-node-grid">
+        ${subWorlds.map(sw => `
+          <button class="portal-node ${sw.status || 'active'}" onclick="enterWorld('${sw.id}')"
+                  data-world-id="${sw.id}">
+            <span class="portal-sigil">${sw.icon || '&#127760;'}</span>
+            <span class="portal-name">${sw.name}</span>
+            <span class="portal-status">${sw.status || 'active'}</span>
+            <div class="portal-ring"></div>
+          </button>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * World Products Panel - Expandable products with phase breakdown
+ */
+function renderWorldProductsPanel() {
+  const world = getCurrentWorld();
+  const products = getWorldProducts(world?.id || 'forante');
+
+  if (!products || products.length === 0) {
+    return '';
+  }
+
+  return `
+    <section class="panel world-products">
+      <h2 class="panel-title">&#128230; World Products</h2>
+      <div class="product-list expandable">
+        ${products.map(p => `
+          <details class="product-item">
+            <summary class="product-header">
+              <span class="product-icon">${p.icon || '&#128230;'}</span>
+              <span class="product-name">${p.name}</span>
+              <span class="product-status ${p.status || 'active'}">${p.status || 'active'}</span>
+            </summary>
+            <div class="product-phases">
+              ${renderProductPhaseBreakdown(p.id)}
+            </div>
+          </details>
+        `).join('')}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Product Phase Breakdown - WO counts by phase for a product
+ */
+function renderProductPhaseBreakdown(productId) {
+  const wos = state.workOrders?.workOrders || [];
+  const productWos = wos.filter(wo => wo.lane === productId || wo.id.toLowerCase().includes(productId.toLowerCase()));
+  const phases = E2E_PHASES;
+
+  if (productWos.length === 0) {
+    return '<p class="empty-state-sm">No work orders in this product</p>';
+  }
+
+  const phaseCounts = phases.map(phase => ({
+    ...phase,
+    count: productWos.filter(wo => wo.status === phase.id).length
+  })).filter(p => p.count > 0);
+
+  if (phaseCounts.length === 0) {
+    return `<p class="empty-state-sm">${productWos.length} WO(s) total</p>`;
+  }
+
+  return `
+    <div class="phase-breakdown-mini">
+      ${phaseCounts.map(p => `
+        <span class="phase-count-badge" title="${p.name}">
+          ${p.icon} ${p.count}
+        </span>
+      `).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Fast Travel Actions - Quick navigation to key areas
+ */
+function renderFastTravelActions() {
+  const world = getCurrentWorld();
+  const parentWorld = world?.parentWorld ? getWorldById(world.parentWorld) : null;
+
+  return `
     <section class="panel quick-nav">
-      <h2 class="panel-title">Quick Actions</h2>
-      <div class="nav-cards">
-        <button class="nav-card" onclick="navigateTo('lifecycle')">
-          <span class="nav-card-icon">&#128260;</span>
-          <span class="nav-card-title">Lifecycle</span>
-          <span class="nav-card-desc">WOs & Intents</span>
+      <h2 class="panel-title">&#128640; Fast Travel</h2>
+      <div class="fast-travel-actions">
+        <button class="fast-travel-btn" onclick="navigateTo('lifecycle')">
+          <span class="icon">&#9881;</span>
+          <span>Engine Room</span>
         </button>
-        <button class="nav-card" onclick="navigateTo('ops')">
-          <span class="nav-card-icon">&#128736;</span>
-          <span class="nav-card-title">Operations</span>
-          <span class="nav-card-desc">${entities.length} entities</span>
+        <button class="fast-travel-btn" onclick="navigateTo('ops')">
+          <span class="icon">&#127758;</span>
+          <span>Navigation</span>
         </button>
-        <button class="nav-card" onclick="navigateTo('config')">
-          <span class="nav-card-icon">&#9881;</span>
-          <span class="nav-card-title">Config</span>
-          <span class="nav-card-desc">Governance</span>
+        <button class="fast-travel-btn" onclick="navigateTo('config')">
+          <span class="icon">&#128220;</span>
+          <span>Archives</span>
         </button>
-        <button class="nav-card" onclick="loadData()">
-          <span class="nav-card-icon">&#8635;</span>
-          <span class="nav-card-title">Refresh</span>
-          <span class="nav-card-desc">Reload data</span>
-        </button>
+        ${parentWorld ? `
+          <button class="fast-travel-btn" onclick="enterWorld('${parentWorld.id}')">
+            <span class="icon">&#8593;</span>
+            <span>${parentWorld.name}</span>
+          </button>
+        ` : `
+          <button class="fast-travel-btn" onclick="loadData()">
+            <span class="icon">&#8635;</span>
+            <span>Refresh</span>
+          </button>
+        `}
       </div>
     </section>
   `;
@@ -5728,84 +5963,146 @@ function getEventIcon(eventType) {
 
 /**
  * Lifecycle Screen - WO management, Intents, phase tracking
- * Includes phase cockpit and intent ribbon before WO content
+ * "Engine Room" aesthetic - where work actually happens
  */
 function renderLifecycleScreen() {
+  const world = getCurrentWorld();
   const intents = state.intents || [];
   const activeIntents = intents.filter(i => i.status === 'active');
 
   return `
     ${renderLifecycleHeader()}
-    ${renderPhaseCockpit()}
-    ${activeIntents.length > 0 ? renderActiveIntentRibbon(activeIntents) : ''}
+    ${renderEnhancedPhaseCockpit()}
+    ${renderActivePhasePanel()}
+    ${activeIntents.length > 0 ? renderActiveIntentRibbon(activeIntents) : renderCreateIntentCTA()}
     ${renderForgeTab()}
   `;
 }
 
 /**
- * Lifecycle Header - Shows current entity context and phase summary
+ * Lifecycle Header - Shows current world context and phase summary
  */
 function renderLifecycleHeader() {
-  const currentEntity = state.currentEntity || 'forge';
-  const entityName = currentEntity === 'forante' ? 'All Entities' :
-                     currentEntity === 'forge' ? 'Forge OS' :
-                     state.entities?.entities?.find(e => e.id === currentEntity)?.name || currentEntity;
+  const world = getCurrentWorld();
+  const worldName = world?.name || 'Forante';
 
   return `
-    <section class="panel lifecycle-header">
+    <section class="panel lifecycle-header engine-room">
       <div class="lifecycle-header-row">
-        <h2 class="panel-title-large">&#128260; Lifecycle</h2>
-        <span class="entity-context-badge">${entityName}</span>
+        <h2 class="panel-title-large">&#9881; Engine Room</h2>
+        <span class="entity-context-badge">${worldName}</span>
       </div>
-      <p class="panel-subtitle">Work Orders, Intents, and Phase Management</p>
+      <p class="panel-subtitle">Phase Management & Work Order Execution</p>
     </section>
   `;
 }
 
 /**
- * Phase Cockpit - Visual representation of the 9-phase lifecycle
+ * Enhanced Phase Cockpit - "Chamber unlocking" visual metaphor
  */
-function renderPhaseCockpit() {
-  const phases = [
-    { id: 'ideation', name: 'Ideation', icon: '&#128161;', short: 'IDEA' },
-    { id: 'requirements', name: 'Requirements', icon: '&#128221;', short: 'REQ' },
-    { id: 'dissonance', name: 'Dissonance', icon: '&#128269;', short: 'DIS' },
-    { id: 'design', name: 'Design', icon: '&#128295;', short: 'DES' },
-    { id: 'execution', name: 'Execution', icon: '&#9889;', short: 'EXEC' },
-    { id: 'validation', name: 'Validation', icon: '&#10004;', short: 'VAL' },
-    { id: 'finalisation', name: 'Finalisation', icon: '&#128221;', short: 'FIN' },
-    { id: 'production', name: 'Production', icon: '&#128640;', short: 'PROD' },
-    { id: 'reflection', name: 'Reflection', icon: '&#128173;', short: 'REF' }
-  ];
-
-  // Count WOs by phase (infer from status if phase not set)
+function renderEnhancedPhaseCockpit() {
+  const phases = E2E_PHASES;
+  const currentPhase = state.selectedE2EPhase || 'executing';
   const wo = state.workOrders?.workOrders || [];
+
+  // Count WOs by status
   const phaseCounts = {};
   phases.forEach(p => phaseCounts[p.id] = 0);
-
   wo.forEach(w => {
-    const phase = w.phase || inferPhaseFromStatus(w.status);
-    if (phaseCounts[phase] !== undefined) {
-      phaseCounts[phase]++;
+    if (phaseCounts[w.status] !== undefined) {
+      phaseCounts[w.status]++;
     }
   });
 
   return `
-    <section class="panel phase-cockpit">
-      <h2 class="panel-title">Phase Pipeline</h2>
-      <div class="phase-ribbon">
-        ${phases.map((p, i) => `
-          <div class="phase-node ${phaseCounts[p.id] > 0 ? 'active' : ''}"
-               title="${p.name}: ${phaseCounts[p.id]} WO(s)">
-            <span class="phase-icon">${p.icon}</span>
-            <span class="phase-short">${p.short}</span>
-            ${phaseCounts[p.id] > 0 ? `<span class="phase-count">${phaseCounts[p.id]}</span>` : ''}
-          </div>
-          ${i < phases.length - 1 ? '<span class="phase-connector">&#8594;</span>' : ''}
-        `).join('')}
+    <section class="panel phase-cockpit engine-room">
+      <h2 class="panel-title">&#9881; Phase Chambers</h2>
+      <div class="phase-chamber-ribbon">
+        ${phases.map((phase, i) => {
+          const count = phaseCounts[phase.id] || 0;
+          const isActive = phase.id === currentPhase;
+          const isUnlocked = isPhaseUnlocked(phase.id);
+
+          return `
+            <button class="phase-chamber ${isActive ? 'active' : ''} ${isUnlocked ? 'unlocked' : 'locked'}"
+                    onclick="selectPhase('${phase.id}')"
+                    title="${phase.name}: ${count} WO(s)"
+                    ${!isUnlocked ? 'disabled' : ''}>
+              <div class="chamber-door ${isUnlocked ? 'open' : 'closed'}">
+                ${phase.icon}
+              </div>
+              <span class="chamber-label">${phase.name.substring(0, 4).toUpperCase()}</span>
+              ${count > 0 ? `<span class="chamber-count">${count}</span>` : ''}
+              <div class="chamber-lock-indicator"></div>
+            </button>
+            ${i < phases.length - 1 ? '<span class="chamber-connector mechanical">&#8594;</span>' : ''}
+          `;
+        }).join('')}
       </div>
     </section>
   `;
+}
+
+/**
+ * Active Phase Panel - Shows what can be done in the currently selected phase
+ */
+function renderActivePhasePanel() {
+  const phase = E2E_PHASES.find(p => p.id === state.selectedE2EPhase);
+  if (!phase) return '';
+
+  const gateStatus = getGateStatus();
+  const warnings = state.reflexWarnings || [];
+  const phaseWarnings = warnings.filter(w => w.phase === phase.id || !w.phase);
+
+  return `
+    <section class="panel active-phase-panel">
+      <div class="phase-detail-header">
+        <span class="phase-icon-large">${phase.icon}</span>
+        <div class="phase-detail-info">
+          <h3 class="phase-name">${phase.name}</h3>
+          <span class="phase-role">Role: ${phase.role}</span>
+        </div>
+      </div>
+
+      <div class="gate-indicator ${gateStatus}">
+        <span class="gate-icon">${gateStatus === 'open' ? '&#128275;' : '&#128274;'}</span>
+        <span class="gate-label">Gate ${gateStatus === 'open' ? 'Open' : 'Blocked'}</span>
+        ${gateStatus !== 'open' && phaseWarnings.length > 0 ? `
+          <span class="gate-reason">${phaseWarnings[0]?.message || 'Requirements not met'}</span>
+        ` : ''}
+      </div>
+
+      <div class="phase-actions-row">
+        <button class="action-btn-sm primary" onclick="navigateTo('work-orders'); setWoFilter('${phase.id}');">
+          View ${phase.name} WOs
+        </button>
+        <button class="action-btn-sm" onclick="copyPhaseAgentPack('${phase.id}')">
+          Copy Agent Pack
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Create Intent CTA - Shown when no active intents
+ */
+function renderCreateIntentCTA() {
+  return `
+    <section class="panel create-intent-cta">
+      <p class="cta-text">No active Director Intents in this world.</p>
+      <button class="action-btn primary" onclick="navigateTo('create-intent')">
+        &#127919; Create Intent
+      </button>
+    </section>
+  `;
+}
+
+/**
+ * Phase Cockpit - Visual representation of the 9-phase lifecycle (legacy)
+ */
+function renderPhaseCockpit() {
+  return renderEnhancedPhaseCockpit();
 }
 
 /**
@@ -5855,19 +6152,200 @@ function showIntentDetail(intentId) {
 }
 
 /**
- * Ops Screen - Entity management, operational dashboards
- * Wraps existing Entities tab
+ * Ops Screen - World Navigation & Sub-World Management
+ * "Star Chart" aesthetic - spatial navigation between worlds
  */
 function renderOpsScreen() {
-  return renderEntitiesTab();
+  const world = getCurrentWorld();
+  const subWorlds = getSubWorlds(world?.id || 'forante');
+  const parentWorld = world?.parentWorld ? getWorldById(world.parentWorld) : null;
+
+  return `
+    <section class="panel star-chart">
+      <h2 class="panel-title-large">&#127758; World Navigation</h2>
+      <p class="panel-subtitle">Current World: ${world?.name || 'Forante'}</p>
+    </section>
+
+    ${renderWorldMap()}
+
+    ${renderIntegrationTierDisplay()}
+
+    ${renderEntitiesTab()}
+  `;
+}
+
+/**
+ * World Map - Visual star-chart style navigation
+ */
+function renderWorldMap() {
+  const world = getCurrentWorld();
+  const subWorlds = getSubWorlds(world?.id || 'forante');
+  const parentWorld = world?.parentWorld ? getWorldById(world.parentWorld) : null;
+
+  return `
+    <section class="panel star-chart-aesthetic">
+      <h2 class="panel-title">&#128752; World Map</h2>
+      <div class="world-map-container">
+        ${parentWorld ? `
+          <div class="map-tier parent-tier">
+            <button class="world-map-node parent" onclick="enterWorld('${parentWorld.id}')">
+              <span class="node-sigil">${parentWorld.icon || '&#127970;'}</span>
+              <span class="node-name">${parentWorld.name}</span>
+              <span class="travel-indicator">&#8593; Ascend</span>
+            </button>
+          </div>
+          <div class="map-connector vertical"></div>
+        ` : ''}
+
+        <div class="map-tier current-tier">
+          <div class="world-map-node current">
+            <span class="node-sigil current-glow">${world?.icon || '&#127970;'}</span>
+            <span class="node-name">${world?.name || 'Forante'}</span>
+            <span class="you-are-here">You are here</span>
+          </div>
+        </div>
+
+        ${subWorlds.length > 0 ? `
+          <div class="map-connector vertical branching"></div>
+          <div class="map-tier child-tier">
+            ${subWorlds.map(sw => `
+              <button class="world-map-node child" onclick="enterWorld('${sw.id}')">
+                <span class="node-sigil">${sw.icon || '&#127760;'}</span>
+                <span class="node-name">${sw.name}</span>
+                <span class="travel-indicator">&#8595; Descend</span>
+              </button>
+            `).join('')}
+          </div>
+        ` : `
+          <p class="empty-state-sm" style="margin-top: var(--spacing-lg); text-align: center;">
+            No sub-worlds in ${world?.name || 'this world'}
+          </p>
+        `}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Integration Tier Display - Shows world authority hierarchy
+ */
+function renderIntegrationTierDisplay() {
+  const worlds = state.worlds?.worlds || [];
+  const tiers = [
+    { id: 'root', label: 'ROOT', desc: 'Constitutional authority' },
+    { id: 'integrated', label: 'INTEGRATED', desc: 'Full governance' },
+    { id: 'satellite', label: 'SATELLITE', desc: 'Limited scope' }
+  ];
+
+  return `
+    <section class="panel integration-tiers">
+      <h2 class="panel-title">&#128279; Integration Tiers</h2>
+      <div class="tier-hierarchy">
+        ${tiers.map(tier => {
+          const tierWorlds = worlds.filter(w => w.tier === tier.id);
+          if (tierWorlds.length === 0) return '';
+          return `
+            <div class="tier-level ${tier.id}">
+              <span class="tier-label">${tier.label}</span>
+              <div class="tier-worlds">
+                ${tierWorlds.map(w => `
+                  <button class="tier-world-badge" onclick="enterWorld('${w.id}')" title="${tier.desc}">
+                    ${w.icon || '&#127760;'} ${w.name}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+  `;
 }
 
 /**
  * Config Screen - Governance, settings, constitutional layer
- * Wraps existing Governance tab
+ * "Archival" aesthetic - calm, authoritative
  */
 function renderConfigScreen() {
-  return renderGovernanceTab();
+  const world = getCurrentWorld();
+
+  return `
+    <section class="panel archival">
+      <h2 class="panel-title-large">&#128220; Lore & Governance</h2>
+      <p class="panel-subtitle">World: ${world?.name || 'Forante'} &mdash; Constitutional Layer</p>
+    </section>
+
+    ${renderWorldSpecificRules()}
+
+    ${renderGuidancePrinciples()}
+
+    ${renderGovernanceTab()}
+  `;
+}
+
+/**
+ * World-Specific Rules - Rules for the current world context
+ */
+function renderWorldSpecificRules() {
+  const world = getCurrentWorld();
+  const rules = getWorldRules(world?.id || 'forante');
+
+  return `
+    <section class="panel world-rules archival">
+      <h2 class="panel-title">&#128214; ${world?.name || 'World'} Rules</h2>
+      <div class="rule-scroll">
+        ${rules.length > 0 ? rules.map(rule => `
+          <div class="rule-entry">
+            <span class="rule-id">${rule.id || 'R-'}</span>
+            <span class="rule-text">${rule.text || rule}</span>
+          </div>
+        `).join('') : `
+          <p class="empty-state-sm">No world-specific rules defined. Inherits from Forante Kernel.</p>
+        `}
+      </div>
+    </section>
+  `;
+}
+
+/**
+ * Guidance Principles - Core principles and lore
+ */
+function renderGuidancePrinciples() {
+  return `
+    <section class="panel archival">
+      <h2 class="panel-title">&#128216; Guiding Principles</h2>
+      <div class="principle-list">
+        <div class="principle-card">
+          <span class="principle-icon">&#9878;</span>
+          <div class="principle-content">
+            <h4>Constitutional Authority</h4>
+            <p>All operations derive authority from the Forante Kernel. Worlds inherit governance.</p>
+          </div>
+        </div>
+        <div class="principle-card">
+          <span class="principle-icon">&#9881;</span>
+          <div class="principle-content">
+            <h4>Forge OS Governance</h4>
+            <p>Forge is an institutional SDLC, not a product. It governs the lifecycle of all work.</p>
+          </div>
+        </div>
+        <div class="principle-card">
+          <span class="principle-icon">&#128683;</span>
+          <div class="principle-content">
+            <h4>Gate Enforcement</h4>
+            <p>Phase transitions require gate clearance. FCL ensures compliance.</p>
+          </div>
+        </div>
+        <div class="principle-card">
+          <span class="principle-icon">&#127758;</span>
+          <div class="principle-content">
+            <h4>World Sovereignty</h4>
+            <p>Each world is a complete, sovereign context. Sub-worlds inherit but can specialize.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 /**
@@ -6392,14 +6870,6 @@ function renderForgeTab() {
     ${renderIntentPanel()}
 
     ${renderFSPPanel()}
-
-    ${renderHeartbeatPanel()}
-
-    ${renderSentinelPanel()}
-
-    ${renderNavigatorPanel()}
-
-    ${renderChroniclerPanel()}
 
     ${renderReflexPanel()}
 
@@ -8213,6 +8683,15 @@ window.selectWorld = selectWorld;
 window.enterWorld = enterWorld;
 window.getCurrentWorld = getCurrentWorld;
 window.canTravelToWorld = canTravelToWorld;
+window.getWorldById = getWorldById;
+window.getWorldProducts = getWorldProducts;
+window.getWorldRules = getWorldRules;
+window.getGateStatus = getGateStatus;
+window.getSystemHealth = getSystemHealth;
+window.getLifecyclePhases = getLifecyclePhases;
+window.getPhaseById = getPhaseById;
+window.isPhaseUnlocked = isPhaseUnlocked;
+window.selectPhase = selectPhase;
 
 // FCL v2 Intent functions (PORTAL-UX-HARDENING)
 window.viewIntent = viewIntent;
