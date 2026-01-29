@@ -20,6 +20,11 @@
     { "kind": "ViewportZone", "category": "prefab", "path": "./prefabs/ViewportZone/part.js", "deprecated": "HUB-22: Use BadlandsStage" },
     { "kind": "BadlandsStage", "category": "prefab", "path": "./prefabs/BadlandsStage/part.js" },
     { "kind": "WorldMap", "category": "prefab", "path": "./prefabs/WorldMap/part.js" },
-    { "kind": "EssenceBar", "category": "primitive", "path": "./primitives/EssenceBar/part.js" }
+    { "kind": "EssenceBar", "category": "primitive", "path": "./primitives/EssenceBar/part.js" },
+    { "kind": "QuestHeader", "category": "prefab", "path": "./prefabs/QuestHeader/part.js" },
+    { "kind": "QuestList", "category": "prefab", "path": "./prefabs/QuestList/part.js" },
+    { "kind": "AvatarDisplay", "category": "prefab", "path": "./prefabs/AvatarDisplay/part.js" },
+    { "kind": "GuidanceDisplay", "category": "prefab", "path": "./prefabs/GuidanceDisplay/part.js" },
+    { "kind": "BadlandsEntry", "category": "prefab", "path": "./prefabs/BadlandsEntry/part.js" }
   ]
 }

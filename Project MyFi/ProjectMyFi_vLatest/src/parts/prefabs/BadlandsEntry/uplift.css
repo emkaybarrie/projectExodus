@@ -1,0 +1,219 @@
+/* BadlandsEntry Part — WO-3 */
+
+.Part-BadlandsEntry {
+  padding: 16px;
+}
+
+.BadlandsEntry__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Portal Graphic */
+.BadlandsEntry__portal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 20px;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(139, 92, 246, 0.05));
+  border-radius: 16px;
+  border: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+.BadlandsEntry__portalRing {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(251, 146, 60, 0.05));
+  border: 3px solid rgba(251, 146, 60, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: portalPulse 2s ease-in-out infinite;
+}
+
+@keyframes portalPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3), 0 0 40px rgba(251, 146, 60, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(251, 146, 60, 0.4), 0 0 60px rgba(251, 146, 60, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+.BadlandsEntry__portalCore {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.4), rgba(139, 92, 246, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.BadlandsEntry__portalIcon {
+  font-size: 36px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsEntry__portalLabel {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(251, 146, 60, 0.9);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+/* Sections */
+.BadlandsEntry__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.BadlandsEntry__sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.BadlandsEntry__sectionTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.BadlandsEntry__editBtn {
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.BadlandsEntry__editBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Avatar Card */
+.BadlandsEntry__avatarCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.BadlandsEntry__avatarIcon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2));
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.BadlandsEntry__avatarInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.BadlandsEntry__avatarName {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsEntry__avatarDetail {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Loadout */
+.BadlandsEntry__loadout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsEntry__loadoutItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.BadlandsEntry__loadoutIcon {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.BadlandsEntry__loadoutLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 60px;
+}
+
+.BadlandsEntry__loadoutValue {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: right;
+}
+
+/* Enter Button */
+.BadlandsEntry__enterBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.5), rgba(251, 146, 60, 0.3));
+  border: 2px solid rgba(251, 146, 60, 0.6);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.BadlandsEntry__enterBtn:hover {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.6), rgba(251, 146, 60, 0.4));
+  border-color: rgba(251, 146, 60, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(251, 146, 60, 0.3);
+}
+
+.BadlandsEntry__enterBtn:active {
+  transform: translateY(0);
+}
+
+.BadlandsEntry__enterIcon {
+  font-size: 18px;
+}
+
+.BadlandsEntry__enterText {
+  /* Inherits font styles from button */
+}

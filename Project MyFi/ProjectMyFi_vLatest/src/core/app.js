@@ -10,6 +10,8 @@ import * as actionBus from './actionBus.js';
 import * as modalManager from './modalManager.js';
 import * as journeyRunner from '../journeys/journeyRunner.js';
 import { createHubController } from '../systems/hubController.js';
+import { createSwipeNav } from './swipeNav.js';
+import { ensureGlobalCSS } from './styleLoader.js';
 
 // Create Hub controller for integrated systems (autobattler, vitals sim)
 const hubController = createHubController({
@@ -56,6 +58,14 @@ const router = createRouter({
 // Wire chrome footer nav to router
 chrome.onNav((id) => router.navigate(id));
 
+// Initialize swipe navigation for cross-screen gestures
+ensureGlobalCSS('swipeNav', '../src/core/swipeNav.css');
+const swipeNav = createSwipeNav(chrome.hostEl, {
+  navigate: (surfaceId) => router.navigate(surfaceId),
+  getCurrentRoute: () => location.hash.replace(/^#/, '') || 'hub'
+});
+console.log('[App] Swipe navigation initialized');
+
 // Initialize journey runner with context
 journeyRunner.init({
   router,
@@ -79,6 +89,7 @@ window.__MYFI_DEBUG__ = {
   journeyRunner,
   router,
   hubController,
+  swipeNav,
 };
 
 // HUB-D4: Enable DEV spawn button in chrome header

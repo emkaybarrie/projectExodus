@@ -4,8 +4,6 @@
   "background": "cosmic",
   "chrome": { "showHeader": true, "showFooter": true, "title": "Guidance" },
   "slots": [
-    { "id": "header", "part": { "kind": "StatusBar" } },
-    { "id": "content", "card": true, "part": { "kind": "EmptyCard", "props": { "message": "Guidance - Coming Soon", "icon": "compass" } } },
-    { "id": "returnNav", "part": { "kind": "ReturnToHub" } }
+    { "id": "content", "card": true, "part": { "kind": "GuidanceDisplay" } }
   ]
 }

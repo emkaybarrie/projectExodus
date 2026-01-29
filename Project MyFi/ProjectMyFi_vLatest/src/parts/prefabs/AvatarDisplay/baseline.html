@@ -1,0 +1,36 @@
+<div class="AvatarDisplay__inner">
+  <!-- Portrait Section -->
+  <div class="AvatarDisplay__portrait">
+    <div class="AvatarDisplay__portraitFrame">
+      <div class="AvatarDisplay__avatarPlaceholder">&#128100;</div>
+    </div>
+    <div class="AvatarDisplay__identity">
+      <h2 class="AvatarDisplay__name" data-bind="avatarName">Wanderer</h2>
+      <div class="AvatarDisplay__meta">
+        <span class="AvatarDisplay__level" data-bind="level">Lv. 1</span>
+        <span class="AvatarDisplay__class" data-bind="class">Novice</span>
+      </div>
+      <div class="AvatarDisplay__xpBar">
+        <div class="AvatarDisplay__xpFill"></div>
+      </div>
+      <span class="AvatarDisplay__xpText" data-bind="xpProgress">0 / 100 XP</span>
+    </div>
+    <button class="AvatarDisplay__customizeBtn" data-action="customize">Customize</button>
+  </div>
+
+  <!-- Stats Section -->
+  <div class="AvatarDisplay__section">
+    <h3 class="AvatarDisplay__sectionTitle">Core Stats</h3>
+    <div class="AvatarDisplay__statsGrid">
+      <!-- Stats rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- Skill Tree Preview -->
+  <div class="AvatarDisplay__section">
+    <h3 class="AvatarDisplay__sectionTitle">Skills</h3>
+    <div class="AvatarDisplay__skillTree">
+      <!-- Skills rendered dynamically -->
+    </div>
+  </div>
+</div>

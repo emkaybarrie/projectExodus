@@ -698,3 +698,897 @@ body{
 .pwa-install-close:hover{
   opacity: 1;
 }
+
+/* ---- WO-4: Navigation Orb ---- */
+.chrome__navOrb{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  justify-self: center;
+}
+
+.chrome__orbInner{
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__orbCore{
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #a78bfa, #7c3aed, #4c1d95);
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2);
+  animation: orbPulse 2s ease-in-out infinite;
+}
+
+.chrome__orbRing{
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 92, 246, 0.4);
+  animation: orbRingPulse 2s ease-in-out infinite;
+}
+
+@keyframes orbPulse{
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes orbRingPulse{
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08);
+  }
+}
+
+.chrome__navOrb--pressed .chrome__orbCore{
+  animation: none;
+  transform: scale(0.92);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+.chrome__navOrb--pressed .chrome__orbRing{
+  animation: none;
+  border-color: rgba(139, 92, 246, 0.7);
+  transform: scale(0.95);
+}
+
+.chrome__navOrb--held .chrome__orbCore{
+  animation: orbHoldGlow 0.5s ease-out forwards;
+}
+
+@keyframes orbHoldGlow{
+  to {
+    box-shadow: 0 0 40px rgba(251, 146, 60, 0.8), 0 0 60px rgba(139, 92, 246, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.4);
+    background: radial-gradient(circle at 30% 30%, #fb923c, #f97316, #ea580c);
+  }
+}
+
+/* ---- WO-4: Compass Cross Layout ---- */
+.chrome__compassCross{
+  width: 280px;
+  height: 280px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 8px;
+  background: radial-gradient(circle at center, rgba(20, 20, 40, 0.95) 0%, rgba(15, 22, 48, 0.98) 70%);
+  border: 3px solid rgba(139, 92, 246, 0.4);
+  border-radius: 20px;
+  box-shadow:
+    0 0 30px rgba(139, 92, 246, 0.3),
+    inset 0 0 40px rgba(139, 92, 246, 0.1);
+}
+
+.chrome__compassCross .chrome__compassDirection{
+  position: static;
+  width: auto;
+  height: auto;
+  transform: none;
+  border-radius: 12px;
+}
+
+.chrome__compassCross .chrome__compassDirection:hover{
+  transform: scale(1.05);
+}
+
+.chrome__compassCross .chrome__compassDirection--n{
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.chrome__compassCross .chrome__compassDirection--w{
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.chrome__compassCross .chrome__compassDirection--e{
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.chrome__compassCross .chrome__compassDirection--s{
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.chrome__compassCenter{
+  grid-column: 2;
+  grid-row: 2;
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__compassCenterBtn{
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.3));
+  border: 2px solid rgba(139, 92, 246, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text);
+}
+
+.chrome__compassCenterBtn:hover{
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(96, 165, 250, 0.5));
+  border-color: rgba(139, 92, 246, 0.8);
+  transform: scale(1.05);
+}
+
+.chrome__compassCenterIcon{
+  font-size: 1.6rem;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+}
+
+.chrome__compassCenterLabel{
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.chrome__compassDirHint{
+  font-size: 0.5rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
+}
+
+/* ---- WO-4: Spirit Stone Modal ---- */
+.chrome__spiritStoneModal{
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__spiritStoneModal[hidden]{
+  display: none;
+}
+
+.chrome__spiritStoneOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.chrome__spiritStoneContent{
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 320px;
+  background: linear-gradient(135deg, rgba(15, 22, 48, 0.98), rgba(20, 10, 30, 0.98));
+  border: 2px solid rgba(251, 146, 60, 0.4);
+  border-radius: 16px;
+  box-shadow:
+    0 0 40px rgba(251, 146, 60, 0.2),
+    inset 0 0 30px rgba(251, 146, 60, 0.05);
+  overflow: hidden;
+  animation: spiritStoneEnter 0.3s ease-out;
+}
+
+@keyframes spiritStoneEnter{
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.chrome__spiritStoneHeader{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(90deg, rgba(251, 146, 60, 0.15), transparent);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.2);
+}
+
+.chrome__spiritStoneIcon{
+  font-size: 2rem;
+  filter: drop-shadow(0 0 10px rgba(251, 146, 60, 0.6));
+}
+
+.chrome__spiritStoneTitle{
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.chrome__spiritStoneBody{
+  padding: 16px;
+}
+
+.chrome__spiritStoneDesc{
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.chrome__spiritStoneStats{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.chrome__spiritStoneStat{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border-left: 3px solid rgba(251, 146, 60, 0.5);
+}
+
+.chrome__spiritStoneStatLabel{
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chrome__spiritStoneStatValue{
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(251, 191, 36, 0.9);
+}
+
+.chrome__spiritStoneAction{
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.3), rgba(251, 146, 60, 0.2));
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chrome__spiritStoneAction:hover{
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.4), rgba(251, 146, 60, 0.3));
+  border-color: rgba(251, 146, 60, 0.6);
+}
+
+.chrome__spiritStoneClose{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__spiritStoneClose:hover{
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* ---- WO-FIX-4: 3-Column Footer Layout (orb-centric) ---- */
+.chrome__footer--3col{
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  justify-items: center;
+}
+
+.chrome__footerBtn{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.chrome__footerBtn:hover{
+  color: var(--text);
+}
+
+.chrome__footerBtnIcon{
+  font-size: 1.3rem;
+}
+
+.chrome__footerBtnLabel{
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---- WO-5: Energy Source Modal ---- */
+.chrome__energyModal{
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__energyModal[hidden]{
+  display: none;
+}
+
+.chrome__energyOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.chrome__energyContent{
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 360px;
+  max-height: 85vh;
+  background: var(--bg1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalEnter 0.3s ease-out;
+}
+
+@keyframes modalEnter{
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.chrome__energyHeader{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.1), transparent);
+  border-bottom: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.chrome__energyIcon{
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 8px rgba(52, 211, 153, 0.5));
+}
+
+.chrome__energyTitle{
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(52, 211, 153, 0.9);
+}
+
+.chrome__energyClose{
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__energyClose:hover{
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.chrome__energyBody{
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.chrome__energySection{
+  margin-bottom: 16px;
+}
+
+.chrome__energySectionHeader{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.chrome__energyLabel{
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.chrome__energyTotal{
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(251, 146, 60, 0.9);
+}
+
+.chrome__energyInputGroup{
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chrome__energyCurrency{
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chrome__energyInput{
+  flex: 1;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.chrome__energyInput::placeholder{
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.chrome__energyItemList{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.chrome__energyItem{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.chrome__energyItemName{
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.chrome__energyItemValue{
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(251, 146, 60, 0.8);
+}
+
+.chrome__energyItemRemove{
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.2);
+  border: none;
+  color: rgba(239, 68, 68, 0.8);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.chrome__energyItemRemove:hover{
+  opacity: 1;
+}
+
+.chrome__energyAddBtn{
+  width: 100%;
+  padding: 8px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__energyAddBtn:hover{
+  border-color: rgba(52, 211, 153, 0.4);
+  color: rgba(52, 211, 153, 0.8);
+}
+
+.chrome__energyAvailable{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: linear-gradient(90deg, rgba(52, 211, 153, 0.1), rgba(52, 211, 153, 0.05));
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.chrome__energyAvailableLabel{
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chrome__energyAvailableValue{
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: rgba(52, 211, 153, 0.9);
+}
+
+.chrome__energyOverride{
+  margin-bottom: 16px;
+}
+
+.chrome__energyOverrideLabel{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chrome__energyOverrideCheck{
+  width: 16px;
+  height: 16px;
+  accent-color: #8b5cf6;
+}
+
+.chrome__energyLinkBtn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__energyLinkBtn:hover{
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.chrome__energyLinkIcon{
+  font-size: 1.1rem;
+}
+
+/* ---- WO-5: Socials Modal ---- */
+.chrome__socialsModal{
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__socialsModal[hidden]{
+  display: none;
+}
+
+.chrome__socialsOverlay{
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.chrome__socialsContent{
+  position: relative;
+  z-index: 1;
+  width: 90%;
+  max-width: 360px;
+  max-height: 80vh;
+  background: var(--bg1);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalEnter 0.3s ease-out;
+}
+
+.chrome__socialsHeader{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.1), transparent);
+  border-bottom: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.chrome__socialsIcon{
+  font-size: 1.5rem;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.5));
+}
+
+.chrome__socialsTitle{
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(96, 165, 250, 0.9);
+}
+
+.chrome__socialsClose{
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: var(--muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chrome__socialsClose:hover{
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+.chrome__socialsTabs{
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chrome__socialsTab{
+  flex: 1;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__socialsTab:hover{
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.chrome__socialsTab.active{
+  color: rgba(96, 165, 250, 0.9);
+  border-bottom-color: rgba(96, 165, 250, 0.8);
+}
+
+.chrome__socialsBody{
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.chrome__socialsTabContent[hidden]{
+  display: none;
+}
+
+.chrome__socialsList{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.chrome__socialsCard{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.chrome__socialsAvatar{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(96, 165, 250, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.chrome__socialsGuildIcon{
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.3), rgba(251, 191, 36, 0.2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+}
+
+.chrome__socialsInfo{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chrome__socialsName{
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chrome__socialsStatus{
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.chrome__socialsStatus--online{
+  color: rgba(52, 211, 153, 0.9);
+}
+
+.chrome__socialsStatus--offline{
+  color: var(--muted);
+}
+
+.chrome__socialsMembers{
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.chrome__socialsAction{
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__socialsAction:hover{
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.4);
+  color: var(--text);
+}
+
+.chrome__socialsAddBtn{
+  width: 100%;
+  padding: 10px;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chrome__socialsAddBtn:hover{
+  border-color: rgba(96, 165, 250, 0.4);
+  color: rgba(96, 165, 250, 0.8);
+}
+
+/* ---- WO-FIX-3: Screen Transition Animations ---- */
+.surface-transition-wrapper{
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure chrome surface host supports transitions */
+.chrome__surfaceHost{
+  position: relative;
+}
