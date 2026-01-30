@@ -731,30 +731,36 @@ body::after{
 }
 
 /* HUB-E4: Hub Surface — Viewport-Filling Layout (no scroll) */
-/* Vitals (auto) + Map (auto) + Stage (flex fill) */
+/* WO-S7: Bias space - Stage > Vitals > Map */
 .screen-host.bg-cosmic .surface-root{
   flex: 1 1 auto;
   min-height: 0; /* Allow flex shrinking */
-  padding: 6px var(--pad) 16px var(--pad); /* Smaller top (header-vitals), larger bottom (footer-stage) */
+  padding: 4px 10px 12px 10px; /* WO-S7: Reduced padding */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* WO-S7: Reduced gap */
   overflow: hidden; /* Prevent scroll */
 }
 
-/* Stage slot fills remaining space */
+/* Stage slot fills remaining space - priority allocation */
 .screen-host.bg-cosmic .slot[data-slot-id="stage"]{
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 120px; /* Ensure stage always gets reasonable space */
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Vitals and Map stay fixed size */
-.screen-host.bg-cosmic .slot[data-slot-id="vitals"],
+/* WO-S7: Vitals - compact, fixed height */
+.screen-host.bg-cosmic .slot[data-slot-id="vitals"]{
+  flex: 0 0 auto;
+}
+
+/* WO-S10: Map - more vertical space for readability */
 .screen-host.bg-cosmic .slot[data-slot-id="map"]{
   flex: 0 0 auto;
+  min-height: 130px; /* Map gets more vertical space */
+  max-height: 160px;
 }
 
 /* Stage part should fill its slot */
@@ -768,10 +774,15 @@ body::after{
   background: var(--card);
   border: 1px solid var(--cardBorder);
   border-radius: var(--r);
-  padding: var(--pad);
+  padding: 8px; /* WO-S7: Reduced from var(--pad) to save vertical space */
   box-shadow: var(--cardGlow);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* WO-S7: Hub vitals card gets minimal padding (Part handles its own) */
+.screen-host.bg-cosmic .slot-card[data-slot-id="vitals"]{
+  padding: 0;
 }
 
 /* HUB-07/HUB-11: Overlay Slot Support — layering container
@@ -1040,6 +1051,7 @@ body::after{
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto; /* WO-S6: Override pointer-events:none from base rule to enable hub button clicks */
 }
 
 .chrome__compassCenterBtn{
@@ -1062,6 +1074,24 @@ body::after{
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(96, 165, 250, 0.5));
   border-color: rgba(139, 92, 246, 0.8);
   transform: scale(1.05);
+}
+
+/* WO-S6: Current screen highlighting in compass nav */
+.chrome__compassDirection--current,
+.chrome__compassCenterBtn--current{
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.4), rgba(139, 92, 246, 0.4));
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.4), inset 0 0 8px rgba(251, 146, 60, 0.2);
+}
+
+.chrome__compassDirection--current::after,
+.chrome__compassCenterBtn--current::after{
+  content: '●';
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 0.5rem;
+  color: rgba(251, 146, 60, 0.9);
 }
 
 .chrome__compassCenterIcon{

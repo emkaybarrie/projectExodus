@@ -617,6 +617,66 @@ function bindInteractions(root, state, ctx) {
   // WO-HUB-02: Tab toast timeout tracker (closure reference)
   let tabToastTimeoutId = null;
 
+  // WO-S10: Swipe navigation for tab switching
+  const TABS = ['current', 'recent', 'loadout'];
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swipeTracking = false;
+
+  const content = container.querySelector('.BadlandsStage__content');
+  if (content) {
+    content.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      swipeStartX = touch.clientX;
+      swipeStartY = touch.clientY;
+      swipeTracking = true;
+    }, { passive: true });
+
+    content.addEventListener('touchend', (e) => {
+      if (!swipeTracking) return;
+      swipeTracking = false;
+
+      const touch = e.changedTouches[0];
+      const deltaX = touch.clientX - swipeStartX;
+      const deltaY = touch.clientY - swipeStartY;
+      const absDeltaX = Math.abs(deltaX);
+      const absDeltaY = Math.abs(deltaY);
+
+      // Only horizontal swipes, minimum 50px, horizontal > vertical
+      if (absDeltaX > 50 && absDeltaX > absDeltaY * 1.5) {
+        const currentIndex = TABS.indexOf(state.activeTab);
+        let newIndex = currentIndex;
+
+        if (deltaX < 0 && currentIndex < TABS.length - 1) {
+          // Swipe left → next tab
+          newIndex = currentIndex + 1;
+        } else if (deltaX > 0 && currentIndex > 0) {
+          // Swipe right → previous tab
+          newIndex = currentIndex - 1;
+        }
+
+        if (newIndex !== currentIndex) {
+          state.activeTab = TABS[newIndex];
+          render(root, state);
+
+          // Show tab toast
+          const dot = container.querySelector(`[data-tab="${TABS[newIndex]}"]`);
+          if (dot) {
+            const icon = dot.dataset.icon || '';
+            const label = dot.dataset.label || TABS[newIndex];
+            showTabToast(root, icon, label, tabToastTimeoutId, (newTimeoutId) => {
+              tabToastTimeoutId = newTimeoutId;
+            });
+          }
+        }
+      }
+    }, { passive: true });
+
+    content.addEventListener('touchcancel', () => {
+      swipeTracking = false;
+    }, { passive: true });
+  }
+
   // Tab/Dot switching
   container.addEventListener('click', (e) => {
     const dotBtn = e.target.closest('[data-action="switchTab"]');

@@ -5,14 +5,12 @@
 
 import { setTransitionDirection } from './screenTransition.js';
 
-// Direction map for compass navigation (target → transition direction)
-// Transition direction determines where new content enters from:
-// - 'right' = new content enters from LEFT (for westward destinations)
-// - 'left' = new content enters from RIGHT (for eastward destinations)
+// WO-S6: Direction map for compass navigation (target → transition direction)
+// Transition direction determines where new content enters from
 const COMPASS_DIRECTIONS = {
   guidance: 'down',  // Guidance is north, content enters from top
-  quests: 'right',   // Quests is west, content enters from left (swipe right to reveal)
-  avatar: 'left',    // Avatar is east, content enters from right (swipe left to reveal)
+  quests: 'right',   // Quests is west, content enters from left
+  avatar: 'left',    // Avatar is east, content enters from right
   badlands: 'up',    // Badlands is south, content enters from bottom
   hub: null,         // Hub is center, no specific direction
 };
@@ -70,17 +68,17 @@ export function createChrome(chromeHost){
         <div class="chrome__compassOverlay" data-action="closeCompass"></div>
         <div class="chrome__compassContent">
           <div class="chrome__compassCross">
-            <!-- North - Guidance (revealed by swiping down) -->
+            <!-- North - Guidance -->
             <button class="chrome__compassDirection chrome__compassDirection--n" data-nav="guidance" title="Guidance">
               <span class="chrome__compassDirIcon">&#128161;</span>
               <span class="chrome__compassDirLabel">Guidance</span>
-              <span class="chrome__compassDirHint">Swipe Down</span>
+              <span class="chrome__compassDirHint">North</span>
             </button>
-            <!-- West - Quests (revealed by swiping right, pulling from left) -->
+            <!-- West - Quests -->
             <button class="chrome__compassDirection chrome__compassDirection--w" data-nav="quests" title="Quests">
               <span class="chrome__compassDirIcon">&#128218;</span>
               <span class="chrome__compassDirLabel">Quests</span>
-              <span class="chrome__compassDirHint">Swipe Right</span>
+              <span class="chrome__compassDirHint">West</span>
             </button>
             <!-- Center - Hub -->
             <div class="chrome__compassCenter">
@@ -89,17 +87,17 @@ export function createChrome(chromeHost){
                 <span class="chrome__compassCenterLabel">Hub</span>
               </button>
             </div>
-            <!-- East - Avatar (revealed by swiping left, pulling from right) -->
+            <!-- East - Avatar -->
             <button class="chrome__compassDirection chrome__compassDirection--e" data-nav="avatar" title="Avatar">
               <span class="chrome__compassDirIcon">&#128100;</span>
               <span class="chrome__compassDirLabel">Avatar</span>
-              <span class="chrome__compassDirHint">Swipe Left</span>
+              <span class="chrome__compassDirHint">East</span>
             </button>
-            <!-- South - Badlands (revealed by swiping up) -->
+            <!-- South - Badlands -->
             <button class="chrome__compassDirection chrome__compassDirection--s" data-nav="badlands" title="Badlands">
               <span class="chrome__compassDirIcon">&#9876;</span>
               <span class="chrome__compassDirLabel">Badlands</span>
-              <span class="chrome__compassDirHint">Swipe Up</span>
+              <span class="chrome__compassDirHint">South</span>
             </button>
           </div>
           <button class="chrome__compassClose" data-action="closeCompass" title="Close">
@@ -549,9 +547,34 @@ export function createChrome(chromeHost){
   // Compass modal management
   function openCompass() {
     if (els.compassModal) {
+      // WO-S6: Update current screen highlighting
+      updateCompassHighlight();
       els.compassModal.hidden = false;
       els.compassModal.classList.add('chrome__compassModal--open');
     }
+  }
+
+  // WO-S6: Update compass button highlighting based on current route
+  function updateCompassHighlight() {
+    // Remove current class from all nav buttons
+    els.compassNavBtns.forEach(btn => {
+      btn.classList.remove('chrome__compassDirection--current', 'chrome__compassCenterBtn--current');
+    });
+    // Add current class to matching button
+    els.compassNavBtns.forEach(btn => {
+      if (btn.dataset.nav === currentRoute) {
+        if (btn.classList.contains('chrome__compassCenterBtn')) {
+          btn.classList.add('chrome__compassCenterBtn--current');
+        } else {
+          btn.classList.add('chrome__compassDirection--current');
+        }
+      }
+    });
+  }
+
+  // WO-S6: Set current route (called externally or via navigation)
+  function setCurrentRoute(route) {
+    currentRoute = route || 'hub';
   }
 
   function closeCompass() {
@@ -576,7 +599,7 @@ export function createChrome(chromeHost){
     }
   }
 
-  // WO-FIX-1: Navigation Orb - tap vs hold detection (fixed)
+  // WO-S10: Navigation Orb - tap = Spirit Stone, hold = Nav modal (with radial charge)
   let orbHoldTimer = null;
   let orbHeld = false;
   let orbActive = false;
@@ -596,7 +619,8 @@ export function createChrome(chromeHost){
           els.navOrb.classList.remove('chrome__navOrb--pressed');
           els.navOrb.classList.add('chrome__navOrb--held');
         }
-        openSpiritStone();
+        // WO-S10: Hold opens navigation compass modal
+        openCompass();
       }
     }, ORB_HOLD_THRESHOLD);
   }
@@ -615,8 +639,8 @@ export function createChrome(chromeHost){
       orbHoldTimer = null;
     }
     if (!orbHeld) {
-      // Tap action - open compass
-      openCompass();
+      // WO-S10: Tap opens Spirit Stone modal
+      openSpiritStone();
     }
     orbHeld = false;
   }
@@ -743,6 +767,36 @@ export function createChrome(chromeHost){
     btn.addEventListener('click', closeCompass);
   });
 
+  // WO-S6: Navigation handler reference (set by onNav)
+  let navHandler = null;
+  // WO-S6: Track current route for compass highlighting
+  let currentRoute = 'hub';
+
+  // WO-S6: Direct click handlers for ALL compass nav buttons (including hub center)
+  // This is more reliable than event delegation
+  const allCompassNavBtns = chromeHost.querySelectorAll('[data-nav]');
+  allCompassNavBtns.forEach(btn => {
+    // Only handle buttons inside the compass modal
+    if (btn.closest('.chrome__compassModal')) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = btn.dataset.nav;
+        console.log(`[Chrome] Compass nav: ${target}`);
+        closeCompass();
+        if (navHandler) {
+          // WO-S6: Track current route for highlighting
+          currentRoute = target;
+          const direction = COMPASS_DIRECTIONS[target];
+          if (direction) setTransitionDirection(direction);
+          navHandler(target);
+        } else {
+          console.warn('[Chrome] navHandler not set - onNav not called?');
+        }
+      });
+    }
+  });
+
   // Escape key closes modals
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -761,26 +815,23 @@ export function createChrome(chromeHost){
   });
 
   function onNav(handler){
+    // WO-S6: Store handler for event delegation (compass uses this)
+    navHandler = handler;
+
     // Footer nav buttons (excluding compass)
     els.navBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         const target = btn.dataset.nav;
+        // WO-S6: Track current route for highlighting
+        currentRoute = target;
         const direction = COMPASS_DIRECTIONS[target];
         if (direction) setTransitionDirection(direction);
         handler(target);
       });
     });
 
-    // HUB-E2/WO-FIX-3: Compass modal nav buttons with transition support
-    els.compassNavBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        closeCompass();
-        const target = btn.dataset.nav;
-        const direction = COMPASS_DIRECTIONS[target];
-        if (direction) setTransitionDirection(direction);
-        handler(target);
-      });
-    });
+    // WO-S6: Compass navigation now handled via event delegation above
+    console.log('[Chrome] Navigation handler registered');
   }
 
   return {
@@ -797,5 +848,7 @@ export function createChrome(chromeHost){
     openDevConfig,
     closeDevConfig,
     getDevConfig() { return { ...devConfig }; },
+    // WO-S6: Route tracking for compass highlighting
+    setCurrentRoute,
   };
 }

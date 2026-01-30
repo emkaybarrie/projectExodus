@@ -87,13 +87,31 @@
   display: none;
   flex-direction: column;
   overflow: hidden;
+  /* WO-S10: Swipe transition animation */
+  opacity: 0;
+  transform: translateX(20px);
 }
 
-/* Show active tab */
+/* Show active tab with animation */
 .BadlandsStage__container[data-active-tab="current"] .BadlandsStage__tabContent[data-tab="current"],
 .BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__tabContent[data-tab="recent"],
 .BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__tabContent[data-tab="loadout"] {
   display: flex;
+  opacity: 1;
+  transform: translateX(0);
+  animation: tabSlideIn 0.25s ease-out;
+}
+
+/* WO-S10: Tab slide-in animation for swipe feel */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -199,22 +217,12 @@
   border-bottom: 1px solid rgba(180, 140, 80, 0.2);
 }
 
-/* Queue indicator - shows pending episodes as dots */
-/* Positioned at top-right of container, always accessible */
+/* WO-S9: Queue indicator now lives in topBar - base styles only */
 .BadlandsStage__queueIndicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   display: none;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: rgba(26, 16, 37, 0.9);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 16px;
-  z-index: 50;
   animation: queueSlideIn 0.3s ease-out;
-  backdrop-filter: blur(4px);
 }
 
 .BadlandsStage__queueIndicator[data-visible="true"] {
@@ -453,27 +461,11 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* RECENT EVENTS TAB */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.BadlandsStage__recentHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.BadlandsStage__recentIcon {
-  font-size: 1.3rem;
-  color: #d4a853;
-}
-
+/* WO-S8: Headers removed for cinematic feel - styles kept for reference */
+.BadlandsStage__recentHeader,
+.BadlandsStage__recentIcon,
 .BadlandsStage__recentTitle {
-  font-family: 'Cinzel', Georgia, serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: rgba(240, 230, 210, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  display: none;
 }
 
 .BadlandsStage__recentList {
@@ -565,27 +557,11 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* LOADOUT TAB */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.BadlandsStage__loadoutHeader {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.BadlandsStage__loadoutIcon {
-  font-size: 1.3rem;
-  color: #d4a853;
-}
-
+/* WO-S8: Headers removed for cinematic feel - styles kept for reference */
+.BadlandsStage__loadoutHeader,
+.BadlandsStage__loadoutIcon,
 .BadlandsStage__loadoutTitle {
-  font-family: 'Cinzel', Georgia, serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: rgba(240, 230, 210, 0.9);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  display: none;
 }
 
 .BadlandsStage__loadoutSections {
@@ -669,23 +645,59 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* DOT NAVIGATION (WO-HUB-02: Replaced tab buttons with centered dots) */
+/* WO-S9: TOP BORDER ROW - Thin bar with queue indicator pinned right */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.BadlandsStage__dotNav {
+.BadlandsStage__topBar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  background: rgba(10, 8, 18, 0.6);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
+  flex-shrink: 0;
+  z-index: 3;
+}
+
+/* Queue indicator now inside topBar */
+.BadlandsStage__topBar .BadlandsStage__queueIndicator {
+  position: static;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.BadlandsStage__topBar .BadlandsStage__queueIndicator[data-visible="false"] {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-S9: BOTTOM BORDER ROW - Centered radio dots */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__bottomBar {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
-  padding: 10px 8px;
-  background: rgba(10, 8, 18, 0.85);
+  height: 28px;
+  background: rgba(10, 8, 18, 0.6);
   border-top: 1px solid rgba(180, 140, 80, 0.15);
   flex-shrink: 0;
   z-index: 3;
 }
 
+.BadlandsStage__dotNav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .BadlandsStage__dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   padding: 0;
   background: rgba(180, 140, 80, 0.25);
   border: 1px solid rgba(180, 140, 80, 0.3);
@@ -717,8 +729,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .BadlandsStage__tabToast {
   position: absolute;
-  bottom: 50px;
-  left: 12px;
+  bottom: 40px; /* WO-S9: Positioned above bottomBar */
+  left: 50%;
+  transform: translateX(-50%) translateY(8px); /* WO-S9: Centered horizontally */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -736,7 +749,7 @@
 
 .BadlandsStage__tabToast[data-visible="true"] {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0); /* WO-S9: Keep centered */
 }
 
 .BadlandsStage__tabToastIcon {
@@ -940,19 +953,27 @@
     font-size: 0.8rem;
   }
 
+  /* WO-S9: Compact bars for small screens */
+  .BadlandsStage__topBar {
+    height: 20px;
+    padding: 0 6px;
+  }
+
+  .BadlandsStage__bottomBar {
+    height: 24px;
+  }
+
   .BadlandsStage__dotNav {
-    padding: 8px 6px;
     gap: 10px;
   }
 
   .BadlandsStage__dot {
-    width: 9px;
-    height: 9px;
+    width: 7px;
+    height: 7px;
   }
 
   .BadlandsStage__tabToast {
-    bottom: 44px;
-    left: 10px;
+    bottom: 32px;
     padding: 6px 12px;
   }
 
@@ -979,13 +1000,22 @@
     font-size: 2.5rem;
   }
 
+  /* WO-S9: Compact bars for landscape */
+  .BadlandsStage__topBar {
+    height: 18px;
+    padding: 0 4px;
+  }
+
+  .BadlandsStage__bottomBar {
+    height: 22px;
+  }
+
   .BadlandsStage__dotNav {
-    padding: 6px 6px;
-    gap: 10px;
+    gap: 8px;
   }
 
   .BadlandsStage__dot {
-    width: 8px;
+    width: 6px;
     height: 8px;
   }
 

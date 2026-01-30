@@ -73,14 +73,14 @@ const chrome = createChrome(appRoot);
 // Initialize modal manager with chrome modal host
 modalManager.init(chrome.modalHostEl);
 
-// Decide initial surface before router boots
+// WO-S6: Always start on hub (demo mode - skip auth check)
 if (!location.hash) {
-  location.hash = session.isAuthed() ? '#hub' : '#start';
+  location.hash = '#hub';
 }
 
 const router = createRouter({
   hostEl: chrome.hostEl,
-  defaultSurfaceId: session.isAuthed() ? 'hub' : 'start',
+  defaultSurfaceId: 'hub', // WO-S6: Always default to hub (demo mode)
   ctx: {
     chrome,
     session,
@@ -90,13 +90,22 @@ const router = createRouter({
 // Wire chrome footer nav to router
 chrome.onNav((id) => router.navigate(id));
 
-// Initialize swipe navigation for cross-screen gestures
-ensureGlobalCSS('swipeNav', '../src/core/swipeNav.css');
-const swipeNav = createSwipeNav(chrome.hostEl, {
-  navigate: (surfaceId) => router.navigate(surfaceId),
-  getCurrentRoute: () => location.hash.replace(/^#/, '') || 'hub'
+// WO-S6: Sync current route with chrome for compass highlighting
+window.addEventListener('hashchange', () => {
+  const route = location.hash.replace(/^#/, '') || 'hub';
+  chrome.setCurrentRoute(route);
 });
-console.log('[App] Swipe navigation initialized');
+// Set initial route
+chrome.setCurrentRoute(location.hash.replace(/^#/, '') || 'hub');
+
+// WO-S6: Swipe navigation DISABLED - navigation via modal only
+// ensureGlobalCSS('swipeNav', '../src/core/swipeNav.css');
+// const swipeNav = createSwipeNav(chrome.hostEl, {
+//   navigate: (surfaceId) => router.navigate(surfaceId),
+//   getCurrentRoute: () => location.hash.replace(/^#/, '') || 'hub'
+// });
+// console.log('[App] Swipe navigation initialized');
+console.log('[App] WO-S6: Swipe navigation disabled - use compass modal for navigation');
 
 // Initialize journey runner with context
 journeyRunner.init({
@@ -121,7 +130,8 @@ window.__MYFI_DEBUG__ = {
   journeyRunner,
   router,
   hubController,
-  swipeNav,
+  // WO-S6: swipeNav disabled - navigation via modal only
+  swipeNav: null,
   // WO-STAGE-EPISODES-V1: Episode system
   stageSignals,
   episodeRunner,

@@ -1,13 +1,16 @@
 <!-- PlayerHeader baseline.html — HUB Refactor: Vitals + Essence -->
-<!-- Row 0: Avatar name/title -->
+<!-- WO-S7: Row 0: Name (left) | Class + Guild (right) -->
 <!-- Row 1: Avatar | Vitals bars -->
 <!-- Row 2: Essence bar (full width) -->
 
 <div class="PlayerHeader__container">
-  <!-- WO-HUB-03: Avatar name row (moved from chrome header) -->
+  <!-- WO-S7: Header row - Name left, Class/Guild right -->
   <div class="PlayerHeader__nameRow">
-    <span class="PlayerHeader__avatarName" data-bind="avatarName">Wanderer</span>
-    <span class="PlayerHeader__avatarTitle" data-bind="avatarTitle">of the Badlands</span>
+    <span class="PlayerHeader__avatarName" data-bind="avatarName">Azakai</span>
+    <div class="PlayerHeader__classGuild">
+      <span class="PlayerHeader__class" data-bind="playerClass">WANDERER</span>
+      <span class="PlayerHeader__guildText" data-bind="guildText">of the Badlands</span>
+    </div>
   </div>
 
   <!-- Row 1: Avatar + Vitals -->
