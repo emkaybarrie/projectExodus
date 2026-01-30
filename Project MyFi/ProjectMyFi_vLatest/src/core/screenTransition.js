@@ -96,7 +96,7 @@ export function animateTransition(hostEl, oldContent, newContent, direction) {
     setTimeout(() => {
       if (oldContent.parentNode) oldContent.remove();
 
-      // Reset new content positioning
+      // Reset new content positioning but preserve flex container behavior
       newContent.style.position = '';
       newContent.style.top = '';
       newContent.style.left = '';
@@ -105,8 +105,9 @@ export function animateTransition(hostEl, oldContent, newContent, direction) {
       newContent.style.transform = '';
       newContent.style.transition = '';
       newContent.style.zIndex = '';
-      newContent.style.width = '';
-      newContent.style.height = '';
+      // Preserve full dimensions for flex layout
+      newContent.style.width = '100%';
+      newContent.style.height = '100%';
 
       // Reset host
       hostEl.style.overflow = '';

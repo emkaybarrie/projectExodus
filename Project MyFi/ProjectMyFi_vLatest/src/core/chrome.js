@@ -5,12 +5,15 @@
 
 import { setTransitionDirection } from './screenTransition.js';
 
-// Direction map for compass navigation (target → swipe direction)
+// Direction map for compass navigation (target → transition direction)
+// Transition direction determines where new content enters from:
+// - 'right' = new content enters from LEFT (for westward destinations)
+// - 'left' = new content enters from RIGHT (for eastward destinations)
 const COMPASS_DIRECTIONS = {
-  guidance: 'down',  // Guidance is north, revealed by swiping down
-  avatar: 'left',    // Avatar is west, revealed by swiping left
-  quests: 'right',   // Quests is east, revealed by swiping right
-  badlands: 'up',    // Badlands is south, revealed by swiping up
+  guidance: 'down',  // Guidance is north, content enters from top
+  quests: 'right',   // Quests is west, content enters from left (swipe right to reveal)
+  avatar: 'left',    // Avatar is east, content enters from right (swipe left to reveal)
+  badlands: 'up',    // Badlands is south, content enters from bottom
   hub: null,         // Hub is center, no specific direction
 };
 
@@ -68,11 +71,11 @@ export function createChrome(chromeHost){
               <span class="chrome__compassDirLabel">Guidance</span>
               <span class="chrome__compassDirHint">Swipe Down</span>
             </button>
-            <!-- West - Avatar (revealed by swiping left) -->
-            <button class="chrome__compassDirection chrome__compassDirection--w" data-nav="avatar" title="Avatar">
-              <span class="chrome__compassDirIcon">&#128100;</span>
-              <span class="chrome__compassDirLabel">Avatar</span>
-              <span class="chrome__compassDirHint">Swipe Left</span>
+            <!-- West - Quests (revealed by swiping right, pulling from left) -->
+            <button class="chrome__compassDirection chrome__compassDirection--w" data-nav="quests" title="Quests">
+              <span class="chrome__compassDirIcon">&#128218;</span>
+              <span class="chrome__compassDirLabel">Quests</span>
+              <span class="chrome__compassDirHint">Swipe Right</span>
             </button>
             <!-- Center - Hub -->
             <div class="chrome__compassCenter">
@@ -81,11 +84,11 @@ export function createChrome(chromeHost){
                 <span class="chrome__compassCenterLabel">Hub</span>
               </button>
             </div>
-            <!-- East - Quests (revealed by swiping right) -->
-            <button class="chrome__compassDirection chrome__compassDirection--e" data-nav="quests" title="Quests">
-              <span class="chrome__compassDirIcon">&#128218;</span>
-              <span class="chrome__compassDirLabel">Quests</span>
-              <span class="chrome__compassDirHint">Swipe Right</span>
+            <!-- East - Avatar (revealed by swiping left, pulling from right) -->
+            <button class="chrome__compassDirection chrome__compassDirection--e" data-nav="avatar" title="Avatar">
+              <span class="chrome__compassDirIcon">&#128100;</span>
+              <span class="chrome__compassDirLabel">Avatar</span>
+              <span class="chrome__compassDirHint">Swipe Left</span>
             </button>
             <!-- South - Badlands (revealed by swiping up) -->
             <button class="chrome__compassDirection chrome__compassDirection--s" data-nav="badlands" title="Badlands">

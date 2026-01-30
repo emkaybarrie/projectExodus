@@ -48,8 +48,7 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
         // Create wrapper for new content and add to DOM first (hidden)
         const newWrapper = document.createElement('div');
         newWrapper.className = 'surface-transition-wrapper';
-        newWrapper.style.visibility = 'hidden';
-        newWrapper.style.position = 'absolute';
+        newWrapper.style.cssText = 'visibility:hidden;position:absolute;inset:0;display:flex;flex-direction:column;';
         hostEl.appendChild(newWrapper);
 
         // Mount new surface into wrapper (now in DOM)
@@ -61,11 +60,13 @@ export function createRouter({ hostEl, defaultSurfaceId = 'start', ctx = {} }){
 
         // Make visible and perform animated transition
         newWrapper.style.visibility = '';
-        newWrapper.style.position = '';
         await animateTransition(hostEl, oldContent, newWrapper, transitionDir);
 
         // Cleanup old surface after animation
         try { current?.unmount?.(); } catch(e){ console.warn('unmount failed', e); }
+
+        // Ensure wrapper has correct flex styling after animation cleanup
+        newWrapper.style.cssText = 'display:flex;flex-direction:column;width:100%;height:100%;';
 
         current = { id: surfaceId, unmount: api?.unmount };
       } else {

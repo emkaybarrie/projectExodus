@@ -114,7 +114,15 @@ function renderPortrait(root, portraitUrl) {
 
   // Default fallback path (relative to part location)
   const defaultUrl = new URL('../../../../assets/art/portraits/default.svg', import.meta.url).href;
-  const targetUrl = portraitUrl || defaultUrl;
+
+  // Resolve VM path (relative to document base) to absolute URL
+  // VM paths like '../assets/art/portraits/player.png' are relative to index.html
+  let targetUrl;
+  if (portraitUrl) {
+    targetUrl = new URL(portraitUrl, document.baseURI).href;
+  } else {
+    targetUrl = defaultUrl;
+  }
 
   // Only update if changed
   if (portraitEl.src !== targetUrl) {
