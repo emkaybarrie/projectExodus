@@ -9,6 +9,92 @@ async function fetchText(url) {
   return await res.text();
 }
 
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`fetchJSON failed ${res.status} for ${url}`);
+  return await res.json();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// World State Background System
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// World state cycle order (loop)
+const WORLD_STATE_CYCLE = ['rest', 'patrol', 'explore', 'return', 'city'];
+
+// Background folders for each state
+const BG_FOLDER_BASE = '../../../../assets/art/stages/';
+const STATE_FOLDERS = {
+  combat: 'combat/',
+  rest: 'rest/',
+  patrol: 'patrol/',
+  explore: 'explore/',
+  return: 'return/',
+  city: 'city/',
+};
+
+// Fallback images for each state
+const STATE_FALLBACKS = {
+  combat: 'wardwatch-combat-01.png',
+  rest: 'wardwatch-rest-01.png',
+  patrol: 'wardwatch-patrol-01.png',
+  explore: 'wardwatch-explore-01.png',
+  return: 'wardwatch-return-01.png',
+  city: 'wardwatch-city-01.png',
+};
+
+// Background manifests cache (loaded once per state)
+const backgroundsCache = {};
+
+async function loadStateBackgrounds(stateName, baseUrl) {
+  if (backgroundsCache[stateName]) return backgroundsCache[stateName];
+
+  const folder = STATE_FOLDERS[stateName];
+  if (!folder) {
+    console.warn(`[BadlandsStage] Unknown state: ${stateName}`);
+    backgroundsCache[stateName] = [];
+    return [];
+  }
+
+  try {
+    const manifestUrl = new URL(BG_FOLDER_BASE + folder + 'manifest.json', baseUrl).href;
+    const manifest = await fetchJSON(manifestUrl);
+    backgroundsCache[stateName] = manifest.backgrounds || [];
+    console.log(`[BadlandsStage] Loaded ${backgroundsCache[stateName].length} backgrounds for state: ${stateName}`);
+  } catch (err) {
+    console.warn(`[BadlandsStage] Failed to load ${stateName} backgrounds manifest, using fallback`, err);
+    backgroundsCache[stateName] = [STATE_FALLBACKS[stateName]];
+  }
+
+  return backgroundsCache[stateName];
+}
+
+async function loadAllStateBackgrounds(baseUrl) {
+  const allStates = [...WORLD_STATE_CYCLE, 'combat'];
+  await Promise.all(allStates.map(state => loadStateBackgrounds(state, baseUrl)));
+}
+
+function getRandomBackground(stateName, baseUrl) {
+  const backgrounds = backgroundsCache[stateName] || [];
+  const folder = STATE_FOLDERS[stateName] || 'patrol/';
+  const fallback = STATE_FALLBACKS[stateName] || 'wardwatch-patrol-01.png';
+
+  if (backgrounds.length === 0) {
+    return new URL(BG_FOLDER_BASE + folder + fallback, baseUrl).href;
+  }
+
+  const randomIndex = Math.floor(Math.random() * backgrounds.length);
+  const filename = backgrounds[randomIndex];
+  return new URL(BG_FOLDER_BASE + folder + filename, baseUrl).href;
+}
+
+function getNextWorldState(currentState) {
+  const currentIndex = WORLD_STATE_CYCLE.indexOf(currentState);
+  if (currentIndex === -1) return WORLD_STATE_CYCLE[0]; // Default to first state
+  const nextIndex = (currentIndex + 1) % WORLD_STATE_CYCLE.length;
+  return WORLD_STATE_CYCLE[nextIndex];
+}
+
 export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Load CSS
   const cssUrl = new URL('./uplift.css', import.meta.url).href;
@@ -23,6 +109,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   root.innerHTML = html;
 
   host.appendChild(root);
+
+  // Pre-load all state backgrounds manifests
+  await loadAllStateBackgrounds(import.meta.url);
 
   // Combat settings (can be overridden by dev config)
   const DEFAULT_ENCOUNTER_DURATION = 30; // seconds (default, can be overridden)
@@ -61,7 +150,76 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     enemyHpCurrent: 100,
     enemyHpMax: 100,
     enemyBaseDamage: 15,
+    // World state system
+    worldState: 'patrol', // rest | patrol | explore | return | city
+    worldStateTimerId: null,
+    currentBgUrl: null, // Current background URL (for any state)
   };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // World State Transition System
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  function getWorldStateConfig() {
+    const devConfig = getDevConfig();
+    return {
+      minTransitionTime: devConfig.worldStateMinTime || 30, // seconds
+      maxTransitionTime: devConfig.worldStateMaxTime || 90, // seconds
+      randomizeOnStateChange: devConfig.worldStateRandomizeBg !== false, // default true
+    };
+  }
+
+  function getRandomTransitionTime() {
+    const config = getWorldStateConfig();
+    const range = config.maxTransitionTime - config.minTransitionTime;
+    return (config.minTransitionTime + Math.random() * range) * 1000; // ms
+  }
+
+  function selectBackgroundForState(stateName) {
+    const config = getWorldStateConfig();
+    if (config.randomizeOnStateChange) {
+      return getRandomBackground(stateName, import.meta.url);
+    }
+    // If not randomizing, keep current if same state type, else pick random
+    if (state.currentBgUrl && state.worldState === stateName) {
+      return state.currentBgUrl;
+    }
+    return getRandomBackground(stateName, import.meta.url);
+  }
+
+  function transitionToNextWorldState() {
+    if (state.stageMode === 'encounter_autobattler') {
+      // Don't transition during combat, timer will restart after combat
+      return;
+    }
+
+    const nextState = getNextWorldState(state.worldState);
+    state.worldState = nextState;
+    state.currentBgUrl = selectBackgroundForState(nextState);
+    render(root, state);
+    console.log(`[BadlandsStage] World state transitioned to: ${nextState}`);
+
+    // Schedule next transition
+    scheduleWorldStateTransition();
+  }
+
+  function scheduleWorldStateTransition() {
+    stopWorldStateTimer();
+    const delay = getRandomTransitionTime();
+    state.worldStateTimerId = setTimeout(transitionToNextWorldState, delay);
+    console.log(`[BadlandsStage] Next world state transition in ${(delay / 1000).toFixed(1)}s`);
+  }
+
+  function stopWorldStateTimer() {
+    if (state.worldStateTimerId) {
+      clearTimeout(state.worldStateTimerId);
+      state.worldStateTimerId = null;
+    }
+  }
+
+  // Initialize world state background and start transition timer
+  state.currentBgUrl = selectBackgroundForState(state.worldState);
+  scheduleWorldStateTransition();
 
   // Combat simulation functions
   function startEncounterTimer() {
@@ -213,8 +371,12 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     // Encounter spawned (from autobattler)
     unsubscribers.push(
       ctx.actionBus.subscribe('autobattler:spawn', (encounter) => {
+        // Pause world state transitions during combat
+        stopWorldStateTimer();
+
         state.stageMode = 'encounter_autobattler';
         state.currentEncounter = encounter;
+        state.currentBgUrl = getRandomBackground('combat', import.meta.url); // Random combat background
         state.activeTab = 'current'; // Switch to current tab
         render(root, state);
         startEncounterTimer(); // Start countdown
@@ -242,7 +404,13 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         }
         state.stageMode = 'world';
         state.currentEncounter = null;
+
+        // Restore world state background (stay on same world state per requirement C)
+        state.currentBgUrl = selectBackgroundForState(state.worldState);
         render(root, state);
+
+        // Resume world state transitions
+        scheduleWorldStateTransition();
       })
     );
 
@@ -250,7 +418,8 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
   return {
     unmount() {
-      stopEncounterTimer(); // Clean up timer
+      stopEncounterTimer(); // Clean up combat timer
+      stopWorldStateTimer(); // Clean up world state timer
       unsubscribers.forEach(unsub => {
         if (typeof unsub === 'function') unsub();
       });
@@ -359,20 +528,16 @@ function render(root, state) {
   if (!container) return;
 
   // Set stage background URL via CSS custom property
-  // Switch between idle and combat backgrounds based on encounter state
-  // Combat mode always uses combat background; idle mode can use VM override
-  // VM paths are relative to index.html, so resolve them to absolute URLs
-  // (CSS url() resolves relative to stylesheet, not document)
-  let stageBgUrl;
-  if (state.stageMode === 'encounter_autobattler') {
-    // Combat mode: always use combat background
-    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch-combat.png', import.meta.url).href;
-  } else if (state.stageBgUrl) {
-    // World mode with VM override
+  // Background is managed by world state system (combat or world states: rest, patrol, explore, return, city)
+  // state.currentBgUrl is set by world state transitions or combat spawn
+  let stageBgUrl = state.currentBgUrl;
+  if (!stageBgUrl && state.stageBgUrl) {
+    // VM override (legacy support)
     stageBgUrl = new URL(state.stageBgUrl, document.baseURI).href;
-  } else {
-    // World mode: use idle background
-    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch-idle.png', import.meta.url).href;
+  }
+  if (!stageBgUrl) {
+    // Fallback to current world state
+    stageBgUrl = getRandomBackground(state.worldState, import.meta.url);
   }
   container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
 
