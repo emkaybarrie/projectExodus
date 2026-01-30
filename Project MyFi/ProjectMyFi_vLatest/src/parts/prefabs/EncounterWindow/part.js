@@ -84,16 +84,24 @@ function bindInteractions(root, data, ctx) {
   }
 
   // HUB-12: DEV-only spawn trigger (visible only when __MYFI_DEBUG__ exists)
+  // WO-STAGE-EPISODES-V1: Updated to use Episode system
   const devSpawnBtn = root.querySelector('.EncounterWindow__devSpawnBtn');
   if (devSpawnBtn && typeof window !== 'undefined' && window.__MYFI_DEBUG__) {
     devSpawnBtn.hidden = false;
     devSpawnBtn.addEventListener('click', () => {
-      const hubController = window.__MYFI_DEBUG__?.hubController;
-      if (hubController && hubController.forceEncounter) {
-        hubController.forceEncounter();
-        console.log('[EncounterWindow] DEV: Spawned test encounter');
+      const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
+      if (emitDemoSignal) {
+        emitDemoSignal();
+        console.log('[EncounterWindow] DEV: Spawned episode via Episode system');
       } else {
-        console.warn('[EncounterWindow] DEV: hubController.forceEncounter not available');
+        // Fallback to legacy
+        const hubController = window.__MYFI_DEBUG__?.hubController;
+        if (hubController && hubController.forceEncounter) {
+          hubController.forceEncounter();
+          console.log('[EncounterWindow] DEV: Spawned test encounter (legacy)');
+        } else {
+          console.warn('[EncounterWindow] DEV: Episode system not available');
+        }
       }
     });
   }

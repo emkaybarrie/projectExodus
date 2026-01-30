@@ -24,7 +24,7 @@
   overflow: hidden;
 }
 
-/* Illustrated background layer — only visible on Current tab */
+/* WO-HUB-04: Illustrated background layer with smooth crossfade transition */
 .BadlandsStage__container::before {
   content: '';
   position: absolute;
@@ -36,7 +36,7 @@
   filter: brightness(0.75) saturate(0.9);
   z-index: 0;
   opacity: 1;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s ease, background-image 0.4s ease-out;
 }
 
 /* Hide background on Recent and Loadout tabs */
@@ -197,6 +197,89 @@
   padding: 12px 16px;
   background: rgba(0, 0, 0, 0.35);
   border-bottom: 1px solid rgba(180, 140, 80, 0.2);
+}
+
+/* Queue indicator - shows pending episodes as dots */
+/* Positioned at top-right of container, always accessible */
+.BadlandsStage__queueIndicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(26, 16, 37, 0.9);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 16px;
+  z-index: 50;
+  animation: queueSlideIn 0.3s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.BadlandsStage__queueIndicator[data-visible="true"] {
+  display: flex;
+}
+
+@keyframes queueSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.BadlandsStage__queueLabel {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.7rem;
+  color: rgba(139, 92, 246, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__queueDots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.BadlandsStage__queueDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.6);
+  animation: queueDotPulse 1.5s ease-in-out infinite;
+}
+
+.BadlandsStage__queueDot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.BadlandsStage__queueDot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.BadlandsStage__queueDot--plus {
+  width: auto;
+  height: auto;
+  background: none;
+  font-size: 0.65rem;
+  color: rgba(139, 92, 246, 0.7);
+  animation: none;
+}
+
+@keyframes queueDotPulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .BadlandsStage__encounterIcon {
@@ -586,53 +669,88 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* TAB BAR (in layout flow - content sits above tabs) */
+/* DOT NAVIGATION (WO-HUB-02: Replaced tab buttons with centered dots) */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.BadlandsStage__tabBar {
+.BadlandsStage__dotNav {
   display: flex;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 8px;
-  background: rgba(10, 8, 18, 0.9);
-  border-top: 1px solid rgba(180, 140, 80, 0.2);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px;
+  background: rgba(10, 8, 18, 0.85);
+  border-top: 1px solid rgba(180, 140, 80, 0.15);
   flex-shrink: 0;
   z-index: 3;
 }
 
-.BadlandsStage__tab {
+.BadlandsStage__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  background: rgba(180, 140, 80, 0.25);
+  border: 1px solid rgba(180, 140, 80, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.BadlandsStage__dot:hover {
+  background: rgba(180, 140, 80, 0.45);
+  border-color: rgba(180, 140, 80, 0.5);
+  transform: scale(1.15);
+}
+
+.BadlandsStage__dot--active {
+  background: #d4a853;
+  border-color: #d4a853;
+  box-shadow: 0 0 6px rgba(212, 168, 83, 0.5);
+}
+
+.BadlandsStage__dot--active:hover {
+  background: #d4a853;
+  border-color: #d4a853;
+  transform: scale(1.1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* TAB TOAST (WO-HUB-02: Shows icon + label on tab change) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__tabToast {
+  position: absolute;
+  bottom: 50px;
+  left: 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  min-height: 32px;
-  background: none;
-  border: none;
-  border-radius: 16px;
-  color: rgba(240, 230, 210, 0.5);
-  font-family: 'Cinzel', Georgia, serif;
-  cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(15, 10, 25, 0.92);
+  border: 1px solid rgba(180, 140, 80, 0.25);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
-.BadlandsStage__tab:hover {
-  color: rgba(240, 230, 210, 0.8);
-  background: rgba(180, 140, 80, 0.15);
+.BadlandsStage__tabToast[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.BadlandsStage__tab--active {
+.BadlandsStage__tabToastIcon {
+  font-size: 1.1rem;
   color: #d4a853;
-  background: rgba(180, 140, 80, 0.2);
 }
 
-.BadlandsStage__tabIcon {
-  font-size: 0.95rem;
-}
-
-.BadlandsStage__tabLabel {
-  font-size: 0.6rem;
+.BadlandsStage__tabToastLabel {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.75rem;
   font-weight: 600;
+  color: rgba(240, 230, 210, 0.9);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -822,13 +940,28 @@
     font-size: 0.8rem;
   }
 
-  .BadlandsStage__tabLabel {
-    font-size: 0.55rem;
+  .BadlandsStage__dotNav {
+    padding: 8px 6px;
+    gap: 10px;
   }
 
-  .BadlandsStage__tab {
-    min-height: 28px;
-    padding: 5px 10px;
+  .BadlandsStage__dot {
+    width: 9px;
+    height: 9px;
+  }
+
+  .BadlandsStage__tabToast {
+    bottom: 44px;
+    left: 10px;
+    padding: 6px 12px;
+  }
+
+  .BadlandsStage__tabToastIcon {
+    font-size: 1rem;
+  }
+
+  .BadlandsStage__tabToastLabel {
+    font-size: 0.7rem;
   }
 }
 
@@ -846,17 +979,19 @@
     font-size: 2.5rem;
   }
 
-  .BadlandsStage__tab {
-    min-height: 26px;
-    padding: 4px 8px;
+  .BadlandsStage__dotNav {
+    padding: 6px 6px;
+    gap: 10px;
   }
 
-  .BadlandsStage__tabIcon {
-    font-size: 0.85rem;
+  .BadlandsStage__dot {
+    width: 8px;
+    height: 8px;
   }
 
-  .BadlandsStage__tabBar {
-    padding: 4px 6px;
+  .BadlandsStage__tabToast {
+    bottom: 38px;
+    padding: 5px 10px;
   }
 }
 
@@ -872,7 +1007,238 @@
   min-height: 44px;
 }
 
-/* Tab bar uses smaller touch targets for compact design */
-.BadlandsStage__tab {
-  min-height: 32px;
+/* Dot nav uses larger touch area via ::after pseudo-element */
+.BadlandsStage__dot {
+  position: relative;
+}
+
+.BadlandsStage__dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* EPISODE SLOW-TIME OVERLAY (WO-STAGE-EPISODES-V1) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__slowTime {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.BadlandsStage__slowTime[data-visible="true"] {
+  display: flex;
+  animation: slowTimeFadeIn 0.4s ease;
+}
+
+@keyframes slowTimeFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.BadlandsStage__slowTimeOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 21, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.BadlandsStage__slowTimeContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 320px;
+  width: 100%;
+}
+
+/* Episode Caption */
+.BadlandsStage__episodeCaption {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+  color: rgba(240, 230, 210, 0.9);
+  text-align: center;
+  padding: 12px 16px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px;
+}
+
+/* Tagging Prompt */
+.BadlandsStage__taggingPrompt {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.BadlandsStage__taggingQuestion {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
+  text-align: center;
+  margin: 0;
+}
+
+.BadlandsStage__taggingOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsStage__taggingOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(25, 20, 35, 0.8);
+  border: 1px solid rgba(180, 140, 80, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.BadlandsStage__taggingOption:hover {
+  background: rgba(180, 140, 80, 0.15);
+  border-color: rgba(180, 140, 80, 0.4);
+  transform: translateX(4px);
+}
+
+.BadlandsStage__taggingOption:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+.BadlandsStage__taggingOptionIcon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* Vital-colored icons */
+.BadlandsStage__taggingOption[data-choice="health"] .BadlandsStage__taggingOptionIcon {
+  background: rgba(196, 80, 80, 0.3);
+  color: #e08080;
+}
+.BadlandsStage__taggingOption[data-choice="mana"] .BadlandsStage__taggingOptionIcon {
+  background: rgba(80, 144, 196, 0.3);
+  color: #80b0e0;
+}
+.BadlandsStage__taggingOption[data-choice="stamina"] .BadlandsStage__taggingOptionIcon {
+  background: rgba(80, 196, 80, 0.3);
+  color: #80e080;
+}
+.BadlandsStage__taggingOption[data-choice="wardfire"] .BadlandsStage__taggingOptionIcon {
+  background: rgba(196, 148, 61, 0.3);
+  color: #d4a853;
+}
+.BadlandsStage__taggingOption[data-choice="unknown"] .BadlandsStage__taggingOptionIcon {
+  background: rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+}
+
+.BadlandsStage__taggingOptionContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.BadlandsStage__taggingOptionLabel {
+  display: block;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
+}
+
+.BadlandsStage__taggingOptionHint {
+  display: block;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.75rem;
+  color: rgba(240, 230, 210, 0.5);
+  margin-top: 2px;
+}
+
+/* Slow-Time Timer */
+.BadlandsStage__slowTimeTimer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.BadlandsStage__slowTimeTimerBar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.BadlandsStage__slowTimeTimerFill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+  border-radius: 2px;
+  transition: width 1s linear;
+  width: 100%;
+}
+
+.BadlandsStage__slowTimeTimerLabel {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.7rem;
+  color: rgba(240, 230, 210, 0.5);
+}
+
+/* Skip Button */
+.BadlandsStage__slowTimeSkip {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  border-radius: 6px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.8rem;
+  color: rgba(240, 230, 210, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.BadlandsStage__slowTimeSkip:hover {
+  border-color: rgba(240, 230, 210, 0.4);
+  color: rgba(240, 230, 210, 0.8);
+}
+
+/* Responsive */
+@media (max-width: 360px) {
+  .BadlandsStage__taggingOption {
+    padding: 10px 12px;
+  }
+
+  .BadlandsStage__taggingOptionIcon {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .BadlandsStage__episodeCaption {
+    font-size: 0.9rem;
+    padding: 10px 14px;
+  }
 }

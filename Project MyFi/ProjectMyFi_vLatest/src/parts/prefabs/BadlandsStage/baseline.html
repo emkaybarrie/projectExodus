@@ -128,21 +128,28 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- TAB BAR (bottom) -->
+  <!-- QUEUE INDICATOR (WO-STAGE-EPISODES-V1: Shows pending episodes) -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="BadlandsStage__tabBar">
-    <button class="BadlandsStage__tab BadlandsStage__tab--active" data-action="switchTab" data-tab="current">
-      <span class="BadlandsStage__tabIcon">&#127758;</span>
-      <span class="BadlandsStage__tabLabel">Current</span>
-    </button>
-    <button class="BadlandsStage__tab" data-action="switchTab" data-tab="recent">
-      <span class="BadlandsStage__tabIcon">&#128220;</span>
-      <span class="BadlandsStage__tabLabel">Recent</span>
-    </button>
-    <button class="BadlandsStage__tab" data-action="switchTab" data-tab="loadout">
-      <span class="BadlandsStage__tabIcon">&#9876;</span>
-      <span class="BadlandsStage__tabLabel">Loadout</span>
-    </button>
+  <div class="BadlandsStage__queueIndicator" data-visible="false" data-bind="queueIndicator">
+    <span class="BadlandsStage__queueLabel">Queued:</span>
+    <div class="BadlandsStage__queueDots" data-bind="queueDots">
+      <!-- Dots rendered dynamically -->
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- DOT NAVIGATION (WO-HUB-02: Replaced tab buttons with centered dots) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="BadlandsStage__dotNav">
+    <button class="BadlandsStage__dot BadlandsStage__dot--active" data-action="switchTab" data-tab="current" data-icon="&#127758;" data-label="Current" aria-label="Current Event"></button>
+    <button class="BadlandsStage__dot" data-action="switchTab" data-tab="recent" data-icon="&#128220;" data-label="Recent" aria-label="Recent Events"></button>
+    <button class="BadlandsStage__dot" data-action="switchTab" data-tab="loadout" data-icon="&#9876;" data-label="Loadout" aria-label="Loadout"></button>
+  </div>
+
+  <!-- TAB TOAST (WO-HUB-02: Shows icon + label on tab change) -->
+  <div class="BadlandsStage__tabToast" data-visible="false">
+    <span class="BadlandsStage__tabToastIcon" data-bind="tabToastIcon">&#127758;</span>
+    <span class="BadlandsStage__tabToastLabel" data-bind="tabToastLabel">Current</span>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -153,6 +160,42 @@
   <div class="BadlandsStage__toast" data-toast="aid" data-visible="false">
     <span class="BadlandsStage__toastIcon">&#9876;</span>
     <span class="BadlandsStage__toastText">Manual battle mode coming soon! The autobattler handles this encounter.</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- EPISODE SLOW-TIME OVERLAY (WO-STAGE-EPISODES-V1) -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="BadlandsStage__slowTime" data-visible="false">
+    <div class="BadlandsStage__slowTimeOverlay"></div>
+    <div class="BadlandsStage__slowTimeContent">
+      <!-- Caption -->
+      <div class="BadlandsStage__episodeCaption" data-bind="episodeCaption">
+        A spending challenger approaches...
+      </div>
+
+      <!-- Tagging prompt -->
+      <div class="BadlandsStage__taggingPrompt">
+        <h3 class="BadlandsStage__taggingQuestion" data-bind="taggingQuestion">
+          What kind of spending was this?
+        </h3>
+        <div class="BadlandsStage__taggingOptions" data-bind="taggingOptions">
+          <!-- Options populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Timer indicator -->
+      <div class="BadlandsStage__slowTimeTimer">
+        <div class="BadlandsStage__slowTimeTimerBar">
+          <div class="BadlandsStage__slowTimeTimerFill" data-bind="slowTimeTimerFill"></div>
+        </div>
+        <span class="BadlandsStage__slowTimeTimerLabel">Auto-resolve in <span data-bind="slowTimeTimerValue">30</span>s</span>
+      </div>
+
+      <!-- Skip button -->
+      <button class="BadlandsStage__slowTimeSkip" data-action="skipTagging">
+        Let Autopilot Handle It
+      </button>
+    </div>
   </div>
 
   <!-- Skill picker modal -->

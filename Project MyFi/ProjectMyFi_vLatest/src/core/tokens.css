@@ -60,6 +60,110 @@ body{
     radial-gradient(ellipse 60% 40% at 80% 100%, rgba(251, 146, 60, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse 40% 30% at 20% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 40%);
   color: var(--text);
+  position: relative;
+}
+
+/* WO-HUB-05: Animated Cosmos Background — Starfield with Motion */
+body::before{
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    /* Bright stars */
+    radial-gradient(2px 2px at 20% 15%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 75% 25%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(2px 2px at 45% 60%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 85% 70%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(2px 2px at 10% 80%, rgba(255, 255, 255, 0.75), transparent),
+    radial-gradient(2px 2px at 60% 90%, rgba(255, 255, 255, 0.7), transparent),
+    /* Medium stars */
+    radial-gradient(1.5px 1.5px at 30% 35%, rgba(255, 255, 255, 0.65), transparent),
+    radial-gradient(1.5px 1.5px at 55% 20%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 90% 45%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 5% 50%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1.5px 1.5px at 70% 85%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 25% 95%, rgba(255, 255, 255, 0.55), transparent),
+    /* Small distant stars */
+    radial-gradient(1px 1px at 15% 40%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 40% 10%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 65% 55%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 80% 30%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 50% 75%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 95% 85%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 35% 65%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 8% 22%, rgba(255, 255, 255, 0.45), transparent);
+  animation: starfieldDrift 60s linear infinite;
+}
+
+/* WO-HUB-05: Floating wisps layer with glow */
+body::after{
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    /* Large purple wisps */
+    radial-gradient(80px 40px at 15% 25%, rgba(139, 92, 246, 0.12), transparent),
+    radial-gradient(60px 30px at 80% 65%, rgba(139, 92, 246, 0.1), transparent),
+    radial-gradient(100px 50px at 50% 85%, rgba(139, 92, 246, 0.08), transparent),
+    /* Gold/warm wisps */
+    radial-gradient(70px 35px at 70% 20%, rgba(251, 191, 36, 0.06), transparent),
+    radial-gradient(90px 45px at 25% 70%, rgba(251, 146, 60, 0.05), transparent),
+    /* Accent stars with glow */
+    radial-gradient(3px 3px at 33% 28%, rgba(167, 139, 250, 0.8), transparent),
+    radial-gradient(3px 3px at 67% 72%, rgba(251, 191, 36, 0.6), transparent),
+    radial-gradient(2px 2px at 12% 55%, rgba(167, 139, 250, 0.7), transparent),
+    radial-gradient(2px 2px at 88% 35%, rgba(251, 191, 36, 0.5), transparent);
+  animation: wispFloat 45s ease-in-out infinite;
+}
+
+/* Slow starfield drift - creates parallax motion feel */
+@keyframes starfieldDrift{
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.85;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(-8px) translateX(4px);
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0.85;
+  }
+}
+
+/* Gentle wisp floating with random-feeling movement */
+@keyframes wispFloat{
+  0%, 100% {
+    transform: translateX(0) translateY(0) scale(1);
+    opacity: 0.9;
+  }
+  20% {
+    transform: translateX(15px) translateY(-10px) scale(1.02);
+    opacity: 0.8;
+  }
+  40% {
+    transform: translateX(-8px) translateY(5px) scale(0.98);
+    opacity: 0.95;
+  }
+  60% {
+    transform: translateX(10px) translateY(-15px) scale(1.03);
+    opacity: 0.85;
+  }
+  80% {
+    transform: translateX(-12px) translateY(8px) scale(0.97);
+    opacity: 0.9;
+  }
 }
 
 #app{
@@ -104,6 +208,40 @@ body{
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* WO-HUB-03: Chrome Status Badge (Demo/Connected indicator) */
+.chrome__status{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  border: 1px solid rgba(180, 140, 80, 0.15);
+}
+
+.chrome__statusIndicator{
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c4943d;
+  box-shadow: 0 0 4px rgba(196, 148, 61, 0.5);
+  flex-shrink: 0;
+}
+
+.chrome__statusIndicator[data-verified="true"]{
+  background: #5cb85c;
+  box-shadow: 0 0 4px rgba(92, 184, 92, 0.5);
+}
+
+.chrome__statusLabel{
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(240, 230, 210, 0.7);
 }
 
 .chrome__devButtons{

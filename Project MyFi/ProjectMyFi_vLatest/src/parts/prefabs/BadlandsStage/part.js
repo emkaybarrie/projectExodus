@@ -1,5 +1,6 @@
 // BadlandsStage Part — HUB Refactor: 3-Tab Stage
 // Tabs: Current Event | Recent Events | Loadout (tab bar at bottom)
+// WO-STAGE-EPISODES-V1: Added Episode system integration with slow-time overlay
 
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
 
@@ -88,6 +89,25 @@ function getRandomBackground(stateName, baseUrl) {
   return new URL(BG_FOLDER_BASE + folder + filename, baseUrl).href;
 }
 
+/**
+ * WO-HUB-04: Preload image and resolve when loaded
+ * Returns a promise that resolves with the URL when the image is ready
+ */
+function preloadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(url);
+    img.onerror = () => {
+      console.warn(`[BadlandsStage] Failed to preload image: ${url}`);
+      resolve(url); // Still resolve to allow fallback behavior
+    };
+    img.src = url;
+  });
+}
+
+// WO-HUB-04: Track preloaded images to avoid re-preloading
+const preloadedImages = new Set();
+
 function getNextWorldState(currentState) {
   const currentIndex = WORLD_STATE_CYCLE.indexOf(currentState);
   if (currentIndex === -1) return WORLD_STATE_CYCLE[0]; // Default to first state
@@ -154,6 +174,14 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     worldState: 'patrol', // rest | patrol | explore | return | city
     worldStateTimerId: null,
     currentBgUrl: null, // Current background URL (for any state)
+    // WO-STAGE-EPISODES-V1: Episode system state
+    episodeActive: false,
+    currentEpisode: null,
+    currentIncident: null,
+    episodePhase: null, // setup | active | resolving | after
+    slowTimeTimerRemaining: 0,
+    slowTimeTimerTotal: 30,
+    queueLength: 0, // Number of pending signals in queue
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -187,15 +215,23 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     return getRandomBackground(stateName, import.meta.url);
   }
 
-  function transitionToNextWorldState() {
+  async function transitionToNextWorldState() {
     if (state.stageMode === 'encounter_autobattler') {
       // Don't transition during combat, timer will restart after combat
       return;
     }
 
     const nextState = getNextWorldState(state.worldState);
+    const nextBgUrl = selectBackgroundForState(nextState);
+
+    // WO-HUB-04: Preload next background before transition
+    if (!preloadedImages.has(nextBgUrl)) {
+      await preloadImage(nextBgUrl);
+      preloadedImages.add(nextBgUrl);
+    }
+
     state.worldState = nextState;
-    state.currentBgUrl = selectBackgroundForState(nextState);
+    state.currentBgUrl = nextBgUrl;
     render(root, state);
     console.log(`[BadlandsStage] World state transitioned to: ${nextState}`);
 
@@ -217,8 +253,11 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     }
   }
 
-  // Initialize world state background and start transition timer
-  state.currentBgUrl = selectBackgroundForState(state.worldState);
+  // WO-HUB-04: Initialize world state background with preload and start transition timer
+  const initialBgUrl = selectBackgroundForState(state.worldState);
+  await preloadImage(initialBgUrl);
+  preloadedImages.add(initialBgUrl);
+  state.currentBgUrl = initialBgUrl;
   scheduleWorldStateTransition();
 
   // Combat simulation functions
@@ -295,13 +334,22 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     const enemyVariance = Math.floor(Math.random() * 8) - 3; // -3 to +4
     const damageTaken = godMode ? 0 : Math.max(1, state.enemyBaseDamage + enemyVariance - damageReduction);
 
-    // --- Emit combat tick with vitals impact ---
+    // --- WO-HUB-01: Emit combat tick with explicit vitals impact ---
     if (ctx.actionBus) {
       ctx.actionBus.emit('combat:tick', {
+        atMs: Date.now(),
         round: Math.ceil((state.timerTotal - state.timerRemaining) / (COMBAT_TICK_INTERVAL / 1000)),
+        actor: 'enemy', // Enemy dealing damage to player
+        reason: state.currentEncounter?.type ? `${state.currentEncounter.type}_attack` : 'enemy_attack',
         skillUsed: skill.id || 'basic_attack',
-        damageDealt,
-        damageTaken,
+        damageDealt, // Damage to enemy
+        damageTaken, // Damage to player
+        // Explicit delta format for VitalsLedger
+        healthDelta: -damageTaken,
+        manaDelta: -(skill.manaCost || 0),
+        staminaDelta: -(skill.staminaCost || 0),
+        essenceDelta: 0,
+        // Legacy format for backwards compatibility
         vitalsImpact: {
           health: -damageTaken,
           mana: -(skill.manaCost || 0),
@@ -370,13 +418,21 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
     // Encounter spawned (from autobattler)
     unsubscribers.push(
-      ctx.actionBus.subscribe('autobattler:spawn', (encounter) => {
+      ctx.actionBus.subscribe('autobattler:spawn', async (encounter) => {
         // Pause world state transitions during combat
         stopWorldStateTimer();
 
+        const combatBgUrl = getRandomBackground('combat', import.meta.url);
+
+        // WO-HUB-04: Preload combat background before showing
+        if (!preloadedImages.has(combatBgUrl)) {
+          await preloadImage(combatBgUrl);
+          preloadedImages.add(combatBgUrl);
+        }
+
         state.stageMode = 'encounter_autobattler';
         state.currentEncounter = encounter;
-        state.currentBgUrl = getRandomBackground('combat', import.meta.url); // Random combat background
+        state.currentBgUrl = combatBgUrl;
         state.activeTab = 'current'; // Switch to current tab
         render(root, state);
         startEncounterTimer(); // Start countdown
@@ -385,7 +441,7 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
     // Encounter resolved (from autobattler)
     unsubscribers.push(
-      ctx.actionBus.subscribe('autobattler:resolve', (result) => {
+      ctx.actionBus.subscribe('autobattler:resolve', async (result) => {
         stopEncounterTimer(); // Stop countdown
         // Add to recent events
         if (state.currentEncounter) {
@@ -402,15 +458,131 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
             state.recentEvents.pop();
           }
         }
+
+        // WO-HUB-04: Preload world state background before showing
+        const worldBgUrl = selectBackgroundForState(state.worldState);
+        if (!preloadedImages.has(worldBgUrl)) {
+          await preloadImage(worldBgUrl);
+          preloadedImages.add(worldBgUrl);
+        }
+
         state.stageMode = 'world';
         state.currentEncounter = null;
-
-        // Restore world state background (stay on same world state per requirement C)
-        state.currentBgUrl = selectBackgroundForState(state.worldState);
+        state.currentBgUrl = worldBgUrl;
         render(root, state);
 
         // Resume world state transitions
         scheduleWorldStateTransition();
+      })
+    );
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WO-STAGE-EPISODES-V1: Episode System Subscriptions
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Episode started
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:started', (data) => {
+        state.episodeActive = true;
+        state.currentEpisode = data.episode;
+        state.currentIncident = data.incident;
+        state.episodePhase = 'setup';
+        console.log(`[BadlandsStage] Episode started: ${data.episode.id}`);
+      })
+    );
+
+    // Episode phase change
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:phaseChange', (data) => {
+        state.episodePhase = data.newPhase;
+        state.currentIncident = data.incident; // Update incident reference
+        console.log(`[BadlandsStage] Episode phase: ${data.newPhase}`);
+
+        // Only show tagging overlay for non-combat (choice mode) episodes
+        const mechanicsMode = data.incident?.mechanics?.mode;
+        const isTaggingEpisode = mechanicsMode === 'choice';
+
+        if (data.newPhase === 'active' && isTaggingEpisode) {
+          // Show slow-time overlay for tagging episodes only
+          renderSlowTimeOverlay(root, state);
+        } else if (data.newPhase === 'resolving' || data.newPhase === 'after') {
+          // Hide slow-time overlay
+          hideSlowTimeOverlay(root);
+        }
+      })
+    );
+
+    // Episode setup (show caption)
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:setup', (data) => {
+        if (data.narrative?.captionIn) {
+          showEpisodeCaption(root, data.narrative.captionIn);
+        }
+      })
+    );
+
+    // Episode active (show tagging prompt for choice mode only)
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:active', (data) => {
+        state.slowTimeTimerTotal = data.incident?.mechanics?.durationS || 30;
+        state.slowTimeTimerRemaining = state.slowTimeTimerTotal;
+        state.currentIncident = data.incident; // Update incident reference
+
+        // Only show tagging overlay for choice mode episodes (not combat)
+        const mechanicsMode = data.mechanicsMode || data.incident?.mechanics?.mode;
+        const isTaggingEpisode = mechanicsMode === 'choice';
+
+        if (isTaggingEpisode) {
+          console.log('[BadlandsStage] Tagging episode active - showing slow-time overlay');
+          renderSlowTimeOverlay(root, state);
+        } else {
+          console.log(`[BadlandsStage] Combat episode active (mode: ${mechanicsMode}) - no tagging overlay`);
+        }
+      })
+    );
+
+    // Episode timer tick
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:timerTick', (data) => {
+        state.slowTimeTimerRemaining = data.remainingMs / 1000;
+        updateSlowTimeTimer(root, data.remainingMs, data.totalMs);
+      })
+    );
+
+    // Episode resolved
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:resolved', (data) => {
+        state.episodeActive = false;
+        state.currentEpisode = null;
+        state.currentIncident = null;
+        state.episodePhase = null;
+        hideSlowTimeOverlay(root);
+
+        // Add to recent events (from episode)
+        if (data.incident) {
+          state.recentEvents.unshift({
+            id: `event-${Date.now()}`,
+            name: data.incident.narrative?.captionIn || 'Episode',
+            icon: data.incident._enemy?.icon || '&#128176;',
+            result: data.resolution?.mode === 'player' ? 'tagged' : 'auto',
+            timestamp: Date.now(),
+            details: `Tagged as: ${data.resolution?.choiceId || 'auto'}`,
+          });
+          if (state.recentEvents.length > 10) {
+            state.recentEvents.pop();
+          }
+          render(root, state);
+        }
+
+        console.log(`[BadlandsStage] Episode resolved: ${data.episode.id}`);
+      })
+    );
+
+    // WO-STAGE-EPISODES-V1: Queue status indicator
+    unsubscribers.push(
+      ctx.actionBus.subscribe('stageSignals:queueStatus', (data) => {
+        state.queueLength = data.queueLength;
+        updateQueueIndicator(root, data.queueLength);
       })
     );
 
@@ -442,14 +614,24 @@ function bindInteractions(root, state, ctx) {
   const container = root.querySelector('.BadlandsStage__container');
   if (!container) return;
 
-  // Tab switching
+  // WO-HUB-02: Tab toast timeout tracker (closure reference)
+  let tabToastTimeoutId = null;
+
+  // Tab/Dot switching
   container.addEventListener('click', (e) => {
-    const tabBtn = e.target.closest('[data-action="switchTab"]');
-    if (tabBtn) {
-      const tab = tabBtn.dataset.tab;
+    const dotBtn = e.target.closest('[data-action="switchTab"]');
+    if (dotBtn) {
+      const tab = dotBtn.dataset.tab;
       if (tab && tab !== state.activeTab) {
         state.activeTab = tab;
         render(root, state);
+
+        // WO-HUB-02: Show tab toast with icon and label from dot data attributes
+        const icon = dotBtn.dataset.icon || '';
+        const label = dotBtn.dataset.label || tab;
+        showTabToast(root, icon, label, tabToastTimeoutId, (newTimeoutId) => {
+          tabToastTimeoutId = newTimeoutId;
+        });
       }
       return;
     }
@@ -516,6 +698,24 @@ function bindInteractions(root, state, ctx) {
       state.selectedSkillSlot = null;
       return;
     }
+
+    // WO-STAGE-EPISODES-V1: Tagging option selection
+    const taggingOption = e.target.closest('[data-action="submitTagChoice"]');
+    if (taggingOption && ctx.actionBus) {
+      const choiceId = taggingOption.dataset.choice;
+      console.log(`[BadlandsStage] Tagging choice: ${choiceId}`);
+      ctx.actionBus.emit('episode:submitChoice', { choiceId });
+      return;
+    }
+
+    // WO-STAGE-EPISODES-V1: Skip tagging (let autopilot handle)
+    const skipBtn = e.target.closest('[data-action="skipTagging"]');
+    if (skipBtn && ctx.actionBus) {
+      console.log('[BadlandsStage] Skip tagging - letting autopilot handle');
+      // Emit with unknown choice to trigger auto-resolution
+      ctx.actionBus.emit('episode:submitChoice', { choiceId: 'unknown' });
+      return;
+    }
   });
 }
 
@@ -545,10 +745,10 @@ function render(root, state) {
   container.dataset.activeTab = state.activeTab;
   container.dataset.stageMode = state.stageMode;
 
-  // Update tab buttons
-  const tabBtns = container.querySelectorAll('[data-action="switchTab"]');
-  tabBtns.forEach(btn => {
-    btn.classList.toggle('BadlandsStage__tab--active', btn.dataset.tab === state.activeTab);
+  // WO-HUB-02: Update dot navigation active state
+  const dots = container.querySelectorAll('.BadlandsStage__dot');
+  dots.forEach(dot => {
+    dot.classList.toggle('BadlandsStage__dot--active', dot.dataset.tab === state.activeTab);
   });
 
   // Render current event tab content
@@ -695,6 +895,36 @@ function hideModal(root, modalId) {
   }
 }
 
+/**
+ * WO-HUB-02: Show tab toast with icon and label
+ * Displays for 900ms then fades out (400ms CSS transition)
+ */
+function showTabToast(root, icon, label, currentTimeoutId, setTimeoutId) {
+  const toast = root.querySelector('.BadlandsStage__tabToast');
+  if (!toast) return;
+
+  // Clear any existing timeout
+  if (currentTimeoutId) {
+    clearTimeout(currentTimeoutId);
+  }
+
+  // Update toast content
+  const iconEl = toast.querySelector('[data-bind="tabToastIcon"]');
+  const labelEl = toast.querySelector('[data-bind="tabToastLabel"]');
+  if (iconEl) iconEl.innerHTML = icon;
+  if (labelEl) labelEl.textContent = label;
+
+  // Show toast
+  toast.dataset.visible = 'true';
+
+  // Hide after 900ms (CSS handles the 400ms fade out transition)
+  const newTimeoutId = setTimeout(() => {
+    toast.dataset.visible = 'false';
+  }, 900);
+
+  setTimeoutId(newTimeoutId);
+}
+
 function formatTimeAgo(timestamp) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
   if (seconds < 60) return 'Just now';
@@ -712,4 +942,131 @@ function getSkillData(skillId) {
     heal: { name: 'Heal', icon: '&#10024;', cost: '10 MP', damage: 0, manaCost: 10, staminaCost: 0 },
   };
   return skills[skillId] || { name: 'Unknown', icon: '&#10067;', cost: '?', damage: 5, manaCost: 0, staminaCost: 5 };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-STAGE-EPISODES-V1: Slow-Time Overlay Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Render the slow-time tagging overlay
+ */
+function renderSlowTimeOverlay(root, state) {
+  const overlay = root.querySelector('.BadlandsStage__slowTime');
+  if (!overlay) return;
+
+  const incident = state.currentIncident;
+  if (!incident) {
+    overlay.dataset.visible = 'false';
+    return;
+  }
+
+  // Update caption
+  const captionEl = root.querySelector('[data-bind="episodeCaption"]');
+  if (captionEl && incident.narrative?.captionIn) {
+    captionEl.textContent = incident.narrative.captionIn;
+  }
+
+  // Update tagging question
+  const questionEl = root.querySelector('[data-bind="taggingQuestion"]');
+  if (questionEl && incident.taggingPrompt?.question) {
+    questionEl.textContent = incident.taggingPrompt.question;
+  }
+
+  // Render tagging options
+  const optionsEl = root.querySelector('[data-bind="taggingOptions"]');
+  if (optionsEl && incident.taggingPrompt?.options) {
+    const iconMap = {
+      health: '&#10084;',
+      mana: '&#10024;',
+      stamina: '&#9889;',
+      wardfire: '&#128293;',
+      unknown: '&#10067;',
+    };
+
+    optionsEl.innerHTML = incident.taggingPrompt.options.map(opt => `
+      <div class="BadlandsStage__taggingOption" data-choice="${opt.id}" data-action="submitTagChoice">
+        <div class="BadlandsStage__taggingOptionIcon">${iconMap[opt.id] || '&#10067;'}</div>
+        <div class="BadlandsStage__taggingOptionContent">
+          <span class="BadlandsStage__taggingOptionLabel">${opt.label}</span>
+          ${opt.hint ? `<span class="BadlandsStage__taggingOptionHint">${opt.hint}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Show overlay
+  overlay.dataset.visible = 'true';
+}
+
+/**
+ * Hide the slow-time overlay
+ */
+function hideSlowTimeOverlay(root) {
+  const overlay = root.querySelector('.BadlandsStage__slowTime');
+  if (overlay) {
+    overlay.dataset.visible = 'false';
+  }
+}
+
+/**
+ * Update slow-time timer display
+ */
+function updateSlowTimeTimer(root, remainingMs, totalMs) {
+  const timerFill = root.querySelector('[data-bind="slowTimeTimerFill"]');
+  const timerValue = root.querySelector('[data-bind="slowTimeTimerValue"]');
+
+  if (timerFill && totalMs > 0) {
+    const percent = (remainingMs / totalMs) * 100;
+    timerFill.style.width = `${percent}%`;
+  }
+
+  if (timerValue) {
+    timerValue.textContent = Math.ceil(remainingMs / 1000);
+  }
+}
+
+/**
+ * Show episode caption (brief display)
+ */
+function showEpisodeCaption(root, text) {
+  const captionEl = root.querySelector('[data-bind="episodeCaption"]');
+  if (captionEl) {
+    captionEl.textContent = text;
+  }
+}
+
+/**
+ * WO-STAGE-EPISODES-V1: Update queue indicator with visual dots
+ * Shows 1-5 dots for queued items, then "+" for more
+ */
+function updateQueueIndicator(root, queueLength) {
+  const indicator = root.querySelector('[data-bind="queueIndicator"]');
+  const dotsContainer = root.querySelector('[data-bind="queueDots"]');
+
+  if (!indicator || !dotsContainer) return;
+
+  if (queueLength <= 0) {
+    indicator.dataset.visible = 'false';
+    return;
+  }
+
+  // Show indicator
+  indicator.dataset.visible = 'true';
+
+  // Build dots HTML (max 5 dots, then show +N)
+  const maxDots = 5;
+  const dotsToShow = Math.min(queueLength, maxDots);
+  let dotsHtml = '';
+
+  for (let i = 0; i < dotsToShow; i++) {
+    dotsHtml += '<span class="BadlandsStage__queueDot"></span>';
+  }
+
+  // Add "+N" if more than maxDots
+  if (queueLength > maxDots) {
+    dotsHtml += `<span class="BadlandsStage__queueDot BadlandsStage__queueDot--plus">+${queueLength - maxDots}</span>`;
+  }
+
+  dotsContainer.innerHTML = dotsHtml;
 }
