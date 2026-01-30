@@ -142,16 +142,21 @@ export function getHubDemoVMVerified() {
 /**
  * Creates a simulation loop that updates vitals over time.
  * Satisfies HUB-02 acceptance criteria: "Vitals visibly change over time"
+ * WO-HUB-01: Added pause/resume for encounter combat authority
  * @param {Function} onUpdate - Callback with updated VM snapshot
  * @param {number} intervalMs - Update interval in ms (default 3000)
- * @returns {{ start: Function, stop: Function, getState: Function }}
+ * @returns {{ start: Function, stop: Function, pause: Function, resume: Function, isPaused: Function, getState: Function }}
  */
 export function createVitalsSimulation(onUpdate, intervalMs = 3000) {
   let state = getHubDemoVM();
   let timerId = null;
   let tickCount = 0;
+  let isPaused = false;
 
   function tick() {
+    // WO-HUB-01: Skip tick if paused (during encounter, combat is authority)
+    if (isPaused) return;
+
     tickCount++;
     const vitals = state.vitalsHud.vitals;
 
@@ -219,6 +224,26 @@ export function createVitalsSimulation(onUpdate, intervalMs = 3000) {
         clearInterval(timerId);
         timerId = null;
       }
+    },
+    /**
+     * WO-HUB-01: Pause simulation (during encounters, combat is vitals authority)
+     */
+    pause() {
+      isPaused = true;
+      console.log('[VitalsSimulation] Paused - combat is now vitals authority');
+    },
+    /**
+     * WO-HUB-01: Resume simulation (after encounter resolution)
+     */
+    resume() {
+      isPaused = false;
+      console.log('[VitalsSimulation] Resumed - ambient simulation active');
+    },
+    /**
+     * WO-HUB-01: Check if simulation is paused
+     */
+    isPaused() {
+      return isPaused;
     },
     getState() {
       return state;

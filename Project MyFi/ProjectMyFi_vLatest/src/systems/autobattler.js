@@ -93,6 +93,39 @@ export function createAutobattler(options = {}) {
   let currentEncounter = null;
   let timerId = null;
   let encounterCount = 0;
+  let unsubscribeSpawn = null;
+  let unsubscribeResolve = null;
+
+  // WO-STAGE-EPISODES-V1: Subscribe to autobattler:spawn from Episode system
+  // This allows the Episode system to trigger combat encounters
+  if (actionBus && actionBus.subscribe) {
+    unsubscribeSpawn = actionBus.subscribe('autobattler:spawn', (encounter) => {
+      // Only accept if we don't have an active encounter
+      // and this wasn't spawned by us (check for _episodeId marker)
+      if (!currentEncounter && encounter._episodeId) {
+        console.log(`[Autobattler] Received encounter from Episode system: ${encounter.id}`);
+        encounterCount++;
+        currentEncounter = {
+          ...encounter,
+          spawnedAt: Date.now(),
+          resolved: false,
+          _fromEpisode: true, // Mark as Episode-sourced for proper cleanup
+        };
+        if (onEncounterSpawn) {
+          onEncounterSpawn(currentEncounter);
+        }
+      }
+    });
+
+    // WO-STAGE-EPISODES-V1: Listen for autobattler:resolve to clear Episode-sourced encounters immediately
+    // This prevents race conditions with stageSignals queue resumption
+    unsubscribeResolve = actionBus.subscribe('autobattler:resolve', (outcome) => {
+      if (currentEncounter && currentEncounter._fromEpisode) {
+        console.log(`[Autobattler] Episode encounter resolved, clearing immediately`);
+        currentEncounter = null;
+      }
+    });
+  }
 
   // Timing constants
   // Encounters take ~30s to auto-resolve in the UI (BadlandsStage handles timer display)
@@ -111,12 +144,26 @@ export function createAutobattler(options = {}) {
 
   /**
    * Attempts to spawn a new encounter
+   * WO-STAGE-EPISODES-V1: Updated to use Episode system for random spawning
+   * This allows spawning any episode type (combat or choice/tagging)
    */
   function trySpawn() {
     if (currentEncounter) return; // Already have an active encounter
 
     if (Math.random() < getSpawnChance()) {
-      spawnEncounter();
+      // Use Episode system for random spawning if available
+      // This routes through: Signal → Incident Factory → Episode Runner
+      // Combat episodes will emit autobattler:spawn back to us
+      // Choice episodes show tagging overlay instead
+      const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
+      if (emitDemoSignal) {
+        console.log('[Autobattler] Random spawn via Episode system');
+        emitDemoSignal(); // Randomly picks episode type
+      } else {
+        // Fallback to legacy direct spawn (combat only)
+        console.log('[Autobattler] Random spawn (legacy fallback)');
+        spawnEncounter();
+      }
     }
   }
 
@@ -209,6 +256,7 @@ export function createAutobattler(options = {}) {
 
   /**
    * Calculates vitals impact based on encounter and outcome
+   * WO-STAGE-EPISODES-V1: Added null checks for Episode system encounters
    */
   function calculateVitalsImpact(encounter, isVictory) {
     const impact = {
@@ -218,18 +266,31 @@ export function createAutobattler(options = {}) {
       essence: 0,
     };
 
+    // Episode system encounters may not have rewards/risks - use defaults based on difficulty
+    const rewards = encounter.rewards || {
+      essence: 50 + (encounter.baseDifficulty || 1) * 25,
+      healthRegen: 10,
+      manaRegen: 10,
+      staminaRegen: 10,
+    };
+    const risks = encounter.risks || {
+      healthDrain: 15 + (encounter.baseDifficulty || 1) * 10,
+      manaDrain: 10,
+      staminaDrain: 15,
+    };
+
     if (isVictory) {
       // Apply rewards
-      impact.essence = encounter.rewards.essence || 0;
-      impact.health = encounter.rewards.healthRegen || 0;
-      impact.mana = encounter.rewards.manaRegen || 0;
-      impact.stamina = encounter.rewards.staminaRegen || 0;
+      impact.essence = rewards.essence || 0;
+      impact.health = rewards.healthRegen || 0;
+      impact.mana = rewards.manaRegen || 0;
+      impact.stamina = rewards.staminaRegen || 0;
     } else {
       // Apply reduced rewards but also risks
-      impact.essence = Math.floor((encounter.rewards.essence || 0) * 0.3);
-      impact.health = -(encounter.risks.healthDrain || 0);
-      impact.mana = -(encounter.risks.manaDrain || 0);
-      impact.stamina = -(encounter.risks.staminaDrain || 0);
+      impact.essence = Math.floor((rewards.essence || 0) * 0.3);
+      impact.health = -(risks.healthDrain || 0);
+      impact.mana = -(risks.manaDrain || 0);
+      impact.stamina = -(risks.staminaDrain || 0);
     }
 
     return impact;
@@ -282,6 +343,15 @@ export function createAutobattler(options = {}) {
       if (timerId) {
         clearInterval(timerId);
         timerId = null;
+      }
+      // WO-STAGE-EPISODES-V1: Cleanup subscriptions
+      if (unsubscribeSpawn) {
+        unsubscribeSpawn();
+        unsubscribeSpawn = null;
+      }
+      if (unsubscribeResolve) {
+        unsubscribeResolve();
+        unsubscribeResolve = null;
       }
     },
 

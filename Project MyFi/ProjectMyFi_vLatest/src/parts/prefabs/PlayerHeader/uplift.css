@@ -16,15 +16,36 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* Status Line (thin top strip) */
+/* Avatar Name Row (WO-HUB-03: Name/title above portrait and vitals) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.PlayerHeader__nameRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(180, 140, 80, 0.12);
+}
+
+.PlayerHeader__avatarName {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(240, 230, 210, 0.95);
+  letter-spacing: 0.02em;
+}
+
+.PlayerHeader__avatarTitle {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: rgba(240, 230, 210, 0.5);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* Status Line (hidden - demo badge remains in AppChrome) */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .PlayerHeader__statusLine {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
-  font-size: 11px;
+  display: none;
 }
 
 .PlayerHeader__modeBtn {
@@ -176,7 +197,81 @@
   border-radius: 3px;
 }
 
+/* WO-HUB-01: Ghost bar for damage animation (fighting game style) */
+/* Shows "damage chunk" in gold/yellow highlight before main bar reduces */
+.PlayerHeader__barGhost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 3px;
+  width: 100%;
+  opacity: 0;
+  z-index: 2; /* Above fill bar during animation */
+  pointer-events: none;
+}
+
+/* Ghost bar color: Gold/yellow highlight for damage chunk (all vitals) */
+.PlayerHeader__barGhost {
+  background: linear-gradient(90deg,
+    rgba(255, 215, 80, 0.95) 0%,
+    rgba(255, 180, 50, 0.9) 50%,
+    rgba(240, 160, 40, 0.85) 100%
+  );
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.4),
+    0 0 8px rgba(255, 200, 80, 0.5);
+}
+
+/* Fighting game style ghost animation:
+   1. Flash in at full opacity (damage visible)
+   2. Hold briefly (player sees the damage)
+   3. Fade out as main bar catches up */
+.PlayerHeader__barGhost--animating {
+  opacity: 1;
+  animation: ghostDamageFlash 1000ms ease-out forwards;
+}
+
+@keyframes ghostDamageFlash {
+  0% {
+    opacity: 0.95;
+    filter: brightness(1.3);
+  }
+  15% {
+    opacity: 1;
+    filter: brightness(1.4);
+  }
+  /* Hold phase - damage chunk visible */
+  45% {
+    opacity: 0.9;
+    filter: brightness(1.2);
+  }
+  /* Fade out as main bar reduces */
+  100% {
+    opacity: 0;
+    filter: brightness(1);
+  }
+}
+
+/* Gain flash animation (positive delta) */
+.PlayerHeader__barFill--gain {
+  animation: gainFlash 400ms ease-out;
+}
+
+@keyframes gainFlash {
+  0% { filter: brightness(1.4); }
+  100% { filter: brightness(1); }
+}
+
+/* Fighting game style: delayed reduction after damage */
+.PlayerHeader__barFill--damage {
+  /* Delay start of transition to let ghost be visible first */
+  transition: width 0.4s ease-out 0.35s !important; /* 350ms delay before reduction */
+}
+
 .PlayerHeader__barFill {
+  position: relative;
+  z-index: 1;
   height: 100%;
   border-radius: 3px;
   transition: width 0.3s ease;

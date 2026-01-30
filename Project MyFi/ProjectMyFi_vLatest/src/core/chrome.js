@@ -24,6 +24,11 @@ export function createChrome(chromeHost){
     <div class="chrome">
       <header class="chrome__header" data-role="header">
         <div class="chrome__title" data-role="title">MyFi</div>
+        <!-- WO-HUB-03: Demo status badge in AppChrome (alias moved to PlayerHeader) -->
+        <div class="chrome__status" data-role="chromeStatus">
+          <span class="chrome__statusIndicator" data-bind="modeIndicator"></span>
+          <span class="chrome__statusLabel" data-bind="modeLabel">Demo</span>
+        </div>
         <!-- HUB-D4/G5: DEV buttons (only visible in debug mode) -->
         <div class="chrome__devButtons" style="display: none;">
           <button class="chrome__devSpawn" data-action="devSpawn">
@@ -344,6 +349,10 @@ export function createChrome(chromeHost){
     surfaceHost: chromeHost.querySelector('[data-role="surfaceHost"]'),
     modalHost: chromeHost.querySelector('[data-role="modalHost"]'),
     navBtns: Array.from(chromeHost.querySelectorAll('.chrome__footer [data-nav]')),
+    // WO-HUB-03: Chrome status (demo badge only, alias moved to PlayerHeader)
+    chromeStatus: chromeHost.querySelector('[data-role="chromeStatus"]'),
+    modeIndicator: chromeHost.querySelector('[data-bind="modeIndicator"]'),
+    modeLabel: chromeHost.querySelector('[data-bind="modeLabel"]'),
     // HUB-G5: Dev buttons container
     devButtons: chromeHost.querySelector('.chrome__devButtons'),
     devSpawn: chromeHost.querySelector('[data-action="devSpawn"]'),
@@ -391,16 +400,26 @@ export function createChrome(chromeHost){
   };
 
   // HUB-D4/G5: Enable DEV buttons (called from app.js after debug setup)
+  // WO-STAGE-EPISODES-V1: Updated to emit demo signal through episode system
   function enableDevSpawn() {
     if (els.devButtons) {
       els.devButtons.style.display = 'flex';
     }
     if (els.devSpawn) {
       els.devSpawn.addEventListener('click', () => {
-        const hubController = window.__MYFI_DEBUG__?.hubController;
-        if (hubController && hubController.forceEncounter) {
-          hubController.forceEncounter();
-          console.log('[Chrome] DEV: Spawned encounter');
+        // WO-STAGE-EPISODES-V1: Emit demo signal via episode system
+        // This triggers: Signal → Incident Factory → Episode Runner → autobattler:spawn
+        const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
+        if (emitDemoSignal) {
+          emitDemoSignal();
+          console.log('[Chrome] DEV: Emitted demo signal via episode system');
+        } else {
+          // Fallback to legacy forceEncounter if episode system not available
+          const hubController = window.__MYFI_DEBUG__?.hubController;
+          if (hubController && hubController.forceEncounter) {
+            hubController.forceEncounter();
+            console.log('[Chrome] DEV: Spawned encounter (legacy fallback)');
+          }
         }
       });
     }
@@ -512,6 +531,19 @@ export function createChrome(chromeHost){
 
   function setTitle(t){
     els.title.textContent = t || 'MyFi';
+  }
+
+  // WO-HUB-03: Update chrome status (demo badge only)
+  function setStatus({ mode } = {}) {
+    if (mode !== undefined) {
+      const isVerified = mode === 'verified';
+      if (els.modeIndicator) {
+        els.modeIndicator.dataset.verified = isVerified ? 'true' : 'false';
+      }
+      if (els.modeLabel) {
+        els.modeLabel.textContent = isVerified ? 'Connected' : 'Demo';
+      }
+    }
   }
 
   // Compass modal management
@@ -756,6 +788,7 @@ export function createChrome(chromeHost){
     modalHostEl: els.modalHost,
     apply,
     setTitle,
+    setStatus, // WO-HUB-03: Update demo mode + player alias
     onNav,
     setHeaderVisible(v){ els.header.style.display = v ? '' : 'none'; },
     setFooterVisible(v){ els.footer.style.display = v ? '' : 'none'; },

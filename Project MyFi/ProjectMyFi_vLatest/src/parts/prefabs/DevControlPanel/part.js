@@ -162,8 +162,16 @@ function executeAction(action, root, state, ctx) {
 
   switch (action) {
     case 'spawn':
-      hubController.forceEncounter();
-      console.log('[DevControlPanel] Spawned test encounter');
+      // WO-STAGE-EPISODES-V1: Use Episode system for spawning (supports any episode type)
+      const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
+      if (emitDemoSignal) {
+        emitDemoSignal();
+        console.log('[DevControlPanel] Spawned episode via Episode system');
+      } else {
+        // Fallback to legacy
+        hubController.forceEncounter();
+        console.log('[DevControlPanel] Spawned test encounter (legacy)');
+      }
       break;
 
     case 'escalate':

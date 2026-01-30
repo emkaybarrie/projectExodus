@@ -1,18 +1,16 @@
 <!-- PlayerHeader baseline.html — HUB Refactor: Vitals + Essence -->
-<!-- Row 1: Avatar | Name/Chips | Vitals bars -->
+<!-- Row 0: Avatar name/title -->
+<!-- Row 1: Avatar | Vitals bars -->
 <!-- Row 2: Essence bar (full width) -->
 
 <div class="PlayerHeader__container">
-  <!-- Status line (thin top strip) -->
-  <div class="PlayerHeader__statusLine">
-    <button class="PlayerHeader__modeBtn" type="button" data-action="modeInfo">
-      <span class="PlayerHeader__modeIndicator"></span>
-      <span class="PlayerHeader__modeLabel" data-bind="modeLabel">Demo Mode</span>
-    </button>
-    <span class="PlayerHeader__cycleInfo" data-bind="cycleInfo"></span>
+  <!-- WO-HUB-03: Avatar name row (moved from chrome header) -->
+  <div class="PlayerHeader__nameRow">
+    <span class="PlayerHeader__avatarName" data-bind="avatarName">Wanderer</span>
+    <span class="PlayerHeader__avatarTitle" data-bind="avatarTitle">of the Badlands</span>
   </div>
 
-  <!-- Row 1: Avatar + Identity + Vitals -->
+  <!-- Row 1: Avatar + Vitals -->
   <div class="PlayerHeader__mainRow">
     <!-- Left: Avatar with illustrated portrait -->
     <div class="PlayerHeader__avatar">
@@ -38,11 +36,12 @@
       </div>
     </div>
 
-    <!-- Right: Vitals bars -->
+    <!-- Right: Vitals bars (WO-HUB-01: Added ghost bars for damage animation) -->
     <div class="PlayerHeader__vitals">
       <div class="PlayerHeader__vital PlayerHeader__vital--health" data-vital="health">
         <span class="PlayerHeader__vitalLabel">Health</span>
         <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barGhost" data-bind="healthGhost"></div>
           <div class="PlayerHeader__barFill" data-bind="healthFill"></div>
         </div>
         <span class="PlayerHeader__vitalValue" data-bind="healthValue">276 / 276</span>
@@ -50,6 +49,7 @@
       <div class="PlayerHeader__vital PlayerHeader__vital--mana" data-vital="mana">
         <span class="PlayerHeader__vitalLabel">Mana</span>
         <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barGhost" data-bind="manaGhost"></div>
           <div class="PlayerHeader__barFill" data-bind="manaFill"></div>
         </div>
         <span class="PlayerHeader__vitalValue" data-bind="manaValue">415 / 415</span>
@@ -57,6 +57,7 @@
       <div class="PlayerHeader__vital PlayerHeader__vital--stamina" data-vital="stamina">
         <span class="PlayerHeader__vitalLabel">Stamina</span>
         <div class="PlayerHeader__barContainer">
+          <div class="PlayerHeader__barGhost" data-bind="staminaGhost"></div>
           <div class="PlayerHeader__barFill" data-bind="staminaFill"></div>
         </div>
         <span class="PlayerHeader__vitalValue" data-bind="staminaValue">691 / 691</span>

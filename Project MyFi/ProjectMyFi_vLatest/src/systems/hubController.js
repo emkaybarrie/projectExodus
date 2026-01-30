@@ -76,6 +76,10 @@ export function createHubController(options = {}) {
   let encounterTimerId = null;
   let encounterStartedAt = null;
 
+  // WO-HUB-01: VitalsLedger - persistent revision tracking for animation triggering
+  let vitalsRevision = 0;
+  let lastVitalsChangeMs = Date.now();
+
   // ─────────────────────────────────────────────────────────────────────────
   // HUB-B8: Encounter Timer Management
   // ─────────────────────────────────────────────────────────────────────────
@@ -241,15 +245,23 @@ export function createHubController(options = {}) {
   }
 
   /**
-   * Handle combat tick from BadlandsStage autobattler simulation
+   * WO-HUB-01: Handle combat tick from BadlandsStage autobattler simulation
    * Applies vitals impact (damage taken, skill costs) during active encounter
+   * Uses explicit delta payload for proper tracking
    */
   function handleCombatTick(data) {
     if (encounterState !== ENCOUNTER_STATES.ACTIVE_AUTOBATTLER) return;
 
-    const { vitalsImpact } = data;
+    const { vitalsImpact, actor, reason } = data;
     if (vitalsImpact) {
-      handleVitalsImpact(vitalsImpact);
+      applyVitalsDelta({
+        source: 'combat',
+        healthDelta: vitalsImpact.health || 0,
+        manaDelta: vitalsImpact.mana || 0,
+        staminaDelta: vitalsImpact.stamina || 0,
+        essenceDelta: vitalsImpact.essence || 0,
+        reason: reason || (actor === 'enemy' ? 'enemy_attack' : 'player_action'),
+      });
     }
   }
 
@@ -363,9 +375,15 @@ export function createHubController(options = {}) {
    * Handle encounter spawn from autobattler
    * HUB-15: State transition: idle → active_autobattler
    * HUB-B8: Start canonical timer
+   * WO-HUB-01: Pause ambient vitals simulation (combat is now authority)
    */
   function handleEncounterSpawn(encounter) {
     console.log('[HubController] Encounter spawned:', encounter.label);
+
+    // WO-HUB-01: Pause ambient vitals simulation - combat is now authority
+    if (vitalsSimulation && vitalsSimulation.pause) {
+      vitalsSimulation.pause();
+    }
 
     // HUB-15: Update encounter state machine
     encounterState = ENCOUNTER_STATES.ACTIVE_AUTOBATTLER;
@@ -401,12 +419,18 @@ export function createHubController(options = {}) {
    * Handle encounter resolution from autobattler
    * HUB-15: State transition: active_* → resolved → idle
    * HUB-B8: Stop canonical timer
+   * WO-HUB-01: Resume ambient vitals simulation
    */
   function handleEncounterResolve(outcome) {
     console.log('[HubController] Encounter resolved:', outcome.summary);
 
     // HUB-B8: Stop canonical timer
     stopEncounterTimer();
+
+    // WO-HUB-01: Resume ambient vitals simulation
+    if (vitalsSimulation && vitalsSimulation.resume) {
+      vitalsSimulation.resume();
+    }
 
     // HUB-15: Transition to resolved state
     encounterState = ENCOUNTER_STATES.RESOLVED;
@@ -446,52 +470,108 @@ export function createHubController(options = {}) {
   }
 
   /**
-   * Handle vitals impact from autobattler
+   * WO-HUB-01: VitalsLedger - Canonical apply function for all vital changes
+   * @param {Object} params
+   * @param {string} params.source - 'combat' | 'ambient' | 'reward' | 'regen'
+   * @param {number} params.healthDelta - Health change
+   * @param {number} params.staminaDelta - Stamina change
+   * @param {number} params.manaDelta - Mana change
+   * @param {number} params.essenceDelta - Essence change
+   * @param {string} params.reason - Descriptive reason for the change
    */
-  function handleVitalsImpact(impact) {
-    console.log('[HubController] Vitals impact:', impact);
-
+  function applyVitalsDelta({ source, healthDelta = 0, staminaDelta = 0, manaDelta = 0, essenceDelta = 0, reason = '' }) {
     if (!currentState || !currentState.vitalsHud) return;
 
     const vitals = currentState.vitalsHud.vitals;
+    const now = Date.now();
 
-    // Apply impact to vitals
+    // Track previous values for ghost animation
+    const prevHealth = vitals.health.current;
+    const prevMana = vitals.mana.current;
+    const prevStamina = vitals.stamina.current;
+    const prevEssence = vitals.essence.current;
+
+    // Apply changes with bounds
     const newVitals = {
       health: {
         ...vitals.health,
-        current: Math.max(0, Math.min(vitals.health.max, vitals.health.current + impact.health)),
-        delta: impact.health,
+        current: Math.max(0, Math.min(vitals.health.max, vitals.health.current + healthDelta)),
+        delta: healthDelta,
+        prevValue: prevHealth, // WO-HUB-01: For ghost animation
       },
       mana: {
         ...vitals.mana,
-        current: Math.max(0, Math.min(vitals.mana.max, vitals.mana.current + impact.mana)),
-        delta: impact.mana,
+        current: Math.max(0, Math.min(vitals.mana.max, vitals.mana.current + manaDelta)),
+        delta: manaDelta,
+        prevValue: prevMana,
       },
       stamina: {
         ...vitals.stamina,
-        current: Math.max(0, Math.min(vitals.stamina.max, vitals.stamina.current + impact.stamina)),
-        delta: impact.stamina,
+        current: Math.max(0, Math.min(vitals.stamina.max, vitals.stamina.current + staminaDelta)),
+        delta: staminaDelta,
+        prevValue: prevStamina,
       },
       essence: {
         ...vitals.essence,
-        current: vitals.essence.current + impact.essence,
-        accrual: impact.essence,
+        current: vitals.essence.current + essenceDelta,
+        accrual: essenceDelta,
+        prevValue: prevEssence,
       },
     };
+
+    // Increment revision for animation triggering
+    vitalsRevision++;
+    lastVitalsChangeMs = now;
 
     currentState = {
       ...currentState,
       vitalsHud: {
         ...currentState.vitalsHud,
         vitals: newVitals,
+        vitalsRevision, // WO-HUB-01: Persistent revision for animation sync
+        lastChangeMs: now,
+        lastChangeSource: source,
+        lastChangeReason: reason,
       },
     };
 
     if (onStateChange) onStateChange(currentState);
-    // HUB-25: Emit state change for real-time vitals binding
+
+    // Emit state change with vitals delta event for animation
     if (actionBus) {
       actionBus.emit('hub:stateChange', currentState);
+      // WO-HUB-01: Emit dedicated vitals delta event for ghost animation
+      actionBus.emit('vitals:delta', {
+        source,
+        reason,
+        revision: vitalsRevision,
+        atMs: now,
+        deltas: { health: healthDelta, mana: manaDelta, stamina: staminaDelta, essence: essenceDelta },
+        previous: { health: prevHealth, mana: prevMana, stamina: prevStamina, essence: prevEssence },
+        current: {
+          health: newVitals.health.current,
+          mana: newVitals.mana.current,
+          stamina: newVitals.stamina.current,
+          essence: newVitals.essence.current,
+        },
+      });
     }
+
+    console.log(`[HubController] Vitals delta applied (rev ${vitalsRevision}):`, { source, reason, healthDelta, manaDelta, staminaDelta, essenceDelta });
+  }
+
+  /**
+   * Handle vitals impact from autobattler (legacy wrapper using new VitalsLedger)
+   */
+  function handleVitalsImpact(impact, source = 'combat', reason = 'encounter') {
+    applyVitalsDelta({
+      source,
+      healthDelta: impact.health || 0,
+      manaDelta: impact.mana || 0,
+      staminaDelta: impact.stamina || 0,
+      essenceDelta: impact.essence || 0,
+      reason,
+    });
   }
 
   /**

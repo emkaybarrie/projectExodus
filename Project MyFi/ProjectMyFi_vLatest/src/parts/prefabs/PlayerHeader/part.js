@@ -31,12 +31,23 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Initial render
   render(root, data);
 
+  // Track previous vitals for ghost animation
+  let prevVitals = null;
+
   // HUB-25: Subscribe to real-time state changes for vitals binding
   const unsubscribers = [];
   if (ctx.actionBus && ctx.actionBus.subscribe) {
     unsubscribers.push(
       ctx.actionBus.subscribe('hub:stateChange', (hubState) => {
         render(root, hubState);
+      })
+    );
+
+    // WO-HUB-01: Subscribe to vitals:delta for ghost bar animation
+    unsubscribers.push(
+      ctx.actionBus.subscribe('vitals:delta', (deltaEvent) => {
+        animateVitalsDelta(root, deltaEvent, prevVitals);
+        prevVitals = deltaEvent.current;
       })
     );
   }
@@ -92,10 +103,13 @@ function render(root, data) {
   // VitalsHUD fields
   const { vitals = {} } = data.vitalsHud || data;
 
+  // WO-HUB-03: Render avatar name row
+  renderAvatarName(root, name, title);
+
   // Render portrait (illustrated avatar)
   renderPortrait(root, portraitUrl);
 
-  // Render status line
+  // Render status line (hidden but may be used in future)
   renderStatusLine(root, mode, payCycle);
 
   // Render identity
@@ -106,6 +120,17 @@ function render(root, data) {
 
   // Render essence (now in PlayerHeader)
   renderEssence(root, vitals.essence);
+}
+
+/**
+ * WO-HUB-03: Render avatar name row above portrait/vitals
+ */
+function renderAvatarName(root, name, title) {
+  const nameEl = root.querySelector('[data-bind="avatarName"]');
+  const titleEl = root.querySelector('[data-bind="avatarTitle"]');
+
+  if (nameEl) nameEl.textContent = name || 'Wanderer';
+  if (titleEl) titleEl.textContent = title || 'of the Badlands';
 }
 
 function renderPortrait(root, portraitUrl) {
@@ -204,9 +229,19 @@ function renderVitalBar(root, vitalName, pool) {
   const { current = 0, max = 100 } = pool || {};
   const percent = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
 
+  // WO-HUB-01: Store max on element for ghost animation calculations
+  el.dataset.max = max;
+
   const fill = el.querySelector('.PlayerHeader__barFill');
   if (fill) {
     fill.style.width = `${percent}%`;
+  }
+
+  // WO-HUB-01: Initialize ghost bar (no animation on initial render)
+  const ghost = el.querySelector('.PlayerHeader__barGhost');
+  if (ghost && !ghost.classList.contains('PlayerHeader__barGhost--animating')) {
+    ghost.style.left = '0';
+    ghost.style.width = '0'; // Ghost hidden until damage animation
   }
 
   const valueEl = el.querySelector('.PlayerHeader__vitalValue');
@@ -267,4 +302,86 @@ function getMomentumLabel(momentum) {
     case 'steady': return 'Steady';
     default: return 'Unknown';
   }
+}
+
+/**
+ * WO-HUB-01: Animate vitals delta with ghost bar effect (fighting game style)
+ * Damage: Shows gold "damage chunk" briefly, then main bar reduces with delay
+ * Heal: Flash the fill bar
+ */
+function animateVitalsDelta(root, deltaEvent, prevVitals) {
+  const { deltas, previous, current } = deltaEvent;
+
+  // Animate each vital that changed
+  ['health', 'mana', 'stamina'].forEach((vitalName) => {
+    const delta = deltas[vitalName];
+    if (delta === 0) return;
+
+    const el = root.querySelector(`.PlayerHeader__vital--${vitalName}`);
+    if (!el) return;
+
+    const ghostEl = el.querySelector('.PlayerHeader__barGhost');
+    const fillEl = el.querySelector('.PlayerHeader__barFill');
+    if (!ghostEl || !fillEl) return;
+
+    // Get max from the vital element dataset (set during render)
+    const max = parseInt(el.dataset.max, 10) || 100;
+
+    const prevPercent = max > 0 ? Math.min(100, (previous[vitalName] / max) * 100) : 0;
+    const currPercent = max > 0 ? Math.min(100, (current[vitalName] / max) * 100) : 0;
+
+    if (delta < 0) {
+      // Fighting game style damage animation:
+      // 1. Ghost shows ONLY the damage chunk (positioned from currPercent to prevPercent)
+      // 2. Fill bar stays at previous value momentarily
+      // 3. After delay, fill bar animates down to new value
+      // 4. Ghost fades out
+
+      // Position ghost to show only the "damage chunk" (the lost portion)
+      // Ghost starts at currPercent (new value) and extends to prevPercent (old value)
+      ghostEl.style.left = `${currPercent}%`;
+      ghostEl.style.width = `${prevPercent - currPercent}%`;
+
+      // Keep fill at previous value initially (will animate down after delay)
+      fillEl.style.width = `${prevPercent}%`;
+
+      // Reset animation classes
+      ghostEl.classList.remove('PlayerHeader__barGhost--animating');
+      fillEl.classList.remove('PlayerHeader__barFill--damage');
+
+      // Force reflow to restart animation
+      void ghostEl.offsetWidth;
+      void fillEl.offsetWidth;
+
+      // Start ghost animation (gold flash)
+      ghostEl.classList.add('PlayerHeader__barGhost--animating');
+
+      // Add delay class to fill for staggered reduction
+      fillEl.classList.add('PlayerHeader__barFill--damage');
+
+      // After brief pause, update fill to new value (CSS handles the delayed transition)
+      requestAnimationFrame(() => {
+        fillEl.style.width = `${currPercent}%`;
+      });
+
+      // Cleanup after animation completes
+      setTimeout(() => {
+        ghostEl.classList.remove('PlayerHeader__barGhost--animating');
+        fillEl.classList.remove('PlayerHeader__barFill--damage');
+        // Reset ghost position
+        ghostEl.style.left = '0';
+      }, 1100);
+
+    } else if (delta > 0) {
+      // Heal/gain: flash the fill bar
+      fillEl.style.width = `${currPercent}%`;
+      fillEl.classList.remove('PlayerHeader__barFill--gain');
+      void fillEl.offsetWidth;
+      fillEl.classList.add('PlayerHeader__barFill--gain');
+
+      setTimeout(() => {
+        fillEl.classList.remove('PlayerHeader__barFill--gain');
+      }, 450);
+    }
+  });
 }
