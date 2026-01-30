@@ -13,7 +13,7 @@
 }
 
 .BadlandsStage__container {
-  --stage-bg-url: url('../../../assets/art/stages/wardwatch.svg');
+  --stage-bg-url: url('../../../../assets/art/stages/wardwatch.svg');
   position: relative;
   display: flex;
   flex-direction: column;
@@ -24,7 +24,7 @@
   overflow: hidden;
 }
 
-/* Illustrated background layer */
+/* Illustrated background layer — only visible on Current tab */
 .BadlandsStage__container::before {
   content: '';
   position: absolute;
@@ -35,9 +35,17 @@
   background-repeat: no-repeat;
   filter: brightness(0.75) saturate(0.9);
   z-index: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }
 
-/* Subtle vignette overlay */
+/* Hide background on Recent and Loadout tabs */
+.BadlandsStage__container[data-active-tab="recent"]::before,
+.BadlandsStage__container[data-active-tab="loadout"]::before {
+  opacity: 0;
+}
+
+/* Subtle vignette overlay — only visible on Current tab */
 .BadlandsStage__container::after {
   content: '';
   position: absolute;
@@ -47,6 +55,14 @@
     radial-gradient(ellipse at center, transparent 50%, rgba(10, 8, 21, 0.4) 100%);
   pointer-events: none;
   z-index: 1;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Hide vignette on Recent and Loadout tabs */
+.BadlandsStage__container[data-active-tab="recent"]::after,
+.BadlandsStage__container[data-active-tab="loadout"]::after {
+  opacity: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -57,6 +73,12 @@
   position: relative;
   overflow: hidden;
   z-index: 2;
+}
+
+/* Solid background for Recent and Loadout tabs (since illustrated bg is hidden) */
+.BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__content,
+.BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__content {
+  background: linear-gradient(180deg, rgba(15, 10, 25, 0.95) 0%, rgba(10, 8, 18, 0.98) 100%);
 }
 
 .BadlandsStage__tabContent {

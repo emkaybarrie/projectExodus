@@ -31,6 +31,8 @@ export function getHubDemoVM() {
       pressure: 'balanced', // 'ahead' | 'behind' | 'balanced'
       momentum: 'steady',   // 'rising' | 'falling' | 'steady'
       effects: [],
+      // Asset path for illustrated portrait (relative to index.html in public/)
+      portraitUrl: '../assets/art/portraits/player.png',
     },
 
     // Wardwatch slot data (WARDWATCH_CONTRACT.md)
@@ -40,6 +42,17 @@ export function getHubDemoVM() {
       timeOfDay: 'day',    // 'day' | 'dusk' | 'night'
       lastActivity: 'Watching the Badlands...',
       encounter: null,
+    },
+
+    // BadlandsStage slot data
+    badlandsStage: {
+      stageMode: 'world', // 'world' | 'encounter_autobattler'
+      // Asset path for stage background (relative to index.html in public/)
+      // Use different images for different states:
+      //   - wardwatch-idle.png for peaceful state
+      //   - wardwatch-combat.png for encounter state
+      stageBgUrl: '../assets/art/stages/wardwatch-idle.png',
+      currentEncounter: null,
     },
 
     // VitalsHUD slot data (VITALSHUD_CONTRACT.md)
@@ -179,6 +192,7 @@ export function createVitalsSimulation(onUpdate, intervalMs = 3000) {
         pressure,
         momentum,
         effects,
+        portraitUrl: state.playerCore.portraitUrl, // Preserve portrait asset path
       },
       vitalsHud: {
         ...state.vitalsHud,

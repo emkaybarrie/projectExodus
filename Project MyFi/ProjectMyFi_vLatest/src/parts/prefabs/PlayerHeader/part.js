@@ -113,7 +113,7 @@ function renderPortrait(root, portraitUrl) {
   if (!portraitEl) return;
 
   // Default fallback path (relative to part location)
-  const defaultUrl = new URL('../../../assets/art/portraits/default.svg', import.meta.url).href;
+  const defaultUrl = new URL('../../../../assets/art/portraits/default.svg', import.meta.url).href;
   const targetUrl = portraitUrl || defaultUrl;
 
   // Only update if changed
