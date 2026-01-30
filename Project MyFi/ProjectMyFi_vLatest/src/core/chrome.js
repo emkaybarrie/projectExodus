@@ -599,7 +599,7 @@ export function createChrome(chromeHost){
     }
   }
 
-  // WO-FIX-1: Navigation Orb - tap vs hold detection (fixed)
+  // WO-S10: Navigation Orb - tap = Spirit Stone, hold = Nav modal (with radial charge)
   let orbHoldTimer = null;
   let orbHeld = false;
   let orbActive = false;
@@ -619,7 +619,8 @@ export function createChrome(chromeHost){
           els.navOrb.classList.remove('chrome__navOrb--pressed');
           els.navOrb.classList.add('chrome__navOrb--held');
         }
-        openSpiritStone();
+        // WO-S10: Hold opens navigation compass modal
+        openCompass();
       }
     }, ORB_HOLD_THRESHOLD);
   }
@@ -638,8 +639,8 @@ export function createChrome(chromeHost){
       orbHoldTimer = null;
     }
     if (!orbHeld) {
-      // Tap action - open compass
-      openCompass();
+      // WO-S10: Tap opens Spirit Stone modal
+      openSpiritStone();
     }
     orbHeld = false;
   }

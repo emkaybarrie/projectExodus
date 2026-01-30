@@ -53,13 +53,12 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
-/* WO-S7: Energy archetype colour coding for class */
-.PlayerHeader__class[data-archetype="fire"] { color: #ff6b4a; border: 1px solid rgba(255, 107, 74, 0.4); }
-.PlayerHeader__class[data-archetype="water"] { color: #4a9fff; border: 1px solid rgba(74, 159, 255, 0.4); }
-.PlayerHeader__class[data-archetype="earth"] { color: #7acc52; border: 1px solid rgba(122, 204, 82, 0.4); }
-.PlayerHeader__class[data-archetype="air"] { color: #c4a0ff; border: 1px solid rgba(196, 160, 255, 0.4); }
-.PlayerHeader__class[data-archetype="void"] { color: #ff80d5; border: 1px solid rgba(255, 128, 213, 0.4); }
-/* Default/neutral */
+/* WO-S10: Energy source colour coding for class (spending persona) */
+/* health = Warrior (red), mana = Mage (blue), stamina = Rogue (green) */
+.PlayerHeader__class[data-archetype="health"] { color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.5); }
+.PlayerHeader__class[data-archetype="mana"] { color: #3498db; border: 1px solid rgba(52, 152, 219, 0.5); }
+.PlayerHeader__class[data-archetype="stamina"] { color: #2ecc71; border: 1px solid rgba(46, 204, 113, 0.5); }
+/* Default/balanced */
 .PlayerHeader__class:not([data-archetype]) { color: rgba(240, 230, 210, 0.8); border: 1px solid rgba(180, 140, 80, 0.3); }
 
 .PlayerHeader__guildText {

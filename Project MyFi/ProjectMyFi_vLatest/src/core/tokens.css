@@ -756,11 +756,11 @@ body::after{
   flex: 0 0 auto;
 }
 
-/* WO-S9: Map - slightly more vertical space, stage more box-like */
+/* WO-S10: Map - more vertical space for readability */
 .screen-host.bg-cosmic .slot[data-slot-id="map"]{
   flex: 0 0 auto;
-  min-height: 110px; /* Map gets perceivably more space */
-  max-height: 130px;
+  min-height: 130px; /* Map gets more vertical space */
+  max-height: 160px;
 }
 
 /* Stage part should fill its slot */

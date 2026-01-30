@@ -25,14 +25,14 @@ export function getHubDemoVM() {
     },
 
     // PlayerCore slot data (PLAYERCORE_CONTRACT.md)
-    // WO-S9: Updated with alias vs class distinction
+    // WO-S10: Updated with alias vs class distinction
     playerCore: {
       name: 'Azakai',  // Player alias (left side of header)
       title: 'of the Badlands',  // Guild flavour text
-      // WO-S9: Class and archetype for colour coding
-      // Archetypes map to dominant vital: health=warrior, mana=mage, stamina=rogue
+      // WO-S10: Class and archetype for energy source colour coding
+      // Archetypes: health (warrior/red), mana (mage/blue), stamina (rogue/green)
       playerClass: 'WANDERER',
-      archetype: 'earth',  // fire, water, earth, air, void (earth = balanced/neutral)
+      archetype: 'stamina',  // health, mana, stamina (null = balanced/neutral)
       guildText: 'of the Badlands',
       pressure: 'balanced', // 'ahead' | 'behind' | 'balanced'
       momentum: 'steady',   // 'rising' | 'falling' | 'steady'

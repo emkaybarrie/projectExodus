@@ -87,13 +87,31 @@
   display: none;
   flex-direction: column;
   overflow: hidden;
+  /* WO-S10: Swipe transition animation */
+  opacity: 0;
+  transform: translateX(20px);
 }
 
-/* Show active tab */
+/* Show active tab with animation */
 .BadlandsStage__container[data-active-tab="current"] .BadlandsStage__tabContent[data-tab="current"],
 .BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__tabContent[data-tab="recent"],
 .BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__tabContent[data-tab="loadout"] {
   display: flex;
+  opacity: 1;
+  transform: translateX(0);
+  animation: tabSlideIn 0.25s ease-out;
+}
+
+/* WO-S10: Tab slide-in animation for swipe feel */
+@keyframes tabSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
