@@ -119,29 +119,24 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- QUEUE INDICATOR (WO-STAGE-EPISODES-V1: Shows pending episodes) -->
+  <!-- WO-S9: TOP BORDER ROW - Queue indicator pinned right -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="BadlandsStage__queueIndicator" data-visible="false" data-bind="queueIndicator">
-    <span class="BadlandsStage__queueLabel">Queued:</span>
-    <div class="BadlandsStage__queueDots" data-bind="queueDots">
-      <!-- Dots rendered dynamically -->
+  <div class="BadlandsStage__topBar">
+    <div class="BadlandsStage__queueIndicator" data-visible="false" data-bind="queueIndicator">
+      <span class="BadlandsStage__queueLabel">Queued:</span>
+      <div class="BadlandsStage__queueDots" data-bind="queueDots">
+        <!-- Dots rendered dynamically -->
+      </div>
     </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- WO-S8: DOT NAVIGATION - Icons + dots pinned bottom-left -->
+  <!-- WO-S9: BOTTOM BORDER ROW - Centered radio dots -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="BadlandsStage__dotNav">
-    <div class="BadlandsStage__dotGroup">
-      <span class="BadlandsStage__dotIcon" data-for="current">&#127758;</span>
+  <div class="BadlandsStage__bottomBar">
+    <div class="BadlandsStage__dotNav">
       <button class="BadlandsStage__dot BadlandsStage__dot--active" data-action="switchTab" data-tab="current" data-icon="&#127758;" data-label="Current" aria-label="Current Event"></button>
-    </div>
-    <div class="BadlandsStage__dotGroup">
-      <span class="BadlandsStage__dotIcon" data-for="recent">&#128220;</span>
       <button class="BadlandsStage__dot" data-action="switchTab" data-tab="recent" data-icon="&#128220;" data-label="Recent" aria-label="Recent Events"></button>
-    </div>
-    <div class="BadlandsStage__dotGroup">
-      <span class="BadlandsStage__dotIcon" data-for="loadout">&#9876;</span>
       <button class="BadlandsStage__dot" data-action="switchTab" data-tab="loadout" data-icon="&#9876;" data-label="Loadout" aria-label="Loadout"></button>
     </div>
   </div>

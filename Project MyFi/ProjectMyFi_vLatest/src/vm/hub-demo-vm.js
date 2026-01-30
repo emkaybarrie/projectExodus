@@ -25,9 +25,15 @@ export function getHubDemoVM() {
     },
 
     // PlayerCore slot data (PLAYERCORE_CONTRACT.md)
+    // WO-S9: Updated with alias vs class distinction
     playerCore: {
-      name: 'Wanderer',
-      title: 'of the Badlands',
+      name: 'Azakai',  // Player alias (left side of header)
+      title: 'of the Badlands',  // Guild flavour text
+      // WO-S9: Class and archetype for colour coding
+      // Archetypes map to dominant vital: health=warrior, mana=mage, stamina=rogue
+      playerClass: 'WANDERER',
+      archetype: 'earth',  // fire, water, earth, air, void (earth = balanced/neutral)
+      guildText: 'of the Badlands',
       pressure: 'balanced', // 'ahead' | 'behind' | 'balanced'
       momentum: 'steady',   // 'rising' | 'falling' | 'steady'
       effects: [],
@@ -197,7 +203,11 @@ export function createVitalsSimulation(onUpdate, intervalMs = 3000) {
         pressure,
         momentum,
         effects,
-        portraitUrl: state.playerCore.portraitUrl, // Preserve portrait asset path
+        // WO-S9: Preserve static fields
+        portraitUrl: state.playerCore.portraitUrl,
+        playerClass: state.playerCore.playerClass,
+        archetype: state.playerCore.archetype,
+        guildText: state.playerCore.guildText,
       },
       vitalsHud: {
         ...state.vitalsHud,

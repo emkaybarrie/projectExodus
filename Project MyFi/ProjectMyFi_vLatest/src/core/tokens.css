@@ -756,10 +756,11 @@ body::after{
   flex: 0 0 auto;
 }
 
-/* WO-S7: Map - constrained height (readable but smaller) */
+/* WO-S9: Map - slightly more vertical space, stage more box-like */
 .screen-host.bg-cosmic .slot[data-slot-id="map"]{
   flex: 0 0 auto;
-  max-height: 100px; /* Map stays readable but constrained */
+  min-height: 110px; /* Map gets perceivably more space */
+  max-height: 130px;
 }
 
 /* Stage part should fill its slot */

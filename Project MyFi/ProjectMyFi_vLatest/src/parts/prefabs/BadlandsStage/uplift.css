@@ -199,22 +199,12 @@
   border-bottom: 1px solid rgba(180, 140, 80, 0.2);
 }
 
-/* Queue indicator - shows pending episodes as dots */
-/* Positioned at top-right of container, always accessible */
+/* WO-S9: Queue indicator now lives in topBar - base styles only */
 .BadlandsStage__queueIndicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   display: none;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: rgba(26, 16, 37, 0.9);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 16px;
-  z-index: 50;
   animation: queueSlideIn 0.3s ease-out;
-  backdrop-filter: blur(4px);
 }
 
 .BadlandsStage__queueIndicator[data-visible="true"] {
@@ -637,39 +627,54 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* WO-S8: DOT NAVIGATION - Icons + dots pinned bottom-left */
+/* WO-S9: TOP BORDER ROW - Thin bar with queue indicator pinned right */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.BadlandsStage__dotNav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+.BadlandsStage__topBar {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  background: rgba(10, 8, 18, 0.75);
-  border-top-right-radius: 8px;
+  height: 24px;
+  padding: 0 8px;
+  background: rgba(10, 8, 18, 0.6);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
   flex-shrink: 0;
   z-index: 3;
 }
 
-/* WO-S8: Icon + dot group */
-.BadlandsStage__dotGroup {
+/* Queue indicator now inside topBar */
+.BadlandsStage__topBar .BadlandsStage__queueIndicator {
+  position: static;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
-/* WO-S8: Icons next to dots */
-.BadlandsStage__dotIcon {
-  font-size: 12px;
-  opacity: 0.4;
-  transition: opacity 0.25s ease;
+.BadlandsStage__topBar .BadlandsStage__queueIndicator[data-visible="false"] {
+  display: none;
 }
 
-/* Show icon brighter when its dot is active */
-.BadlandsStage__dotGroup:has(.BadlandsStage__dot--active) .BadlandsStage__dotIcon {
-  opacity: 0.9;
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-S9: BOTTOM BORDER ROW - Centered radio dots */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__bottomBar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  background: rgba(10, 8, 18, 0.6);
+  border-top: 1px solid rgba(180, 140, 80, 0.15);
+  flex-shrink: 0;
+  z-index: 3;
+}
+
+.BadlandsStage__dotNav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .BadlandsStage__dot {
@@ -706,8 +711,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .BadlandsStage__tabToast {
   position: absolute;
-  bottom: 50px;
-  left: 12px;
+  bottom: 40px; /* WO-S9: Positioned above bottomBar */
+  left: 50%;
+  transform: translateX(-50%) translateY(8px); /* WO-S9: Centered horizontally */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -725,7 +731,7 @@
 
 .BadlandsStage__tabToast[data-visible="true"] {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0); /* WO-S9: Keep centered */
 }
 
 .BadlandsStage__tabToastIcon {
@@ -929,18 +935,18 @@
     font-size: 0.8rem;
   }
 
-  /* WO-S8: Compact dotNav for small screens */
+  /* WO-S9: Compact bars for small screens */
+  .BadlandsStage__topBar {
+    height: 20px;
+    padding: 0 6px;
+  }
+
+  .BadlandsStage__bottomBar {
+    height: 24px;
+  }
+
   .BadlandsStage__dotNav {
-    padding: 6px 8px;
-    gap: 6px;
-  }
-
-  .BadlandsStage__dotGroup {
-    gap: 3px;
-  }
-
-  .BadlandsStage__dotIcon {
-    font-size: 10px;
+    gap: 10px;
   }
 
   .BadlandsStage__dot {
@@ -949,8 +955,7 @@
   }
 
   .BadlandsStage__tabToast {
-    bottom: 36px;
-    left: 8px;
+    bottom: 32px;
     padding: 6px 12px;
   }
 
@@ -977,18 +982,18 @@
     font-size: 2.5rem;
   }
 
-  /* WO-S8: Compact dotNav for landscape */
+  /* WO-S9: Compact bars for landscape */
+  .BadlandsStage__topBar {
+    height: 18px;
+    padding: 0 4px;
+  }
+
+  .BadlandsStage__bottomBar {
+    height: 22px;
+  }
+
   .BadlandsStage__dotNav {
-    padding: 4px 6px;
-    gap: 6px;
-  }
-
-  .BadlandsStage__dotGroup {
-    gap: 2px;
-  }
-
-  .BadlandsStage__dotIcon {
-    font-size: 10px;
+    gap: 8px;
   }
 
   .BadlandsStage__dot {
