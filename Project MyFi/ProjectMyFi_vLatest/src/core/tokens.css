@@ -731,30 +731,35 @@ body::after{
 }
 
 /* HUB-E4: Hub Surface — Viewport-Filling Layout (no scroll) */
-/* Vitals (auto) + Map (auto) + Stage (flex fill) */
+/* WO-S7: Bias space - Stage > Vitals > Map */
 .screen-host.bg-cosmic .surface-root{
   flex: 1 1 auto;
   min-height: 0; /* Allow flex shrinking */
-  padding: 6px var(--pad) 16px var(--pad); /* Smaller top (header-vitals), larger bottom (footer-stage) */
+  padding: 4px 10px 12px 10px; /* WO-S7: Reduced padding */
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* WO-S7: Reduced gap */
   overflow: hidden; /* Prevent scroll */
 }
 
-/* Stage slot fills remaining space */
+/* Stage slot fills remaining space - priority allocation */
 .screen-host.bg-cosmic .slot[data-slot-id="stage"]{
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 120px; /* Ensure stage always gets reasonable space */
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Vitals and Map stay fixed size */
-.screen-host.bg-cosmic .slot[data-slot-id="vitals"],
+/* WO-S7: Vitals - compact, fixed height */
+.screen-host.bg-cosmic .slot[data-slot-id="vitals"]{
+  flex: 0 0 auto;
+}
+
+/* WO-S7: Map - constrained height (readable but smaller) */
 .screen-host.bg-cosmic .slot[data-slot-id="map"]{
   flex: 0 0 auto;
+  max-height: 100px; /* Map stays readable but constrained */
 }
 
 /* Stage part should fill its slot */
@@ -768,10 +773,15 @@ body::after{
   background: var(--card);
   border: 1px solid var(--cardBorder);
   border-radius: var(--r);
-  padding: var(--pad);
+  padding: 8px; /* WO-S7: Reduced from var(--pad) to save vertical space */
   box-shadow: var(--cardGlow);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* WO-S7: Hub vitals card gets minimal padding (Part handles its own) */
+.screen-host.bg-cosmic .slot-card[data-slot-id="vitals"]{
+  padding: 0;
 }
 
 /* HUB-07/HUB-11: Overlay Slot Support — layering container

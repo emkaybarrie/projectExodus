@@ -99,12 +99,16 @@ function render(root, data) {
     pressure = 'balanced',
     momentum = 'steady',
     portraitUrl = null,
+    // WO-S7: New fields for class/guild display
+    playerClass = 'WANDERER',
+    archetype = null, // fire, water, earth, air, void
+    guildText = null, // Falls back to title if not set
   } = data.playerCore || data;
   // VitalsHUD fields
   const { vitals = {} } = data.vitalsHud || data;
 
-  // WO-HUB-03: Render avatar name row
-  renderAvatarName(root, name, title);
+  // WO-S7: Render header row - Name (left) | Class + Guild (right)
+  renderAvatarName(root, name, title, playerClass, archetype, guildText);
 
   // Render portrait (illustrated avatar)
   renderPortrait(root, portraitUrl);
@@ -123,14 +127,29 @@ function render(root, data) {
 }
 
 /**
- * WO-HUB-03: Render avatar name row above portrait/vitals
+ * WO-S7: Render header row - Name (left) | Class + Guild (right)
  */
-function renderAvatarName(root, name, title) {
+function renderAvatarName(root, name, title, playerClass, archetype, guildText) {
   const nameEl = root.querySelector('[data-bind="avatarName"]');
-  const titleEl = root.querySelector('[data-bind="avatarTitle"]');
+  const classEl = root.querySelector('[data-bind="playerClass"]');
+  const guildEl = root.querySelector('[data-bind="guildText"]');
 
   if (nameEl) nameEl.textContent = name || 'Wanderer';
-  if (titleEl) titleEl.textContent = title || 'of the Badlands';
+
+  // WO-S7: Class with energy archetype colour coding
+  if (classEl) {
+    classEl.textContent = playerClass || 'WANDERER';
+    if (archetype) {
+      classEl.dataset.archetype = archetype;
+    } else {
+      delete classEl.dataset.archetype;
+    }
+  }
+
+  // WO-S7: Guild flavour text
+  if (guildEl) {
+    guildEl.textContent = guildText || title || 'of the Badlands';
+  }
 }
 
 function renderPortrait(root, portraitUrl) {

@@ -4,25 +4,26 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
 
+/* WO-S7: Reduced vertical padding to reclaim space */
 .Part-PlayerHeader {
-  padding: 12px 14px;
+  padding: 8px 12px;
   font-family: 'Crimson Pro', Georgia, serif;
 }
 
 .PlayerHeader__container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* Avatar Name Row (WO-HUB-03: Name/title above portrait and vitals) */
+/* WO-S7: Header Row - Name (left) | Class + Guild (right) */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .PlayerHeader__nameRow {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding-bottom: 6px;
+  justify-content: space-between;
+  padding-bottom: 4px;
   border-bottom: 1px solid rgba(180, 140, 80, 0.12);
 }
 
@@ -34,11 +35,43 @@
   letter-spacing: 0.02em;
 }
 
-.PlayerHeader__avatarTitle {
+/* WO-S7: Class + Guild group (right side) */
+.PlayerHeader__classGuild {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.PlayerHeader__class {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* WO-S7: Energy archetype colour coding for class */
+.PlayerHeader__class[data-archetype="fire"] { color: #ff6b4a; border: 1px solid rgba(255, 107, 74, 0.4); }
+.PlayerHeader__class[data-archetype="water"] { color: #4a9fff; border: 1px solid rgba(74, 159, 255, 0.4); }
+.PlayerHeader__class[data-archetype="earth"] { color: #7acc52; border: 1px solid rgba(122, 204, 82, 0.4); }
+.PlayerHeader__class[data-archetype="air"] { color: #c4a0ff; border: 1px solid rgba(196, 160, 255, 0.4); }
+.PlayerHeader__class[data-archetype="void"] { color: #ff80d5; border: 1px solid rgba(255, 128, 213, 0.4); }
+/* Default/neutral */
+.PlayerHeader__class:not([data-archetype]) { color: rgba(240, 230, 210, 0.8); border: 1px solid rgba(180, 140, 80, 0.3); }
+
+.PlayerHeader__guildText {
   font-family: 'Crimson Pro', Georgia, serif;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-style: italic;
   color: rgba(240, 230, 210, 0.5);
+}
+
+/* Legacy - hidden */
+.PlayerHeader__avatarTitle {
+  display: none;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -97,7 +130,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .PlayerHeader__mainRow {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: flex-start;
 }
 
@@ -333,20 +366,20 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* Essence Row — Gold accent, elegant */
+/* WO-S7: Essence Row — Reduced padding */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .PlayerHeader__essenceRow {
-  padding-top: 10px;
+  padding-top: 6px;
   border-top: 1px solid rgba(180, 140, 80, 0.12);
 }
 
 .PlayerHeader__essenceBar {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 6px 10px;
   background: rgba(25, 20, 35, 0.5);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid rgba(180, 140, 80, 0.15);
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.2);
 }

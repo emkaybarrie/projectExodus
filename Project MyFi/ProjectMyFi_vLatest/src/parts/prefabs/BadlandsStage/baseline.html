@@ -67,12 +67,8 @@
       </div>
     </div>
 
-    <!-- TAB: Recent Events -->
+    <!-- TAB: Recent Events (WO-S8: Header removed for cinematic feel) -->
     <div class="BadlandsStage__tabContent" data-tab="recent">
-      <div class="BadlandsStage__recentHeader">
-        <span class="BadlandsStage__recentIcon">&#128220;</span>
-        <span class="BadlandsStage__recentTitle">Recent Encounters</span>
-      </div>
       <ul class="BadlandsStage__recentList" data-bind="recentList">
         <li class="BadlandsStage__recentItem BadlandsStage__recentItem--empty">
           <span class="BadlandsStage__recentItemText">No recent encounters</span>
@@ -80,13 +76,8 @@
       </ul>
     </div>
 
-    <!-- TAB: Loadout -->
+    <!-- TAB: Loadout (WO-S8: Header removed for cinematic feel) -->
     <div class="BadlandsStage__tabContent" data-tab="loadout">
-      <div class="BadlandsStage__loadoutHeader">
-        <span class="BadlandsStage__loadoutIcon">&#9876;</span>
-        <span class="BadlandsStage__loadoutTitle">Avatar Loadout</span>
-      </div>
-
       <div class="BadlandsStage__loadoutSections">
         <!-- Skills section -->
         <div class="BadlandsStage__loadoutSection">
@@ -138,12 +129,21 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- DOT NAVIGATION (WO-HUB-02: Replaced tab buttons with centered dots) -->
+  <!-- WO-S8: DOT NAVIGATION - Icons + dots pinned bottom-left -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <div class="BadlandsStage__dotNav">
-    <button class="BadlandsStage__dot BadlandsStage__dot--active" data-action="switchTab" data-tab="current" data-icon="&#127758;" data-label="Current" aria-label="Current Event"></button>
-    <button class="BadlandsStage__dot" data-action="switchTab" data-tab="recent" data-icon="&#128220;" data-label="Recent" aria-label="Recent Events"></button>
-    <button class="BadlandsStage__dot" data-action="switchTab" data-tab="loadout" data-icon="&#9876;" data-label="Loadout" aria-label="Loadout"></button>
+    <div class="BadlandsStage__dotGroup">
+      <span class="BadlandsStage__dotIcon" data-for="current">&#127758;</span>
+      <button class="BadlandsStage__dot BadlandsStage__dot--active" data-action="switchTab" data-tab="current" data-icon="&#127758;" data-label="Current" aria-label="Current Event"></button>
+    </div>
+    <div class="BadlandsStage__dotGroup">
+      <span class="BadlandsStage__dotIcon" data-for="recent">&#128220;</span>
+      <button class="BadlandsStage__dot" data-action="switchTab" data-tab="recent" data-icon="&#128220;" data-label="Recent" aria-label="Recent Events"></button>
+    </div>
+    <div class="BadlandsStage__dotGroup">
+      <span class="BadlandsStage__dotIcon" data-for="loadout">&#9876;</span>
+      <button class="BadlandsStage__dot" data-action="switchTab" data-tab="loadout" data-icon="&#9876;" data-label="Loadout" aria-label="Loadout"></button>
+    </div>
   </div>
 
   <!-- TAB TOAST (WO-HUB-02: Shows icon + label on tab change) -->
