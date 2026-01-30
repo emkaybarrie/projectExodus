@@ -9,45 +9,46 @@
  *       badlands (S)
  *
  * Swipe direction maps to navigation (pull-to-reveal):
- * - Swipe left  → avatar (pull from west)
- * - Swipe right → quests (pull from east)
- * - Swipe up    → badlands (pull from south)
- * - Swipe down  → guidance (pull from north)
+ * - Swipe left  → quests (reveal from west/left)
+ * - Swipe right → avatar (reveal from east/right)
+ * - Swipe up    → badlands (reveal from south/bottom)
+ * - Swipe down  → guidance (reveal from north/top)
+ *
+ * Interactive dragging: Screen follows finger during swipe
  */
 
 import { emit } from './actionBus.js';
 import { setTransitionDirection } from './screenTransition.js';
 
 // Navigation map from each screen
-// Swipe direction maps to screen reveal:
-// - Swipe left  → avatar (reveal from west/left)
-// - Swipe right → quests (reveal from east/right)
-// - Swipe up    → badlands (reveal from south/bottom)
-// - Swipe down  → guidance (reveal from north/top)
+// Conceptual layout:  Quests (W) -- HUB -- Avatar (E)
+// Swipe direction reveals screen from that side:
+// - Swipe left  → Avatar (pull from east/right)
+// - Swipe right → Quests (pull from west/left)
 const NAV_MAP = {
   hub: {
-    left: 'avatar',
-    right: 'quests',
+    left: 'avatar',     // Swipe left reveals Avatar (from right)
+    right: 'quests',    // Swipe right reveals Quests (from left)
     up: 'badlands',
     down: 'guidance'
   },
   quests: {
-    left: 'hub'   // Can only go back to hub
+    left: 'hub'         // Swipe left from Quests returns to Hub
   },
   avatar: {
-    right: 'hub'  // Can only go back to hub
+    right: 'hub'        // Swipe right from Avatar returns to Hub
   },
   guidance: {
-    up: 'hub'     // Can only go back to hub (swipe up to return)
+    up: 'hub'
   },
   badlands: {
-    down: 'hub'   // Can only go back to hub (swipe down to return)
+    down: 'hub'
   }
 };
 
 // Edge positions for glow feedback
 const EDGE_MAP = {
-  left: 'edge-right',   // Swiping left reveals right edge glow
+  left: 'edge-right',
   right: 'edge-left',
   up: 'edge-bottom',
   down: 'edge-top'
@@ -66,15 +67,17 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
   let startX = 0;
   let startY = 0;
   let startTime = 0;
-  let lockedAxis = null; // 'x' | 'y' | null
+  let lockedAxis = null;
   let tracking = false;
+  let interactiveDrag = false; // Track if we're in interactive drag mode
 
   // Thresholds
-  const AXIS_LOCK_THRESHOLD = 10;  // px before axis locks
-  const SWIPE_THRESHOLD = 50;       // px minimum for swipe
-  const VELOCITY_THRESHOLD = 0.3;   // px/ms minimum velocity
+  const AXIS_LOCK_THRESHOLD = 10;
+  const SWIPE_THRESHOLD = 60;      // px minimum for swipe commit
+  const VELOCITY_THRESHOLD = 0.25;  // px/ms minimum velocity
+  const MAX_DRAG_DISTANCE = 150;    // Max visual drag distance (parallax feel)
 
-  // Edge glow elements (injected into chrome)
+  // Edge glow elements
   let edgeGlows = null;
 
   function createEdgeGlows() {
@@ -89,17 +92,11 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     return container;
   }
 
-  function showEdgeGlow(direction) {
-    if (!edgeGlows) return;
-    const edgeClass = EDGE_MAP[direction];
-    const el = edgeGlows.querySelector(`.${edgeClass}`);
-    if (el) el.classList.add('active');
-  }
-
   function hideAllEdgeGlows() {
     if (!edgeGlows) return;
     edgeGlows.querySelectorAll('.swipe-edge-glow').forEach(el => {
       el.classList.remove('active');
+      el.style.setProperty('--glow-intensity', '0');
     });
   }
 
@@ -131,10 +128,56 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     return routes && routes[direction];
   }
 
+  // Get the surface host element for interactive dragging
+  function getSurfaceHost() {
+    return hostEl.querySelector('.chrome__surfaceHost');
+  }
+
+  // Apply interactive drag transform to the surface
+  function applyDragTransform(deltaX, deltaY, direction) {
+    const surfaceHost = getSurfaceHost();
+    if (!surfaceHost) return;
+
+    // Calculate drag amount with easing (resistance at edges)
+    let dragX = 0;
+    let dragY = 0;
+
+    if (lockedAxis === 'x') {
+      const sign = deltaX > 0 ? 1 : -1;
+      const absDelta = Math.abs(deltaX);
+      // Apply resistance curve for parallax feel
+      dragX = sign * Math.min(absDelta * 0.5, MAX_DRAG_DISTANCE);
+    } else if (lockedAxis === 'y') {
+      const sign = deltaY > 0 ? 1 : -1;
+      const absDelta = Math.abs(deltaY);
+      dragY = sign * Math.min(absDelta * 0.5, MAX_DRAG_DISTANCE);
+    }
+
+    surfaceHost.style.transition = 'none';
+    surfaceHost.style.transform = `translate(${dragX}px, ${dragY}px)`;
+  }
+
+  // Reset drag transform with animation
+  function resetDragTransform(animate = true) {
+    const surfaceHost = getSurfaceHost();
+    if (!surfaceHost) return;
+
+    if (animate) {
+      surfaceHost.style.transition = 'transform 250ms ease-out';
+    }
+    surfaceHost.style.transform = '';
+
+    // Cleanup after animation
+    if (animate) {
+      setTimeout(() => {
+        surfaceHost.style.transition = '';
+      }, 260);
+    }
+  }
+
   function handleStart(e) {
     if (!enabled) return;
 
-    // Ignore if interacting with scrollable content or inputs
     const target = e.target;
     if (target.closest('input, textarea, select, button, a, [data-no-swipe]')) {
       return;
@@ -146,6 +189,7 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     startTime = Date.now();
     lockedAxis = null;
     tracking = true;
+    interactiveDrag = false;
 
     emit('swipe:start', { x: startX, y: startY });
   }
@@ -173,13 +217,18 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
 
     const progress = lockedAxis === 'x' ? absDeltaX : absDeltaY;
 
+    // Check if navigation is possible
+    const canNav = canNavigate(direction);
+
     // Prevent scroll if this is a valid navigation swipe
-    if (canNavigate(direction) && e.cancelable) {
+    if (canNav && e.cancelable) {
       e.preventDefault();
     }
 
-    // Show edge glow if navigation is possible
-    if (canNavigate(direction)) {
+    // Apply interactive drag effect if valid navigation
+    if (canNav) {
+      interactiveDrag = true;
+      applyDragTransform(deltaX, deltaY, direction);
       updateEdgeGlowIntensity(direction, progress);
     }
 
@@ -200,6 +249,7 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     hideAllEdgeGlows();
 
     if (!lockedAxis) {
+      if (interactiveDrag) resetDragTransform(true);
       emit('swipe:cancel', { reason: 'no-axis-lock' });
       return;
     }
@@ -208,52 +258,62 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     const distance = lockedAxis === 'x' ? absDeltaX : absDeltaY;
     const velocity = distance / elapsed;
 
-    // Check if swipe qualifies
-    if (distance < SWIPE_THRESHOLD) {
-      emit('swipe:cancel', { reason: 'below-threshold', distance });
-      return;
-    }
-
-    if (velocity < VELOCITY_THRESHOLD) {
-      emit('swipe:cancel', { reason: 'too-slow', velocity });
-      return;
-    }
-
     // Check if navigation is possible
     const targetRoute = canNavigate(direction);
-    if (!targetRoute) {
-      emit('swipe:blocked', { direction, currentRoute: getCurrentRoute() });
-      return;
+
+    // Determine if swipe qualifies for navigation
+    const meetsThreshold = distance >= SWIPE_THRESHOLD;
+    const meetsVelocity = velocity >= VELOCITY_THRESHOLD;
+    const shouldNavigate = targetRoute && meetsThreshold && meetsVelocity;
+
+    if (shouldNavigate) {
+      // Reset transform immediately (navigation will handle transition)
+      resetDragTransform(false);
+
+      // Navigate with transition
+      emit('swipe:navigate', { direction, target: targetRoute, velocity });
+      setTransitionDirection(direction);
+      navigate(targetRoute);
+    } else {
+      // Snap back with animation
+      if (interactiveDrag) {
+        resetDragTransform(true);
+      }
+
+      if (!targetRoute) {
+        emit('swipe:blocked', { direction, currentRoute: getCurrentRoute() });
+      } else if (!meetsThreshold) {
+        emit('swipe:cancel', { reason: 'below-threshold', distance });
+      } else {
+        emit('swipe:cancel', { reason: 'too-slow', velocity });
+      }
     }
 
-    // Navigate with transition!
-    emit('swipe:navigate', { direction, target: targetRoute, velocity });
-    setTransitionDirection(direction);
-    navigate(targetRoute);
+    interactiveDrag = false;
   }
 
   function handleCancel() {
     tracking = false;
     lockedAxis = null;
+    if (interactiveDrag) {
+      resetDragTransform(true);
+    }
+    interactiveDrag = false;
     hideAllEdgeGlows();
     emit('swipe:cancel', { reason: 'touch-cancel' });
   }
 
-  // Attach listeners
   function attach() {
-    // Touch events - touchmove must be non-passive to allow preventDefault for swipe
     hostEl.addEventListener('touchstart', handleStart, { passive: true });
     hostEl.addEventListener('touchmove', handleMove, { passive: false });
     hostEl.addEventListener('touchend', handleEnd, { passive: true });
     hostEl.addEventListener('touchcancel', handleCancel, { passive: true });
 
-    // Pointer events for mouse/stylus
     hostEl.addEventListener('pointerdown', handleStart, { passive: true });
     hostEl.addEventListener('pointermove', handleMove, { passive: false });
     hostEl.addEventListener('pointerup', handleEnd, { passive: true });
     hostEl.addEventListener('pointercancel', handleCancel, { passive: true });
 
-    // Inject edge glows
     edgeGlows = createEdgeGlows();
     hostEl.appendChild(edgeGlows);
   }
@@ -273,7 +333,6 @@ export function createSwipeNav(hostEl, { navigate, getCurrentRoute }) {
     }
   }
 
-  // Initialize
   attach();
 
   return {

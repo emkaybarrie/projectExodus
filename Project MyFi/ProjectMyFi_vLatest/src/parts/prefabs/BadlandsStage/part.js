@@ -359,15 +359,20 @@ function render(root, state) {
   if (!container) return;
 
   // Set stage background URL via CSS custom property
+  // Switch between idle and combat backgrounds based on encounter state
+  // Combat mode always uses combat background; idle mode can use VM override
   // VM paths are relative to index.html, so resolve them to absolute URLs
   // (CSS url() resolves relative to stylesheet, not document)
   let stageBgUrl;
-  if (state.stageBgUrl) {
-    // Resolve VM path (relative to document base) to absolute URL
+  if (state.stageMode === 'encounter_autobattler') {
+    // Combat mode: always use combat background
+    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch-combat.png', import.meta.url).href;
+  } else if (state.stageBgUrl) {
+    // World mode with VM override
     stageBgUrl = new URL(state.stageBgUrl, document.baseURI).href;
   } else {
-    // Fallback to SVG (relative to this module)
-    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch.svg', import.meta.url).href;
+    // World mode: use idle background
+    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch-idle.png', import.meta.url).href;
   }
   container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
 

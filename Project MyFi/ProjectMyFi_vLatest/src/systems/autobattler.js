@@ -10,49 +10,67 @@
  */
 const ENCOUNTER_TYPES = [
   {
-    type: 'wanderer',
-    label: 'Wandering Spirit',
-    icon: '&#128123;',
-    spawnWeight: 30,
+    type: 'wraith',
+    label: 'Restless Wraith',
+    icon: '&#128128;', // Skull
+    spawnWeight: 25,
     baseDifficulty: 1,
     rewards: { essence: 50, healthRegen: 10 },
     risks: { healthDrain: 20, manaDrain: 10 },
   },
   {
-    type: 'storm',
-    label: 'Dust Storm',
-    icon: '&#127786;',
-    spawnWeight: 25,
+    type: 'wolf',
+    label: 'Dire Wolf',
+    icon: '&#128058;', // Wolf
+    spawnWeight: 30,
     baseDifficulty: 2,
     rewards: { essence: 75, staminaRegen: 15 },
-    risks: { healthDrain: 30, staminaDrain: 25 },
+    risks: { healthDrain: 35, staminaDrain: 20 },
   },
   {
     type: 'cache',
-    label: 'Hidden Cache',
-    icon: '&#128230;',
-    spawnWeight: 15,
+    label: 'Ancient Treasure',
+    icon: '&#128176;', // Money bag (treasure)
+    spawnWeight: 12,
     baseDifficulty: 0,
     rewards: { essence: 100, manaRegen: 25 },
     risks: { healthDrain: 0, manaDrain: 0 },
   },
   {
-    type: 'beast',
-    label: 'Badlands Beast',
-    icon: '&#128058;',
+    type: 'spider',
+    label: 'Giant Spider',
+    icon: '&#128375;', // Spider
     spawnWeight: 20,
+    baseDifficulty: 2,
+    rewards: { essence: 80, healthRegen: 0 },
+    risks: { healthDrain: 40, staminaDrain: 15 },
+  },
+  {
+    type: 'drake',
+    label: 'Wyrm Drake',
+    icon: '&#128009;', // Dragon
+    spawnWeight: 8,
+    baseDifficulty: 4,
+    rewards: { essence: 200, healthRegen: 30 },
+    risks: { healthDrain: 70, staminaDrain: 40 },
+  },
+  {
+    type: 'ogre',
+    label: 'Cave Ogre',
+    icon: '&#128121;', // Ogre
+    spawnWeight: 15,
     baseDifficulty: 3,
-    rewards: { essence: 120, healthRegen: 0 },
-    risks: { healthDrain: 50, staminaDrain: 30 },
+    rewards: { essence: 120, staminaRegen: 20 },
+    risks: { healthDrain: 55, staminaDrain: 30 },
   },
   {
     type: 'anomaly',
-    label: 'Essence Anomaly',
-    icon: '&#10024;',
+    label: 'Arcane Rift',
+    icon: '&#10024;', // Sparkles (magic)
     spawnWeight: 10,
     baseDifficulty: 2,
-    rewards: { essence: 200, manaRegen: 40 },
-    risks: { healthDrain: 15, manaDrain: 30 },
+    rewards: { essence: 150, manaRegen: 50 },
+    risks: { healthDrain: 15, manaDrain: 35 },
   },
 ];
 
