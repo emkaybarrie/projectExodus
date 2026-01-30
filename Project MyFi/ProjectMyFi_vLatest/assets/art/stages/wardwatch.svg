@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0e1a"/>
+      <stop offset="40%" style="stop-color:#1a1e35"/>
+      <stop offset="100%" style="stop-color:#2a2050"/>
+    </linearGradient>
+    <linearGradient id="building" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a2040"/>
+      <stop offset="100%" style="stop-color:#0f1525"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#f0e6d2;stop-opacity:0.9"/>
+      <stop offset="100%" style="stop-color:#d4a853;stop-opacity:0.3"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="400" height="600" fill="url(#sky)"/>
+
+  <!-- Moon -->
+  <circle cx="320" cy="80" r="35" fill="url(#moon)"/>
+
+  <!-- Stars -->
+  <circle cx="50" cy="40" r="1" fill="#fff" opacity="0.7"/>
+  <circle cx="120" cy="70" r="1.2" fill="#fff" opacity="0.5"/>
+  <circle cx="200" cy="30" r="0.8" fill="#fff" opacity="0.6"/>
+  <circle cx="280" cy="55" r="1" fill="#fff" opacity="0.4"/>
+  <circle cx="80" cy="120" r="0.9" fill="#fff" opacity="0.5"/>
+  <circle cx="350" cy="140" r="1.1" fill="#fff" opacity="0.6"/>
+
+  <!-- Distant buildings silhouette -->
+  <rect x="0" y="280" width="60" height="320" fill="url(#building)" opacity="0.6"/>
+  <rect x="55" y="320" width="45" height="280" fill="url(#building)" opacity="0.5"/>
+  <rect x="95" y="260" width="70" height="340" fill="url(#building)" opacity="0.7"/>
+  <rect x="160" y="300" width="50" height="300" fill="url(#building)" opacity="0.5"/>
+  <rect x="205" y="240" width="80" height="360" fill="url(#building)" opacity="0.8"/>
+  <rect x="280" y="290" width="55" height="310" fill="url(#building)" opacity="0.6"/>
+  <rect x="330" y="270" width="70" height="330" fill="url(#building)" opacity="0.7"/>
+
+  <!-- Tower spires -->
+  <polygon points="130,260 140,180 150,260" fill="#1a2040" opacity="0.8"/>
+  <polygon points="240,240 255,150 270,240" fill="#1a2040" opacity="0.9"/>
+
+  <!-- Window lights -->
+  <rect x="110" y="300" width="4" height="6" fill="#d4a853" opacity="0.6"/>
+  <rect x="120" y="320" width="4" height="6" fill="#d4a853" opacity="0.4"/>
+  <rect x="225" y="280" width="5" height="8" fill="#d4a853" opacity="0.7"/>
+  <rect x="240" y="310" width="5" height="8" fill="#d4a853" opacity="0.5"/>
+  <rect x="255" y="290" width="5" height="8" fill="#d4a853" opacity="0.6"/>
+  <rect x="350" y="310" width="4" height="6" fill="#d4a853" opacity="0.5"/>
+
+  <!-- Fog layer at bottom -->
+  <rect x="0" y="500" width="400" height="100" fill="#1a1e35" opacity="0.5"/>
+</svg>

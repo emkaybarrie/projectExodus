@@ -1,14 +1,48 @@
+/* Cinzel/Crimson Pro Typography for Fantasy RPG Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
+
 :root{
-  --bg0: #0b0f1a;
-  --bg1: #0f1630;
-  --card: rgba(255,255,255,0.06);
-  --cardBorder: rgba(255,255,255,0.12);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.68);
+  /* Core backgrounds - deeper, richer purples */
+  --bg0: #0a0812;
+  --bg1: #12101f;
+  --bg2: #1a1528;
+
+  /* Card styling - warm gold accent instead of purple */
+  --card: rgba(20, 15, 35, 0.75);
+  --cardBorder: rgba(180, 140, 80, 0.2);
+  --cardGlow: 0 2px 12px rgba(180, 140, 80, 0.08);
+
+  /* Text - warm cream tones */
+  --text: rgba(240, 230, 210, 0.95);
+  --muted: rgba(240, 230, 210, 0.6);
+  --gold: #d4a853;
+  --goldGlow: rgba(212, 168, 83, 0.4);
+
+  /* Stat bar colors - muted, earthy tones */
+  --stat-health: #5cb85c;
+  --stat-health-bg: rgba(92, 184, 92, 0.15);
+  --stat-mana: #5090c4;
+  --stat-mana-bg: rgba(80, 144, 196, 0.15);
+  --stat-stamina: #d4a040;
+  --stat-stamina-bg: rgba(212, 160, 64, 0.15);
+  --stat-shield: #9070b0;
+  --stat-shield-bg: rgba(144, 112, 176, 0.15);
+
+  /* Accents - warm fantasy tones */
+  --accent-purple: #9070b0;
+  --accent-purple-glow: rgba(144, 112, 176, 0.4);
+  --accent-orange: #d4a853;
+  --accent-teal: #5cb85c;
+
+  /* Layout (unchanged) */
   --r: 16px;
   --gap: 12px;
   --pad: 14px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Typography - Fantasy RPG */
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-body: 'Crimson Pro', Georgia, serif;
+  font-family: var(--font-body);
 }
 
 html, body{
@@ -20,6 +54,11 @@ html, body{
 
 body{
   background: var(--bg0);
+  /* Cosmic atmospheric gradient - purple glow from top, warm hint at bottom */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139, 92, 246, 0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(251, 146, 60, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(139, 92, 246, 0.06) 0%, transparent 40%);
   color: var(--text);
 }
 
@@ -45,14 +84,19 @@ body{
 
 .chrome__header{
   padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, rgba(18, 16, 31, 0.95) 0%, rgba(10, 8, 18, 0.9) 100%);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 .chrome__title{
-  font-weight: 900;
-  letter-spacing: 0.02em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  color: rgba(240, 230, 210, 0.95);
 }
 
 /* HUB-D4/G5: DEV buttons in chrome header */
@@ -332,10 +376,11 @@ body{
   gap: 8px;
   padding: 10px 10px;
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); /* Safe area for notched phones */
-  border-top: 1px solid rgba(255,255,255,0.10);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  background: var(--bg0); /* Ensure footer has background */
+  background: linear-gradient(180deg, rgba(10, 8, 18, 0.95) 0%, rgba(10, 8, 18, 0.98) 100%);
+  border-top: 1px solid rgba(180, 140, 80, 0.2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .chrome__navBtn{
@@ -586,6 +631,9 @@ body{
   border: 1px solid var(--cardBorder);
   border-radius: var(--r);
   padding: var(--pad);
+  box-shadow: var(--cardGlow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* HUB-07/HUB-11: Overlay Slot Support — layering container
@@ -726,12 +774,15 @@ body{
 }
 
 .chrome__orbCore{
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #a78bfa, #7c3aed, #4c1d95);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.2);
-  animation: orbPulse 2s ease-in-out infinite;
+  background: radial-gradient(circle at 35% 35%, #c4b5fd, #a78bfa 30%, #7c3aed 60%, #5b21b6);
+  box-shadow:
+    0 0 20px rgba(139, 92, 246, 0.7),
+    0 0 40px rgba(139, 92, 246, 0.4),
+    inset 0 0 12px rgba(255, 255, 255, 0.3);
+  animation: orbPulse 2.5s ease-in-out infinite;
 }
 
 .chrome__orbRing{
@@ -744,12 +795,19 @@ body{
 
 @keyframes orbPulse{
   0%, 100% {
-    box-shadow: 0 0 15px rgba(139, 92, 246, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.2);
+    box-shadow:
+      0 0 20px rgba(139, 92, 246, 0.6),
+      0 0 40px rgba(139, 92, 246, 0.3),
+      inset 0 0 12px rgba(255, 255, 255, 0.25);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 25px rgba(139, 92, 246, 0.8), 0 0 40px rgba(139, 92, 246, 0.4), inset 0 0 15px rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
+    box-shadow:
+      0 0 30px rgba(139, 92, 246, 0.9),
+      0 0 60px rgba(139, 92, 246, 0.5),
+      0 0 80px rgba(139, 92, 246, 0.2),
+      inset 0 0 15px rgba(255, 255, 255, 0.4);
+    transform: scale(1.08);
   }
 }
 
@@ -1053,11 +1111,12 @@ body{
   border: none;
   color: var(--muted);
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .chrome__footerBtn:hover{
-  color: var(--text);
+  color: var(--gold);
+  filter: drop-shadow(0 0 6px var(--goldGlow));
 }
 
 .chrome__footerBtnIcon{
@@ -1578,6 +1637,97 @@ body{
 .chrome__socialsAddBtn:hover{
   border-color: rgba(96, 165, 250, 0.4);
   color: rgba(96, 165, 250, 0.8);
+}
+
+/* ---- Stat Bars (Fantasy RPG Style) ---- */
+.stat-bar{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.stat-bar__label{
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  min-width: 55px;
+}
+
+.stat-bar__track{
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-bar__fill{
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stat-bar__value{
+  font-size: 0.75rem;
+  font-weight: 600;
+  min-width: 55px;
+  text-align: right;
+}
+
+/* Stat color variants */
+.stat-bar--health .stat-bar__fill{
+  background: linear-gradient(90deg, #16a34a, var(--stat-health));
+  box-shadow: 0 0 6px var(--stat-health);
+}
+.stat-bar--health .stat-bar__value{ color: var(--stat-health); }
+
+.stat-bar--mana .stat-bar__fill{
+  background: linear-gradient(90deg, #2563eb, var(--stat-mana));
+  box-shadow: 0 0 6px var(--stat-mana);
+}
+.stat-bar--mana .stat-bar__value{ color: var(--stat-mana); }
+
+.stat-bar--stamina .stat-bar__fill{
+  background: linear-gradient(90deg, #ca8a04, var(--stat-stamina));
+  box-shadow: 0 0 6px var(--stat-stamina);
+}
+.stat-bar--stamina .stat-bar__value{ color: var(--stat-stamina); }
+
+.stat-bar--shield .stat-bar__fill{
+  background: linear-gradient(90deg, #9333ea, var(--stat-shield));
+  box-shadow: 0 0 6px var(--stat-shield);
+}
+.stat-bar--shield .stat-bar__value{ color: var(--stat-shield); }
+
+/* Essence bar (gold accent) */
+.essence-bar{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border: 1px solid rgba(245, 166, 35, 0.2);
+}
+
+.essence-bar__label{
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.essence-bar__value{
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  text-shadow: 0 0 8px var(--goldGlow);
 }
 
 /* ---- WO-FIX-3: Screen Transition Animations ---- */

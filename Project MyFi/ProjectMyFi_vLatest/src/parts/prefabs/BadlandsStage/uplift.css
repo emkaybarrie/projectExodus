@@ -1,24 +1,68 @@
-/* BadlandsStage uplift.css — HUB Refactor: 3-Tab Stage */
-/* Tabs: Current Event | Recent Events | Loadout (tab bar at bottom) */
+/* BadlandsStage uplift.css — Illustrated RPG Aesthetic */
+/* Asset-driven background, Cinzel/Crimson Pro typography, warm tones */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap');
 
 .Part-BadlandsStage {
   padding: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Crimson Pro', Georgia, serif;
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* Allow shrinking in flex context */
+  min-height: 0;
 }
 
 .BadlandsStage__container {
+  --stage-bg-url: url('../../../../assets/art/stages/wardwatch.svg');
   position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
-  min-height: 0; /* Allow shrinking in flex context */
-  background: linear-gradient(135deg, var(--surface-1, #1a1a2e) 0%, var(--surface-2, #16213e) 100%);
+  min-height: 0;
+  background: #0a0815;
   border-radius: var(--radius-m, 12px);
   overflow: hidden;
+}
+
+/* Illustrated background layer — only visible on Current tab */
+.BadlandsStage__container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--stage-bg-url);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.75) saturate(0.9);
+  z-index: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Hide background on Recent and Loadout tabs */
+.BadlandsStage__container[data-active-tab="recent"]::before,
+.BadlandsStage__container[data-active-tab="loadout"]::before {
+  opacity: 0;
+}
+
+/* Subtle vignette overlay — only visible on Current tab */
+.BadlandsStage__container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(10, 8, 21, 0.3) 0%, transparent 30%, transparent 60%, rgba(10, 8, 21, 0.85) 100%),
+    radial-gradient(ellipse at center, transparent 50%, rgba(10, 8, 21, 0.4) 100%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Hide vignette on Recent and Loadout tabs */
+.BadlandsStage__container[data-active-tab="recent"]::after,
+.BadlandsStage__container[data-active-tab="loadout"]::after {
+  opacity: 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -28,6 +72,13 @@
   flex: 1;
   position: relative;
   overflow: hidden;
+  z-index: 2;
+}
+
+/* Solid background for Recent and Loadout tabs (since illustrated bg is hidden) */
+.BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__content,
+.BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__content {
+  background: linear-gradient(180deg, rgba(15, 10, 25, 0.95) 0%, rgba(10, 8, 18, 0.98) 100%);
 }
 
 .BadlandsStage__tabContent {
@@ -64,11 +115,27 @@
 .BadlandsStage__scenicBg {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, transparent 50%, rgba(10, 12, 28, 0.85) 100%),
-    url('./wardwatch-bg.svg');
-  background-size: cover;
-  background-position: center bottom;
+  z-index: 1;
+}
+
+/* Subtle atmospheric glow (moon/ambient) */
+.BadlandsStage__scenic::before {
+  content: '';
+  position: absolute;
+  top: 8%;
+  right: 12%;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(240, 230, 210, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(15px);
+  animation: ambientGlow 6s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes ambientGlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
 }
 
 .BadlandsStage__scenicOverlay {
@@ -84,15 +151,18 @@
 }
 
 .BadlandsStage__scenicTitle {
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 1.3rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.02em;
 }
 
 .BadlandsStage__scenicSubtitle {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(240, 230, 210, 0.6);
   font-style: italic;
   margin-top: 4px;
 }
@@ -113,8 +183,8 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg,
-    rgba(60, 30, 30, 0.85) 0%,
-    rgba(40, 20, 35, 0.9) 100%
+    rgba(60, 35, 35, 0.85) 0%,
+    rgba(45, 25, 40, 0.9) 100%
   );
 }
 
@@ -125,7 +195,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.2);
 }
 
 .BadlandsStage__encounterIcon {
@@ -138,14 +209,16 @@
 
 .BadlandsStage__encounterName {
   display: block;
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 1.1rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
 }
 
 .BadlandsStage__encounterType {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.65rem;
+  color: rgba(180, 140, 80, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -154,12 +227,14 @@
   padding: 8px 14px;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 8px;
+  border: 1px solid rgba(180, 140, 80, 0.2);
 }
 
 .BadlandsStage__timerValue {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
   font-variant-numeric: tabular-nums;
 }
 
@@ -183,12 +258,12 @@
 
 .BadlandsStage__enemySprite {
   font-size: 4rem;
-  animation: enemyPulse 2s ease-in-out infinite;
+  animation: enemyIdle 3s ease-in-out infinite;
 }
 
-@keyframes enemyPulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+@keyframes enemyIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
 }
 
 .BadlandsStage__enemyHealth {
@@ -201,14 +276,16 @@
   background: rgba(0, 0, 0, 0.5);
   border-radius: 5px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .BadlandsStage__enemyHealthFill {
   height: 100%;
   width: 75%;
-  background: linear-gradient(90deg, #ef4444, #dc2626);
+  background: linear-gradient(180deg, #c45050 0%, #a03030 100%);
   border-radius: 5px;
   transition: width 0.3s ease;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 .BadlandsStage__autobattlerStatus {
@@ -221,19 +298,19 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #22c55e;
-  animation: statusPulse 1.5s ease-out infinite;
+  background: #5cb85c;
+  animation: statusBlink 2s ease-out infinite;
 }
 
-@keyframes statusPulse {
-  0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.5); }
-  70% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+@keyframes statusBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .BadlandsStage__statusText {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(240, 230, 210, 0.6);
 }
 
 .BadlandsStage__timerBar {
@@ -244,14 +321,16 @@
   background: rgba(0, 0, 0, 0.5);
   border-radius: 3px;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .BadlandsStage__timerFill {
   height: 100%;
   width: 45%;
-  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  background: linear-gradient(90deg, #b8863a 0%, #d4a853 100%);
   border-radius: 3px;
   transition: width 0.1s linear;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
 .BadlandsStage__encounterCTA {
@@ -268,18 +347,19 @@
   gap: 8px;
   padding: 12px 24px;
   min-height: 44px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(109, 40, 217, 0.4));
-  border: 1px solid rgba(139, 92, 246, 0.5);
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.3), rgba(140, 100, 50, 0.3));
+  border: 1px solid rgba(180, 140, 80, 0.5);
   border-radius: 8px;
-  color: #fff;
-  font-size: 0.9rem;
+  color: rgba(240, 230, 210, 0.95);
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
 }
 
 .BadlandsStage__aidBtn:hover {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(109, 40, 217, 0.6));
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.5), rgba(140, 100, 50, 0.5));
   transform: translateY(-2px);
 }
 
@@ -295,17 +375,22 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .BadlandsStage__recentIcon {
   font-size: 1.3rem;
+  color: #d4a853;
 }
 
 .BadlandsStage__recentTitle {
-  font-size: 1rem;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .BadlandsStage__recentList {
@@ -324,14 +409,16 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(180, 140, 80, 0.1);
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .BadlandsStage__recentItem:hover {
   background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(180, 140, 80, 0.25);
 }
 
 .BadlandsStage__recentItem--empty {
@@ -341,8 +428,8 @@
 }
 
 .BadlandsStage__recentItem--expanded {
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: rgba(180, 140, 80, 0.08);
+  border: 1px solid rgba(180, 140, 80, 0.3);
 }
 
 .BadlandsStage__recentItemMain {
@@ -360,28 +447,32 @@
 }
 
 .BadlandsStage__recentItemName {
+  font-family: 'Cinzel', Georgia, serif;
   font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
 }
 
 .BadlandsStage__recentItemText {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(240, 230, 210, 0.6);
 }
 
 .BadlandsStage__recentItemTime {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(240, 230, 210, 0.4);
 }
 
 .BadlandsStage__recentItemDetails {
   display: none;
   padding-top: 8px;
   margin-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(180, 140, 80, 0.15);
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(240, 230, 210, 0.7);
 }
 
 .BadlandsStage__recentItem--expanded .BadlandsStage__recentItemDetails {
@@ -396,17 +487,22 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .BadlandsStage__loadoutIcon {
   font-size: 1.3rem;
+  color: #d4a853;
 }
 
 .BadlandsStage__loadoutTitle {
-  font-size: 1rem;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .BadlandsStage__loadoutSections {
@@ -425,11 +521,12 @@
 }
 
 .BadlandsStage__loadoutSectionTitle {
-  font-size: 0.75rem;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(180, 140, 80, 0.7);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   margin: 0;
 }
 
@@ -446,8 +543,8 @@
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  background: rgba(139, 92, 246, 0.1);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: rgba(180, 140, 80, 0.08);
+  border: 1px solid rgba(180, 140, 80, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
@@ -455,14 +552,14 @@
 
 .BadlandsStage__skillSlot:hover,
 .BadlandsStage__equipSlot:hover {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(180, 140, 80, 0.15);
+  border-color: rgba(180, 140, 80, 0.35);
 }
 
 .BadlandsStage__skillSlot--empty,
 .BadlandsStage__equipSlot--empty {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(180, 140, 80, 0.1);
   border-style: dashed;
 }
 
@@ -474,15 +571,17 @@
 .BadlandsStage__skillName,
 .BadlandsStage__equipName {
   flex: 1;
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
 }
 
 .BadlandsStage__equipStat {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.75rem;
-  color: #22c55e;
+  color: #a8d4a8;
   padding: 2px 6px;
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(92, 184, 92, 0.1);
   border-radius: 4px;
 }
 
@@ -491,8 +590,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .BadlandsStage__tabBar {
   display: flex;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(180, 140, 80, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 3;
 }
 
 .BadlandsStage__tab {
@@ -505,19 +605,20 @@
   min-height: 54px;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(240, 230, 210, 0.5);
+  font-family: 'Cinzel', Georgia, serif;
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
 }
 
 .BadlandsStage__tab:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.05);
+  color: rgba(240, 230, 210, 0.8);
+  background: rgba(180, 140, 80, 0.08);
 }
 
 .BadlandsStage__tab--active {
-  color: #a855f7;
-  background: rgba(139, 92, 246, 0.1);
+  color: #d4a853;
+  background: rgba(180, 140, 80, 0.12);
 }
 
 .BadlandsStage__tabIcon {
@@ -525,8 +626,10 @@
 }
 
 .BadlandsStage__tabLabel {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -541,7 +644,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.95), rgba(109, 40, 217, 0.95));
+  background: linear-gradient(135deg, rgba(180, 140, 80, 0.95), rgba(140, 100, 50, 0.95));
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
   z-index: 50;
@@ -563,8 +666,9 @@
 
 .BadlandsStage__toastText {
   flex: 1;
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.85rem;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -576,7 +680,7 @@
   display: none;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   z-index: 100;
 }
 
@@ -588,8 +692,8 @@
   width: 90%;
   max-width: 320px;
   max-height: 80%;
-  background: var(--surface-1, #1a1a2e);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, #1a1525 0%, #0f0a15 100%);
+  border: 1px solid rgba(180, 140, 80, 0.25);
   border-radius: 12px;
   overflow: hidden;
   display: flex;
@@ -601,13 +705,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
 }
 
 .BadlandsStage__modalTitle {
-  font-size: 1rem;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .BadlandsStage__modalClose {
@@ -616,16 +723,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: rgba(180, 140, 80, 0.1);
+  border: 1px solid rgba(180, 140, 80, 0.2);
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(240, 230, 210, 0.7);
   font-size: 1.2rem;
   cursor: pointer;
 }
 
 .BadlandsStage__modalClose:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(180, 140, 80, 0.2);
 }
 
 .BadlandsStage__modalBody {
@@ -642,16 +749,16 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(180, 140, 80, 0.05);
+  border: 1px solid rgba(180, 140, 80, 0.15);
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s, border-color 0.2s;
 }
 
 .BadlandsStage__skillOption:hover {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(180, 140, 80, 0.12);
+  border-color: rgba(180, 140, 80, 0.3);
 }
 
 .BadlandsStage__skillOptionIcon {
@@ -660,13 +767,15 @@
 
 .BadlandsStage__skillOptionName {
   flex: 1;
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(240, 230, 210, 0.9);
 }
 
 .BadlandsStage__skillOptionCost {
+  font-family: 'Crimson Pro', Georgia, serif;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(180, 140, 80, 0.7);
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
@@ -707,11 +816,11 @@
 
   .BadlandsStage__aidBtn {
     padding: 10px 16px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .BadlandsStage__tabLabel {
-    font-size: 0.65rem;
+    font-size: 0.6rem;
   }
 
   .BadlandsStage__tab {

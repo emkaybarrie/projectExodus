@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="manaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#5a9bd4"/>
+      <stop offset="100%" style="stop-color:#3a70a8"/>
+    </linearGradient>
+  </defs>
+  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93s3.06-7.44 7-7.93v15.86zm2-15.86c3.94.49 7 3.85 7 7.93s-3.06 7.44-7 7.93V4.07z" fill="url(#manaGrad)"/>
+  <circle cx="12" cy="12" r="4" fill="url(#manaGrad)" opacity="0.6"/>
+</svg>

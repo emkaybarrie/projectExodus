@@ -87,9 +87,13 @@ function render(root, data) {
     title = 'of the Badlands',
     pressure = 'balanced',
     momentum = 'steady',
+    portraitUrl = null,
   } = data.playerCore || data;
   // VitalsHUD fields
   const { vitals = {} } = data.vitalsHud || data;
+
+  // Render portrait (illustrated avatar)
+  renderPortrait(root, portraitUrl);
 
   // Render status line
   renderStatusLine(root, mode, payCycle);
@@ -102,6 +106,28 @@ function render(root, data) {
 
   // Render essence (now in PlayerHeader)
   renderEssence(root, vitals.essence);
+}
+
+function renderPortrait(root, portraitUrl) {
+  const portraitEl = root.querySelector('.PlayerHeader__portrait');
+  if (!portraitEl) return;
+
+  // Default fallback path (relative to part location)
+  const defaultUrl = new URL('../../../../assets/art/portraits/default.svg', import.meta.url).href;
+  const targetUrl = portraitUrl || defaultUrl;
+
+  // Only update if changed
+  if (portraitEl.src !== targetUrl) {
+    portraitEl.src = targetUrl;
+
+    // Handle load errors with fallback + console warning
+    portraitEl.onerror = () => {
+      console.warn(`[PlayerHeader] Portrait asset not found: ${targetUrl}, using fallback`);
+      if (portraitEl.src !== defaultUrl) {
+        portraitEl.src = defaultUrl;
+      }
+    };
+  }
 }
 
 function renderStatusLine(root, mode, payCycle) {
@@ -177,8 +203,8 @@ function renderVitalBar(root, vitalName, pool) {
 
   const valueEl = el.querySelector('.PlayerHeader__vitalValue');
   if (valueEl) {
-    // Compact display: just current value
-    valueEl.textContent = formatCompact(current);
+    // Full display: current / max (like reference UI)
+    valueEl.textContent = `${formatCompact(current)} / ${formatCompact(max)}`;
   }
 }
 

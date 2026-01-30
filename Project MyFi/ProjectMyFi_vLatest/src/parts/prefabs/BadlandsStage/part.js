@@ -36,8 +36,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Internal state
   const state = {
     activeTab: 'current', // current | recent | loadout
-    stageMode: 'world', // world | encounter_autobattler
-    currentEncounter: null,
+    stageMode: data.stageMode || 'world', // world | encounter_autobattler
+    stageBgUrl: data.stageBgUrl || null, // Stage background URL from VM
+    currentEncounter: data.currentEncounter || null,
     recentEvents: [],
     loadout: {
       skills: [
@@ -191,15 +192,18 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Subscribe to events
   const unsubscribers = [];
   if (ctx.actionBus && ctx.actionBus.subscribe) {
-    // State changes
+    // State changes (only for non-encounter properties)
+    // NOTE: stageMode and currentEncounter are controlled by autobattler events,
+    // not hub:stateChange, to prevent race conditions where hub state resets
+    // active encounters back to 'world' mode
     unsubscribers.push(
       ctx.actionBus.subscribe('hub:stateChange', (hubState) => {
         if (hubState?.badlandsStage) {
-          if (hubState.badlandsStage.stageMode) {
-            state.stageMode = hubState.badlandsStage.stageMode;
-          }
-          if (hubState.badlandsStage.currentEncounter) {
-            state.currentEncounter = hubState.badlandsStage.currentEncounter;
+          // Only update stageBgUrl from hub state (visual config)
+          // Do NOT update stageMode or currentEncounter here - those are
+          // controlled by autobattler:spawn and autobattler:resolve events
+          if (hubState.badlandsStage.stageBgUrl) {
+            state.stageBgUrl = hubState.badlandsStage.stageBgUrl;
           }
           render(root, state);
         }
@@ -353,6 +357,19 @@ function bindInteractions(root, state, ctx) {
 function render(root, state) {
   const container = root.querySelector('.BadlandsStage__container');
   if (!container) return;
+
+  // Set stage background URL via CSS custom property
+  // VM paths are relative to index.html, so resolve them to absolute URLs
+  // (CSS url() resolves relative to stylesheet, not document)
+  let stageBgUrl;
+  if (state.stageBgUrl) {
+    // Resolve VM path (relative to document base) to absolute URL
+    stageBgUrl = new URL(state.stageBgUrl, document.baseURI).href;
+  } else {
+    // Fallback to SVG (relative to this module)
+    stageBgUrl = new URL('../../../../assets/art/stages/wardwatch.svg', import.meta.url).href;
+  }
+  container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
 
   // Set active tab
   container.dataset.activeTab = state.activeTab;
