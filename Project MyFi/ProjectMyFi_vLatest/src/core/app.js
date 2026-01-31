@@ -18,6 +18,8 @@ import { createStageSignals, createTransactionSignal } from '../systems/stageSig
 import { createEpisodeRunner } from '../systems/episodeRunner.js';
 // Keyboard navigation for cross-layout screens
 import * as keyboardNav from './keyboardNav.js';
+// WO-P0-A: First-run welcome overlay
+import * as firstRun from './firstRun.js';
 
 // Create Hub controller for integrated systems (autobattler, vitals sim)
 const hubController = createHubController({
@@ -139,6 +141,8 @@ window.__MYFI_DEBUG__ = {
   journeyRunner,
   router,
   hubController,
+  // WO-P0-A: First-run state (use firstRun.resetFirstRun() to test again)
+  firstRun,
   // WO-S6: swipeNav disabled - navigation via modal only
   swipeNav: null,
   // Keyboard navigation controller
@@ -176,6 +180,37 @@ window.__MYFI_DEBUG__ = {
 chrome.enableDevSpawn();
 
 router.start();
+
+// WO-P0-A: First-run welcome overlay
+// Shows once on first load, skippable, frames player as patron/influence
+if (!firstRun.hasCompletedFirstRun()) {
+  // Dynamically import and mount welcome overlay
+  import('../parts/prefabs/WelcomeOverlay/part.js').then(async (module) => {
+    const mount = module.default;
+    const welcomeHost = document.createElement('div');
+    welcomeHost.id = 'welcome-overlay-host';
+    document.body.appendChild(welcomeHost);
+
+    const welcomeOverlay = await mount(welcomeHost, {
+      id: 'welcome',
+      data: { autoShow: true },
+      ctx: { emitter: actionBus },
+    });
+
+    // Clean up after dismiss
+    const unsub = actionBus.subscribe('welcome:complete', () => {
+      unsub();
+      setTimeout(() => {
+        welcomeOverlay.unmount();
+        welcomeHost.remove();
+      }, 500);
+    }, 'app');
+
+    console.log('[App] WO-P0-A: First-run welcome overlay mounted');
+  }).catch((e) => {
+    console.warn('[App] Failed to load welcome overlay:', e);
+  });
+}
 
 // Start Hub controller when on hub surface
 // WO-HUB-02: Mark as persistent (app-level subscriptions, not cleaned up per-surface)
