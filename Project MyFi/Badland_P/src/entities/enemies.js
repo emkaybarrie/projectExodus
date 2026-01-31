@@ -1,5 +1,5 @@
 // enemies.js — Enemy Manager
-// Enemy spawning, AI, and behaviors
+// Enemy spawning, AI, projectiles, and behaviors
 
 // Enemy types
 const ENEMY_TYPES = {
@@ -31,7 +31,23 @@ const ENEMY_TYPES = {
     health: 40,
     color: '#a855f7',
     behavior: 'shoot',
+    projectileSpeed: 300,
+    projectileDamage: 15,
+    shootCooldown: 1800,
     score: 100,
+  },
+  sniper: {
+    width: 32,
+    height: 56,
+    speed: 0,
+    damage: 25,
+    health: 50,
+    color: '#dc2626',
+    behavior: 'snipe',
+    projectileSpeed: 450,
+    projectileDamage: 20,
+    shootCooldown: 2500,
+    score: 150,
   },
   bomber: {
     width: 28,
@@ -42,7 +58,32 @@ const ENEMY_TYPES = {
     color: '#ec4899',
     behavior: 'fly',
     flyHeight: 100,
+    projectileSpeed: 200,
+    projectileDamage: 12,
+    shootCooldown: 2000,
     score: 125,
+  },
+};
+
+// Projectile types
+const PROJECTILE_TYPES = {
+  basic: {
+    width: 10,
+    height: 10,
+    color: '#ff6b35',
+    trailColor: '#ff9500',
+  },
+  sniper: {
+    width: 16,
+    height: 6,
+    color: '#dc2626',
+    trailColor: '#ff4444',
+  },
+  bomb: {
+    width: 14,
+    height: 14,
+    color: '#ec4899',
+    trailColor: '#f472b6',
   },
 };
 
@@ -50,22 +91,24 @@ const ENEMY_TYPES = {
 const SPAWN_INTERVAL_BASE = 3000; // ms
 const SPAWN_DISTANCE = 800; // pixels ahead of player
 const MAX_ENEMIES = 8;
+const MAX_PROJECTILES = 20;
 
 /**
  * Create the enemy manager
  */
 export function createEnemyManager(region, events) {
   const enemies = [];
+  const projectiles = []; // Enemy projectiles
   let lastSpawnTime = 0;
   let spawnInterval = SPAWN_INTERVAL_BASE;
   let difficulty = 1;
   let terrainManager = null;
 
-  // Region-specific enemy pools
+  // Region-specific enemy pools - all regions now include ranged enemies
   const regionEnemies = {
-    frontier: ['charger', 'jumper'],
-    badlands: ['charger', 'jumper', 'shooter'],
-    void: ['charger', 'jumper', 'shooter', 'bomber'],
+    frontier: ['charger', 'jumper', 'shooter'],
+    badlands: ['charger', 'jumper', 'shooter', 'sniper'],
+    void: ['charger', 'jumper', 'shooter', 'sniper', 'bomber'],
   };
   const enemyPool = regionEnemies[region.id] || regionEnemies.frontier;
 
@@ -214,23 +257,40 @@ export function createEnemyManager(region, events) {
         break;
 
       case 'shoot':
-        // Stationary, shoot periodically
-        const now = Date.now();
-        if (now - enemy.lastShot > 2000) {
-          enemy.lastShot = now;
-          events.emit('enemy:shoot', {
-            x: enemy.x,
-            y: enemy.y + type.height / 2,
-            targetX: playerPos.x,
-            targetY: playerPos.y,
-          });
+        // Stationary, shoot periodically toward player
+        const shootNow = Date.now();
+        const shootCooldown = type.shootCooldown || 2000;
+        if (shootNow - enemy.lastShot > shootCooldown) {
+          enemy.lastShot = shootNow;
+          spawnProjectile(enemy, playerPos, 'basic');
+          events.emit('enemy:shoot', { enemy, targetX: playerPos.x, targetY: playerPos.y });
+        }
+        break;
+
+      case 'snipe':
+        // Stationary sniper - accurate, slower fire rate
+        const snipeNow = Date.now();
+        const snipeCooldown = type.shootCooldown || 2500;
+        if (snipeNow - enemy.lastShot > snipeCooldown) {
+          enemy.lastShot = snipeNow;
+          spawnProjectile(enemy, playerPos, 'sniper');
+          events.emit('enemy:shoot', { enemy, targetX: playerPos.x, targetY: playerPos.y });
         }
         break;
 
       case 'fly':
-        // Fly in sine wave pattern
+        // Fly in sine wave pattern and occasionally drop bombs
         enemy.x -= type.speed * dt;
         enemy.y = (480 - type.height - type.flyHeight) + Math.sin(Date.now() / 500) * 30;
+
+        // Drop bombs periodically
+        const flyNow = Date.now();
+        const flyCooldown = type.shootCooldown || 2000;
+        if (flyNow - enemy.lastShot > flyCooldown) {
+          enemy.lastShot = flyNow;
+          spawnProjectile(enemy, { x: enemy.x, y: 600 }, 'bomb'); // Bomb drops down
+          events.emit('enemy:shoot', { enemy, targetX: enemy.x, targetY: 600 });
+        }
         break;
     }
   }
@@ -270,6 +330,165 @@ export function createEnemyManager(region, events) {
   }
 
   /**
+   * Spawn an enemy projectile
+   */
+  function spawnProjectile(enemy, targetPos, projectileType = 'basic') {
+    if (projectiles.length >= MAX_PROJECTILES) {
+      projectiles.shift(); // Remove oldest
+    }
+
+    const type = enemy.type;
+    const projType = PROJECTILE_TYPES[projectileType] || PROJECTILE_TYPES.basic;
+
+    // Calculate direction toward target
+    const startX = enemy.x + type.width / 2;
+    const startY = enemy.y + type.height / 2;
+    const dx = targetPos.x - startX;
+    const dy = targetPos.y - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Normalize and apply speed
+    const speed = type.projectileSpeed || 300;
+    const vx = (dx / dist) * speed;
+    const vy = (dy / dist) * speed;
+
+    projectiles.push({
+      x: startX,
+      y: startY,
+      vx,
+      vy,
+      width: projType.width,
+      height: projType.height,
+      color: projType.color,
+      trailColor: projType.trailColor,
+      damage: type.projectileDamage || 15,
+      type: projectileType,
+      trail: [], // For visual trail effect
+      age: 0,
+    });
+  }
+
+  /**
+   * Update enemy projectiles
+   */
+  function updateProjectiles(dt, player, visibleRange) {
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const proj = projectiles[i];
+
+      // Add trail point
+      if (proj.trail.length < 8) {
+        proj.trail.push({ x: proj.x, y: proj.y, age: 0 });
+      }
+
+      // Age trail points
+      for (let j = proj.trail.length - 1; j >= 0; j--) {
+        proj.trail[j].age += dt * 1000;
+        if (proj.trail[j].age > 100) {
+          proj.trail.splice(j, 1);
+        }
+      }
+
+      // Move projectile
+      proj.x += proj.vx * dt;
+      proj.y += proj.vy * dt;
+      proj.age += dt * 1000;
+
+      // Bomb type has gravity
+      if (proj.type === 'bomb') {
+        proj.vy += 400 * dt;
+      }
+
+      // Check if off screen
+      if (proj.x < visibleRange.minX - 100 ||
+          proj.x > visibleRange.maxX + 100 ||
+          proj.y > 700 ||
+          proj.y < -100 ||
+          proj.age > 5000) {
+        projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Check collision with player
+      const playerBounds = player.getBounds();
+      if (rectIntersects(
+        { x: proj.x - proj.width / 2, y: proj.y - proj.height / 2, width: proj.width, height: proj.height },
+        playerBounds
+      )) {
+        // Hit player!
+        if (!player.hasIframes || !player.hasIframes()) {
+          player.takeDamage(proj.damage);
+          events.emit('player:hit', { damage: proj.damage, source: 'projectile' });
+        }
+        projectiles.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * Render enemy projectiles
+   */
+  function renderProjectiles(ctx) {
+    for (const proj of projectiles) {
+      // Draw trail
+      ctx.globalAlpha = 0.6;
+      for (let i = 0; i < proj.trail.length; i++) {
+        const t = proj.trail[i];
+        const alpha = 1 - (t.age / 100);
+        const size = (proj.width * 0.5) * alpha;
+        ctx.globalAlpha = alpha * 0.4;
+        ctx.fillStyle = proj.trailColor;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw projectile
+      ctx.globalAlpha = 1;
+
+      if (proj.type === 'sniper') {
+        // Sniper bullet - elongated
+        ctx.save();
+        const angle = Math.atan2(proj.vy, proj.vx);
+        ctx.translate(proj.x, proj.y);
+        ctx.rotate(angle);
+        ctx.fillStyle = proj.color;
+        ctx.fillRect(-proj.width / 2, -proj.height / 2, proj.width, proj.height);
+        // Core
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-proj.width / 4, -proj.height / 4, proj.width / 2, proj.height / 2);
+        ctx.restore();
+      } else if (proj.type === 'bomb') {
+        // Bomb - round with fuse
+        ctx.fillStyle = proj.color;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Fuse spark
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y - proj.width / 2 - 3, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Basic projectile - fireball style
+        const gradient = ctx.createRadialGradient(proj.x, proj.y, 0, proj.x, proj.y, proj.width);
+        gradient.addColorStop(0, '#ffff00');
+        gradient.addColorStop(0.4, proj.color);
+        gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.width, 0, Math.PI * 2);
+        ctx.fill();
+        // Core
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.width * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /**
    * Check rectangle intersection
    */
   function rectIntersects(a, b) {
@@ -288,10 +507,20 @@ export function createEnemyManager(region, events) {
     return enemies;
   }
 
+  /**
+   * Get enemy projectiles
+   */
+  function getProjectiles() {
+    return projectiles;
+  }
+
   return {
     update,
     render,
     getEnemies,
+    getProjectiles,
+    updateProjectiles,
+    renderProjectiles,
     setTerrainManager,
   };
 }
