@@ -1053,7 +1053,8 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* EPISODE SLOW-TIME OVERLAY (WO-STAGE-EPISODES-V1) */
+/* WO-S3: UNIFIED INCIDENT OVERLAY (replaces WO-STAGE-EPISODES-V1 slow-time) */
+/* Shows for ALL incident types with mode-specific theming */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .BadlandsStage__slowTime {
   position: absolute;
@@ -1083,6 +1084,20 @@
   backdrop-filter: blur(4px);
 }
 
+/* WO-S3: Theme-specific overlay backgrounds */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(20, 10, 10, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(10, 15, 20, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(15, 10, 20, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(20, 15, 25, 0.85);
+}
+
 .BadlandsStage__slowTimeContent {
   position: relative;
   z-index: 1;
@@ -1091,6 +1106,127 @@
   align-items: center;
   gap: 16px;
   max-width: 320px;
+  width: 100%;
+}
+
+/* WO-S3: Incident Header (icon + title) */
+.BadlandsStage__incidentHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.BadlandsStage__incidentIcon {
+  font-size: 2.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* WO-S3: Theme-specific icon colors */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__incidentIcon {
+  color: #e08080;
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__incidentIcon {
+  color: #80b0e0;
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__incidentIcon {
+  color: #a78bfa;
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__incidentIcon {
+  color: #d4a853;
+}
+
+.BadlandsStage__incidentTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* WO-S3: Overlay Actions Container */
+.BadlandsStage__overlayActions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* WO-S3: Engage/Skip Buttons */
+.BadlandsStage__overlayBtn {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-family: 'Cinzel', Georgia, serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.BadlandsStage__overlayBtn--engage {
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.3) 0%, rgba(160, 120, 60, 0.4) 100%);
+  border: 2px solid rgba(180, 140, 80, 0.6);
+  color: rgba(240, 230, 210, 0.95);
+}
+
+.BadlandsStage__overlayBtn--engage:hover {
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.4) 0%, rgba(160, 120, 60, 0.5) 100%);
+  border-color: rgba(200, 160, 100, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(180, 140, 80, 0.3);
+}
+
+.BadlandsStage__overlayBtn--skip {
+  background: transparent;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  color: rgba(240, 230, 210, 0.6);
+}
+
+.BadlandsStage__overlayBtn--skip:hover {
+  border-color: rgba(240, 230, 210, 0.4);
+  color: rgba(240, 230, 210, 0.8);
+}
+
+.BadlandsStage__overlayBtn--skipTag {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  border-radius: 6px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.8rem;
+  color: rgba(240, 230, 210, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.BadlandsStage__overlayBtn--skipTag:hover {
+  border-color: rgba(240, 230, 210, 0.4);
+  color: rgba(240, 230, 210, 0.8);
+}
+
+.BadlandsStage__overlayBtnLabel {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.BadlandsStage__overlayBtnHint {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* WO-S3: Tagging Options Grid (when engaged) */
+.BadlandsStage__taggingOptionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
 }
 

@@ -83,6 +83,53 @@ const TAGGING_PROMPTS = {
 };
 
 /**
+ * WO-S3: Unified Overlay Configuration by incident kind
+ * All incidents use the same overlay structure with mode-specific visuals
+ */
+const OVERLAY_CONFIG = {
+  combat: {
+    theme: 'combat',
+    icon: '&#9876;', // Swords
+    title: 'Encounter',
+    subtitle: 'A challenger approaches',
+    engageLabel: 'Engage',
+    engageHint: 'Watch the battle',
+    skipLabel: 'Auto-resolve',
+    skipHint: 'Let autopilot handle it',
+  },
+  traversal: {
+    theme: 'traversal',
+    icon: '&#128099;', // Footprints
+    title: 'Passage',
+    subtitle: 'The path demands tribute',
+    engageLabel: 'Review',
+    engageHint: 'Tag this expense',
+    skipLabel: 'Continue',
+    skipHint: 'Mark as routine',
+  },
+  social: {
+    theme: 'social',
+    icon: '&#128176;', // Money bag
+    title: 'Commitment',
+    subtitle: 'A recurring pact',
+    engageLabel: 'Evaluate',
+    engageHint: 'Review this subscription',
+    skipLabel: 'Accept',
+    skipHint: 'Continue as-is',
+  },
+  anomaly: {
+    theme: 'anomaly',
+    icon: '&#10067;', // Question mark
+    title: 'Anomaly',
+    subtitle: 'Something unusual',
+    engageLabel: 'Investigate',
+    engageHint: 'Look closer',
+    skipLabel: 'Dismiss',
+    skipHint: 'Probably fine',
+  },
+};
+
+/**
  * Map signal kind to incident kind
  */
 function mapSignalToIncidentKind(signal) {
@@ -321,6 +368,9 @@ export function createIncidentFromSignal(signal) {
     { type: 'enemy', kind: enemy.kind },
   ];
 
+  // WO-S3: Get overlay config for this incident kind
+  const overlayConfig = OVERLAY_CONFIG[incidentKind] || OVERLAY_CONFIG.combat;
+
   // Create the incident
   const incident = createIncident({
     id: `inc-${signal.id}`,
@@ -337,6 +387,8 @@ export function createIncidentFromSignal(signal) {
   // Attach enemy metadata for UI (non-canonical but useful)
   incident._enemy = enemy;
   incident._signal = signal;
+  // WO-S3: Attach overlay config for unified overlay rendering
+  incident._overlayConfig = overlayConfig;
 
   console.log(`[IncidentFactory] Created incident: ${incident.id} (${incidentKind}, difficulty ${difficulty}, mode: ${incident.mechanics?.mode})`);
 
@@ -374,11 +426,12 @@ export function createDemoIncident(options = {}) {
   });
 }
 
-export { ENEMY_CATALOG, TAGGING_PROMPTS };
+export { ENEMY_CATALOG, TAGGING_PROMPTS, OVERLAY_CONFIG };
 
 export default {
   createIncidentFromSignal,
   createDemoIncident,
   ENEMY_CATALOG,
   TAGGING_PROMPTS,
+  OVERLAY_CONFIG,
 };

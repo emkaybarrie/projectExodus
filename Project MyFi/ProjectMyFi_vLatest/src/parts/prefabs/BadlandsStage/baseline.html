@@ -158,24 +158,27 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- EPISODE SLOW-TIME OVERLAY (WO-STAGE-EPISODES-V1) -->
+  <!-- WO-S3: UNIFIED INCIDENT OVERLAY (Replaces WO-STAGE-EPISODES-V1 slow-time) -->
+  <!-- Shows for ALL incident types with mode-specific visuals -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="BadlandsStage__slowTime" data-visible="false">
+  <div class="BadlandsStage__slowTime" data-visible="false" data-theme="combat">
     <div class="BadlandsStage__slowTimeOverlay"></div>
     <div class="BadlandsStage__slowTimeContent">
-      <!-- Caption -->
+
+      <!-- WO-S3: Incident header (icon + title) -->
+      <div class="BadlandsStage__incidentHeader">
+        <span class="BadlandsStage__incidentIcon" data-bind="incidentIcon">&#9876;</span>
+        <span class="BadlandsStage__incidentTitle" data-bind="incidentTitle">Encounter</span>
+      </div>
+
+      <!-- Caption (narrative) -->
       <div class="BadlandsStage__episodeCaption" data-bind="episodeCaption">
         A spending challenger approaches...
       </div>
 
-      <!-- Tagging prompt -->
-      <div class="BadlandsStage__taggingPrompt">
-        <h3 class="BadlandsStage__taggingQuestion" data-bind="taggingQuestion">
-          What kind of spending was this?
-        </h3>
-        <div class="BadlandsStage__taggingOptions" data-bind="taggingOptions">
-          <!-- Options populated dynamically -->
-        </div>
+      <!-- WO-S3: Dynamic actions container (Engage/Skip OR tagging options) -->
+      <div class="BadlandsStage__overlayActions" data-bind="overlayActions">
+        <!-- Populated dynamically by renderSlowTimeOverlay -->
       </div>
 
       <!-- Timer indicator -->
@@ -186,10 +189,16 @@
         <span class="BadlandsStage__slowTimeTimerLabel">Auto-resolve in <span data-bind="slowTimeTimerValue">30</span>s</span>
       </div>
 
-      <!-- Skip button -->
-      <button class="BadlandsStage__slowTimeSkip" data-action="skipTagging">
-        Let Autopilot Handle It
-      </button>
+      <!-- Legacy tagging prompt (kept for backwards compatibility) -->
+      <div class="BadlandsStage__taggingPrompt" style="display:none;">
+        <h3 class="BadlandsStage__taggingQuestion" data-bind="taggingQuestion">
+          What kind of spending was this?
+        </h3>
+        <div class="BadlandsStage__taggingOptions" data-bind="taggingOptions">
+          <!-- Options populated dynamically -->
+        </div>
+      </div>
+
     </div>
   </div>
 
