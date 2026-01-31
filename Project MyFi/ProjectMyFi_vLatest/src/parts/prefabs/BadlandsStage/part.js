@@ -26,6 +26,20 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
+// WO-DEV-ASSET-PREFLIGHT: Import asset preflight system
+import {
+  preflightBackground,
+  getMissingAssets,
+  generateMissingPlaceholderHTML,
+  ensurePlaceholderCSS,
+} from '../../../systems/assetPreflight.js';
+// WO-ASSET-ROUTING: Import asset routing schema for beat type / activity phase / region routing
+import {
+  buildAssetPathChain,
+  getFallbackImage,
+  BEAT_TYPES,
+  LEGACY_STATE_FOLDERS,
+} from '../../../systems/assetRoutingSchema.js';
 
 async function fetchText(url) {
   const res = await fetch(url);
@@ -121,6 +135,124 @@ function getRandomBackground(stateName, baseUrl) {
   const randomIndex = Math.floor(Math.random() * backgrounds.length);
   const filename = backgrounds[randomIndex];
   return new URL(BG_FOLDER_BASE + folder + filename, baseUrl).href;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-ASSET-ROUTING: Routing-based Background Selection
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Cache for routed folder manifests (keyed by folder path)
+const routedManifestCache = {};
+
+/**
+ * WO-ASSET-ROUTING: Load manifest for a folder path
+ * Returns array of background filenames or empty array if not found
+ */
+async function loadRoutedManifest(folderPath, baseUrl) {
+  if (routedManifestCache[folderPath]) {
+    return routedManifestCache[folderPath];
+  }
+
+  try {
+    const manifestUrl = new URL(BG_FOLDER_BASE + folderPath + '/manifest.json', baseUrl).href;
+    const response = await fetch(manifestUrl);
+    if (!response.ok) {
+      routedManifestCache[folderPath] = null; // Mark as checked but not found
+      return null;
+    }
+    const manifest = await response.json();
+    routedManifestCache[folderPath] = manifest.backgrounds || [];
+    console.log(`[BadlandsStage] Loaded ${routedManifestCache[folderPath].length} backgrounds from ${folderPath}`);
+    return routedManifestCache[folderPath];
+  } catch (err) {
+    routedManifestCache[folderPath] = null; // Mark as checked but not found
+    return null;
+  }
+}
+
+/**
+ * WO-ASSET-ROUTING: Select background using routing context with fallback chain
+ *
+ * Tries paths in order from most specific to least specific:
+ * 1. beatType/activityPhase/region (e.g., combat/focus/center)
+ * 2. beatType/activityPhase (e.g., combat/focus)
+ * 3. beatType (e.g., combat)
+ * 4. idle (ultimate fallback)
+ *
+ * @param {Object} routingContext - Routing context from incident.renderPlan.assetRouting
+ * @param {string} routingContext.beatType - Beat type (combat, traversal, social, anomaly, idle)
+ * @param {string} routingContext.activityPhase - Activity phase (wake, explore, focus, etc.)
+ * @param {string} routingContext.region - Region (north, east, south, west, center)
+ * @param {string[]} routingContext.pathChain - Pre-computed fallback paths
+ * @param {string} routingContext.legacyState - Legacy state for backward compatibility
+ * @param {string} baseUrl - Base URL for asset paths
+ * @returns {Promise<{url: string, folderUsed: string, fallbackLevel: number}>}
+ */
+async function selectBackgroundWithRouting(routingContext, baseUrl) {
+  const {
+    beatType = BEAT_TYPES.IDLE,
+    pathChain = null,
+    legacyState = 'patrol',
+  } = routingContext || {};
+
+  // Build path chain if not pre-computed
+  const paths = pathChain || buildAssetPathChain(routingContext || {});
+
+  // Try each path in order
+  for (let i = 0; i < paths.length; i++) {
+    const folderPath = paths[i];
+    const backgrounds = await loadRoutedManifest(folderPath, baseUrl);
+
+    if (backgrounds && backgrounds.length > 0) {
+      const randomIndex = Math.floor(Math.random() * backgrounds.length);
+      const filename = backgrounds[randomIndex];
+      const url = new URL(BG_FOLDER_BASE + folderPath + '/' + filename, baseUrl).href;
+
+      console.log(`[BadlandsStage] Asset routing: Using ${folderPath} (fallback level ${i})`);
+      return {
+        url,
+        folderUsed: folderPath,
+        fallbackLevel: i,
+        filename,
+      };
+    }
+  }
+
+  // Ultimate fallback: use legacy state folders
+  const legacyFolder = STATE_FOLDERS[legacyState] || LEGACY_STATE_FOLDERS[legacyState] || 'patrol/';
+  const legacyFallback = STATE_FALLBACKS[legacyState] || getFallbackImage(beatType);
+  const url = new URL(BG_FOLDER_BASE + legacyFolder + legacyFallback, baseUrl).href;
+
+  console.log(`[BadlandsStage] Asset routing: Using legacy fallback ${legacyFolder}${legacyFallback}`);
+  return {
+    url,
+    folderUsed: legacyFolder,
+    fallbackLevel: paths.length, // Beyond all routing paths
+    filename: legacyFallback,
+  };
+}
+
+/**
+ * WO-ASSET-ROUTING: Select background for an incident using its render plan
+ *
+ * @param {Object} incident - Incident object with renderPlan.assetRouting
+ * @param {string} baseUrl - Base URL for asset paths
+ * @returns {Promise<{url: string, folderUsed: string, fallbackLevel: number}>}
+ */
+async function selectBackgroundForIncident(incident, baseUrl) {
+  const routingContext = incident?.renderPlan?.assetRouting;
+  if (!routingContext) {
+    // No routing context, fall back to legacy state
+    const legacyState = incident?.renderPlan?.state || 'patrol';
+    return {
+      url: getRandomBackground(legacyState, baseUrl),
+      folderUsed: STATE_FOLDERS[legacyState] || 'patrol/',
+      fallbackLevel: -1, // Indicates legacy selection
+      filename: null,
+    };
+  }
+
+  return selectBackgroundWithRouting(routingContext, baseUrl);
 }
 
 /**
@@ -248,10 +380,14 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
   // Internal state
   const state = {
-    activeTab: 'current', // current | recent | loadout
+    activeTab: 'current', // current | recent | narrative
     stageMode: data.stageMode || 'world', // world | encounter_autobattler
     stageBgUrl: data.stageBgUrl || null, // Stage background URL from VM
     currentEncounter: data.currentEncounter || null,
+    // WO-HUB-LAYOUT: Narrative log placeholder entries
+    narrativeEntries: [],
+    // WO-HUB-LAYOUT: DEPRECATED - recentEvents and loadout migrated to WorldMap
+    // Keeping for backwards compatibility during migration
     recentEvents: [],
     loadout: {
       skills: [
@@ -296,6 +432,26 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     // WO-WATCH-EPISODE-ROUTING: Activity state visual pool
     currentVisualPool: 'default',
     currentActivityState: null, // Activity state from episodeRouter
+    // WO-DEV-ASSET-PREFLIGHT: Missing asset tracking
+    currentMissingAsset: null, // Current missing asset entry for placeholder
+    // WO-LIVE-DEMO: Event notification state (legacy)
+    engagementState: 'inactive', // inactive | pending | engaged
+    notificationExpanded: false, // True when capsule is expanded to full overlay
+    pendingCombatBgUrl: null, // Combat background to use when player engages
+    // WO-CAPSULE-V2: Capsule notification state machine
+    // hidden: no active event
+    // pending: event triggered, capsule banner visible at top
+    // collapsed: capsule collapsed to orb at top-right (after COLLAPSE_DELAY)
+    // expanded: player tapped, HUD panel visible with scene log and engage button
+    // engaged: player engaged, activity state updated to 'engaged'
+    capsuleState: 'hidden', // hidden | pending | collapsed | expanded | engaged
+    capsuleCollapseTimerId: null, // Timer for auto-collapse
+    // WO-CAPSULE-V2: Quick-engage overlay state
+    // Shows briefly when story beat generated, allows hold-to-engage
+    quickEngageVisible: false,
+    quickEngageTimerId: null, // 5-second auto-dismiss timer
+    quickEngageHoldTimerId: null, // Hold progress timer
+    quickEngageHoldProgress: 0, // 0-100% hold progress
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -317,16 +473,66 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     return (config.minTransitionTime + Math.random() * range) * 1000; // ms
   }
 
-  function selectBackgroundForState(stateName) {
+  /**
+   * WO-DEV-ASSET-PREFLIGHT: Select background with preflight validation
+   * Returns { url: string, missingEntry: Object|null }
+   */
+  async function selectBackgroundForState(stateName) {
     const config = getWorldStateConfig();
+    let selectedUrl;
     if (config.randomizeOnStateChange) {
-      return getRandomBackground(stateName, import.meta.url);
+      selectedUrl = getRandomBackground(stateName, import.meta.url);
+    } else if (state.currentBgUrl && state.worldState === stateName) {
+      // If not randomizing, keep current if same state type, else pick random
+      selectedUrl = state.currentBgUrl;
+    } else {
+      selectedUrl = getRandomBackground(stateName, import.meta.url);
     }
-    // If not randomizing, keep current if same state type, else pick random
-    if (state.currentBgUrl && state.worldState === stateName) {
-      return state.currentBgUrl;
+
+    const folder = STATE_FOLDERS[stateName] || 'patrol/';
+    const manifestPath = new URL(BG_FOLDER_BASE + folder + 'manifest.json', import.meta.url).href;
+    const filename = selectedUrl.split('/').pop();
+
+    // WO-DEV-RENDER-BINDING: Emit trace event for background selection
+    if (ctx.actionBus && isDevRenderEnabled()) {
+      ctx.actionBus.emit('stage:bgSelected', {
+        poolFolder: folder,
+        filename,
+        manifestPath,
+        fullUrl: selectedUrl,
+        stateName,
+      });
     }
-    return getRandomBackground(stateName, import.meta.url);
+
+    // WO-DEV-ASSET-PREFLIGHT: Preflight check the selected background
+    const preflightResult = await preflightBackground({
+      imageUrl: selectedUrl,
+      poolFolder: folder,
+      filename,
+      manifestPath,
+      stateName,
+    });
+
+    if (!preflightResult.valid) {
+      // Asset is missing - try fallback or record for placeholder
+      if (preflightResult.fallbackUrl) {
+        // Use fallback URL
+        console.warn(`[BadlandsStage] Missing asset, using fallback: ${preflightResult.fallbackUrl}`);
+        return { url: preflightResult.fallbackUrl, missingEntry: preflightResult.missingEntry };
+      } else {
+        // No fallback available - will show placeholder
+        console.error(`[BadlandsStage] Missing asset with no fallback: ${selectedUrl}`);
+        return { url: null, missingEntry: preflightResult.missingEntry };
+      }
+    }
+
+    return { url: selectedUrl, missingEntry: null };
+  }
+
+  // WO-DEV-RENDER-BINDING: Check if dev render inspector is enabled
+  function isDevRenderEnabled() {
+    const devConfig = getDevConfig();
+    return devConfig.enableRenderInspector || devConfig.showStageDebugOverlay;
   }
 
   async function transitionToNextWorldState() {
@@ -337,10 +543,24 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
     // WO-WATCH-EPISODE-ROUTING: Use visual pool bias for state selection
     const nextState = getNextWorldState(state.worldState, state.currentVisualPool);
-    const nextBgUrl = selectBackgroundForState(nextState);
 
-    // WO-HUB-04: Preload next background before transition
-    if (!preloadedImages.has(nextBgUrl)) {
+    // WO-DEV-RENDER-BINDING: Emit pool selection trace event
+    if (ctx.actionBus && isDevRenderEnabled()) {
+      ctx.actionBus.emit('stage:poolSelected', {
+        stateId: nextState,
+        poolFolder: STATE_FOLDERS[nextState] || 'patrol/',
+        reason: `visualPool:${state.currentVisualPool}`,
+        previousState: state.worldState,
+      });
+    }
+
+    // WO-DEV-ASSET-PREFLIGHT: Get background with preflight validation
+    const bgResult = await selectBackgroundForState(nextState);
+    const nextBgUrl = bgResult.url;
+    state.currentMissingAsset = bgResult.missingEntry;
+
+    // WO-HUB-04: Preload next background before transition (if valid)
+    if (nextBgUrl && !preloadedImages.has(nextBgUrl)) {
       await preloadImage(nextBgUrl);
       preloadedImages.add(nextBgUrl);
     }
@@ -354,6 +574,15 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     state.currentBgUrl = nextBgUrl;
     render(root, state);
     console.log(`[BadlandsStage] World state transitioned to: ${nextState}`);
+
+    // WO-DEV-RENDER-BINDING: Emit world state changed event
+    if (ctx.actionBus && isDevRenderEnabled()) {
+      ctx.actionBus.emit('worldState:changed', {
+        state: nextState,
+        regionName: state.scenicTitle,
+        bgUrl: nextBgUrl,
+      });
+    }
 
     // Schedule next transition
     scheduleWorldStateTransition();
@@ -374,9 +603,15 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   }
 
   // WO-HUB-04: Initialize world state background with preload and start transition timer
-  const initialBgUrl = selectBackgroundForState(state.worldState);
-  await preloadImage(initialBgUrl);
-  preloadedImages.add(initialBgUrl);
+  // WO-DEV-ASSET-PREFLIGHT: Ensure placeholder CSS is loaded if preflight enabled
+  ensurePlaceholderCSS();
+  const initialBgResult = await selectBackgroundForState(state.worldState);
+  const initialBgUrl = initialBgResult.url;
+  state.currentMissingAsset = initialBgResult.missingEntry;
+  if (initialBgUrl) {
+    await preloadImage(initialBgUrl);
+    preloadedImages.add(initialBgUrl);
+  }
   state.currentBgUrl = initialBgUrl;
 
   // WO-UX-4: Initialize evocative caption for initial state
@@ -515,11 +750,228 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     }
   }
 
+  // WO-CAPSULE-V2: Capsule auto-collapse timer
+  const CAPSULE_COLLAPSE_DELAY = 15000; // 15 seconds before collapsing to orb
+
+  function startCapsuleCollapseTimer() {
+    stopCapsuleCollapseTimer(); // Clear any existing timer
+
+    state.capsuleCollapseTimerId = setTimeout(() => {
+      // Only collapse if still in pending state (player didn't tap)
+      if (state.capsuleState === 'pending') {
+        state.capsuleState = 'collapsed';
+        render(root, state);
+        console.log('[BadlandsStage] Capsule auto-collapsed to orb');
+      }
+    }, CAPSULE_COLLAPSE_DELAY);
+  }
+
+  function stopCapsuleCollapseTimer() {
+    if (state.capsuleCollapseTimerId) {
+      clearTimeout(state.capsuleCollapseTimerId);
+      state.capsuleCollapseTimerId = null;
+    }
+  }
+
+  // WO-CAPSULE-V2: Quick-engage overlay functions
+  const QUICK_ENGAGE_DURATION = 5000; // 5 seconds before auto-dismissing to capsule
+  const HOLD_TO_ENGAGE_DURATION = 800; // 800ms hold to engage
+  let quickEngageTimerStartMs = 0;
+  let quickEngageAnimationId = null;
+
+  function showQuickEngageOverlay(root, state, incident) {
+    const overlay = root.querySelector('.BadlandsStage__quickEngage');
+    if (!overlay) return;
+
+    // Get incident data
+    const icon = incident._enemy?.icon || incident.icon || '&#128058;';
+    const title = incident._enemy?.label || incident.label || 'Encounter';
+    const flavor = incident.narrative?.captionIn || 'A challenger emerges...';
+    const theme = getEncounterTheme(incident);
+
+    // Update overlay content
+    const iconEl = root.querySelector('[data-bind="quickEngageIcon"]');
+    const titleEl = root.querySelector('[data-bind="quickEngageTitle"]');
+    const flavorEl = root.querySelector('[data-bind="quickEngageFlavor"]');
+    if (iconEl) iconEl.innerHTML = icon;
+    if (titleEl) titleEl.textContent = title;
+    if (flavorEl) flavorEl.textContent = flavor;
+
+    // Set theme
+    overlay.dataset.theme = theme;
+    overlay.dataset.visible = 'true';
+    state.quickEngageVisible = true;
+
+    console.log(`[BadlandsStage] Quick-engage overlay shown: ${title}`);
+  }
+
+  function hideQuickEngageOverlay(root, state) {
+    const overlay = root.querySelector('.BadlandsStage__quickEngage');
+    if (overlay) {
+      overlay.dataset.visible = 'false';
+    }
+    state.quickEngageVisible = false;
+    stopQuickEngageTimer();
+    stopHoldToEngage(root, state);
+  }
+
+  function startQuickEngageTimer(root, state) {
+    stopQuickEngageTimer();
+    quickEngageTimerStartMs = Date.now();
+
+    // Animate the timer bar
+    function updateTimer() {
+      const elapsed = Date.now() - quickEngageTimerStartMs;
+      const remaining = Math.max(0, QUICK_ENGAGE_DURATION - elapsed);
+      const percent = (remaining / QUICK_ENGAGE_DURATION) * 100;
+
+      const timerFill = root.querySelector('[data-bind="quickEngageTimerFill"]');
+      if (timerFill) {
+        timerFill.style.width = `${percent}%`;
+      }
+
+      if (remaining <= 0) {
+        // Timer expired - transition to capsule notification
+        onQuickEngageTimeout(root, state);
+      } else {
+        quickEngageAnimationId = requestAnimationFrame(updateTimer);
+      }
+    }
+    quickEngageAnimationId = requestAnimationFrame(updateTimer);
+  }
+
+  function stopQuickEngageTimer() {
+    if (quickEngageAnimationId) {
+      cancelAnimationFrame(quickEngageAnimationId);
+      quickEngageAnimationId = null;
+    }
+  }
+
+  async function onQuickEngageTimeout(root, state) {
+    console.log('[BadlandsStage] Quick-engage timeout - showing capsule notification');
+    hideQuickEngageOverlay(root, state);
+
+    // Create encounter from incident for capsule notification
+    if (state.currentIncident) {
+      const incident = state.currentIncident;
+      state.currentEncounter = {
+        id: incident.id,
+        type: incident.kind || 'combat',
+        label: incident._enemy?.label || incident.label || 'Encounter',
+        icon: incident._enemy?.icon || incident.icon || '&#128058;',
+        baseDifficulty: incident.mechanics?.difficulty || 1,
+        _incidentId: incident.id,
+        _incident: incident, // WO-ASSET-ROUTING: Attach incident for routing
+      };
+
+      // WO-ASSET-ROUTING: Get background using routing if available
+      let combatBgUrl;
+      if (incident.renderPlan?.assetRouting) {
+        const bgResult = await selectBackgroundForIncident(incident, import.meta.url);
+        combatBgUrl = bgResult.url;
+      } else {
+        combatBgUrl = getRandomBackground('combat', import.meta.url);
+      }
+      state.pendingCombatBgUrl = combatBgUrl;
+
+      // Show capsule notification
+      state.engagementState = 'pending';
+      state.capsuleState = 'pending';
+      state.notificationExpanded = false;
+      state.activeTab = 'current';
+      render(root, state);
+      startEncounterTimer();
+      startCapsuleCollapseTimer();
+    }
+  }
+
+  // Hold-to-engage logic
+  let holdStartMs = 0;
+  let holdAnimationId = null;
+
+  function startHoldToEngage(root, state) {
+    if (!state.quickEngageVisible) return;
+
+    holdStartMs = Date.now();
+    state.quickEngageHoldProgress = 0;
+
+    function updateHold() {
+      const elapsed = Date.now() - holdStartMs;
+      const progress = Math.min(100, (elapsed / HOLD_TO_ENGAGE_DURATION) * 100);
+      state.quickEngageHoldProgress = progress;
+
+      // Update progress bar
+      const progressEl = root.querySelector('.BadlandsStage__quickEngageProgress');
+      if (progressEl) {
+        progressEl.style.width = `${progress}%`;
+      }
+
+      if (progress >= 100) {
+        // Hold complete - engage!
+        onHoldToEngageComplete(root, state);
+      } else {
+        holdAnimationId = requestAnimationFrame(updateHold);
+      }
+    }
+    holdAnimationId = requestAnimationFrame(updateHold);
+  }
+
+  function stopHoldToEngage(root, state) {
+    if (holdAnimationId) {
+      cancelAnimationFrame(holdAnimationId);
+      holdAnimationId = null;
+    }
+    state.quickEngageHoldProgress = 0;
+    const progressEl = root.querySelector('.BadlandsStage__quickEngageProgress');
+    if (progressEl) {
+      progressEl.style.width = '0%';
+    }
+  }
+
+  function onHoldToEngageComplete(root, state) {
+    console.log('[BadlandsStage] Hold-to-engage complete - engaging with journey');
+    hideQuickEngageOverlay(root, state);
+
+    // Emit episode:engage to trigger the full journey
+    if (ctx.actionBus) {
+      ctx.actionBus.emit('episode:engage');
+    }
+  }
+
   // Initial render
   render(root, state);
 
   // Bind interactions
   bindInteractions(root, state, ctx);
+
+  // WO-CAPSULE-V2: Bind hold-to-engage touch/mouse events
+  // These are separate from bindInteractions because they need access to the closure functions
+  const holdToEngageBtn = root.querySelector('[data-action="holdToEngage"]');
+  if (holdToEngageBtn) {
+    // Mouse events
+    holdToEngageBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startHoldToEngage(root, state);
+    });
+    holdToEngageBtn.addEventListener('mouseup', () => {
+      stopHoldToEngage(root, state);
+    });
+    holdToEngageBtn.addEventListener('mouseleave', () => {
+      stopHoldToEngage(root, state);
+    });
+
+    // Touch events
+    holdToEngageBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      startHoldToEngage(root, state);
+    });
+    holdToEngageBtn.addEventListener('touchend', () => {
+      stopHoldToEngage(root, state);
+    });
+    holdToEngageBtn.addEventListener('touchcancel', () => {
+      stopHoldToEngage(root, state);
+    });
+  }
 
   // Subscribe to events
   const unsubscribers = [];
@@ -543,12 +995,22 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     );
 
     // Encounter spawned (from autobattler)
+    // WO-LIVE-DEMO: Show capsule notification first, then expand if player taps
     unsubscribers.push(
       ctx.actionBus.subscribe('autobattler:spawn', async (encounter) => {
         // Pause world state transitions during combat
         stopWorldStateTimer();
 
-        const combatBgUrl = getRandomBackground('combat', import.meta.url);
+        // WO-ASSET-ROUTING: Use routing if incident has routing context, else legacy
+        let combatBgUrl;
+        const incident = encounter._incident || state.currentIncident;
+        if (incident?.renderPlan?.assetRouting) {
+          const bgResult = await selectBackgroundForIncident(incident, import.meta.url);
+          combatBgUrl = bgResult.url;
+          console.log(`[BadlandsStage] Combat bg from routing: ${bgResult.folderUsed} (level ${bgResult.fallbackLevel})`);
+        } else {
+          combatBgUrl = getRandomBackground('combat', import.meta.url);
+        }
 
         // WO-HUB-04: Preload combat background before showing
         if (!preloadedImages.has(combatBgUrl)) {
@@ -556,12 +1018,20 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
           preloadedImages.add(combatBgUrl);
         }
 
-        state.stageMode = 'encounter_autobattler';
         state.currentEncounter = encounter;
-        state.currentBgUrl = combatBgUrl;
+        state.pendingCombatBgUrl = combatBgUrl; // Store for when player engages
+
+        // WO-CAPSULE-V2: Show capsule notification at top
+        // Background stays as current world state, capsule appears at top
+        state.engagementState = 'pending';
+        state.capsuleState = 'pending';
+        state.notificationExpanded = false;
         state.activeTab = 'current'; // Switch to current tab
         render(root, state);
-        startEncounterTimer(); // Start countdown
+        startEncounterTimer(); // Start countdown (shows on capsule and orb)
+
+        // WO-CAPSULE-V2: Auto-collapse to orb after brief delay
+        startCapsuleCollapseTimer();
       })
     );
 
@@ -586,8 +1056,11 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         }
 
         // WO-HUB-04: Preload world state background before showing
-        const worldBgUrl = selectBackgroundForState(state.worldState);
-        if (!preloadedImages.has(worldBgUrl)) {
+        // WO-DEV-ASSET-PREFLIGHT: Use preflight for background selection
+        const worldBgResult = await selectBackgroundForState(state.worldState);
+        const worldBgUrl = worldBgResult.url;
+        state.currentMissingAsset = worldBgResult.missingEntry;
+        if (worldBgUrl && !preloadedImages.has(worldBgUrl)) {
           await preloadImage(worldBgUrl);
           preloadedImages.add(worldBgUrl);
         }
@@ -595,6 +1068,13 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         state.stageMode = 'world';
         state.currentEncounter = null;
         state.currentBgUrl = worldBgUrl;
+        // WO-LIVE-DEMO: Reset engagement state
+        state.engagementState = 'inactive';
+        state.notificationExpanded = false;
+        state.pendingCombatBgUrl = null;
+        // WO-CAPSULE-V2: Reset capsule state
+        state.capsuleState = 'hidden';
+        stopCapsuleCollapseTimer();
         render(root, state);
 
         // Resume world state transitions
@@ -645,7 +1125,15 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       })
     );
 
-    // WO-S3: Episode active - show unified overlay for ALL incident types
+    // ═══════════════════════════════════════════════════════════════════════════
+    // WO-CAPSULE-V2: DISABLED - Legacy slow-time overlay and tagging menu
+    // These handlers are kept for future reference/repurposing but are disabled.
+    // The new flow uses: Capsule notification → Collapse to orb → HUD → Engage
+    // To re-enable: uncomment the renderSlowTimeOverlay() calls below
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // WO-S3: Episode active - show quick-engage overlay
+    // WO-CAPSULE-V2: Shows brief overlay, if timeout → capsule notification
     unsubscribers.push(
       ctx.actionBus.subscribe('episode:active', (data) => {
         state.slowTimeTimerTotal = data.incident?.mechanics?.durationS || 30;
@@ -656,31 +1144,46 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         state.isPlayerEngaged = false;
 
         const mechanicsMode = data.mechanicsMode || data.incident?.mechanics?.mode;
-        console.log(`[BadlandsStage] Episode active - showing unified overlay (mode: ${mechanicsMode}, awaiting: ${state.awaitingEngagement})`);
+        console.log(`[BadlandsStage] Episode active - showing quick-engage overlay`);
 
-        // WO-S3: Show unified overlay for ALL incidents
-        renderSlowTimeOverlay(root, state);
+        // WO-DEV-RENDER-BINDING: Emit incident shown trace event
+        if (isDevRenderEnabled()) {
+          ctx.actionBus.emit('stage:incidentShown', {
+            incidentType: data.incident?.type,
+            mode: mechanicsMode,
+            durationMs: state.slowTimeTimerTotal * 1000,
+            awaitingEngagement: state.awaitingEngagement,
+          });
+        }
+
+        // WO-CAPSULE-V2: Show quick-engage overlay
+        showQuickEngageOverlay(root, state, data.incident);
+        startQuickEngageTimer(root, state);
       })
     );
 
     // WO-S3: Episode engaged - player chose to engage
+    // WO-CAPSULE-V2: DISABLED - tagging menu replaced by HUD engage flow
     unsubscribers.push(
       ctx.actionBus.subscribe('episode:engaged', (data) => {
         state.isPlayerEngaged = true;
         state.awaitingEngagement = false;
         state.currentIncident = data.incident;
-        console.log('[BadlandsStage] Player engaged - updating overlay');
+        console.log('[BadlandsStage] Player engaged (tagging menu disabled)');
 
-        // Update overlay to show tagging options (hide Engage/Skip buttons)
-        renderSlowTimeOverlay(root, state);
+        // WO-CAPSULE-V2: DISABLED - tagging options overlay
+        // Engagement now happens via capsule HUD, not slow-time overlay
+        // renderSlowTimeOverlay(root, state);
       })
     );
 
     // Episode timer tick
+    // WO-CAPSULE-V2: Timer updates now go to capsule/orb/HUD elements
     unsubscribers.push(
       ctx.actionBus.subscribe('episode:timerTick', (data) => {
         state.slowTimeTimerRemaining = data.remainingMs / 1000;
-        updateSlowTimeTimer(root, data.remainingMs, data.totalMs);
+        // WO-CAPSULE-V2: DISABLED - slow-time timer display
+        // updateSlowTimeTimer(root, data.remainingMs, data.totalMs);
       })
     );
 
@@ -692,6 +1195,13 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         state.currentIncident = null;
         state.episodePhase = null;
         hideSlowTimeOverlay(root);
+
+        // WO-CAPSULE-FIX: Reset capsule and engagement state on episode resolution
+        state.capsuleState = 'hidden';
+        state.engagementState = 'inactive';
+        state.notificationExpanded = false;
+        state.currentEncounter = null;
+        stopCapsuleCollapseTimer();
 
         // Add to recent events (from episode)
         if (data.incident) {
@@ -706,8 +1216,8 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
           if (state.recentEvents.length > 10) {
             state.recentEvents.pop();
           }
-          render(root, state);
         }
+        render(root, state);
 
         console.log(`[BadlandsStage] Episode resolved: ${data.episode.id}`);
       })
@@ -827,7 +1337,8 @@ function bindInteractions(root, state, ctx) {
   let tabToastTimeoutId = null;
 
   // WO-S10: Swipe navigation for tab switching
-  const TABS = ['current', 'recent', 'loadout'];
+  // WO-HUB-LAYOUT-REVERT: 3 tabs - Current | Narrative | Recent (swapped order)
+  const TABS = ['current', 'narrative', 'recent'];
   let swipeStartX = 0;
   let swipeStartY = 0;
   let swipeTracking = false;
@@ -960,6 +1471,50 @@ function bindInteractions(root, state, ctx) {
       return;
     }
 
+    // WO-CAPSULE-V2: Event capsule/orb tap - expand to HUD
+    const expandTrigger = e.target.closest('[data-action="expandEvent"]');
+    if (expandTrigger && (state.capsuleState === 'pending' || state.capsuleState === 'collapsed')) {
+      // Player tapped capsule or orb - show HUD
+      state.capsuleState = 'expanded';
+      render(root, state);
+      console.log('[BadlandsStage] Player expanded event notification to HUD');
+      return;
+    }
+
+    // WO-CAPSULE-V2: HUD backdrop/close tap - collapse back to orb
+    const collapseTrigger = e.target.closest('[data-action="collapseEvent"]');
+    if (collapseTrigger && state.capsuleState === 'expanded') {
+      state.capsuleState = 'collapsed';
+      render(root, state);
+      console.log('[BadlandsStage] Player collapsed HUD back to orb');
+      return;
+    }
+
+    // WO-CAPSULE-V2: Engage button tap - engage with event
+    const engageTrigger = e.target.closest('[data-action="engageEvent"]');
+    if (engageTrigger && state.capsuleState === 'expanded') {
+      // Player engaged - update state and re-render
+      state.capsuleState = 'engaged';
+      state.engagementState = 'engaged';
+      state.notificationExpanded = true;
+      // Switch to combat background
+      if (state.pendingCombatBgUrl) {
+        state.currentBgUrl = state.pendingCombatBgUrl;
+      }
+      state.stageMode = 'encounter_autobattler';
+      render(root, state);
+      console.log('[BadlandsStage] Player engaged with event');
+
+      // Emit activity state change to 'engaged' (stubbed for now)
+      if (ctx.actionBus) {
+        ctx.actionBus.emit('engagement:started', {
+          encounter: state.currentEncounter,
+          activityState: 'engaged',
+        });
+      }
+      return;
+    }
+
     // Modal backdrop click
     const modal = e.target.closest('.BadlandsStage__modal');
     if (modal && e.target === modal) {
@@ -1020,17 +1575,26 @@ function render(root, state) {
     // VM override (legacy support)
     stageBgUrl = new URL(state.stageBgUrl, document.baseURI).href;
   }
-  if (!stageBgUrl) {
-    // Fallback to current world state
+  if (!stageBgUrl && !state.currentMissingAsset) {
+    // Fallback to current world state (only if no missing asset tracked)
     stageBgUrl = getRandomBackground(state.worldState, import.meta.url);
   }
-  container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
 
-  // Set active tab
+  // WO-DEV-ASSET-PREFLIGHT: Handle missing asset placeholder
+  renderMissingAssetPlaceholder(root, state);
+
+  if (stageBgUrl) {
+    container.style.setProperty('--stage-bg-url', `url('${stageBgUrl}')`);
+  } else {
+    // No background - use solid color fallback
+    container.style.setProperty('--stage-bg-url', 'none');
+  }
+
+  // Set active tab and stage mode
   container.dataset.activeTab = state.activeTab;
   container.dataset.stageMode = state.stageMode;
 
-  // WO-HUB-02: Update dot navigation active state
+  // Update dot navigation active state
   const dots = container.querySelectorAll('.BadlandsStage__dot');
   dots.forEach(dot => {
     dot.classList.toggle('BadlandsStage__dot--active', dot.dataset.tab === state.activeTab);
@@ -1039,19 +1603,98 @@ function render(root, state) {
   // Render current event tab content
   renderCurrentEvent(root, state);
 
-  // Render recent events
+  // Render recent events and narrative log
   renderRecentEvents(root, state);
+  renderNarrativeLog(root, state);
 
-  // Render loadout
-  renderLoadout(root, state);
+  // WO-DEV-RENDER-BINDING: Update dev overlay if enabled
+  updateDevRenderOverlay(root, state);
 }
 
 function renderCurrentEvent(root, state) {
   const scenic = root.querySelector('.BadlandsStage__scenic');
   const encounter = root.querySelector('.BadlandsStage__encounter');
 
-  if (state.stageMode === 'encounter_autobattler' && state.currentEncounter) {
-    // Show encounter
+  // WO-CAPSULE-V2: Get all notification elements
+  const capsule = root.querySelector('.BadlandsStage__eventCapsule');
+  const orb = root.querySelector('.BadlandsStage__eventOrb');
+  const hud = root.querySelector('.BadlandsStage__eventHUD');
+
+  // WO-CAPSULE-V2: Get encounter theme
+  const theme = getEncounterTheme(state.currentEncounter);
+
+  // WO-CAPSULE-V2: Handle notification state machine
+  // States: hidden → pending → collapsed → expanded → engaged
+  if (state.currentEncounter && state.capsuleState !== 'engaged') {
+    const encounterIcon = state.currentEncounter.icon || '&#128058;';
+    const encounterLabel = state.currentEncounter.label || state.currentEncounter.name || 'Encounter';
+    const encounterType = (state.currentEncounter.type || 'ENCOUNTER').toUpperCase();
+
+    // PENDING: Show full capsule banner at top
+    if (capsule) {
+      if (state.capsuleState === 'pending') {
+        capsule.dataset.visible = 'true';
+        capsule.dataset.theme = theme;
+        // Update capsule content
+        const capsuleIcon = root.querySelector('[data-bind="capsuleIcon"]');
+        const capsuleTitle = root.querySelector('[data-bind="capsuleTitle"]');
+        const capsuleType = root.querySelector('[data-bind="capsuleType"]');
+        if (capsuleIcon) capsuleIcon.innerHTML = encounterIcon;
+        if (capsuleTitle) capsuleTitle.textContent = encounterLabel;
+        if (capsuleType) capsuleType.textContent = encounterType;
+      } else {
+        capsule.dataset.visible = 'false';
+      }
+    }
+
+    // COLLAPSED: Show orb at top-right with radial timer
+    if (orb) {
+      if (state.capsuleState === 'collapsed') {
+        orb.dataset.visible = 'true';
+        orb.dataset.theme = theme;
+        const orbIcon = root.querySelector('[data-bind="orbIcon"]');
+        if (orbIcon) orbIcon.innerHTML = encounterIcon;
+      } else {
+        orb.dataset.visible = 'false';
+      }
+    }
+
+    // EXPANDED: Show HUD panel with scene log and engage button
+    if (hud) {
+      if (state.capsuleState === 'expanded') {
+        hud.dataset.visible = 'true';
+        hud.dataset.theme = theme;
+        // Update HUD content
+        const hudIcon = root.querySelector('[data-bind="hudIcon"]');
+        const hudTitle = root.querySelector('[data-bind="hudTitle"]');
+        const hudType = root.querySelector('[data-bind="hudType"]');
+        if (hudIcon) hudIcon.innerHTML = encounterIcon;
+        if (hudTitle) hudTitle.textContent = encounterLabel;
+        if (hudType) hudType.textContent = encounterType;
+        // Populate scene log (stubbed for now - would pull from sceneBeatLog)
+        renderHUDSceneLog(root, state);
+      } else {
+        hud.dataset.visible = 'false';
+      }
+    }
+
+    // Show scenic background while not engaged
+    if (scenic) scenic.dataset.visible = 'true';
+    if (encounter) encounter.dataset.visible = 'false';
+
+    // WO-UX-4: Update evocative captions
+    const titleEl = root.querySelector('[data-bind="scenicTitle"]');
+    const subtitleEl = root.querySelector('[data-bind="scenicSubtitle"]');
+    if (titleEl) titleEl.textContent = state.scenicTitle;
+    if (subtitleEl) subtitleEl.textContent = state.scenicSubtitle;
+
+  } else if (state.stageMode === 'encounter_autobattler' && state.currentEncounter && state.capsuleState === 'engaged') {
+    // ENGAGED: Show full encounter overlay
+    // Hide all notification elements
+    if (capsule) capsule.dataset.visible = 'false';
+    if (orb) orb.dataset.visible = 'false';
+    if (hud) hud.dataset.visible = 'false';
+
     if (scenic) scenic.dataset.visible = 'false';
     if (encounter) {
       encounter.dataset.visible = 'true';
@@ -1070,7 +1713,11 @@ function renderCurrentEvent(root, state) {
       if (spriteEl) spriteEl.innerHTML = state.currentEncounter.icon || '&#128058;';
     }
   } else {
-    // Show scenic
+    // No event or cleared - hide all notifications, show scenic
+    if (capsule) capsule.dataset.visible = 'false';
+    if (orb) orb.dataset.visible = 'false';
+    if (hud) hud.dataset.visible = 'false';
+
     if (scenic) scenic.dataset.visible = 'true';
     if (encounter) encounter.dataset.visible = 'false';
 
@@ -1081,6 +1728,76 @@ function renderCurrentEvent(root, state) {
     if (subtitleEl) subtitleEl.textContent = state.scenicSubtitle;
   }
 }
+
+// WO-CAPSULE-V2: Render scene log in HUD
+function renderHUDSceneLog(root, state) {
+  const logContent = root.querySelector('[data-bind="hudSceneLog"]');
+  if (!logContent) return;
+
+  // Get recent scene beats from sceneBeatLog if available
+  const sceneBeatLog = window.__MYFI_DEBUG__?.sceneBeatLog;
+  const recentBeats = sceneBeatLog?.getRecentBeats?.(5) || [];
+
+  if (recentBeats.length === 0) {
+    // Show placeholder entry
+    logContent.innerHTML = `
+      <div class="BadlandsStage__hudSceneEntry">
+        <span class="BadlandsStage__hudSceneTime">--:--</span>
+        <span class="BadlandsStage__hudSceneText">A challenger approaches from the wilds...</span>
+      </div>
+    `;
+  } else {
+    logContent.innerHTML = recentBeats.map(beat => {
+      const time = new Date(beat.timestamp).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return `
+        <div class="BadlandsStage__hudSceneEntry">
+          <span class="BadlandsStage__hudSceneTime">${time}</span>
+          <span class="BadlandsStage__hudSceneText">${beat.narrative || beat.label || 'Event occurred'}</span>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// WO-LIVE-DEMO: Get encounter theme for capsule styling
+function getEncounterTheme(encounter) {
+  if (!encounter) return 'default';
+  const type = (encounter.type || '').toLowerCase();
+  if (type === 'combat' || type === 'beast' || type === 'hostile') return 'combat';
+  if (type === 'social' || type === 'choice' || type === 'npc') return 'social';
+  return 'default';
+}
+
+// WO-HUB-LAYOUT: Narrative Log tab (placeholder)
+// Chronicles the avatar's day as a narrative summary
+function renderNarrativeLog(root, state) {
+  const listEl = root.querySelector('[data-bind="narrativeList"]');
+  if (!listEl) return;
+
+  if (!state.narrativeEntries || state.narrativeEntries.length === 0) {
+    listEl.innerHTML = `
+      <div class="BadlandsStage__narrativeEntry BadlandsStage__narrativeEntry--placeholder">
+        <span class="BadlandsStage__narrativeText">Your journey awaits... The narrative log will chronicle your avatar's day as events unfold.</span>
+      </div>
+    `;
+  } else {
+    listEl.innerHTML = state.narrativeEntries.map(entry => `
+      <div class="BadlandsStage__narrativeEntry">
+        <span class="BadlandsStage__narrativeTime">${entry.time || ''}</span>
+        <span class="BadlandsStage__narrativeText">${entry.text}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-HUB-LAYOUT: DEPRECATED - Migrated to WorldMap component
+// Kept for reference during migration and backwards compatibility
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function renderRecentEvents(root, state) {
   const listEl = root.querySelector('[data-bind="recentList"]');
@@ -1161,17 +1878,56 @@ function updateTimer(root, remaining, total) {
   const timerFill = root.querySelector('[data-bind="timerFill"]');
   const timerContainer = root.querySelector('.BadlandsStage__encounterTimer');
 
+  // Calculate percent and urgency once for all timer elements
+  const percent = total > 0 ? (remaining / total) * 100 : 0;
+  const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
+
+  // Update encounter timer
   if (timerValue) {
     timerValue.textContent = Math.ceil(remaining);
   }
   if (timerFill && total > 0) {
-    const percent = (remaining / total) * 100;
     timerFill.style.width = `${percent}%`;
-
-    // WO-UX-2: Set urgency level for timer gradient
-    const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
     timerFill.dataset.urgency = urgency;
     if (timerContainer) timerContainer.dataset.urgency = urgency;
+  }
+
+  // WO-CAPSULE-V2: Update all notification timer elements
+  // Capsule timer bar (pending state)
+  const capsuleTimerFill = root.querySelector('[data-bind="capsuleTimerFill"]');
+  const capsuleTimerValue = root.querySelector('[data-bind="capsuleTimerValue"]');
+  const capsuleTimerBar = root.querySelector('.BadlandsStage__capsuleTimerBar');
+
+  if (capsuleTimerFill && total > 0) {
+    capsuleTimerFill.style.width = `${percent}%`;
+    capsuleTimerFill.dataset.urgency = urgency;
+    if (capsuleTimerBar) capsuleTimerBar.dataset.urgency = urgency;
+  }
+  if (capsuleTimerValue) {
+    capsuleTimerValue.textContent = `${Math.ceil(remaining)}s`;
+  }
+
+  // WO-CAPSULE-V2: Update orb radial timer (collapsed state)
+  // SVG circle uses stroke-dashoffset for radial progress
+  // circumference = 2 * π * radius = 2 * 3.14159 * 16 ≈ 100.53
+  const orbTimerFill = root.querySelector('[data-bind="orbTimerFill"]');
+  if (orbTimerFill && total > 0) {
+    const circumference = 100.53;
+    const offset = circumference * (1 - percent / 100);
+    orbTimerFill.style.strokeDashoffset = offset;
+    orbTimerFill.dataset.urgency = urgency;
+  }
+
+  // WO-CAPSULE-V2: Update HUD timer (expanded state)
+  const hudTimerFill = root.querySelector('[data-bind="hudTimerFill"]');
+  const hudTimerValue = root.querySelector('[data-bind="hudTimerValue"]');
+
+  if (hudTimerFill && total > 0) {
+    hudTimerFill.style.width = `${percent}%`;
+    hudTimerFill.dataset.urgency = urgency;
+  }
+  if (hudTimerValue) {
+    hudTimerValue.textContent = `${Math.ceil(remaining)}s`;
   }
 }
 
@@ -1257,14 +2013,18 @@ function getSkillData(skillId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// WO-STAGE-EPISODES-V1: Slow-Time Overlay Helpers
+// WO-CAPSULE-V2: LEGACY - Slow-Time Overlay Helpers (DISABLED)
+// These functions are DISABLED - replaced by capsule notification system.
+// Kept for future reference/repurposing. To re-enable, uncomment the calls in
+// episode:active and episode:engaged handlers above.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * WO-S3: Render the unified incident overlay
+ * WO-CAPSULE-V2: DISABLED - This function is no longer called.
  * Shows for ALL incident types with mode-specific visuals
  * - awaitingEngagement: shows Engage/Skip buttons
- * - isPlayerEngaged: shows tagging options
+ * - isPlayerEngaged: shows tagging options (Growth/Entertainment etc.)
  */
 function renderSlowTimeOverlay(root, state) {
   const overlay = root.querySelector('.BadlandsStage__slowTime');
@@ -1541,4 +2301,198 @@ function updateQueueIndicator(root, queueLength) {
   }
 
   dotsContainer.innerHTML = dotsHtml;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-DEV-RENDER-BINDING: Dev Render Overlay
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Create and insert the dev render overlay into the stage
+ */
+function createDevRenderOverlay(root) {
+  // Check if overlay already exists
+  if (root.querySelector('.BadlandsStage__devOverlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'BadlandsStage__devOverlay';
+  overlay.dataset.visible = 'false';
+  overlay.innerHTML = `
+    <div class="BadlandsStage__devOverlayHeader">
+      <span class="BadlandsStage__devOverlayTitle">Stage Debug</span>
+      <button class="BadlandsStage__devOverlayClose" data-action="closeDevOverlay">&times;</button>
+    </div>
+    <div class="BadlandsStage__devOverlayContent">
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">DayT:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devDayT">0.000</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devTimeString">00:00</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Segment:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devSegment">--</span>
+        <span class="BadlandsStage__devOverlayLabel">Activity:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devActivity">--</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Distance:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devDistance">0.000</span>
+        <span class="BadlandsStage__devOverlayLabel">Band:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devBand">City</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Override:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devOverride">None</span>
+      </div>
+      <div class="BadlandsStage__devOverlaySeparator"></div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Pool:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devPool">--</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">BG:</span>
+        <span class="BadlandsStage__devOverlayValue BadlandsStage__devOverlayValue--small" data-bind="devBg">--</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">World:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devWorldState">--</span>
+      </div>
+      <div class="BadlandsStage__devOverlaySeparator"></div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Incident:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devIncident">None</span>
+      </div>
+      <div class="BadlandsStage__devOverlayRow">
+        <span class="BadlandsStage__devOverlayLabel">Time Left:</span>
+        <span class="BadlandsStage__devOverlayValue" data-bind="devIncidentTime">--</span>
+      </div>
+    </div>
+    <div class="BadlandsStage__devOverlayFooter">
+      <button class="BadlandsStage__devOverlayBtn" data-action="copyDevContext">Copy Context</button>
+    </div>
+  `;
+
+  root.appendChild(overlay);
+
+  // Bind close button
+  overlay.querySelector('[data-action="closeDevOverlay"]')?.addEventListener('click', () => {
+    overlay.dataset.visible = 'false';
+  });
+
+  // Bind copy context button
+  overlay.querySelector('[data-action="copyDevContext"]')?.addEventListener('click', () => {
+    const inspector = window.__MYFI_DEBUG__?.renderInspector;
+    if (inspector) {
+      inspector.copyContextToClipboard();
+    } else {
+      // Fallback: copy basic state info
+      const context = {
+        dayT: window.__MYFI_DEBUG__?.episodeClock?.getDayT(),
+        distance01: window.__MYFI_DEBUG__?.distanceDriver?.distance01,
+        activityState: window.__MYFI_DEBUG__?.episodeRouter?.currentState?.id,
+      };
+      navigator.clipboard.writeText(JSON.stringify(context, null, 2));
+    }
+  });
+}
+
+/**
+ * Update the dev render overlay with current state
+ */
+function updateDevRenderOverlay(root, state) {
+  const devConfig = window.__MYFI_DEV_CONFIG__ || {};
+  if (!devConfig.showStageDebugOverlay) return;
+
+  const overlay = root.querySelector('.BadlandsStage__devOverlay');
+  if (!overlay) {
+    createDevRenderOverlay(root);
+    return updateDevRenderOverlay(root, state);
+  }
+
+  overlay.dataset.visible = 'true';
+
+  // Get debug references
+  const clock = window.__MYFI_DEBUG__?.episodeClock;
+  const distanceDriver = window.__MYFI_DEBUG__?.distanceDriver;
+  const router = window.__MYFI_DEBUG__?.episodeRouter;
+  const inspector = window.__MYFI_DEBUG__?.renderInspector;
+
+  // Update clock info
+  if (clock) {
+    const clockState = clock.getState();
+    updateDevOverlayValue(overlay, 'devDayT', clockState.dayT.toFixed(3));
+    updateDevOverlayValue(overlay, 'devTimeString', clockState.timeString);
+    updateDevOverlayValue(overlay, 'devSegment', clockState.segmentLabel);
+  }
+
+  // Update distance info
+  if (distanceDriver) {
+    const driverState = distanceDriver.getState();
+    updateDevOverlayValue(overlay, 'devDistance', driverState.distance01.toFixed(3));
+    updateDevOverlayValue(overlay, 'devBand', driverState.distanceBand?.label || 'City');
+
+    const override = driverState.currentPressureOverride;
+    updateDevOverlayValue(overlay, 'devOverride', override ? override.reason.toUpperCase() : 'None');
+  }
+
+  // Update activity info
+  if (router) {
+    updateDevOverlayValue(overlay, 'devActivity', router.currentState?.label || '--');
+  }
+
+  // Update stage info
+  updateDevOverlayValue(overlay, 'devPool', state.currentVisualPool || 'default');
+  updateDevOverlayValue(overlay, 'devBg', state.currentBgUrl?.split('/').pop() || '--');
+  updateDevOverlayValue(overlay, 'devWorldState', state.worldState || '--');
+
+  // Update incident info
+  if (state.episodeActive && state.currentIncident) {
+    updateDevOverlayValue(overlay, 'devIncident', state.currentIncident.type || 'Active');
+    updateDevOverlayValue(overlay, 'devIncidentTime', `${Math.ceil(state.slowTimeTimerRemaining)}s`);
+  } else {
+    updateDevOverlayValue(overlay, 'devIncident', 'None');
+    updateDevOverlayValue(overlay, 'devIncidentTime', '--');
+  }
+}
+
+function updateDevOverlayValue(overlay, bindKey, value) {
+  const el = overlay.querySelector(`[data-bind="${bindKey}"]`);
+  if (el) el.textContent = value;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-DEV-ASSET-PREFLIGHT: Missing Asset Placeholder
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Render or hide the missing asset placeholder
+ */
+function renderMissingAssetPlaceholder(root, state) {
+  const devConfig = window.__MYFI_DEV_CONFIG__ || {};
+  const placeholderHost = root.querySelector('.BadlandsStage__assetPlaceholder');
+
+  // Only show placeholder if preflight is enabled and there's a missing asset
+  if (!devConfig.devAssetPreflightEnabled || !state.currentMissingAsset) {
+    // Hide placeholder if exists
+    if (placeholderHost) {
+      placeholderHost.dataset.visible = 'false';
+      placeholderHost.innerHTML = '';
+    }
+    return;
+  }
+
+  // Create placeholder host if it doesn't exist
+  let host = placeholderHost;
+  if (!host) {
+    host = document.createElement('div');
+    host.className = 'BadlandsStage__assetPlaceholder';
+    const container = root.querySelector('.BadlandsStage__container');
+    if (container) {
+      container.appendChild(host);
+    }
+  }
+
+  // Generate and insert placeholder HTML
+  host.innerHTML = generateMissingPlaceholderHTML(state.currentMissingAsset);
+  host.dataset.visible = 'true';
 }

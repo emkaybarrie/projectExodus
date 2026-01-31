@@ -1,5 +1,6 @@
-// WorldMap Part — HUB Refactor: Dartboard radial map with meandering avatar
-// Avatar moves between zones when no encounter active
+// WorldMap Part — Compact Status Bar HUD
+// Icon-driven panels: Location | Loadout
+// Tap panels to open detail modals (stubbed)
 
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
 
@@ -8,21 +9,6 @@ async function fetchText(url) {
   if (!res.ok) throw new Error(`fetchText failed ${res.status} for ${url}`);
   return await res.text();
 }
-
-// Region names for each quadrant
-const REGIONS = {
-  north: ['Frostwind Peaks', 'Northern Reaches', 'The Frozen Wastes'],
-  south: ['Sunscorch Plains', 'Southern Expanse', 'The Arid Flats'],
-  east: ['Twilight Marshes', 'Eastern Glades', 'The Misty Fens'],
-  west: ['Crimson Dunes', 'Western Badlands', 'The Scarred Lands'],
-  center: ['Haven Outskirts', 'City Gates', 'Merchant Quarter'],
-};
-
-// Subtitles based on state
-const SUBTITLES = {
-  idle: ['— All quiet', '— Shadows lengthen', '— The wind whispers', '— Distant echoes'],
-  encounter: ['— Something stirs...', '— Danger approaches', '— Stay alert'],
-};
 
 export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Load CSS
@@ -41,152 +27,108 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
   // Internal state
   const state = {
-    avatarX: 40,
-    avatarY: -25,
-    currentRegion: 'east',
-    isEncounterActive: false,
-    meanderInterval: null,
+    distance01: 0,
+    distanceBand: { id: 'city', label: 'City' },
+    loadout: {
+      skills: [
+        { slot: 1, id: 'strike', name: 'Strike', icon: '&#9876;' },
+        { slot: 2, id: 'guard', name: 'Guard', icon: '&#128737;' },
+        { slot: 3, id: null, name: 'Empty', icon: '&#10133;' },
+      ],
+    },
   };
 
   // Initial render
   render(root, state);
 
-  // Start meandering
-  startMeandering(root, state);
+  // Bind click handlers
+  bindInteractions(root, state, ctx);
 
   // Subscribe to state changes
   const unsubscribers = [];
   if (ctx.actionBus && ctx.actionBus.subscribe) {
+    // Subscribe to distance updates
     unsubscribers.push(
-      ctx.actionBus.subscribe('hub:stateChange', (hubState) => {
-        // Update encounter state
-        if (hubState?.badlandsStage?.stageMode) {
-          const wasEncounter = state.isEncounterActive;
-          state.isEncounterActive = hubState.badlandsStage.stageMode === 'encounter_autobattler';
-
-          // Update avatar idle state
-          const avatar = root.querySelector('.WorldMap__avatar');
-          if (avatar) {
-            avatar.dataset.idle = state.isEncounterActive ? 'false' : 'true';
-          }
-
-          // Update subtitle for encounter
-          if (state.isEncounterActive && !wasEncounter) {
-            updateSubtitle(root, 'encounter');
-          } else if (!state.isEncounterActive && wasEncounter) {
-            updateSubtitle(root, 'idle');
-          }
-        }
-
-        // Update region name if provided
-        if (hubState?.worldMap?.regionName) {
-          const regionEl = root.querySelector('[data-bind="regionName"]');
-          if (regionEl) regionEl.textContent = hubState.worldMap.regionName;
-        }
-      })
-    );
-
-    // Subscribe to encounter events (from autobattler)
-    unsubscribers.push(
-      ctx.actionBus.subscribe('autobattler:spawn', () => {
-        state.isEncounterActive = true;
-        const avatar = root.querySelector('.WorldMap__avatar');
-        if (avatar) avatar.dataset.idle = 'false';
-        updateSubtitle(root, 'encounter');
-      })
-    );
-
-    unsubscribers.push(
-      ctx.actionBus.subscribe('autobattler:resolve', () => {
-        state.isEncounterActive = false;
-        const avatar = root.querySelector('.WorldMap__avatar');
-        if (avatar) avatar.dataset.idle = 'true';
-        updateSubtitle(root, 'idle');
-      })
+      ctx.actionBus.subscribe('distance:updated', (data) => {
+        state.distance01 = data.distance01;
+        state.distanceBand = data.distanceBand || { id: 'city', label: 'City' };
+        render(root, state);
+      }, 'worldMap')
     );
   }
 
   return {
     unmount() {
-      // Stop meandering
-      if (state.meanderInterval) {
-        clearInterval(state.meanderInterval);
-        state.meanderInterval = null;
-      }
       unsubscribers.forEach(unsub => {
         if (typeof unsub === 'function') unsub();
       });
       root.remove();
     },
     update(newData) {
-      if (newData.worldMap?.regionName) {
-        const regionEl = root.querySelector('[data-bind="regionName"]');
-        if (regionEl) regionEl.textContent = newData.worldMap.regionName;
+      if (newData.worldMap) {
+        Object.assign(state, newData.worldMap);
+        render(root, state);
       }
     },
   };
 }
 
 function render(root, state) {
-  updateAvatarPosition(root, state);
-  updateRegionInfo(root, state);
-}
+  // Update zone label
+  const zoneLabelEl = root.querySelector('[data-bind="zoneLabel"]');
+  if (zoneLabelEl) {
+    const bandLabel = state.distanceBand?.label || state.distanceBand || 'City';
+    zoneLabelEl.textContent = bandLabel;
+  }
 
-function updateAvatarPosition(root, state) {
-  const avatar = root.querySelector('.WorldMap__avatar');
-  if (avatar) {
-    avatar.style.setProperty('--avatar-x', `${state.avatarX}px`);
-    avatar.style.setProperty('--avatar-y', `${state.avatarY}px`);
+  // Update distance label
+  const distanceLabelEl = root.querySelector('[data-bind="distanceLabel"]');
+  if (distanceLabelEl) {
+    const leagues = Math.round(state.distance01 * 10);
+    distanceLabelEl.textContent = leagues === 0 ? 'Home' : `${leagues} leagues`;
+  }
+
+  // Update location icon based on zone
+  const panelIconEl = root.querySelector('.WorldMap__panelIcon');
+  if (panelIconEl) {
+    const icon = state.distance01 < 0.2 ? '&#127984;' : '&#129517;'; // Castle or compass
+    panelIconEl.innerHTML = icon;
+  }
+
+  // Update loadout icons
+  const loadoutIconsEl = root.querySelector('[data-bind="loadoutIcons"]');
+  if (loadoutIconsEl) {
+    loadoutIconsEl.innerHTML = state.loadout.skills.map(skill => `
+      <span class="WorldMap__loadoutIcon ${skill.id ? '' : 'WorldMap__loadoutIcon--empty'}">${skill.icon}</span>
+    `).join('');
   }
 }
 
-function updateRegionInfo(root, state) {
-  const regionEl = root.querySelector('[data-bind="regionName"]');
-  if (regionEl) {
-    const regions = REGIONS[state.currentRegion] || REGIONS.center;
-    regionEl.textContent = regions[Math.floor(Math.random() * regions.length)];
-  }
-  updateSubtitle(root, 'idle');
-}
+function bindInteractions(root, state, ctx) {
+  const container = root.querySelector('.WorldMap__container');
+  if (!container) return;
 
-function updateSubtitle(root, mode) {
-  const subtitleEl = root.querySelector('[data-bind="subtitle"]');
-  if (subtitleEl) {
-    const subtitles = SUBTITLES[mode] || SUBTITLES.idle;
-    subtitleEl.textContent = subtitles[Math.floor(Math.random() * subtitles.length)];
-  }
-}
-
-function startMeandering(root, state) {
-  // Move avatar every 3-5 seconds
-  state.meanderInterval = setInterval(() => {
-    if (state.isEncounterActive) return; // Don't move during encounter
-
-    // Pick a new position within bounds
-    const angle = Math.random() * 2 * Math.PI;
-    const radius = 20 + Math.random() * 50; // 20-70px from center
-
-    state.avatarX = Math.cos(angle) * radius;
-    state.avatarY = Math.sin(angle) * radius;
-
-    // Determine current region based on position
-    if (Math.abs(state.avatarX) < 15 && Math.abs(state.avatarY) < 15) {
-      state.currentRegion = 'center';
-    } else if (state.avatarY < -10 && Math.abs(state.avatarX) < Math.abs(state.avatarY)) {
-      state.currentRegion = 'north';
-    } else if (state.avatarY > 10 && Math.abs(state.avatarX) < Math.abs(state.avatarY)) {
-      state.currentRegion = 'south';
-    } else if (state.avatarX > 10) {
-      state.currentRegion = 'east';
-    } else if (state.avatarX < -10) {
-      state.currentRegion = 'west';
+  container.addEventListener('click', (e) => {
+    // Location panel tap
+    const locationPanel = e.target.closest('[data-action="openLocationModal"]');
+    if (locationPanel) {
+      console.log('[WorldMap] Location panel tapped - modal stub');
+      // TODO: Emit event to open location modal
+      if (ctx.actionBus) {
+        ctx.actionBus.emit('ui:requestModal', { type: 'location' });
+      }
+      return;
     }
 
-    updateAvatarPosition(root, state);
-
-    // Occasionally update region name (not every move)
-    if (Math.random() > 0.6) {
-      updateRegionInfo(root, state);
+    // Loadout panel tap
+    const loadoutPanel = e.target.closest('[data-action="openLoadoutModal"]');
+    if (loadoutPanel) {
+      console.log('[WorldMap] Loadout panel tapped - modal stub');
+      // TODO: Emit event to open loadout modal
+      if (ctx.actionBus) {
+        ctx.actionBus.emit('ui:requestModal', { type: 'loadout' });
+      }
+      return;
     }
-  }, 3000 + Math.random() * 2000);
+  });
 }

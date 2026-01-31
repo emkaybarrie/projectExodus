@@ -22,11 +22,11 @@ export function createChrome(chromeHost){
     <div class="chrome">
       <header class="chrome__header" data-role="header">
         <div class="chrome__title" data-role="title">MyFi</div>
-        <!-- WO-HUB-03: Demo status badge in AppChrome (alias moved to PlayerHeader) -->
-        <div class="chrome__status" data-role="chromeStatus">
-          <span class="chrome__statusIndicator" data-bind="modeIndicator"></span>
-          <span class="chrome__statusLabel" data-bind="modeLabel">Demo</span>
-        </div>
+        <!-- WO-LIVE-DEMO: Tappable mode toggle (Live/Demo) -->
+        <button class="chrome__modeToggle" data-action="toggleGameMode" title="Tap to switch mode">
+          <span class="chrome__modeIndicator" data-bind="modeIndicator"></span>
+          <span class="chrome__modeLabel" data-bind="modeLabel">Live</span>
+        </button>
         <!-- HUB-D4/G5: DEV buttons (only visible in debug mode) -->
         <div class="chrome__devButtons" style="display: none;">
           <button class="chrome__devSpawn" data-action="devSpawn">
@@ -41,8 +41,8 @@ export function createChrome(chromeHost){
       <main class="chrome__surfaceHost" data-role="surfaceHost"></main>
 
       <footer class="chrome__footer chrome__footer--3col" data-role="footer">
-        <!-- WO-5: Energy Source button -->
-        <button class="chrome__footerBtn" data-action="openEnergySource" title="Energy Source">
+        <!-- WO-LIVE-DEMO: Energy button (tap = transaction modal, hold = energy source) -->
+        <button class="chrome__footerBtn chrome__energyBtn" data-action="energyInteract" title="Tap for Transaction, Hold for Energy Source">
           <span class="chrome__footerBtnIcon">&#128161;</span>
           <span class="chrome__footerBtnLabel">Energy</span>
         </button>
@@ -281,47 +281,125 @@ export function createChrome(chromeHost){
             <button class="chrome__devConfigClose" data-action="closeDevConfig">&times;</button>
           </div>
           <div class="chrome__devConfigBody">
-            <!-- Encounter Settings -->
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- DEMO MODE SETTINGS - Controls for Demo mode simulation -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <div class="chrome__devConfigSection chrome__devConfigSection--watchMode">
+              <h4 class="chrome__devConfigSectionTitle chrome__devConfigSectionTitle--watch">🎬 Demo Mode Settings</h4>
+              <p class="chrome__devConfigSectionDesc">Controls for Demo mode - simulated time and auto-generated events. Toggle Demo mode via header chip.</p>
+
+              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                <label class="chrome__devConfigCheckboxLabel">
+                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="watchModeEnabled">
+                  <span><strong>Enable Auto Events (in Demo)</strong></span>
+                </label>
+              </div>
+
+              <div class="chrome__devConfigSubsection" data-watch-only="true">
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Time Scale</label>
+                  <div class="chrome__devConfigBtnGroup" data-config-group="watchTimeScale">
+                    <button class="chrome__devConfigScaleBtn" data-scale="1">1x</button>
+                    <button class="chrome__devConfigScaleBtn chrome__devConfigScaleBtn--active" data-scale="5">5x</button>
+                    <button class="chrome__devConfigScaleBtn" data-scale="20">20x</button>
+                    <button class="chrome__devConfigScaleBtn" data-scale="60">60x</button>
+                    <button class="chrome__devConfigScaleBtn" data-scale="300">Turbo</button>
+                  </div>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Clock Control</label>
+                  <div class="chrome__devConfigBtnGroup">
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPauseResume" data-bind="watchPauseBtn">Pause</button>
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPrevSegment">&lt; Prev</button>
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchNextSegment">Next &gt;</button>
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="resetDay">Reset</button>
+                  </div>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Jump to Segment</label>
+                  <div class="chrome__devConfigBtnGroup chrome__devConfigBtnGroup--wrap" data-config-group="watchSegmentJump">
+                    <button class="chrome__devConfigSegmentBtn" data-segment="dawn">Dawn</button>
+                    <button class="chrome__devConfigSegmentBtn" data-segment="morning">Morning</button>
+                    <button class="chrome__devConfigSegmentBtn" data-segment="midday">Midday</button>
+                    <button class="chrome__devConfigSegmentBtn" data-segment="afternoon">Afternoon</button>
+                    <button class="chrome__devConfigSegmentBtn" data-segment="evening">Evening</button>
+                    <button class="chrome__devConfigSegmentBtn" data-segment="night">Night</button>
+                  </div>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Auto-Transaction Frequency</label>
+                  <input type="range" class="chrome__devConfigSlider" data-config="autoTxFrequency" min="0" max="100" value="30">
+                  <span class="chrome__devConfigValue" data-value="autoTxFrequency">30%</span>
+                </div>
+
+                <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                  <label class="chrome__devConfigCheckboxLabel">
+                    <input type="checkbox" class="chrome__devConfigCheckbox" data-config="enableMapBinding" checked>
+                    <span>Bind Map to Simulated State</span>
+                  </label>
+                </div>
+
+                <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                  <label class="chrome__devConfigCheckboxLabel">
+                    <input type="checkbox" class="chrome__devConfigCheckbox" data-config="showStageDebugOverlay">
+                    <span>Show Stage Debug Overlay</span>
+                  </label>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Current State</label>
+                  <div class="chrome__devConfigStatus">
+                    <span class="chrome__devConfigStatusItem" data-bind="watchTime">--:--</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="watchSegment">--</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="watchActivity">--</span>
+                  </div>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Pressure Status</label>
+                  <div class="chrome__devConfigStatus chrome__devConfigStatus--hybrid">
+                    <div class="chrome__devConfigStatusRow">
+                      <span class="chrome__devConfigStatusLabel">Distance:</span>
+                      <span class="chrome__devConfigStatusItem" data-bind="hybridDistance">0.000</span>
+                      <span class="chrome__devConfigStatusItem" data-bind="hybridBand">City</span>
+                    </div>
+                    <div class="chrome__devConfigStatusRow">
+                      <span class="chrome__devConfigStatusLabel">Pressure:</span>
+                      <span class="chrome__devConfigStatusItem" data-bind="hybridPressure">0.000</span>
+                      <span class="chrome__devConfigStatusLabel">Override:</span>
+                      <span class="chrome__devConfigStatusItem" data-bind="hybridOverride">None</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chrome__devConfigField">
+                  <label class="chrome__devConfigLabel">Manual Triggers</label>
+                  <div class="chrome__devConfigBtnGroup">
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="triggerSpike">Spike $100</button>
+                    <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="clearOverride">Clear Override</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- ENCOUNTER SETTINGS - Combat/Episode configuration -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
             <div class="chrome__devConfigSection">
-              <h4 class="chrome__devConfigSectionTitle">Encounter Settings</h4>
+              <h4 class="chrome__devConfigSectionTitle">⚔️ Encounter Settings</h4>
               <div class="chrome__devConfigField">
                 <label class="chrome__devConfigLabel">Auto-Resolve Duration (sec)</label>
                 <input type="range" class="chrome__devConfigSlider" data-config="encounterDuration" min="5" max="120" value="30">
                 <span class="chrome__devConfigValue" data-value="encounterDuration">30</span>
               </div>
               <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Encounter Rate (% per tick)</label>
-                <input type="range" class="chrome__devConfigSlider" data-config="encounterRate" min="1" max="50" value="10">
-                <span class="chrome__devConfigValue" data-value="encounterRate">10</span>
-              </div>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Average Enemies</label>
-                <input type="range" class="chrome__devConfigSlider" data-config="avgEnemies" min="1" max="5" value="2">
-                <span class="chrome__devConfigValue" data-value="avgEnemies">2</span>
-              </div>
-            </div>
-            <!-- Vitals Settings -->
-            <div class="chrome__devConfigSection">
-              <h4 class="chrome__devConfigSectionTitle">Vitals Settings</h4>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Regen Rate (% per tick)</label>
-                <input type="range" class="chrome__devConfigSlider" data-config="regenRate" min="1" max="20" value="3">
-                <span class="chrome__devConfigValue" data-value="regenRate">3</span>
-              </div>
-              <div class="chrome__devConfigField">
                 <label class="chrome__devConfigLabel">Damage Multiplier</label>
                 <input type="range" class="chrome__devConfigSlider" data-config="damageMultiplier" min="50" max="200" value="100">
                 <span class="chrome__devConfigValue" data-value="damageMultiplier">100</span>
-              </div>
-            </div>
-            <!-- Debug Options -->
-            <div class="chrome__devConfigSection">
-              <h4 class="chrome__devConfigSectionTitle">Debug Options</h4>
-              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
-                <label class="chrome__devConfigCheckboxLabel">
-                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="showDebugLogs" checked>
-                  <span>Show Debug Logs</span>
-                </label>
               </div>
               <div class="chrome__devConfigField chrome__devConfigField--checkbox">
                 <label class="chrome__devConfigCheckboxLabel">
@@ -330,62 +408,12 @@ export function createChrome(chromeHost){
                 </label>
               </div>
             </div>
-            <!-- Watch Mode Settings -->
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- PRESSURE TUNING - Advanced hybrid routing settings -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
             <div class="chrome__devConfigSection">
-              <h4 class="chrome__devConfigSectionTitle">Watch Mode</h4>
-              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
-                <label class="chrome__devConfigCheckboxLabel">
-                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="watchModeEnabled">
-                  <span>Enable Watch Mode</span>
-                </label>
-              </div>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Time Scale</label>
-                <div class="chrome__devConfigBtnGroup" data-config-group="watchTimeScale">
-                  <button class="chrome__devConfigScaleBtn" data-scale="1">1x</button>
-                  <button class="chrome__devConfigScaleBtn chrome__devConfigScaleBtn--active" data-scale="5">5x</button>
-                  <button class="chrome__devConfigScaleBtn" data-scale="20">20x</button>
-                  <button class="chrome__devConfigScaleBtn" data-scale="60">60x</button>
-                  <button class="chrome__devConfigScaleBtn" data-scale="300">300x</button>
-                </div>
-              </div>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Clock Control</label>
-                <div class="chrome__devConfigBtnGroup">
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPauseResume" data-bind="watchPauseBtn">Pause</button>
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPrevSegment">&lt; Prev</button>
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchNextSegment">Next &gt;</button>
-                </div>
-              </div>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Jump to Segment</label>
-                <div class="chrome__devConfigBtnGroup chrome__devConfigBtnGroup--wrap" data-config-group="watchSegmentJump">
-                  <button class="chrome__devConfigSegmentBtn" data-segment="dawn">Dawn</button>
-                  <button class="chrome__devConfigSegmentBtn" data-segment="morning">Morning</button>
-                  <button class="chrome__devConfigSegmentBtn" data-segment="midday">Midday</button>
-                  <button class="chrome__devConfigSegmentBtn" data-segment="afternoon">Afternoon</button>
-                  <button class="chrome__devConfigSegmentBtn" data-segment="evening">Evening</button>
-                  <button class="chrome__devConfigSegmentBtn" data-segment="night">Night</button>
-                </div>
-              </div>
-              <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Current State</label>
-                <div class="chrome__devConfigStatus">
-                  <span class="chrome__devConfigStatusItem" data-bind="watchTime">--:--</span>
-                  <span class="chrome__devConfigStatusItem" data-bind="watchSegment">--</span>
-                  <span class="chrome__devConfigStatusItem" data-bind="watchActivity">--</span>
-                </div>
-              </div>
-            </div>
-            <!-- Hybrid Routing Settings (WO-HYBRID-ROUTING) -->
-            <div class="chrome__devConfigSection">
-              <h4 class="chrome__devConfigSectionTitle">Hybrid Routing</h4>
-              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
-                <label class="chrome__devConfigCheckboxLabel">
-                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="hybridModeEnabled" checked>
-                  <span>Enable Hybrid Mode</span>
-                </label>
-              </div>
+              <h4 class="chrome__devConfigSectionTitle">📊 Pressure Tuning</h4>
               <div class="chrome__devConfigField">
                 <label class="chrome__devConfigLabel">EMA Alpha (smoothing)</label>
                 <input type="range" class="chrome__devConfigSlider" data-config="pressureEmaAlpha" min="5" max="20" value="10">
@@ -406,39 +434,45 @@ export function createChrome(chromeHost){
                 <input type="range" class="chrome__devConfigSlider" data-config="returnOverrideThreshold" min="50" max="150" value="80">
                 <span class="chrome__devConfigValue" data-value="returnOverrideThreshold">0.80</span>
               </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- TRANSACTION EVENTS - Manual transaction creation -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <div class="chrome__devConfigSection">
+              <h4 class="chrome__devConfigSectionTitle">💳 Transaction Events</h4>
+              <p class="chrome__devConfigSectionDesc">Manually create transaction signals for testing</p>
               <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Manual Controls</label>
-                <div class="chrome__devConfigBtnGroup">
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="triggerSpike">Trigger Spike</button>
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="clearOverride">Clear Override</button>
-                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="resetDistance">Reset Distance</button>
-                </div>
+                <button class="chrome__devConfigBtn chrome__devConfigBtn--primary chrome__devConfigBtn--full" data-action="openTransactionModal">
+                  📝 New Transaction Event...
+                </button>
               </div>
               <div class="chrome__devConfigField">
-                <label class="chrome__devConfigLabel">Current Pressure State</label>
-                <div class="chrome__devConfigStatus chrome__devConfigStatus--hybrid">
-                  <div class="chrome__devConfigStatusRow">
-                    <span class="chrome__devConfigStatusLabel">Distance:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridDistance">0.000</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridBand">City</span>
-                  </div>
-                  <div class="chrome__devConfigStatusRow">
-                    <span class="chrome__devConfigStatusLabel">Base:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridBaseSchedule">0.000</span>
-                    <span class="chrome__devConfigStatusLabel">Pressure:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridPressure">0.000</span>
-                  </div>
-                  <div class="chrome__devConfigStatusRow">
-                    <span class="chrome__devConfigStatusLabel">Spike:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridSpike">0.000</span>
-                    <span class="chrome__devConfigStatusLabel">Aftershock:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridAftershock">0.000</span>
-                  </div>
-                  <div class="chrome__devConfigStatusRow">
-                    <span class="chrome__devConfigStatusLabel">Override:</span>
-                    <span class="chrome__devConfigStatusItem" data-bind="hybridOverride">None</span>
-                  </div>
+                <label class="chrome__devConfigLabel">Quick Emit</label>
+                <div class="chrome__devConfigBtnGroup">
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="quickEmitSmall">Small $25</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="quickEmitMed">Med $50</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="quickEmitLarge">Large $100</button>
                 </div>
+              </div>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <!-- DEBUG OPTIONS -->
+            <!-- ═══════════════════════════════════════════════════════════════ -->
+            <div class="chrome__devConfigSection">
+              <h4 class="chrome__devConfigSectionTitle">🔧 Debug</h4>
+              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                <label class="chrome__devConfigCheckboxLabel">
+                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="showDebugLogs" checked>
+                  <span>Show Debug Logs</span>
+                </label>
+              </div>
+              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                <label class="chrome__devConfigCheckboxLabel">
+                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="enableRenderInspector">
+                  <span>Enable Render Inspector</span>
+                </label>
               </div>
             </div>
           </div>
@@ -458,10 +492,12 @@ export function createChrome(chromeHost){
     surfaceHost: chromeHost.querySelector('[data-role="surfaceHost"]'),
     modalHost: chromeHost.querySelector('[data-role="modalHost"]'),
     navBtns: Array.from(chromeHost.querySelectorAll('.chrome__footer [data-nav]')),
-    // WO-HUB-03: Chrome status (demo badge only, alias moved to PlayerHeader)
-    chromeStatus: chromeHost.querySelector('[data-role="chromeStatus"]'),
+    // WO-LIVE-DEMO: Mode toggle (Live/Demo)
+    modeToggle: chromeHost.querySelector('[data-action="toggleGameMode"]'),
     modeIndicator: chromeHost.querySelector('[data-bind="modeIndicator"]'),
     modeLabel: chromeHost.querySelector('[data-bind="modeLabel"]'),
+    // WO-LIVE-DEMO: Energy button (tap/hold)
+    energyInteractBtn: chromeHost.querySelector('[data-action="energyInteract"]'),
     // HUB-G5: Dev buttons container
     devButtons: chromeHost.querySelector('.chrome__devButtons'),
     devSpawn: chromeHost.querySelector('[data-action="devSpawn"]'),
@@ -476,8 +512,7 @@ export function createChrome(chromeHost){
     spiritStoneModal: chromeHost.querySelector('[data-role="spiritStoneModal"]'),
     spiritStoneCloseBtns: Array.from(chromeHost.querySelectorAll('[data-action="closeSpiritStone"]')),
     spiritStoneEnergyBtn: chromeHost.querySelector('[data-action="viewEnergySource"]'),
-    // WO-5: Energy Source modal elements
-    energyBtn: chromeHost.querySelector('[data-action="openEnergySource"]'),
+    // WO-5: Energy Source modal elements (energyBtn now uses energyInteractBtn above)
     energyModal: chromeHost.querySelector('[data-role="energyModal"]'),
     energyCloseBtns: Array.from(chromeHost.querySelectorAll('[data-action="closeEnergy"]')),
     energyAddBtn: chromeHost.querySelector('[data-action="addOutgoing"]'),
@@ -515,30 +550,230 @@ export function createChrome(chromeHost){
     triggerSpikeBtn: chromeHost.querySelector('[data-action="triggerSpike"]'),
     clearOverrideBtn: chromeHost.querySelector('[data-action="clearOverride"]'),
     resetDistanceBtn: chromeHost.querySelector('[data-action="resetDistance"]'),
+    // WO-DEV-RENDER-BINDING: Render inspector elements
+    resetDayBtn: chromeHost.querySelector('[data-action="resetDay"]'),
+    // WO-TRANSACTION-MODAL-V1: Transaction event elements
+    openTransactionModalBtn: chromeHost.querySelector('[data-action="openTransactionModal"]'),
+    quickEmitSmallBtn: chromeHost.querySelector('[data-action="quickEmitSmall"]'),
+    quickEmitMedBtn: chromeHost.querySelector('[data-action="quickEmitMed"]'),
+    quickEmitLargeBtn: chromeHost.querySelector('[data-action="quickEmitLarge"]'),
   };
 
   // HUB-G5: Dev config state
   const devConfig = {
-    encounterDuration: 30,
-    encounterRate: 10,
-    avgEnemies: 2,
-    regenRate: 3,
-    damageMultiplier: 100,
-    showDebugLogs: true,
-    godMode: false,
-    // Watch Mode settings
-    watchModeEnabled: false,
-    watchTimeScale: 5,
-    // Hybrid Routing settings (WO-HYBRID-ROUTING)
+    // Encounter Settings
+    encounterDuration: 30,     // Auto-resolve duration in seconds
+    damageMultiplier: 100,     // Damage multiplier percentage
+    godMode: false,            // No damage to player
+
+    // Watch Mode Settings (simulated day)
+    watchModeEnabled: false,   // Enable/disable Watch Mode
+    watchTimeScale: 5,         // Time acceleration (1x, 5x, 20x, 60x, 300x)
+    autoTxFrequency: 30,       // Auto-transaction frequency 0-100%
+    enableMapBinding: true,    // Bind WorldMap to simulated state
+    showStageDebugOverlay: false, // Show debug overlay on stage
+
+    // Pressure/Hybrid Routing Settings
     hybridModeEnabled: true,
-    pressureEmaAlpha: 10,      // Stored as 10 = 0.10 (slider value / 100)
-    spikeThreshold: 50,        // $50
-    exploreOverrideThreshold: 50, // 0.50 (slider value / 100)
-    returnOverrideThreshold: 80,  // 0.80 (slider value / 100)
+    pressureEmaAlpha: 10,      // EMA smoothing (10 = 0.10)
+    spikeThreshold: 50,        // Spike threshold in dollars
+    exploreOverrideThreshold: 50, // (50 = 0.50)
+    returnOverrideThreshold: 80,  // (80 = 0.80)
+
+    // Debug Settings
+    showDebugLogs: true,
+    enableRenderInspector: false,
   };
 
-  // Watch Mode UI state
+  // Watch Mode UI state (renamed to Demo Mode)
   let watchModeUIUpdateInterval = null;
+  let autoTxInterval = null;   // Auto-transaction interval (Demo Mode only)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WO-LIVE-DEMO: Game Mode State (Live vs Demo)
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Live Mode: Real time, no random events, user-triggered transactions only
+  // Demo Mode: Simulated time, random events based on config
+  let gameMode = 'live'; // Default to 'live', can be 'demo'
+
+  /**
+   * WO-LIVE-TIME: Convert current local time to dayT (0..1)
+   * Maps 00:00 to 0.0, 12:00 to 0.5, 23:59 to ~1.0
+   */
+  function getLocalTimeDayT() {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+    // Total seconds in day = 86400
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    return totalSeconds / 86400;
+  }
+
+  function getGameMode() {
+    return gameMode;
+  }
+
+  function setGameMode(mode) {
+    if (mode !== 'live' && mode !== 'demo') return;
+    if (mode === gameMode) return;
+
+    gameMode = mode;
+    updateGameModeUI();
+
+    // Broadcast mode change via global config and actionBus
+    if (!window.__MYFI_DEV_CONFIG__) {
+      window.__MYFI_DEV_CONFIG__ = {};
+    }
+    window.__MYFI_DEV_CONFIG__.gameMode = mode;
+
+    // WO-LIVE-TIME: Sync episode clock to mode
+    const clock = window.__MYFI_DEBUG__?.episodeClock;
+    if (clock) {
+      if (mode === 'live') {
+        // Live mode: use player's actual local time, real-time speed
+        const localDayT = getLocalTimeDayT();
+        clock.setDayT(localDayT);
+        clock.setTimeScale(1); // REALTIME
+        console.log(`[Chrome] Clock synced to local time: ${(localDayT * 24).toFixed(1)}h (dayT: ${localDayT.toFixed(3)})`);
+      } else {
+        // Demo mode: use accelerated time (5x default)
+        clock.setTimeScale(5);
+      }
+    }
+
+    // In Demo mode, enable watch mode features
+    if (mode === 'demo') {
+      devConfig.watchModeEnabled = true;
+      startAutoTransactionLoop();
+    } else {
+      devConfig.watchModeEnabled = false;
+      stopAutoTransactionLoop();
+    }
+
+    // Sync dev config UI if modal is open
+    if (els.devConfigModal && !els.devConfigModal.hidden) {
+      syncDevConfigUI();
+    }
+
+    // Emit mode change event
+    if (window.__MYFI_DEBUG__?.actionBus) {
+      window.__MYFI_DEBUG__.actionBus.emit('gameMode:changed', {
+        mode,
+        isLive: mode === 'live',
+        isDemo: mode === 'demo',
+      });
+    }
+
+    console.log(`[Chrome] Game mode changed to: ${mode}`);
+  }
+
+  function toggleGameMode() {
+    setGameMode(gameMode === 'live' ? 'demo' : 'live');
+  }
+
+  function updateGameModeUI() {
+    if (els.modeIndicator) {
+      els.modeIndicator.dataset.mode = gameMode;
+    }
+    if (els.modeLabel) {
+      els.modeLabel.textContent = gameMode === 'live' ? 'Live' : 'Demo';
+    }
+    if (els.modeToggle) {
+      els.modeToggle.dataset.mode = gameMode;
+    }
+  }
+
+  // Initialize game mode UI
+  updateGameModeUI();
+
+  // Bind mode toggle click
+  if (els.modeToggle) {
+    els.modeToggle.addEventListener('click', toggleGameMode);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WO-LIVE-DEMO: Energy Button (tap = transaction modal, hold = energy source)
+  // ═══════════════════════════════════════════════════════════════════════════
+  let energyHoldTimer = null;
+  let energyHeld = false;
+  let energyActive = false;
+  const ENERGY_HOLD_THRESHOLD = 400; // ms
+
+  function handleEnergyStart(e) {
+    e.preventDefault();
+    energyHeld = false;
+    energyActive = true;
+
+    if (els.energyInteractBtn) {
+      els.energyInteractBtn.classList.add('chrome__footerBtn--pressed');
+    }
+
+    energyHoldTimer = setTimeout(() => {
+      if (energyActive) {
+        energyHeld = true;
+        if (els.energyInteractBtn) {
+          els.energyInteractBtn.classList.remove('chrome__footerBtn--pressed');
+          els.energyInteractBtn.classList.add('chrome__footerBtn--held');
+        }
+        // Hold = Open Energy Source modal
+        openEnergy();
+      }
+    }, ENERGY_HOLD_THRESHOLD);
+  }
+
+  function handleEnergyEnd(e) {
+    e.preventDefault();
+    if (!energyActive) return;
+    energyActive = false;
+
+    if (els.energyInteractBtn) {
+      els.energyInteractBtn.classList.remove('chrome__footerBtn--pressed');
+      els.energyInteractBtn.classList.remove('chrome__footerBtn--held');
+    }
+
+    if (energyHoldTimer) {
+      clearTimeout(energyHoldTimer);
+      energyHoldTimer = null;
+    }
+
+    if (!energyHeld) {
+      // Tap = Open Transaction Modal (in Live mode, this is the primary way to create events)
+      if (transactionModalShowFn) {
+        transactionModalShowFn();
+        console.log('[Chrome] Energy tap: Opening Transaction Modal');
+      } else {
+        console.warn('[Chrome] Transaction modal handler not registered');
+      }
+    }
+
+    energyHeld = false;
+  }
+
+  function handleEnergyCancel() {
+    energyActive = false;
+    if (els.energyInteractBtn) {
+      els.energyInteractBtn.classList.remove('chrome__footerBtn--pressed');
+      els.energyInteractBtn.classList.remove('chrome__footerBtn--held');
+    }
+    if (energyHoldTimer) {
+      clearTimeout(energyHoldTimer);
+      energyHoldTimer = null;
+    }
+    energyHeld = false;
+  }
+
+  // Bind energy button interactions
+  if (els.energyInteractBtn) {
+    // Touch events (mobile)
+    els.energyInteractBtn.addEventListener('touchstart', handleEnergyStart, { passive: false });
+    els.energyInteractBtn.addEventListener('touchend', handleEnergyEnd, { passive: false });
+    els.energyInteractBtn.addEventListener('touchcancel', handleEnergyCancel);
+    // Mouse events (desktop)
+    els.energyInteractBtn.addEventListener('mousedown', handleEnergyStart);
+    els.energyInteractBtn.addEventListener('mouseup', handleEnergyEnd);
+    els.energyInteractBtn.addEventListener('mouseleave', handleEnergyCancel);
+  }
 
   // HUB-D4/G5: Enable DEV buttons (called from app.js after debug setup)
   // WO-STAGE-EPISODES-V1: Updated to emit demo signal through episode system
@@ -592,7 +827,16 @@ export function createChrome(chromeHost){
       if (devConfig[key] !== undefined) {
         slider.value = devConfig[key];
         const valueEl = chromeHost.querySelector(`[data-value="${key}"]`);
-        if (valueEl) valueEl.textContent = devConfig[key];
+        if (valueEl) {
+          // Format based on slider type
+          if (key === 'pressureEmaAlpha' || key === 'exploreOverrideThreshold' || key === 'returnOverrideThreshold') {
+            valueEl.textContent = (devConfig[key] / 100).toFixed(2);
+          } else if (key === 'autoTxFrequency') {
+            valueEl.textContent = devConfig[key] + '%';
+          } else {
+            valueEl.textContent = devConfig[key];
+          }
+        }
       }
     });
     // Sync checkboxes
@@ -655,27 +899,43 @@ export function createChrome(chromeHost){
       });
     }
 
+    // WO-DEV-RENDER-BINDING: Start/stop auto-transaction loop based on Watch Mode
+    if (devConfig.watchModeEnabled) {
+      startAutoTransactionLoop();
+    } else {
+      stopAutoTransactionLoop();
+    }
+
     console.log('[Chrome] Dev config applied:', devConfig);
     closeDevConfig();
   }
 
   function resetDevConfig() {
+    // Encounter settings
     devConfig.encounterDuration = 30;
-    devConfig.encounterRate = 10;
-    devConfig.avgEnemies = 2;
-    devConfig.regenRate = 3;
     devConfig.damageMultiplier = 100;
-    devConfig.showDebugLogs = true;
     devConfig.godMode = false;
+    // Watch Mode settings
     devConfig.watchModeEnabled = false;
     devConfig.watchTimeScale = 5;
-    // WO-HYBRID-ROUTING: Reset hybrid settings
+    devConfig.autoTxFrequency = 30;
+    devConfig.enableMapBinding = true;
+    devConfig.showStageDebugOverlay = false;
+    // Hybrid/Pressure settings
     devConfig.hybridModeEnabled = true;
     devConfig.pressureEmaAlpha = 10;
     devConfig.spikeThreshold = 50;
     devConfig.exploreOverrideThreshold = 50;
     devConfig.returnOverrideThreshold = 80;
+    // Debug settings
+    devConfig.showDebugLogs = true;
+    devConfig.enableRenderInspector = false;
+
     syncDevConfigUI();
+
+    // Stop auto-transaction loop when reset
+    stopAutoTransactionLoop();
+
     // Reset Watch Mode clock if present
     const clock = getEpisodeClock();
     if (clock) {
@@ -698,9 +958,11 @@ export function createChrome(chromeHost){
       const value = parseInt(e.target.value, 10);
       const valueEl = chromeHost.querySelector(`[data-value="${key}"]`);
       if (valueEl) {
-        // WO-HYBRID-ROUTING: Format hybrid sliders as decimals
+        // Format based on slider type
         if (key === 'pressureEmaAlpha' || key === 'exploreOverrideThreshold' || key === 'returnOverrideThreshold') {
           valueEl.textContent = (value / 100).toFixed(2);
+        } else if (key === 'autoTxFrequency') {
+          valueEl.textContent = value + '%';
         } else {
           valueEl.textContent = value;
         }
@@ -774,6 +1036,69 @@ export function createChrome(chromeHost){
       clearInterval(watchModeUIUpdateInterval);
       watchModeUIUpdateInterval = null;
     }
+  }
+
+  // WO-DEV-RENDER-BINDING: Auto-transaction loop for Watch Mode
+  // Emits random transactions based on autoTxFrequency setting
+  function startAutoTransactionLoop() {
+    if (autoTxInterval) return;
+
+    // Check every 5 seconds (scaled by time scale)
+    const baseIntervalMs = 5000;
+
+    autoTxInterval = setInterval(() => {
+      // Only emit if Watch Mode is enabled
+      if (!devConfig.watchModeEnabled) return;
+
+      // Check frequency (0-100%)
+      const frequency = devConfig.autoTxFrequency || 0;
+      if (frequency === 0) return;
+
+      // Roll for transaction
+      const roll = Math.random() * 100;
+      if (roll < frequency) {
+        emitRandomTransaction();
+      }
+    }, baseIntervalMs);
+
+    console.log('[Chrome] Auto-transaction loop started');
+  }
+
+  function stopAutoTransactionLoop() {
+    if (autoTxInterval) {
+      clearInterval(autoTxInterval);
+      autoTxInterval = null;
+      console.log('[Chrome] Auto-transaction loop stopped');
+    }
+  }
+
+  function emitRandomTransaction() {
+    const emitFn = window.__MYFI_DEBUG__?.emitDemoSignal;
+    if (!emitFn) return;
+
+    // Random amount distribution: 60% small, 30% medium, 10% large
+    const roll = Math.random();
+    let amount, merchant, category;
+
+    if (roll < 0.6) {
+      // Small transaction
+      amount = 10 + Math.floor(Math.random() * 25); // $10-35
+      merchant = ['Coffee Shop', 'Fast Food', 'Convenience Store', 'Snack Bar'][Math.floor(Math.random() * 4)];
+      category = 'discretionary';
+    } else if (roll < 0.9) {
+      // Medium transaction
+      amount = 35 + Math.floor(Math.random() * 50); // $35-85
+      merchant = ['Restaurant', 'Gas Station', 'Grocery Store', 'Online Shop'][Math.floor(Math.random() * 4)];
+      category = ['discretionary', 'essential'][Math.floor(Math.random() * 2)];
+    } else {
+      // Large transaction (spike potential)
+      amount = 80 + Math.floor(Math.random() * 100); // $80-180
+      merchant = ['Electronics Store', 'Department Store', 'Subscription Service', 'Utility Bill'][Math.floor(Math.random() * 4)];
+      category = ['discretionary', 'subscription', 'essential'][Math.floor(Math.random() * 3)];
+    }
+
+    emitFn(amount, merchant, category);
+    console.log(`[Chrome] Auto-transaction: $${amount} at ${merchant} (${category})`);
   }
 
   // WO-HYBRID-ROUTING: Get distance driver for hybrid routing
@@ -860,6 +1185,72 @@ export function createChrome(chromeHost){
         console.log('[Chrome] Distance reset');
         updateHybridRoutingUI();
       }
+    });
+  }
+
+  // WO-DEV-RENDER-BINDING: Render inspector button handlers
+  if (els.resetDayBtn) {
+    els.resetDayBtn.addEventListener('click', () => {
+      const clock = getEpisodeClock();
+      const driver = getDistanceDriver();
+      const scenePacer = window.__MYFI_DEBUG__?.scenePacer;
+
+      if (clock) clock.reset();
+      if (driver) driver.reset('day_reset');
+      if (scenePacer && scenePacer.reset) scenePacer.reset('day_reset');
+
+      console.log('[Chrome] Day reset');
+      updateWatchModeUI();
+      updateHybridRoutingUI();
+    });
+  }
+
+  // WO-TRANSACTION-MODAL-V1: Transaction modal and quick emit handlers
+  // Reference to transaction modal show function (set by app.js)
+  let transactionModalShowFn = null;
+
+  function setTransactionModalHandler(showFn) {
+    transactionModalShowFn = showFn;
+  }
+
+  if (els.openTransactionModalBtn) {
+    els.openTransactionModalBtn.addEventListener('click', () => {
+      if (transactionModalShowFn) {
+        closeDevConfig(); // Close dev config first
+        transactionModalShowFn();
+        console.log('[Chrome] Opening Transaction Modal');
+      } else {
+        console.warn('[Chrome] Transaction modal handler not registered');
+      }
+    });
+  }
+
+  // Quick emit handlers - emit preset transactions directly
+  function quickEmitTransaction(amount, merchant, category) {
+    const emitFn = window.__MYFI_DEBUG__?.emitDemoSignal;
+    if (emitFn) {
+      emitFn(amount, merchant, category);
+      console.log(`[Chrome] Quick emit: $${amount} at ${merchant} (${category})`);
+    } else {
+      console.warn('[Chrome] emitDemoSignal not available');
+    }
+  }
+
+  if (els.quickEmitSmallBtn) {
+    els.quickEmitSmallBtn.addEventListener('click', () => {
+      quickEmitTransaction(25, 'Quick Purchase', 'discretionary');
+    });
+  }
+
+  if (els.quickEmitMedBtn) {
+    els.quickEmitMedBtn.addEventListener('click', () => {
+      quickEmitTransaction(50, 'Medium Purchase', 'discretionary');
+    });
+  }
+
+  if (els.quickEmitLargeBtn) {
+    els.quickEmitLargeBtn.addEventListener('click', () => {
+      quickEmitTransaction(100, 'Large Purchase', 'discretionary');
     });
   }
 
@@ -1113,10 +1504,8 @@ export function createChrome(chromeHost){
     }
   }
 
-  // Bind energy button
-  if (els.energyBtn) {
-    els.energyBtn.addEventListener('click', openEnergy);
-  }
+  // WO-LIVE-DEMO: Energy button binding moved to energyInteractBtn above (tap/hold)
+  // Old els.energyBtn removed - now uses energyInteractBtn
 
   // Bind energy close buttons
   els.energyCloseBtns.forEach(btn => {
@@ -1265,5 +1654,11 @@ export function createChrome(chromeHost){
     getDevConfig() { return { ...devConfig }; },
     // WO-S6: Route tracking for compass highlighting
     setCurrentRoute,
+    // WO-TRANSACTION-MODAL-V1: Transaction modal handler
+    setTransactionModalHandler,
+    // WO-LIVE-DEMO: Game mode functions
+    getGameMode,
+    setGameMode,
+    toggleGameMode,
   };
 }

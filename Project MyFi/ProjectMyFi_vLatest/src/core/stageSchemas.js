@@ -154,6 +154,7 @@ export function createIncident({
 /**
  * Create a DioramaSpec object
  * @param {Object} params
+ * @param {Object} params.assetRouting - WO-ASSET-ROUTING: Routing context for asset selection
  * @returns {Object} DioramaSpec
  */
 export function createDioramaSpec({
@@ -166,6 +167,7 @@ export function createDioramaSpec({
   props = [],
   effects = [],
   camera = { zoom: 1, pan: 'none' },
+  assetRouting = null, // WO-ASSET-ROUTING: { beatType, activityPhase, region, pathChain, legacyState }
 } = {}) {
   return {
     seed,
@@ -177,6 +179,7 @@ export function createDioramaSpec({
     props,
     effects,
     camera,
+    assetRouting,
   };
 }
 

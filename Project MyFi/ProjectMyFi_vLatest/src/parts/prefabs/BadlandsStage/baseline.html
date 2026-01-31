@@ -1,5 +1,6 @@
-<!-- BadlandsStage baseline.html — HUB Refactor: 3-Tab Stage -->
-<!-- Tabs: Current Event | Recent Events | Loadout (tab bar at bottom) -->
+<!-- BadlandsStage baseline.html — HUB 3-Tab Stage -->
+<!-- Tabs: Current Event | Recent Events | Narrative Log (tab bar at bottom) -->
+<!-- Loadout moved to WorldMap component -->
 
 <div class="BadlandsStage__container" data-active-tab="current" data-stage-mode="world">
 
@@ -67,52 +68,29 @@
       </div>
     </div>
 
-    <!-- TAB: Recent Events (WO-S8: Header removed for cinematic feel) -->
-    <div class="BadlandsStage__tabContent" data-tab="recent">
-      <ul class="BadlandsStage__recentList" data-bind="recentList">
-        <li class="BadlandsStage__recentItem BadlandsStage__recentItem--empty">
-          <span class="BadlandsStage__recentItemText">No recent encounters</span>
-        </li>
-      </ul>
+    <!-- TAB: Narrative Log (Placeholder for day narrative) -->
+    <div class="BadlandsStage__tabContent" data-tab="narrative">
+      <div class="BadlandsStage__narrativeLog">
+        <div class="BadlandsStage__narrativeHeader">
+          <span class="BadlandsStage__narrativeIcon">&#128220;</span>
+          <span class="BadlandsStage__narrativeTitle">Today's Journey</span>
+        </div>
+        <div class="BadlandsStage__narrativeList" data-bind="narrativeList">
+          <div class="BadlandsStage__narrativeEntry BadlandsStage__narrativeEntry--placeholder">
+            <span class="BadlandsStage__narrativeText">Your journey awaits... The narrative log will chronicle your avatar's day as events unfold.</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- TAB: Loadout (WO-S8: Header removed for cinematic feel) -->
-    <div class="BadlandsStage__tabContent" data-tab="loadout">
-      <div class="BadlandsStage__loadoutSections">
-        <!-- Skills section -->
-        <div class="BadlandsStage__loadoutSection">
-          <h4 class="BadlandsStage__loadoutSectionTitle">Active Skills</h4>
-          <div class="BadlandsStage__skillSlots" data-bind="skillSlots">
-            <div class="BadlandsStage__skillSlot" data-slot="1" data-action="editSkill">
-              <span class="BadlandsStage__skillIcon">&#9876;</span>
-              <span class="BadlandsStage__skillName">Strike</span>
-            </div>
-            <div class="BadlandsStage__skillSlot" data-slot="2" data-action="editSkill">
-              <span class="BadlandsStage__skillIcon">&#128737;</span>
-              <span class="BadlandsStage__skillName">Guard</span>
-            </div>
-            <div class="BadlandsStage__skillSlot BadlandsStage__skillSlot--empty" data-slot="3" data-action="editSkill">
-              <span class="BadlandsStage__skillIcon">&#10133;</span>
-              <span class="BadlandsStage__skillName">Empty</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Equipment section -->
-        <div class="BadlandsStage__loadoutSection">
-          <h4 class="BadlandsStage__loadoutSectionTitle">Equipment</h4>
-          <div class="BadlandsStage__equipSlots" data-bind="equipSlots">
-            <div class="BadlandsStage__equipSlot" data-slot="weapon" data-action="editEquip">
-              <span class="BadlandsStage__equipIcon">&#128481;</span>
-              <span class="BadlandsStage__equipName">Iron Sword</span>
-              <span class="BadlandsStage__equipStat">+8 ATK</span>
-            </div>
-            <div class="BadlandsStage__equipSlot BadlandsStage__equipSlot--empty" data-slot="armor" data-action="editEquip">
-              <span class="BadlandsStage__equipIcon">&#128085;</span>
-              <span class="BadlandsStage__equipName">No Armor</span>
-            </div>
-          </div>
-        </div>
+    <!-- TAB: Recent Events (overlay on background) -->
+    <div class="BadlandsStage__tabContent" data-tab="recent">
+      <div class="BadlandsStage__recentOverlay">
+        <ul class="BadlandsStage__recentList" data-bind="recentList">
+          <li class="BadlandsStage__recentItem BadlandsStage__recentItem--empty">
+            <span class="BadlandsStage__recentItemText">No recent encounters</span>
+          </li>
+        </ul>
       </div>
     </div>
 
@@ -142,8 +120,8 @@
   <div class="BadlandsStage__bottomBar">
     <div class="BadlandsStage__dotNav">
       <button class="BadlandsStage__dot BadlandsStage__dot--active" data-action="switchTab" data-tab="current" data-icon="&#127758;" data-label="Current" aria-label="Current Event"></button>
+      <button class="BadlandsStage__dot" data-action="switchTab" data-tab="narrative" data-icon="&#128214;" data-label="Narrative" aria-label="Narrative Log"></button>
       <button class="BadlandsStage__dot" data-action="switchTab" data-tab="recent" data-icon="&#128220;" data-label="Recent" aria-label="Recent Events"></button>
-      <button class="BadlandsStage__dot" data-action="switchTab" data-tab="loadout" data-icon="&#9876;" data-label="Loadout" aria-label="Loadout"></button>
     </div>
   </div>
 
@@ -151,6 +129,110 @@
   <div class="BadlandsStage__tabToast" data-visible="false">
     <span class="BadlandsStage__tabToastIcon" data-bind="tabToastIcon">&#127758;</span>
     <span class="BadlandsStage__tabToastLabel" data-bind="tabToastLabel">Current</span>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- WO-CAPSULE-V2: Event Notification System -->
+  <!-- States: hidden → pending (top banner) → collapsed (top-right circle) → expanded (HUD) → engaged -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+  <!-- PENDING STATE: Full capsule banner at top -->
+  <div class="BadlandsStage__eventCapsule" data-visible="false" data-state="pending" data-action="expandEvent">
+    <div class="BadlandsStage__capsuleIcon" data-bind="capsuleIcon">&#128058;</div>
+    <div class="BadlandsStage__capsuleContent">
+      <span class="BadlandsStage__capsuleTitle" data-bind="capsuleTitle">Wolf Encounter</span>
+      <span class="BadlandsStage__capsuleType" data-bind="capsuleType">COMBAT</span>
+    </div>
+    <div class="BadlandsStage__capsuleTimer">
+      <div class="BadlandsStage__capsuleTimerBar">
+        <div class="BadlandsStage__capsuleTimerFill" data-bind="capsuleTimerFill"></div>
+      </div>
+      <span class="BadlandsStage__capsuleTimerValue" data-bind="capsuleTimerValue">30s</span>
+    </div>
+    <div class="BadlandsStage__capsuleTapHint">
+      <span>Tap to view</span>
+    </div>
+  </div>
+
+  <!-- COLLAPSED STATE: Small circle at top-right with radial timer -->
+  <div class="BadlandsStage__eventOrb" data-visible="false" data-action="expandEvent">
+    <svg class="BadlandsStage__orbTimer" viewBox="0 0 36 36">
+      <circle class="BadlandsStage__orbTimerBg" cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+      <circle class="BadlandsStage__orbTimerFill" data-bind="orbTimerFill" cx="18" cy="18" r="16" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linecap="round" transform="rotate(-90 18 18)" stroke-dasharray="100.53" stroke-dashoffset="0"/>
+    </svg>
+    <div class="BadlandsStage__orbIcon" data-bind="orbIcon">&#128058;</div>
+    <div class="BadlandsStage__orbPulse"></div>
+  </div>
+
+  <!-- EXPANDED STATE: HUD view with scene info and engage button -->
+  <div class="BadlandsStage__eventHUD" data-visible="false">
+    <div class="BadlandsStage__hudBackdrop" data-action="collapseEvent"></div>
+    <div class="BadlandsStage__hudPanel">
+      <!-- HUD Header -->
+      <div class="BadlandsStage__hudHeader">
+        <div class="BadlandsStage__hudIcon" data-bind="hudIcon">&#128058;</div>
+        <div class="BadlandsStage__hudInfo">
+          <span class="BadlandsStage__hudTitle" data-bind="hudTitle">Wolf Encounter</span>
+          <span class="BadlandsStage__hudType" data-bind="hudType">COMBAT</span>
+        </div>
+        <button class="BadlandsStage__hudClose" data-action="collapseEvent">&times;</button>
+      </div>
+
+      <!-- HUD Timer -->
+      <div class="BadlandsStage__hudTimerRow">
+        <div class="BadlandsStage__hudTimerBar">
+          <div class="BadlandsStage__hudTimerFill" data-bind="hudTimerFill"></div>
+        </div>
+        <span class="BadlandsStage__hudTimerValue" data-bind="hudTimerValue">30s</span>
+      </div>
+
+      <!-- Scene Log Preview -->
+      <div class="BadlandsStage__hudSceneLog">
+        <div class="BadlandsStage__hudSceneLogHeader">
+          <span class="BadlandsStage__hudSceneLogTitle">Scene Log</span>
+        </div>
+        <div class="BadlandsStage__hudSceneLogContent" data-bind="hudSceneLog">
+          <!-- Recent scene beats rendered here -->
+          <div class="BadlandsStage__hudSceneEntry">
+            <span class="BadlandsStage__hudSceneTime">12:34</span>
+            <span class="BadlandsStage__hudSceneText">A challenger approaches from the wilds...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engage Button -->
+      <div class="BadlandsStage__hudActions">
+        <button class="BadlandsStage__hudEngageBtn" data-action="engageEvent">
+          <span class="BadlandsStage__hudEngageIcon">&#9876;</span>
+          <span class="BadlandsStage__hudEngageLabel">Engage</span>
+        </button>
+        <span class="BadlandsStage__hudAutoNote">Auto-resolves if not engaged</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!-- WO-CAPSULE-V2: Quick-Engage Overlay -->
+  <!-- Appears when story beat is generated, 5-second hold-to-engage -->
+  <!-- If timer expires without engage, transitions to capsule notification -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <div class="BadlandsStage__quickEngage" data-visible="false">
+    <div class="BadlandsStage__quickEngageContent">
+      <div class="BadlandsStage__quickEngageIcon" data-bind="quickEngageIcon">&#128058;</div>
+      <div class="BadlandsStage__quickEngageInfo">
+        <span class="BadlandsStage__quickEngageTitle" data-bind="quickEngageTitle">Wolf Encounter</span>
+        <span class="BadlandsStage__quickEngageFlavor" data-bind="quickEngageFlavor">A challenger emerges from the wilds...</span>
+      </div>
+    </div>
+    <div class="BadlandsStage__quickEngageTimer">
+      <div class="BadlandsStage__quickEngageTimerBar">
+        <div class="BadlandsStage__quickEngageTimerFill" data-bind="quickEngageTimerFill"></div>
+      </div>
+    </div>
+    <button class="BadlandsStage__quickEngageBtn" data-action="holdToEngage">
+      <span class="BadlandsStage__quickEngageBtnLabel">Hold to Engage</span>
+      <div class="BadlandsStage__quickEngageProgress"></div>
+    </button>
   </div>
 
   <!-- WO-UX-NEXT: Resolution Echo - shows cause→effect after incident resolves -->
@@ -176,10 +258,12 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- WO-S3: UNIFIED INCIDENT OVERLAY (Replaces WO-STAGE-EPISODES-V1 slow-time) -->
-  <!-- Shows for ALL incident types with mode-specific visuals -->
+  <!-- WO-CAPSULE-V2: LEGACY - SLOW-TIME OVERLAY (DISABLED) -->
+  <!-- This overlay is DISABLED - replaced by capsule notification system -->
+  <!-- Kept for future reference/repurposing. To re-enable, see part.js -->
+  <!-- episode:active and episode:engaged handlers -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <div class="BadlandsStage__slowTime" data-visible="false" data-theme="combat">
+  <div class="BadlandsStage__slowTime" data-visible="false" data-theme="combat" data-legacy-disabled="true">
     <div class="BadlandsStage__slowTimeOverlay"></div>
     <div class="BadlandsStage__slowTimeContent">
 

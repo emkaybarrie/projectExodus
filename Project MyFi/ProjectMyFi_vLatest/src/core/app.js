@@ -24,6 +24,8 @@ import { createScenePacer } from '../systems/scenePacer.js';
 // WO-WATCH-EPISODE-ROUTING: Episode clock and router
 import { createEpisodeClock } from '../systems/episodeClock.js';
 import { createEpisodeRouter } from '../systems/episodeRouter.js';
+// WO-DEV-RENDER-BINDING: Dev render inspector
+import { createDevRenderInspector } from '../systems/devRenderInspector.js';
 // Keyboard navigation for cross-layout screens
 import * as keyboardNav from './keyboardNav.js';
 // WO-P0-A: First-run welcome overlay
@@ -93,10 +95,20 @@ const scenePacer = createScenePacer({
 });
 scenePacer.init();
 
+// WO-LIVE-TIME: Helper to get local time as dayT
+function getLocalTimeDayT() {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const seconds = now.getSeconds();
+  return (hours * 3600 + minutes * 60 + seconds) / 86400;
+}
+
 // WO-WATCH-EPISODE-ROUTING: Episode clock (simulated time-of-day)
+// WO-LIVE-TIME: Start at local time for live mode (default), 1x time scale
 const episodeClock = createEpisodeClock({
-  initialDayT: 0.25, // Start at 6:00 AM
-  defaultTimeScale: 5, // Default 5x speed for dev
+  initialDayT: getLocalTimeDayT(), // Start at player's local time
+  defaultTimeScale: 1, // REALTIME for live mode (default)
 });
 
 // WO-WATCH-EPISODE-ROUTING: Episode router (time→activity state mapping)
@@ -108,6 +120,12 @@ const episodeRouter = createEpisodeRouter({
   },
 });
 episodeRouter.init();
+
+// WO-DEV-RENDER-BINDING: Dev render inspector (dev-only, gated by config)
+const renderInspector = createDevRenderInspector({
+  actionBus,
+});
+renderInspector.init();
 
 // Register demo VM providers for surfaces
 // Hub uses controller state if available, otherwise falls back to demo VM
@@ -207,6 +225,11 @@ window.__MYFI_DEBUG__ = {
   // WO-WATCH-EPISODE-ROUTING: Episode clock and router
   episodeClock,
   episodeRouter,
+  // WO-DEV-RENDER-BINDING: Render inspector
+  renderInspector,
+  // WO-LIVE-DEMO: Game mode accessor (getter returns current mode from chrome)
+  get gameMode() { return chrome.getGameMode(); },
+  setGameMode: (mode) => chrome.setGameMode(mode),
   // Helper to emit a demo transaction signal
   // WO-STAGE-EPISODES-V1: Updated to randomly select episode type
   // Categories map to: discretionary→COMBAT(autobattler), subscription→SOCIAL(choice), essential→TRAVERSAL(autobattler)
@@ -235,6 +258,46 @@ window.__MYFI_DEBUG__ = {
 
 // HUB-D4: Enable DEV spawn button in chrome header
 chrome.enableDevSpawn();
+
+// WO-TRANSACTION-MODAL-V1: Transaction modal setup
+// Lazy-load TransactionModal when first opened
+let transactionModalInstance = null;
+let transactionModalHost = null;
+
+async function showTransactionModal() {
+  // Create host element if needed
+  if (!transactionModalHost) {
+    transactionModalHost = document.createElement('div');
+    transactionModalHost.id = 'transaction-modal-host';
+    document.body.appendChild(transactionModalHost);
+  }
+
+  // Lazy-load and mount modal if not already mounted
+  if (!transactionModalInstance) {
+    try {
+      const module = await import('../parts/prefabs/TransactionModal/part.js');
+      const mount = module.default;
+      transactionModalInstance = await mount(transactionModalHost, {
+        id: 'transactionModal',
+        data: {},
+        ctx: { emitter: actionBus },
+      });
+      console.log('[App] WO-TRANSACTION-MODAL-V1: Transaction modal mounted');
+    } catch (e) {
+      console.error('[App] Failed to load TransactionModal:', e);
+      return;
+    }
+  }
+
+  // Show the modal
+  if (transactionModalInstance && transactionModalInstance.show) {
+    transactionModalInstance.show();
+  }
+}
+
+// Register the modal handler with chrome
+chrome.setTransactionModalHandler(showTransactionModal);
+console.log('[App] WO-TRANSACTION-MODAL-V1: Transaction modal handler registered');
 
 router.start();
 

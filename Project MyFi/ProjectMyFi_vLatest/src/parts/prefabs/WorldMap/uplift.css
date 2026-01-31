@@ -1,5 +1,5 @@
-/* WorldMap uplift.css — HUB Refactor: Dartboard radial map */
-/* Top-down map with city at center, avatar meandering between zones */
+/* WorldMap uplift.css — Compact Status Bar HUD */
+/* Icon-driven panels: Location | Loadout */
 
 .Part-WorldMap {
   padding: 0;
@@ -7,196 +7,127 @@
 }
 
 .WorldMap__container {
-  position: relative;
-  width: 100%;
-  height: 120px;
+  display: flex;
+  align-items: stretch;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(15, 12, 25, 0.95) 0%, rgba(20, 15, 30, 0.98) 100%);
+  border-radius: 8px;
   overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* Dartboard Map Visual */
+/* PANELS */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.WorldMap__dartboard {
-  position: absolute;
-  inset: 0;
+
+.WorldMap__panel {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center,
-    rgba(20, 25, 45, 0.95) 0%,
-    rgba(15, 18, 35, 0.98) 50%,
-    rgba(10, 12, 28, 1) 100%
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.WorldMap__panel:hover {
+  background: rgba(180, 140, 80, 0.08);
+}
+
+.WorldMap__panel:active {
+  background: rgba(180, 140, 80, 0.15);
+}
+
+/* Location panel - takes more space */
+.WorldMap__panel--location {
+  flex: 1.2;
+}
+
+/* Loadout panel */
+.WorldMap__panel--loadout {
+  flex: 1;
+}
+
+/* Panel icon (region indicator) */
+.WorldMap__panelIcon {
+  font-size: 1.3rem;
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.4));
+  flex-shrink: 0;
+}
+
+/* Panel info stack */
+.WorldMap__panelInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.WorldMap__panelLabel {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.WorldMap__panelValue {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.65rem;
+  color: rgba(212, 168, 83, 0.85);
+}
+
+/* Chevron indicator */
+.WorldMap__panelChevron {
+  font-size: 1rem;
+  color: rgba(180, 140, 80, 0.4);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* DIVIDER */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.WorldMap__divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 8px 0;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(180, 140, 80, 0.25) 30%,
+    rgba(180, 140, 80, 0.25) 70%,
+    transparent 100%
   );
 }
 
-/* Cardinal direction labels */
-.WorldMap__cardinal {
-  position: absolute;
-  font-size: 0.55rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.3);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  z-index: 5;
-}
-
-.WorldMap__cardinal--north {
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.WorldMap__cardinal--south {
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.WorldMap__cardinal--east {
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.WorldMap__cardinal--west {
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* Grid lines and rings */
-.WorldMap__grid {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.WorldMap__line {
-  position: absolute;
-  background: rgba(139, 92, 246, 0.12);
-}
-
-.WorldMap__line--ns {
-  width: 1px;
-  height: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.WorldMap__line--ew {
-  width: 100%;
-  height: 1px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.WorldMap__ring {
-  position: absolute;
-  border: 1px solid rgba(139, 92, 246, 0.15);
-  border-radius: 50%;
-}
-
-.WorldMap__ring--outer {
-  inset: 5%;
-}
-
-.WorldMap__ring--mid {
-  inset: 25%;
-}
-
-.WorldMap__ring--inner {
-  inset: 45%;
-}
-
-/* City marker at center */
-.WorldMap__city {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  z-index: 10;
-}
-
-.WorldMap__cityIcon {
-  font-size: 1.4rem;
-  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.5));
-}
-
-.WorldMap__cityLabel {
-  font-size: 0.5rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.75);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-/* Meandering avatar */
-.WorldMap__avatar {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) translate(var(--avatar-x, 40px), var(--avatar-y, -25px));
-  z-index: 15;
-  transition: transform 2s ease-in-out;
-}
-
-.WorldMap__avatarIcon {
-  font-size: 1.1rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-
-/* Idle bounce animation */
-.WorldMap__avatar[data-idle="true"] .WorldMap__avatarIcon {
-  animation: avatarBounce 2s ease-in-out infinite;
-}
-
-@keyframes avatarBounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-/* Pause animation during encounter */
-.WorldMap__avatar[data-idle="false"] .WorldMap__avatarIcon {
-  animation: none;
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* Location Info Overlay */
+/* LOADOUT ICONS */
 /* ═══════════════════════════════════════════════════════════════════════════ */
-.WorldMap__info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+
+.WorldMap__loadoutIcons {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 8px 16px 12px;
-  background: linear-gradient(transparent, rgba(10, 12, 28, 0.95));
-  text-align: center;
-  z-index: 20;
+  gap: 6px;
+  flex: 1;
 }
 
-.WorldMap__regionName {
+.WorldMap__loadoutIcon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(180, 140, 80, 0.2);
+  border-radius: 6px;
 }
 
-.WorldMap__subtitle {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
-  font-style: italic;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+.WorldMap__loadoutIcon--empty {
+  opacity: 0.4;
+  border-style: dashed;
+  font-size: 0.8rem;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -205,70 +136,29 @@
 
 @media (max-width: 360px) {
   .WorldMap__container {
-    height: 100px;
+    height: 44px;
   }
 
-  .WorldMap__grid {
-    width: 160px;
-    height: 160px;
+  .WorldMap__panel {
+    padding: 6px 10px;
+    gap: 6px;
   }
 
-  .WorldMap__cardinal {
-    font-size: 0.5rem;
+  .WorldMap__panelIcon {
+    font-size: 1.1rem;
   }
 
-  .WorldMap__cityIcon {
-    font-size: 1.2rem;
-  }
-
-  .WorldMap__cityLabel {
-    font-size: 0.45rem;
-  }
-
-  .WorldMap__avatarIcon {
-    font-size: 1rem;
-  }
-
-  .WorldMap__regionName {
-    font-size: 0.9rem;
-  }
-
-  .WorldMap__subtitle {
+  .WorldMap__panelLabel {
     font-size: 0.7rem;
   }
-}
 
-@media (max-height: 500px) {
-  .WorldMap__container {
-    height: 90px;
+  .WorldMap__panelValue {
+    font-size: 0.6rem;
   }
 
-  .WorldMap__grid {
-    width: 140px;
-    height: 140px;
-  }
-
-  .WorldMap__cardinal {
-    font-size: 0.45rem;
-  }
-
-  .WorldMap__cardinal--north {
-    top: 4px;
-  }
-
-  .WorldMap__cardinal--south {
-    bottom: 4px;
-  }
-
-  .WorldMap__info {
-    padding: 4px 12px 8px;
-  }
-
-  .WorldMap__regionName {
+  .WorldMap__loadoutIcon {
+    width: 24px;
+    height: 24px;
     font-size: 0.85rem;
-  }
-
-  .WorldMap__subtitle {
-    font-size: 0.65rem;
   }
 }
