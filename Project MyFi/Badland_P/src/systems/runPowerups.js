@@ -147,8 +147,8 @@ const POWERUP_POOL = [
       type: 'autoAbility',
       ability: 'flyingKick',
       damage: 25,
-      range: 80,
-      cooldown: 1500,
+      range: 100,
+      cooldown: 600, // Reduced from 1500ms
       trigger: 'airborne_near_enemy',
     },
     weight: 2,
@@ -164,8 +164,8 @@ const POWERUP_POOL = [
       type: 'autoAbility',
       ability: 'swordSlash',
       damage: 30,
-      range: 60,
-      cooldown: 1200,
+      range: 80,
+      cooldown: 500, // Reduced from 1200ms
       trigger: 'near_enemy',
     },
     weight: 2,
@@ -181,10 +181,10 @@ const POWERUP_POOL = [
       type: 'autoAbility',
       ability: 'fireball',
       damage: 40,
-      range: 200,
-      cooldown: 2000,
+      range: 250,
+      cooldown: 800, // Reduced from 2000ms
       trigger: 'ranged_enemy',
-      projectileSpeed: 400,
+      projectileSpeed: 500,
     },
     weight: 1,
   },
@@ -198,9 +198,9 @@ const POWERUP_POOL = [
     effect: {
       type: 'autoAbility',
       ability: 'dodgeRoll',
-      iframeDuration: 400,
-      range: 100,
-      cooldown: 2500,
+      iframeDuration: 500,
+      range: 120,
+      cooldown: 1000, // Reduced from 2500ms
       trigger: 'enemy_collision',
     },
     weight: 1,
@@ -216,8 +216,8 @@ const POWERUP_POOL = [
       type: 'autoAbility',
       ability: 'groundPound',
       damage: 50,
-      range: 120,
-      cooldown: 3000,
+      range: 150,
+      cooldown: 1200, // Reduced from 3000ms
       trigger: 'enemy_below',
     },
     weight: 1,
@@ -233,8 +233,8 @@ const POWERUP_POOL = [
       type: 'autoAbility',
       ability: 'shockwave',
       damage: 20,
-      range: 100,
-      cooldown: 1000,
+      range: 120,
+      cooldown: 400, // Reduced from 1000ms
       trigger: 'hard_landing',
     },
     weight: 2,
@@ -606,10 +606,14 @@ export function createRunPowerupSystem(events) {
     const triggered = [];
     const now = Date.now();
 
-    // Update cooldowns
+    // Update cooldowns - ensure cooldowns reset properly
     for (const ability of autoAbilities) {
-      const cooldownEnd = autoAbilityCooldowns[ability.id] || 0;
-      if (now < cooldownEnd) continue; // Still on cooldown
+      const cooldownEnd = autoAbilityCooldowns[ability.id];
+
+      // If cooldown not set or expired, ability is ready
+      if (cooldownEnd !== undefined && now < cooldownEnd) {
+        continue; // Still on cooldown
+      }
 
       // Check trigger conditions
       let shouldTrigger = false;
@@ -617,11 +621,9 @@ export function createRunPowerupSystem(events) {
 
       switch (ability.trigger) {
         case 'near_enemy':
-          // Trigger when grounded and enemy within melee range
-          if (player.isGrounded) {
-            target = findNearestEnemy(enemies, player, ability.range);
-            shouldTrigger = !!target;
-          }
+          // Trigger when enemy within melee range (grounded OR airborne)
+          target = findNearestEnemy(enemies, player, ability.range);
+          shouldTrigger = !!target;
           break;
 
         case 'airborne_near_enemy':
@@ -634,7 +636,7 @@ export function createRunPowerupSystem(events) {
 
         case 'ranged_enemy':
           // Trigger when enemy at medium-long range
-          target = findNearestEnemy(enemies, player, ability.range, 80); // min 80px away
+          target = findNearestEnemy(enemies, player, ability.range, 50); // min 50px away (reduced from 80)
           shouldTrigger = !!target;
           break;
 
@@ -645,23 +647,23 @@ export function createRunPowerupSystem(events) {
           break;
 
         case 'enemy_below':
-          // Trigger when airborne with enemy below
-          if (!player.isGrounded && player.vy > 0) {
+          // Trigger when airborne with enemy below (or falling)
+          if (!player.isGrounded) {
             target = findEnemyBelow(enemies, player, ability.range);
             shouldTrigger = !!target;
           }
           break;
 
         case 'hard_landing':
-          // Trigger on landing with significant velocity
-          if (player.justLanded && player.landingVelocity > 300) {
+          // Trigger on landing with significant velocity (reduced threshold)
+          if (player.justLanded && player.landingVelocity > 200) {
             shouldTrigger = true;
           }
           break;
       }
 
       if (shouldTrigger) {
-        // Start cooldown
+        // Start cooldown - store as absolute timestamp
         autoAbilityCooldowns[ability.id] = now + ability.cooldown;
 
         triggered.push({
@@ -671,7 +673,7 @@ export function createRunPowerupSystem(events) {
           playerY: player.y,
         });
 
-        console.log(`[AutoAbility] Triggered: ${ability.name}`);
+        console.log(`[AutoAbility] Triggered: ${ability.name} (cooldown: ${ability.cooldown}ms)`);
       }
     }
 
@@ -692,8 +694,8 @@ export function createRunPowerupSystem(events) {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist >= minRange && dist <= maxRange && dist < nearestDist) {
-        // Only target enemies ahead of player (positive X direction)
-        if (dx > 0) {
+        // Prefer enemies ahead, but also target enemies slightly behind
+        if (dx > -30) { // Allow enemies up to 30px behind
           nearest = enemy;
           nearestDist = dist;
         }

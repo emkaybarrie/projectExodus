@@ -63,13 +63,10 @@ export function createParallax() {
   let zoneTransition = 0; // 0-1 for blending between zones
   let theme = regionData.zones[0];
 
-  // Layer definitions (back to front)
+  // Layer definitions - SIMPLIFIED to avoid visual confusion with terrain
+  // Only render sky gradient and atmospheric effects - NO terrain-like shapes
   const layers = [
     { depth: 0.1, type: 'sky' },
-    { depth: 0.2, type: 'mountains_far' },
-    { depth: 0.4, type: 'mountains_near' },
-    { depth: 0.6, type: 'hills' },
-    { depth: 0.8, type: 'ground_back' },
   ];
 
   /**
@@ -177,18 +174,27 @@ export function createParallax() {
 
   /**
    * Render all parallax layers
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} cameraX - Camera X position
+   * @param {number} zoom - Current zoom level (1.0 = normal, < 1 = zoomed out)
    */
-  function render(ctx, cameraX) {
+  function render(ctx, cameraX, zoom = 1.0) {
     // Get current theme (with transition blending)
     const currentTheme = getInterpolatedTheme();
 
-    // Draw sky gradient
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
+    // Calculate scaled dimensions for zoom (background needs to cover more area when zoomed out)
+    const scaledWidth = Math.ceil(width / zoom) + 2;  // +2 to prevent edge gaps
+    const scaledHeight = Math.ceil(height / zoom) + 2;
+    const offsetX = (scaledWidth - width) / 2;
+    const offsetY = (scaledHeight - height) / 2;
+
+    // Draw sky gradient (covers full area accounting for zoom)
+    const skyGradient = ctx.createLinearGradient(0, -offsetY, 0, height + offsetY);
     skyGradient.addColorStop(0, currentTheme.sky[0]);
     skyGradient.addColorStop(0.5, currentTheme.sky[1]);
     skyGradient.addColorStop(1, currentTheme.sky[2]);
     ctx.fillStyle = skyGradient;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(-offsetX, -offsetY, scaledWidth, scaledHeight);
 
     // Draw horizon glow (intensity based on zone - brighter in early zones)
     const horizonY = height * 0.7;
@@ -201,7 +207,7 @@ export function createParallax() {
     horizonGradient.addColorStop(0.5, currentTheme.horizon + Math.round(horizonIntensity * 127).toString(16).padStart(2, '0'));
     horizonGradient.addColorStop(1, 'transparent');
     ctx.fillStyle = horizonGradient;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(-offsetX, -offsetY, scaledWidth, scaledHeight);
 
     // Draw region-specific features
     const features = regionData.features;
@@ -231,35 +237,8 @@ export function createParallax() {
       drawSmoke(ctx, cameraX);
     }
 
-    // Trees (frontier wilderness feature)
-    if (features.trees) {
-      drawDistantTrees(ctx, cameraX, currentTheme.ground);
-    }
-
-    // Rocks (badlands feature)
-    if (features.rocks) {
-      drawDistantRocks(ctx, cameraX, currentTheme.ground);
-    }
-
-    // Draw each parallax layer
-    for (const layer of layers) {
-      const offsetX = -cameraX * layer.depth;
-
-      switch (layer.type) {
-        case 'mountains_far':
-          drawMountains(ctx, offsetX, 0.5, currentTheme.sky[2], horizonY - 100);
-          break;
-        case 'mountains_near':
-          drawMountains(ctx, offsetX, 0.8, currentTheme.ground + '80', horizonY - 50);
-          break;
-        case 'hills':
-          drawHills(ctx, offsetX, currentTheme.ground, horizonY);
-          break;
-        case 'ground_back':
-          drawGround(ctx, offsetX, currentTheme.ground, horizonY + 50);
-          break;
-      }
-    }
+    // REMOVED: Trees, rocks, mountains - they cause visual confusion with actual terrain
+    // Background should only be sky gradient + atmospheric effects (stars, clouds, embers)
 
     // Zone indicator (subtle text for debugging / atmosphere)
     if (currentZone > 0) {
@@ -533,13 +512,14 @@ export function createParallax() {
   function drawMountains(ctx, offsetX, scale, color, baseY) {
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(0, height);
+    ctx.moveTo(-100, height * 2);  // Start below and left
 
     const mountainWidth = 200 * scale;
     const mountainHeight = 150 * scale;
 
-    for (let x = -mountainWidth; x < width + mountainWidth; x += mountainWidth * 0.7) {
-      const actualX = ((x + offsetX) % (width + mountainWidth * 2)) - mountainWidth;
+    // Extend mountains well beyond viewport to prevent edge gaps
+    for (let x = -mountainWidth * 2; x < width + mountainWidth * 3; x += mountainWidth * 0.7) {
+      const actualX = ((x + offsetX) % (width + mountainWidth * 3)) - mountainWidth;
       const peakY = baseY - mountainHeight * (0.7 + Math.sin(x * 0.01) * 0.3);
 
       ctx.lineTo(actualX, baseY);
@@ -547,8 +527,9 @@ export function createParallax() {
       ctx.lineTo(actualX + mountainWidth, baseY);
     }
 
-    ctx.lineTo(width, height);
-    ctx.lineTo(0, height);
+    ctx.lineTo(width + 100, height * 2);  // End below and right
+    ctx.lineTo(-100, height * 2);
+    ctx.closePath();
     ctx.fill();
   }
 
@@ -558,16 +539,18 @@ export function createParallax() {
   function drawHills(ctx, offsetX, color, baseY) {
     ctx.fillStyle = color + 'cc';
     ctx.beginPath();
-    ctx.moveTo(0, height);
+    ctx.moveTo(-50, height * 2);  // Start below and left of viewport
 
-    for (let x = 0; x <= width; x += 20) {
+    // Extend hills beyond viewport edges to prevent gaps
+    for (let x = -50; x <= width + 50; x += 20) {
       const actualX = x + (offsetX % 400);
       const hillY = baseY + Math.sin(actualX * 0.02) * 30 + Math.sin(actualX * 0.005) * 20;
       ctx.lineTo(x, hillY);
     }
 
-    ctx.lineTo(width, height);
-    ctx.lineTo(0, height);
+    ctx.lineTo(width + 50, height * 2);  // Extend right and below
+    ctx.lineTo(-50, height * 2);
+    ctx.closePath();
     ctx.fill();
   }
 
@@ -575,17 +558,19 @@ export function createParallax() {
    * Draw ground layer
    */
   function drawGround(ctx, offsetX, color, baseY) {
+    // Extend ground well beyond viewport to prevent gaps when zoomed out
+    const extendedHeight = height * 2;
     ctx.fillStyle = color;
-    ctx.fillRect(0, baseY, width, height - baseY);
+    ctx.fillRect(-100, baseY, width + 200, extendedHeight);
 
     // Ground texture lines
     ctx.strokeStyle = color + '40';
     ctx.lineWidth = 1;
-    for (let x = 0; x < width; x += 50) {
+    for (let x = -100; x < width + 100; x += 50) {
       const actualX = ((x + offsetX * 0.5) % 100);
       ctx.beginPath();
-      ctx.moveTo(actualX + x % width, baseY);
-      ctx.lineTo(actualX + x % width + 30, baseY + 20);
+      ctx.moveTo(actualX + (x + 100) % (width + 200) - 100, baseY);
+      ctx.lineTo(actualX + (x + 100) % (width + 200) - 100 + 30, baseY + 20);
       ctx.stroke();
     }
   }
