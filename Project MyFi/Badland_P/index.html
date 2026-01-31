@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Badlands Runner</title>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Canvas for game rendering -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI Overlay Layer -->
+    <div id="ui-overlay">
+      <!-- HUD (visible during gameplay) -->
+      <div id="hud" class="hidden">
+        <div class="hud-top">
+          <div class="hud-score">
+            <span class="hud-label">SCORE</span>
+            <span class="hud-value" id="hud-score">0</span>
+          </div>
+          <button class="hud-pause-btn" id="btn-pause-hud" aria-label="Pause">⏸</button>
+          <div class="hud-week" id="hud-week">
+            <span class="week-number">W1</span>
+            <span class="day-indicator">Mon</span>
+            <span class="section-type">TERRAIN</span>
+          </div>
+          <div class="hud-distance">
+            <span class="hud-label">DISTANCE</span>
+            <span class="hud-value" id="hud-distance">0m</span>
+          </div>
+        </div>
+        <div class="hud-bottom">
+          <div class="hud-bars-left">
+            <div class="hud-health">
+              <div class="health-bar">
+                <div class="health-fill" id="health-fill"></div>
+              </div>
+            </div>
+            <div class="hud-speed">
+              <div class="speed-bar">
+                <div class="speed-fill" id="speed-fill"></div>
+              </div>
+              <span class="speed-label">SPEED</span>
+            </div>
+          </div>
+          <div class="hud-momentum">
+            <div class="momentum-bar">
+              <div class="momentum-fill" id="momentum-fill"></div>
+            </div>
+            <span class="momentum-label">MOMENTUM</span>
+          </div>
+        </div>
+        <!-- Active power-ups display -->
+        <div class="hud-powerups" id="hud-powerups"></div>
+      </div>
+
+      <!-- Title Screen -->
+      <div id="screen-title" class="screen">
+        <div class="title-content">
+          <h1 class="game-title">BADLANDS<br><span class="title-sub">RUNNER</span></h1>
+          <p class="title-tagline">Endless Parkour Adventure</p>
+          <button class="btn-primary" id="btn-start">ENTER THE PORTAL</button>
+        </div>
+      </div>
+
+      <!-- Class Select Screen -->
+      <div id="screen-class" class="screen hidden">
+        <h2 class="screen-title">Choose Your Path</h2>
+        <div class="class-grid" id="class-grid">
+          <!-- Drifter - Balanced starter class -->
+          <div class="class-card selected" data-class="drifter">
+            <div class="class-avatar">🏃</div>
+            <div class="class-name">Drifter</div>
+            <div class="class-title">The Wanderer</div>
+            <div class="class-desc">A balanced runner who excels at maintaining momentum across any terrain.</div>
+            <div class="class-stats">
+              <div class="class-stat">
+                <span class="class-stat-value">5</span>
+                <span class="class-stat-label">Speed</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">5</span>
+                <span class="class-stat-label">Health</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">5</span>
+                <span class="class-stat-label">Power</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Warden - Tank class -->
+          <div class="class-card" data-class="warden">
+            <div class="class-avatar">🛡️</div>
+            <div class="class-name">Warden</div>
+            <div class="class-title">The Protector</div>
+            <div class="class-desc">Heavy armor reduces damage but slows momentum gain. Survives longer falls.</div>
+            <div class="class-stats">
+              <div class="class-stat">
+                <span class="class-stat-value">3</span>
+                <span class="class-stat-label">Speed</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">8</span>
+                <span class="class-stat-label">Health</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">4</span>
+                <span class="class-stat-label">Power</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Striker - Glass cannon -->
+          <div class="class-card" data-class="striker">
+            <div class="class-avatar">⚔️</div>
+            <div class="class-name">Striker</div>
+            <div class="class-title">The Blade</div>
+            <div class="class-desc">Swift attacks and high damage, but fragile. Momentum builds faster.</div>
+            <div class="class-stats">
+              <div class="class-stat">
+                <span class="class-stat-value">7</span>
+                <span class="class-stat-label">Speed</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">3</span>
+                <span class="class-stat-label">Health</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">7</span>
+                <span class="class-stat-label">Power</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mystic - Locked class (unlockable) -->
+          <div class="class-card locked" data-class="mystic">
+            <span class="class-lock-icon">🔒</span>
+            <div class="class-avatar">✨</div>
+            <div class="class-name">Mystic</div>
+            <div class="class-title">The Enigma</div>
+            <div class="class-desc">Harness arcane energy for powerful abilities. Reach the Void to unlock.</div>
+            <div class="class-stats">
+              <div class="class-stat">
+                <span class="class-stat-value">?</span>
+                <span class="class-stat-label">Speed</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">?</span>
+                <span class="class-stat-label">Health</span>
+              </div>
+              <div class="class-stat">
+                <span class="class-stat-value">?</span>
+                <span class="class-stat-label">Power</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="class-actions">
+          <button class="btn-back" id="btn-back-title">BACK</button>
+          <button class="btn-primary" id="btn-confirm-class">CONFIRM</button>
+        </div>
+      </div>
+
+      <!-- Region Select Screen -->
+      <div id="screen-select" class="screen hidden">
+        <h2 class="screen-title">SELECT REGION</h2>
+        <div class="region-grid" id="region-grid">
+          <!-- Regions populated by JS -->
+        </div>
+        <button class="btn-back" id="btn-back-class">BACK</button>
+      </div>
+
+      <!-- Loadout Screen -->
+      <div id="screen-loadout" class="screen hidden">
+        <h2 class="screen-title">LOADOUT</h2>
+        <div class="loadout-grid" id="loadout-grid">
+          <!-- Loadout slots populated by JS -->
+        </div>
+        <div class="loadout-actions">
+          <button class="btn-back" id="btn-back-select">BACK</button>
+          <button class="btn-primary" id="btn-run">BEGIN RUN</button>
+        </div>
+      </div>
+
+      <!-- Pause Screen -->
+      <div id="screen-pause" class="screen hidden">
+        <h2 class="screen-title">PAUSED</h2>
+        <div class="pause-actions">
+          <button class="btn-primary" id="btn-resume">RESUME</button>
+          <button class="btn-secondary" id="btn-quit">QUIT RUN</button>
+        </div>
+      </div>
+
+      <!-- Results Screen -->
+      <div id="screen-results" class="screen hidden">
+        <h2 class="screen-title">RUN COMPLETE</h2>
+        <div class="results-stats">
+          <div class="stat-row">
+            <span class="stat-label">DISTANCE</span>
+            <span class="stat-value" id="result-distance">0m</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">SCORE</span>
+            <span class="stat-value" id="result-score">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">ESSENCE</span>
+            <span class="stat-value" id="result-essence">+0</span>
+          </div>
+        </div>
+        <div class="results-actions">
+          <button class="btn-primary" id="btn-retry">RUN AGAIN</button>
+          <button class="btn-secondary" id="btn-menu">MAIN MENU</button>
+        </div>
+      </div>
+
+      <!-- Power-up Selection Overlay -->
+      <div id="powerup-selection" class="powerup-overlay hidden">
+        <div class="powerup-backdrop"></div>
+        <div class="powerup-modal">
+          <h2 class="powerup-title">MILESTONE REACHED!</h2>
+          <p class="powerup-subtitle">Choose a power-up</p>
+          <div class="powerup-options" id="powerup-options">
+            <!-- Power-up cards populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Touch Control Zones (mobile) - Three zone layout -->
+    <div id="touch-zones" class="hidden">
+      <div class="touch-zone touch-zone-left" id="touch-left">
+        <div class="touch-icon">◀</div>
+        <span class="touch-hint">BRAKE</span>
+        <span class="touch-hint-sub">hold</span>
+      </div>
+      <div class="touch-zone touch-zone-center" id="touch-center">
+        <div class="touch-icon">↑</div>
+        <span class="touch-hint">SWIPE UP</span>
+        <span class="touch-hint-sub">jump</span>
+      </div>
+      <div class="touch-zone touch-zone-right" id="touch-right">
+        <div class="touch-icon">▶</div>
+        <span class="touch-hint">GAS</span>
+        <span class="touch-hint-sub">hold / tap attack</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts (ES Modules) -->
+  <script type="module" src="src/core/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "id": "badlands-portal",
+  "description": "Portal backgrounds for Badlands entry screen, themed by subscription tier",
+  "backgrounds": {
+    "frontier": {
+      "label": "Frontier",
+      "file": "portal-frontier.png",
+      "tier": "free",
+      "theme": {
+        "primary": "#fb923c",
+        "secondary": "#8b5cf6",
+        "glow": "rgba(251, 146, 60, 0.3)"
+      }
+    },
+    "badlands": {
+      "label": "Badlands",
+      "file": "portal-badlands.png",
+      "tier": "silver",
+      "theme": {
+        "primary": "#ef4444",
+        "secondary": "#f97316",
+        "glow": "rgba(239, 68, 68, 0.4)"
+      }
+    },
+    "void": {
+      "label": "The Void",
+      "file": "portal-void.png",
+      "tier": "gold",
+      "theme": {
+        "primary": "#a855f7",
+        "secondary": "#3b82f6",
+        "glow": "rgba(168, 85, 247, 0.5)"
+      }
+    }
+  },
+  "fallback": "portal-frontier.png"
+}

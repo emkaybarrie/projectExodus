@@ -1,4 +1,4 @@
-/* BadlandsEntry Part — WO-3 */
+/* BadlandsEntry Part — WO-3 + Subscription Background + Stats Dashboard */
 
 .Part-BadlandsEntry {
   padding: 16px;
@@ -8,67 +8,314 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  position: relative;
+  min-height: 400px;
 }
 
-/* Portal Graphic */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* PORTAL CARD - Subscription-based background with lightning border */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 .BadlandsEntry__portal {
+  --portal-bg-url: url('../../../../assets/art/badlands-portal/portal-frontier.png');
+  --portal-accent: #a855f7;
+  --portal-glow: rgba(168, 85, 247, 0.4);
+  --lightning-color-1: #a855f7;
+  --lightning-color-2: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 16px;
-  padding: 32px 20px;
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(139, 92, 246, 0.05));
+  padding: 48px 20px 24px;
+  position: relative;
   border-radius: 16px;
-  border: 1px solid rgba(251, 146, 60, 0.2);
+  overflow: hidden;
+  min-height: 180px;
 }
 
-.BadlandsEntry__portalRing {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.2), rgba(251, 146, 60, 0.05));
-  border: 3px solid rgba(251, 146, 60, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: portalPulse 2s ease-in-out infinite;
+/* Background image layer */
+.BadlandsEntry__portal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--portal-bg-url);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  opacity: 0.85;
+  transition: background-image 0.5s ease-out;
 }
 
-@keyframes portalPulse {
+/* Vignette overlay */
+.BadlandsEntry__portal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.6) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Ensure content is above background */
+.BadlandsEntry__portal > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Glow pulse - synced with text shimmer (6s cycle) */
+.BadlandsEntry__portal {
+  box-shadow:
+    0 0 0 1px rgba(168, 85, 247, 0.2),
+    0 0 8px var(--portal-glow);
+  animation: glowPulse 6s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(251, 146, 60, 0.3), 0 0 40px rgba(251, 146, 60, 0.1);
-    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(168, 85, 247, 0.2),
+      0 0 8px var(--portal-glow);
   }
   50% {
-    box-shadow: 0 0 30px rgba(251, 146, 60, 0.4), 0 0 60px rgba(251, 146, 60, 0.2);
-    transform: scale(1.02);
+    box-shadow:
+      0 0 0 2px var(--portal-accent),
+      0 0 20px var(--portal-accent),
+      0 0 40px var(--portal-glow);
   }
 }
 
-.BadlandsEntry__portalCore {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.4), rgba(139, 92, 246, 0.3));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Theme-specific colors */
+.BadlandsEntry__portal[data-portal-theme="frontier"] {
+  --portal-accent: #fb923c;
+  --portal-glow: rgba(251, 146, 60, 0.4);
+  --lightning-color-1: #fb923c;
+  --lightning-color-2: #ffffff;
 }
 
-.BadlandsEntry__portalIcon {
-  font-size: 36px;
-  color: rgba(255, 255, 255, 0.9);
+.BadlandsEntry__portal[data-portal-theme="badlands"] {
+  --portal-accent: #ef4444;
+  --portal-glow: rgba(239, 68, 68, 0.4);
+  --lightning-color-1: #ef4444;
+  --lightning-color-2: #ffffff;
+}
+
+.BadlandsEntry__portal[data-portal-theme="void"] {
+  --portal-accent: #a855f7;
+  --portal-glow: rgba(168, 85, 247, 0.5);
+  --lightning-color-1: #a855f7;
+  --lightning-color-2: #ffffff;
 }
 
 .BadlandsEntry__portalLabel {
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 700;
-  color: rgba(251, 146, 60, 0.9);
-  letter-spacing: 3px;
+  color: rgba(255, 255, 255, 0.15);
+  letter-spacing: 4px;
   text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: textShimmer 6s ease-in-out infinite;
 }
 
-/* Sections */
+@keyframes textShimmer {
+  0%, 100% {
+    color: rgba(255, 255, 255, 0.12);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    color: rgba(255, 255, 255, 0.7);
+    text-shadow:
+      0 0 20px var(--portal-accent),
+      0 0 40px var(--portal-glow),
+      0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STATS DASHBOARD */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.BadlandsEntry__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.BadlandsEntry__statCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.BadlandsEntry__statIcon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(96, 165, 250, 0.1));
+  border-radius: 10px;
+  font-size: 20px;
+}
+
+.BadlandsEntry__statInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.BadlandsEntry__statValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.BadlandsEntry__statLabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* REGION STATS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.BadlandsEntry__regionStats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.BadlandsEntry__regionStat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.BadlandsEntry__regionDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--region-color, #888);
+  box-shadow: 0 0 8px var(--region-color, #888);
+}
+
+.BadlandsEntry__regionName {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.BadlandsEntry__regionValue {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LEADERBOARD */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.BadlandsEntry__leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.BadlandsEntry__leaderRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 80px;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  transition: background 150ms ease;
+}
+
+.BadlandsEntry__leaderRow:not(.BadlandsEntry__leaderRow--header):hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.BadlandsEntry__leaderRow--header {
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.BadlandsEntry__leaderRow--header span {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.BadlandsEntry__leaderRank {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.BadlandsEntry__leaderRow[data-rank="1"] .BadlandsEntry__leaderRank {
+  color: #fbbf24;
+}
+
+.BadlandsEntry__leaderRow[data-rank="2"] .BadlandsEntry__leaderRank {
+  color: #94a3b8;
+}
+
+.BadlandsEntry__leaderRow[data-rank="3"] .BadlandsEntry__leaderRank {
+  color: #cd7f32;
+}
+
+.BadlandsEntry__leaderName {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.BadlandsEntry__leaderScore {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(168, 85, 247, 0.9);
+  text-align: right;
+}
+
+.BadlandsEntry__expandBtn {
+  padding: 4px 12px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 6px;
+  color: rgba(168, 85, 247, 0.9);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+
+.BadlandsEntry__expandBtn:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* SECTIONS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 .BadlandsEntry__section {
   display: flex;
   flex-direction: column;
@@ -105,7 +352,10 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Avatar Card */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* AVATAR CARD */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 .BadlandsEntry__avatarCard {
   display: flex;
   align-items: center;
@@ -145,7 +395,10 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Loadout */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LOADOUT */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 .BadlandsEntry__loadout {
   display: flex;
   flex-direction: column;
@@ -180,15 +433,18 @@
   text-align: right;
 }
 
-/* Enter Button */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ENTER BUTTON */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 .BadlandsEntry__enterBtn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   padding: 16px 24px;
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.5), rgba(251, 146, 60, 0.3));
-  border: 2px solid rgba(251, 146, 60, 0.6);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(0, 0, 0, 0.3));
+  border: 2px solid rgba(168, 85, 247, 0.6);
   border-radius: 12px;
   color: rgba(255, 255, 255, 0.95);
   font-size: 16px;
@@ -197,13 +453,14 @@
   letter-spacing: 1px;
   cursor: pointer;
   transition: all 200ms ease;
+  backdrop-filter: blur(4px);
 }
 
 .BadlandsEntry__enterBtn:hover {
-  background: linear-gradient(135deg, rgba(251, 146, 60, 0.6), rgba(251, 146, 60, 0.4));
-  border-color: rgba(251, 146, 60, 0.8);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.6), rgba(168, 85, 247, 0.3));
+  border-color: rgba(168, 85, 247, 0.8);
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(251, 146, 60, 0.3);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.3);
 }
 
 .BadlandsEntry__enterBtn:active {

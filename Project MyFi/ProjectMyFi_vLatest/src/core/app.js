@@ -6,6 +6,7 @@ import { createChrome } from './chrome.js';
 import * as session from './session.js';
 import { registerVMProvider } from './surfaceRuntime.js';
 import { getHubDemoVM } from '../vm/hub-demo-vm.js';
+import { getBadlandsDemoVM } from '../vm/badlands-demo-vm.js';
 import * as actionBus from './actionBus.js';
 import * as modalManager from './modalManager.js';
 import * as journeyRunner from '../journeys/journeyRunner.js';
@@ -15,6 +16,8 @@ import { ensureGlobalCSS } from './styleLoader.js';
 // WO-STAGE-EPISODES-V1: Episode system imports
 import { createStageSignals, createTransactionSignal } from '../systems/stageSignals.js';
 import { createEpisodeRunner } from '../systems/episodeRunner.js';
+// Keyboard navigation for cross-layout screens
+import * as keyboardNav from './keyboardNav.js';
 
 // Create Hub controller for integrated systems (autobattler, vitals sim)
 const hubController = createHubController({
@@ -58,6 +61,8 @@ episodeRunner.init();
 // Register demo VM providers for surfaces
 // Hub uses controller state if available, otherwise falls back to demo VM
 registerVMProvider('hub', () => hubController.getState() || getHubDemoVM());
+// Badlands entry screen VM
+registerVMProvider('badlands', () => getBadlandsDemoVM());
 
 function ensureAppRoot(){
   const el = document.getElementById('app');
@@ -122,6 +127,10 @@ journeyRunner.loadJourneys().then(() => {
   console.error('[App] Failed to initialize journey runner:', e);
 });
 
+// Initialize keyboard navigation (arrow keys for cross-layout navigation)
+keyboardNav.init({ actionBus });
+console.log('[App] Keyboard navigation initialized - use arrow keys to navigate');
+
 // Expose for debugging/testing BEFORE router starts
 // (DevControlPanel needs this to be available at mount time)
 window.__MYFI_DEBUG__ = {
@@ -132,6 +141,8 @@ window.__MYFI_DEBUG__ = {
   hubController,
   // WO-S6: swipeNav disabled - navigation via modal only
   swipeNav: null,
+  // Keyboard navigation controller
+  keyboardNav,
   // WO-STAGE-EPISODES-V1: Episode system
   stageSignals,
   episodeRunner,
@@ -167,16 +178,17 @@ chrome.enableDevSpawn();
 router.start();
 
 // Start Hub controller when on hub surface
+// WO-HUB-02: Mark as persistent (app-level subscriptions, not cleaned up per-surface)
 actionBus.subscribe('surface:mounted', ({ surfaceId }) => {
   if (surfaceId === 'hub') {
     hubController.start();
     console.log('[App] Hub controller started');
   }
-});
+}, 'app', { persistent: true });
 
 actionBus.subscribe('surface:unmounted', ({ surfaceId }) => {
   if (surfaceId === 'hub') {
     hubController.stop();
     console.log('[App] Hub controller stopped');
   }
-});
+}, 'app', { persistent: true });

@@ -455,17 +455,18 @@ export function createEpisodeRunner(options = {}) {
 
   /**
    * Subscribe to stage:signal events
+   * WO-HUB-02: Mark as persistent (runner-level subscriptions, not cleaned up per-surface)
    */
   function init() {
     if (actionBus && actionBus.subscribe) {
       actionBus.subscribe('stage:signal', (signal) => {
         startFromSignal(signal);
-      });
+      }, 'episodeRunner', { persistent: true });
 
       // Allow external choice submission
       actionBus.subscribe('episode:submitChoice', (data) => {
         playerChoice(data.choiceId);
-      });
+      }, 'episodeRunner', { persistent: true });
 
       // Listen for autobattler resolution to complete combat episodes
       actionBus.subscribe('autobattler:resolve', (result) => {
@@ -488,7 +489,7 @@ export function createEpisodeRunner(options = {}) {
 
         // Transition to resolving phase
         transitionToPhase(EPISODE_PHASES.RESOLVING);
-      });
+      }, 'episodeRunner', { persistent: true });
     }
   }
 

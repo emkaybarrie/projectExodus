@@ -1,0 +1,88 @@
+{
+  "enemies": [
+    {
+      "id": "charger",
+      "name": "Dust Devil",
+      "description": "Fast ground enemy that charges at sight",
+      "type": "melee",
+      "health": 1,
+      "damage": 20,
+      "speed": 200,
+      "detectionRange": 400,
+      "width": 40,
+      "height": 40,
+      "color": "#f97316",
+      "behavior": "charge",
+      "essenceValue": 10,
+      "spawnWeight": 3
+    },
+    {
+      "id": "jumper",
+      "name": "Crag Hopper",
+      "description": "Bouncing enemy that leaps toward players",
+      "type": "melee",
+      "health": 1,
+      "damage": 15,
+      "speed": 150,
+      "jumpForce": 400,
+      "detectionRange": 300,
+      "width": 35,
+      "height": 45,
+      "color": "#22c55e",
+      "behavior": "jump",
+      "essenceValue": 15,
+      "spawnWeight": 2
+    },
+    {
+      "id": "shooter",
+      "name": "Ember Spitter",
+      "description": "Stationary enemy that fires projectiles",
+      "type": "ranged",
+      "health": 2,
+      "damage": 25,
+      "projectileSpeed": 300,
+      "fireRate": 2000,
+      "detectionRange": 500,
+      "width": 45,
+      "height": 50,
+      "color": "#ef4444",
+      "behavior": "shoot",
+      "essenceValue": 25,
+      "spawnWeight": 1
+    },
+    {
+      "id": "bomber",
+      "name": "Void Drifter",
+      "description": "Flying enemy that drops explosive orbs",
+      "type": "ranged",
+      "health": 1,
+      "damage": 30,
+      "speed": 100,
+      "dropRate": 3000,
+      "detectionRange": 400,
+      "width": 50,
+      "height": 40,
+      "color": "#a855f7",
+      "behavior": "bomb",
+      "essenceValue": 30,
+      "spawnWeight": 1,
+      "flying": true
+    }
+  ],
+  "projectiles": {
+    "ember": {
+      "speed": 300,
+      "damage": 25,
+      "size": 10,
+      "color": "#fbbf24"
+    },
+    "bomb": {
+      "speed": 0,
+      "damage": 30,
+      "size": 15,
+      "color": "#a855f7",
+      "gravity": 300,
+      "explodeRadius": 60
+    }
+  }
+}

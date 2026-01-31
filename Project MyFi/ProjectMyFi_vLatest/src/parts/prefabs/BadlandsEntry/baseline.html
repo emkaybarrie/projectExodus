@@ -1,12 +1,78 @@
 <div class="BadlandsEntry__inner">
-  <!-- Portal Graphic -->
+  <!-- Portal Card (subscription-based background) -->
   <div class="BadlandsEntry__portal">
-    <div class="BadlandsEntry__portalRing">
-      <div class="BadlandsEntry__portalCore">
-        <span class="BadlandsEntry__portalIcon">&#9876;</span>
+    <div class="BadlandsEntry__portalLabel">THE BADLANDS</div>
+    <!-- Lightning border effect rendered via CSS -->
+  </div>
+
+  <!-- Stats Dashboard -->
+  <div class="BadlandsEntry__stats">
+    <div class="BadlandsEntry__statCard">
+      <div class="BadlandsEntry__statIcon">&#128100;</div>
+      <div class="BadlandsEntry__statInfo">
+        <span class="BadlandsEntry__statValue" data-bind="activePlayers">--</span>
+        <span class="BadlandsEntry__statLabel">Active Runners</span>
       </div>
     </div>
-    <div class="BadlandsEntry__portalLabel">THE BADLANDS</div>
+    <div class="BadlandsEntry__statCard">
+      <div class="BadlandsEntry__statIcon">&#10024;</div>
+      <div class="BadlandsEntry__statInfo">
+        <span class="BadlandsEntry__statValue" data-bind="totalEssence">--</span>
+        <span class="BadlandsEntry__statLabel">Essence Available</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Essence by Region -->
+  <div class="BadlandsEntry__section">
+    <h3 class="BadlandsEntry__sectionTitle">Essence by Region</h3>
+    <div class="BadlandsEntry__regionStats">
+      <div class="BadlandsEntry__regionStat">
+        <span class="BadlandsEntry__regionDot" style="--region-color: #fb923c"></span>
+        <span class="BadlandsEntry__regionName">Frontier</span>
+        <span class="BadlandsEntry__regionValue" data-bind="essenceFrontier">--</span>
+      </div>
+      <div class="BadlandsEntry__regionStat">
+        <span class="BadlandsEntry__regionDot" style="--region-color: #ef4444"></span>
+        <span class="BadlandsEntry__regionName">Badlands</span>
+        <span class="BadlandsEntry__regionValue" data-bind="essenceBadlands">--</span>
+      </div>
+      <div class="BadlandsEntry__regionStat">
+        <span class="BadlandsEntry__regionDot" style="--region-color: #a855f7"></span>
+        <span class="BadlandsEntry__regionName">The Void</span>
+        <span class="BadlandsEntry__regionValue" data-bind="essenceVoid">--</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="BadlandsEntry__section">
+    <div class="BadlandsEntry__sectionHeader">
+      <h3 class="BadlandsEntry__sectionTitle">Leaderboard</h3>
+      <button class="BadlandsEntry__expandBtn" data-action="expandLeaderboard">View All</button>
+    </div>
+    <div class="BadlandsEntry__leaderboard" data-bind="leaderboard">
+      <div class="BadlandsEntry__leaderRow BadlandsEntry__leaderRow--header">
+        <span class="BadlandsEntry__leaderRank">#</span>
+        <span class="BadlandsEntry__leaderName">Runner</span>
+        <span class="BadlandsEntry__leaderScore">Score</span>
+      </div>
+      <div class="BadlandsEntry__leaderRow" data-rank="1">
+        <span class="BadlandsEntry__leaderRank">1</span>
+        <span class="BadlandsEntry__leaderName">--</span>
+        <span class="BadlandsEntry__leaderScore">--</span>
+      </div>
+      <div class="BadlandsEntry__leaderRow" data-rank="2">
+        <span class="BadlandsEntry__leaderRank">2</span>
+        <span class="BadlandsEntry__leaderName">--</span>
+        <span class="BadlandsEntry__leaderScore">--</span>
+      </div>
+      <div class="BadlandsEntry__leaderRow" data-rank="3">
+        <span class="BadlandsEntry__leaderRank">3</span>
+        <span class="BadlandsEntry__leaderName">--</span>
+        <span class="BadlandsEntry__leaderScore">--</span>
+      </div>
+    </div>
   </div>
 
   <!-- Avatar Selection -->
