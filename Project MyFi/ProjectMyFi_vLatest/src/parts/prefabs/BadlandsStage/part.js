@@ -622,6 +622,37 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       })
     );
 
+    // WO-S5: Scene Beat added - update Recent Events
+    unsubscribers.push(
+      ctx.actionBus.subscribe('sceneBeat:added', (data) => {
+        const beat = data.beat;
+        if (beat && beat.display) {
+          // Convert scene beat to recent event format
+          state.recentEvents.unshift({
+            id: beat.id,
+            name: beat.display.title,
+            icon: beat.display.icon,
+            result: beat.resolvedBy,
+            timestamp: beat.time,
+            details: beat.display.choiceLabel
+              ? `Tagged as: ${beat.display.choiceLabel}`
+              : beat.display.subtitle,
+            // WO-S5: Enhanced data from scene beat
+            location: beat.display.locationLabel,
+            vitalsImpact: beat.display.vitalsImpact,
+            resultBadge: beat.display.resultBadge,
+          });
+
+          // Keep only last 10 events
+          if (state.recentEvents.length > 10) {
+            state.recentEvents.pop();
+          }
+
+          render(root, state);
+        }
+      })
+    );
+
   }
 
   return {
@@ -915,17 +946,32 @@ function renderRecentEvents(root, state) {
     `;
   } else {
     listEl.innerHTML = state.recentEvents.map(event => `
-      <li class="BadlandsStage__recentItem">
+      <li class="BadlandsStage__recentItem" data-result="${event.result || 'auto'}">
         <div class="BadlandsStage__recentItemMain">
           <span class="BadlandsStage__recentItemIcon">${event.icon}</span>
           <div class="BadlandsStage__recentItemInfo">
             <span class="BadlandsStage__recentItemName">${event.name}</span>
             <span class="BadlandsStage__recentItemTime">${formatTimeAgo(event.timestamp)}</span>
           </div>
+          ${event.resultBadge ? `
+            <span class="BadlandsStage__recentItemBadge BadlandsStage__recentItemBadge--${event.resultBadge.class}">
+              ${event.resultBadge.label}
+            </span>
+          ` : ''}
         </div>
         <div class="BadlandsStage__recentItemDetails">
           ${event.details}
+          ${event.location ? `<span class="BadlandsStage__recentItemLocation">${event.location}</span>` : ''}
         </div>
+        ${event.vitalsImpact ? `
+          <div class="BadlandsStage__recentItemVitals">
+            ${event.vitalsImpact.map(v => `
+              <span class="BadlandsStage__recentItemVital BadlandsStage__recentItemVital--${v.isPositive ? 'positive' : 'negative'}">
+                ${v.label}
+              </span>
+            `).join('')}
+          </div>
+        ` : ''}
       </li>
     `).join('');
   }
