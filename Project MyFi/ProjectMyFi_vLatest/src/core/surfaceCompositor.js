@@ -51,7 +51,12 @@ export async function mountSurface(hostEl, surface, { resolvePart, ctx, vm = {} 
         }
       }
       mounted.length = 0;
-      hostEl.innerHTML = '';
+
+      // WO-HUB-02: Only remove elements we created, not entire hostEl
+      // This prevents clearing new content during animated screen transitions
+      // where the new surface is already mounted in hostEl via a wrapper
+      if (root.parentNode) root.remove();
+      if (overlayRoot.parentNode) overlayRoot.remove();
 
       // HUB-08-R: Check for subscription leaks after all parts unmounted
       // Delayed slightly to allow async cleanup

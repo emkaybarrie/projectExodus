@@ -118,6 +118,7 @@ function registerJourney(journey) {
 
 /**
  * Bind journeys with triggers to ActionBus.
+ * WO-HUB-02: Mark as persistent (runner-level subscription, not cleaned up per-surface)
  */
 export function bindTriggers() {
   if (!runnerContext?.actionBus) {
@@ -148,7 +149,7 @@ export function bindTriggers() {
         break;
       }
     }
-  });
+  }, 'journeyRunner', { persistent: true });
 
   console.log('[JourneyRunner] Triggers bound to ActionBus');
 }
