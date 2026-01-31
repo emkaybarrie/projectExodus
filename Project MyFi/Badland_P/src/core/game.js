@@ -81,6 +81,133 @@ const REGIONS = [
 ];
 
 /**
+ * Request fullscreen mode
+ */
+function requestFullscreen() {
+  const container = document.getElementById('game-container');
+  if (!container) return;
+
+  if (container.requestFullscreen) {
+    container.requestFullscreen().catch(e => console.log('[Game] Fullscreen request denied:', e.message));
+  } else if (container.webkitRequestFullscreen) {
+    container.webkitRequestFullscreen();
+  } else if (container.mozRequestFullScreen) {
+    container.mozRequestFullScreen();
+  } else if (container.msRequestFullscreen) {
+    container.msRequestFullscreen();
+  }
+}
+
+/**
+ * Exit fullscreen mode
+ */
+function exitFullscreen() {
+  if (document.exitFullscreen) {
+    document.exitFullscreen();
+  } else if (document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  } else if (document.mozCancelFullScreen) {
+    document.mozCancelFullScreen();
+  } else if (document.msExitFullscreen) {
+    document.msExitFullscreen();
+  }
+}
+
+/**
+ * Check if currently in fullscreen
+ */
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+            document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+/**
+ * Toggle fullscreen mode
+ */
+function toggleFullscreen() {
+  if (isFullscreen()) {
+    exitFullscreen();
+  } else {
+    requestFullscreen();
+  }
+}
+
+/**
+ * Show confirmation modal
+ */
+function showConfirmModal({ icon, title, message, onConfirm, onCancel, confirmText = 'Confirm', cancelText = 'Cancel' }) {
+  const host = document.getElementById('confirm-modal-host');
+  if (!host) return;
+
+  host.innerHTML = `
+    <div class="confirm-modal-overlay" id="confirm-modal-overlay">
+      <div class="confirm-modal">
+        <div class="confirm-modal__icon">${icon}</div>
+        <h3 class="confirm-modal__title">${title}</h3>
+        <p class="confirm-modal__message">${message}</p>
+        <div class="confirm-modal__actions">
+          <button class="confirm-modal__btn confirm-modal__btn--cancel" id="confirm-modal-cancel">${cancelText}</button>
+          <button class="confirm-modal__btn confirm-modal__btn--confirm" id="confirm-modal-confirm">${confirmText}</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const overlay = document.getElementById('confirm-modal-overlay');
+  const cancelBtn = document.getElementById('confirm-modal-cancel');
+  const confirmBtn = document.getElementById('confirm-modal-confirm');
+
+  const closeModal = () => {
+    host.innerHTML = '';
+  };
+
+  cancelBtn?.addEventListener('click', () => {
+    closeModal();
+    onCancel?.();
+  });
+
+  confirmBtn?.addEventListener('click', () => {
+    closeModal();
+    onConfirm?.();
+  });
+
+  // Close on backdrop click
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeModal();
+      onCancel?.();
+    }
+  });
+
+  // Close on Escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      onCancel?.();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+}
+
+/**
+ * Navigate back to MyFi Badlands Entry screen
+ */
+function returnToMyFi() {
+  // Check if we're in an iframe or opened as standalone
+  if (window.opener) {
+    // Opened via window.open - close this window
+    window.close();
+  } else if (window.parent !== window) {
+    // In an iframe - post message to parent
+    window.parent.postMessage({ type: 'badlands:return' }, '*');
+  } else {
+    // Standalone - navigate back to entry
+    window.location.href = '../ProjectMyFi_vLatest/index.html#badlands';
+  }
+}
+
+/**
  * Create the main game instance
  */
 function createGame() {
@@ -133,6 +260,18 @@ function createGame() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
+    // Handle fullscreen changes
+    document.addEventListener('fullscreenchange', resizeCanvas);
+    document.addEventListener('webkitfullscreenchange', resizeCanvas);
+    document.addEventListener('mozfullscreenchange', resizeCanvas);
+    document.addEventListener('MSFullscreenChange', resizeCanvas);
+
+    // Handle orientation changes (important for portrait mode)
+    window.addEventListener('orientationchange', () => {
+      // Delay resize to allow orientation change to complete
+      setTimeout(resizeCanvas, 100);
+    });
+
     // Initialize input
     input.init();
 
@@ -166,8 +305,29 @@ function createGame() {
    * Bind UI button handlers
    */
   function bindUI() {
+    // Return portal button - back to MyFi
+    document.getElementById('btn-return-portal')?.addEventListener('click', () => {
+      showConfirmModal({
+        icon: '🌀',
+        title: 'Return Through Portal?',
+        message: 'You will leave the Badlands and return to the city. Your progress will be saved.',
+        confirmText: 'Return',
+        cancelText: 'Stay',
+        onConfirm: () => {
+          returnToMyFi();
+        },
+      });
+    });
+
+    // Fullscreen toggle button
+    document.getElementById('btn-fullscreen')?.addEventListener('click', () => {
+      toggleFullscreen();
+    });
+
     // Title screen -> Class selection
     document.getElementById('btn-start')?.addEventListener('click', () => {
+      // Request fullscreen when entering the game flow
+      requestFullscreen();
       showScreen('class');
     });
 

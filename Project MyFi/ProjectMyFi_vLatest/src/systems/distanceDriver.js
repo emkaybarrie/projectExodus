@@ -80,14 +80,9 @@ const DEFAULT_CONFIG = {
   // Update interval in ms
   updateIntervalMs: 1000,
 
-  // Demo mode: simulate spend signals automatically
-  demoMode: true,
-
-  // Demo spend interval (ms between simulated transactions)
-  demoSpendIntervalMs: 15000,
-
-  // Demo spike chance (probability that demo signal is a spike)
-  demoSpikeChance: 0.15,
+  // WO-NARRATIVE-CONSOLIDATION: Demo mode emission removed
+  // Transaction emission is now handled solely by chrome.js narrative engine
+  // DistanceDriver only responds to spend signals, doesn't emit them
 };
 
 /**
@@ -180,7 +175,6 @@ export function createDistanceDriver(options = {}) {
   let aftershock = 0;           // Lingering spike effect (decays slower)
   let dayStartMs = Date.now();  // When current "day" started
   let updateTimerId = null;
-  let demoTimerId = null;
   let isRunning = false;
 
   // Legacy compat: trajectory alias
@@ -475,37 +469,17 @@ export function createDistanceDriver(options = {}) {
     }
   }
 
-  /**
-   * Demo mode: emit simulated spend signals
-   * Occasionally generates spike amounts
-   */
-  function emitDemoSignal() {
-    if (!isRunning) return;
-
-    const config = getConfig();
-
-    // WO-HYBRID-ROUTING: Occasionally generate spike amounts
-    const isSpike = Math.random() < config.demoSpikeChance;
-
-    // Random spend amount: normal ($5-$40) or spike ($60-$150)
-    const amount = isSpike
-      ? 60 + Math.random() * 90   // Spike: $60-$150
-      : 5 + Math.random() * 35;    // Normal: $5-$40
-
-    // Random category (spikes more likely to be discretionary)
-    const categories = isSpike
-      ? ['discretionary', 'discretionary', 'discretionary', 'subscription']
-      : ['discretionary', 'discretionary', 'subscription', 'essential'];
-    const category = categories[Math.floor(Math.random() * categories.length)];
-
-    // Process as if it came from a real signal
-    processSpendSignal(amount);
-
-    // Also emit to actionBus for other systems
-    if (actionBus) {
-      actionBus.emit('demo:spend', { amount, category, isSpike });
-    }
-  }
+  // WO-NARRATIVE-CONSOLIDATION: Removed internal demo signal emission
+  // DistanceDriver no longer emits its own demo signals - it only responds to
+  // spend signals from the stageSignals pipeline (via actionBus subscriptions).
+  //
+  // Demo mode transaction emission is handled by ONE source:
+  // - chrome.js auto-transaction loop (Narrative Engine)
+  //
+  // DistanceDriver's role is purely distance/pressure calculation:
+  // - Listens for stage:signal and spend:recorded events
+  // - Updates pressure, distance, and spike calculations
+  // - Does NOT emit transaction signals
 
   /**
    * Initialize the driver
@@ -546,6 +520,7 @@ export function createDistanceDriver(options = {}) {
 
   /**
    * Start the driver
+   * WO-NARRATIVE-CONSOLIDATION: Removed demo signal emission - only handles distance/pressure
    */
   function start() {
     if (isRunning) return;
@@ -554,19 +529,13 @@ export function createDistanceDriver(options = {}) {
     isRunning = true;
     lastUpdateMs = Date.now();
 
-    // Start update loop
+    // Start update loop (distance/pressure calculations only)
     updateTimerId = setInterval(update, config.updateIntervalMs);
-
-    // Start demo mode if enabled
-    if (config.demoMode) {
-      demoTimerId = setInterval(emitDemoSignal, config.demoSpendIntervalMs);
-      console.log('[DistanceDriver] Demo mode active');
-    }
 
     // Initial update
     update();
 
-    console.log('[DistanceDriver] Started');
+    console.log('[DistanceDriver] Started (distance/pressure mode)');
   }
 
   /**
@@ -578,11 +547,6 @@ export function createDistanceDriver(options = {}) {
     if (updateTimerId) {
       clearInterval(updateTimerId);
       updateTimerId = null;
-    }
-
-    if (demoTimerId) {
-      clearInterval(demoTimerId);
-      demoTimerId = null;
     }
 
     console.log('[DistanceDriver] Stopped');
