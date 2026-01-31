@@ -57,6 +57,51 @@ export const TAGGING_OPTIONS = {
 };
 
 /**
+ * WO-S1: Stage Modes (READ-ONLY / DERIVED STATE)
+ *
+ * These modes describe what the Stage is currently SHOWING, not a state machine.
+ * The Stage derives its mode from episode/encounter state - it does NOT control behavior.
+ *
+ * Flow: IDLE_TRAVEL → (signal) → INCIDENT_OVERLAY → (engage) → COMBAT_ACTIVE → (resolve) → IDLE_TRAVEL
+ *
+ * - IDLE_TRAVEL: Avatar wandering, world state cycling (rest/patrol/explore/return/city)
+ * - INCIDENT_OVERLAY: Signal received, slow-time overlay visible, awaiting player tag or autopilot
+ * - COMBAT_ACTIVE: Autobattler running, enemy sprite visible, damage ticks occurring
+ * - RESOLUTION: Brief display of outcome before returning to idle
+ */
+export const STAGE_MODES = {
+  IDLE_TRAVEL: 'idle_travel',
+  INCIDENT_OVERLAY: 'incident_overlay',
+  COMBAT_ACTIVE: 'combat_active',
+  RESOLUTION: 'resolution',
+};
+
+/**
+ * Derive current Stage mode from episode/encounter state
+ * @param {Object} state - Stage internal state
+ * @returns {string} Current STAGE_MODES value
+ */
+export function deriveStageMode(state) {
+  // Combat takes priority
+  if (state.stageMode === 'encounter_autobattler' && state.currentEncounter) {
+    return STAGE_MODES.COMBAT_ACTIVE;
+  }
+
+  // Episode overlay (tagging/choice mode)
+  if (state.episodeActive && state.episodePhase === 'active') {
+    return STAGE_MODES.INCIDENT_OVERLAY;
+  }
+
+  // Resolution phase
+  if (state.episodeActive && (state.episodePhase === 'resolving' || state.episodePhase === 'after')) {
+    return STAGE_MODES.RESOLUTION;
+  }
+
+  // Default: idle travel
+  return STAGE_MODES.IDLE_TRAVEL;
+}
+
+/**
  * Create a Signal object
  * @param {Object} params
  * @returns {Object} Signal
@@ -258,6 +303,9 @@ export default {
   EPISODE_PHASES,
   MECHANIC_MODES,
   TAGGING_OPTIONS,
+  // WO-S1: Stage modes (derived state)
+  STAGE_MODES,
+  deriveStageMode,
   createSignal,
   createIncident,
   createDioramaSpec,

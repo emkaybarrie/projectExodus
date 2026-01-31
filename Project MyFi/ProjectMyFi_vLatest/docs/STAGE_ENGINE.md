@@ -12,25 +12,71 @@ The player observes a living world. They may intervene, or simply watch the stor
 
 ## Spectator-Mode Simulation Model
 
-The Stage renders three conceptual modes (derived state, not explicit state machine):
+The Stage renders derived modes (NOT a state machine—behavior is controlled elsewhere):
 
-### 1. Idle Travel Mode
+```
+┌─────────────────┐     ┌───────────────────┐     ┌───────────────┐
+│  IDLE_TRAVEL    │────►│ INCIDENT_OVERLAY  │────►│ COMBAT_ACTIVE │
+│                 │     │   (or choice tag) │     │               │
+│ World cycling:  │     │                   │     │ Autobattler   │
+│ rest→patrol→    │◄────│ Slow-time, player │◄────│ ticks, enemy  │
+│ explore→return→ │     │ can tag or skip   │     │ HP, damage    │
+│ city (loop)     │     │                   │     │               │
+└─────────────────┘     └───────────────────┘     └───────────────┘
+       ▲                                                  │
+       └────────────────── RESOLUTION ◄───────────────────┘
+```
+
+### STAGE_MODES Enum (WO-S1)
+
+**Location:** `src/core/stageSchemas.js`
+
+| Mode | Description | Trigger |
+|------|-------------|---------|
+| `IDLE_TRAVEL` | Avatar wandering, world state cycling | Default / episode resolved |
+| `INCIDENT_OVERLAY` | Slow-time overlay, tagging prompt | Episode active + choice mode |
+| `COMBAT_ACTIVE` | Autobattler running, enemy visible | Encounter spawned |
+| `RESOLUTION` | Outcome display | Episode resolving/after phase |
+
+**Key Principle:** Stage SHOWS mode, it does NOT control behavior.
+- Combat logic → `autobattler.js`
+- Episode logic → `episodeRunner.js`
+- World state → `BadlandsStage/part.js` internal timer
+
+### deriveStageMode(state)
+
+Helper function to derive current mode from state:
+
+```javascript
+import { deriveStageMode, STAGE_MODES } from '../core/stageSchemas.js';
+
+const mode = deriveStageMode(stageState);
+// Returns: 'idle_travel' | 'incident_overlay' | 'combat_active' | 'resolution'
+```
+
+### Mode Details
+
+#### 1. IDLE_TRAVEL
 - **World State Cycling:** rest → patrol → explore → return → city (loop)
 - Avatar wanders the world, background transitions every 30-90 seconds
 - No active incident, peaceful observation
 - **Visual:** Scenic backgrounds, ambient motion
 
-### 2. Incident Overlay Mode
+#### 2. INCIDENT_OVERLAY
 - **Triggered by:** Financial signal (transaction, anomaly, etc.)
 - Slow-time effect, tagging prompt appears
-- Player can tag spend (choice mode) or watch combat (autobattler mode)
+- Player can tag spend (choice mode) or skip to autopilot
 - **Visual:** Stage dims, overlay panel slides in
 
-### 3. Engagement Transition
+#### 3. COMBAT_ACTIVE
 - Combat simulation runs (autobattler ticks every 2.5s)
+- Enemy sprite visible, HP bar, damage numbers
+- **Visual:** Combat background, enemy, timer countdown
+
+#### 4. RESOLUTION
 - Resolution display, vitals impact shown
 - Return to idle travel after aftermath
-- **Visual:** Enemy sprite, combat HUD, damage ticks
+- **Visual:** Outcome text, brief pause before world resumes
 
 ---
 

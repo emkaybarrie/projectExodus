@@ -1,6 +1,29 @@
 // BadlandsStage Part — HUB Refactor: 3-Tab Stage
 // Tabs: Current Event | Recent Events | Loadout (tab bar at bottom)
 // WO-STAGE-EPISODES-V1: Added Episode system integration with slow-time overlay
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-S1: SPECTATOR-MODE SIMULATION MODEL
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// The Stage is a REAL-TIME NARRATIVE RENDERER, not a UI component.
+// It simulates the Badlands game loop in spectator mode.
+//
+// DERIVED MODES (see stageSchemas.STAGE_MODES):
+// ┌─────────────────┐     ┌───────────────────┐     ┌───────────────┐
+// │  IDLE_TRAVEL    │────►│ INCIDENT_OVERLAY  │────►│ COMBAT_ACTIVE │
+// │                 │     │   (or choice tag) │     │               │
+// │ World cycling:  │     │                   │     │ Autobattler   │
+// │ rest→patrol→    │◄────│ Slow-time, player │◄────│ ticks, enemy  │
+// │ explore→return→ │     │ can tag or skip   │     │ HP, damage    │
+// │ city (loop)     │     │                   │     │               │
+// └─────────────────┘     └───────────────────┘     └───────────────┘
+//        ▲                                                  │
+//        └────────────────── RESOLUTION ◄───────────────────┘
+//
+// KEY PRINCIPLE: Stage SHOWS mode, it does NOT control behavior.
+// Combat logic is in autobattler.js, episode logic is in episodeRunner.js.
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
 
