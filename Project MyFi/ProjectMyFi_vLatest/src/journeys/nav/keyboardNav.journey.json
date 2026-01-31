@@ -1,0 +1,15 @@
+{
+  "id": "nav.keyboard",
+  "type": "journey",
+  "title": "Keyboard Arrow Navigation",
+  "description": "Handles cross-layout navigation via arrow keys",
+  "trigger": {
+    "action": "nav:keyboard",
+    "from": "keyboardNav"
+  },
+  "timeout": 5000,
+  "steps": [
+    { "op": "log", "message": "Keyboard navigation triggered" },
+    { "op": "navigate", "fromTrigger": "to" }
+  ]
+}
