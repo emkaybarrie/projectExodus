@@ -27,11 +27,8 @@ export function createChrome(chromeHost){
           <span class="chrome__modeIndicator" data-bind="modeIndicator"></span>
           <span class="chrome__modeLabel" data-bind="modeLabel">Live</span>
         </button>
-        <!-- HUB-D4/G5: DEV buttons (only visible in debug mode) -->
+        <!-- HUB-G5: DEV config button (only visible in debug mode) -->
         <div class="chrome__devButtons" style="display: none;">
-          <button class="chrome__devSpawn" data-action="devSpawn">
-            DEV: Spawn
-          </button>
           <button class="chrome__devConfig" data-action="openDevConfig">
             ⚙️
           </button>
@@ -500,7 +497,6 @@ export function createChrome(chromeHost){
     energyInteractBtn: chromeHost.querySelector('[data-action="energyInteract"]'),
     // HUB-G5: Dev buttons container
     devButtons: chromeHost.querySelector('.chrome__devButtons'),
-    devSpawn: chromeHost.querySelector('[data-action="devSpawn"]'),
     devConfigBtn: chromeHost.querySelector('[data-action="openDevConfig"]'),
     // WO-4: Navigation orb (tap = compass, hold = spirit stone)
     navOrb: chromeHost.querySelector('[data-action="orbInteract"]'),
@@ -775,29 +771,11 @@ export function createChrome(chromeHost){
     els.energyInteractBtn.addEventListener('mouseleave', handleEnergyCancel);
   }
 
-  // HUB-D4/G5: Enable DEV buttons (called from app.js after debug setup)
-  // WO-STAGE-EPISODES-V1: Updated to emit demo signal through episode system
-  function enableDevSpawn() {
+  // HUB-G5: Enable DEV config button (called from app.js after debug setup)
+  // WO-NARRATIVE-CLEANUP: Removed dev spawn button - transactions emit through narrative engine only
+  function enableDevButtons() {
     if (els.devButtons) {
       els.devButtons.style.display = 'flex';
-    }
-    if (els.devSpawn) {
-      els.devSpawn.addEventListener('click', () => {
-        // WO-STAGE-EPISODES-V1: Emit demo signal via episode system
-        // This triggers: Signal → Incident Factory → Episode Runner → autobattler:spawn
-        const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
-        if (emitDemoSignal) {
-          emitDemoSignal();
-          console.log('[Chrome] DEV: Emitted demo signal via episode system');
-        } else {
-          // Fallback to legacy forceEncounter if episode system not available
-          const hubController = window.__MYFI_DEBUG__?.hubController;
-          if (hubController && hubController.forceEncounter) {
-            hubController.forceEncounter();
-            console.log('[Chrome] DEV: Spawned encounter (legacy fallback)');
-          }
-        }
-      });
     }
     if (els.devConfigBtn) {
       els.devConfigBtn.addEventListener('click', openDevConfig);
@@ -1647,7 +1625,7 @@ export function createChrome(chromeHost){
     onNav,
     setHeaderVisible(v){ els.header.style.display = v ? '' : 'none'; },
     setFooterVisible(v){ els.footer.style.display = v ? '' : 'none'; },
-    enableDevSpawn, // HUB-D4: Enable DEV spawn button
+    enableDevButtons, // HUB-G5: Enable DEV config button
     // HUB-G5: Dev config functions
     openDevConfig,
     closeDevConfig,

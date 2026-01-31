@@ -256,8 +256,8 @@ window.__MYFI_DEBUG__ = {
   },
 };
 
-// HUB-D4: Enable DEV spawn button in chrome header
-chrome.enableDevSpawn();
+// HUB-G5: Enable DEV config button in chrome header
+chrome.enableDevButtons();
 
 // WO-TRANSACTION-MODAL-V1: Transaction modal setup
 // Lazy-load TransactionModal when first opened
