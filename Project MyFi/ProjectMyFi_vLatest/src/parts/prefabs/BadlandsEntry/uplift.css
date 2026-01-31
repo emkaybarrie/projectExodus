@@ -486,9 +486,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Safe padding for mobile notches and edges */
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   opacity: 0;
   visibility: hidden;
   transition: opacity 200ms ease, visibility 200ms ease;
+  /* Prevent body scroll when modal is open */
+  overflow: hidden;
 }
 
 .BadlandsEntry__modal.is-open {
@@ -499,8 +507,8 @@
 .BadlandsEntry__modalBackdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(6px);
 }
 
 .BadlandsEntry__modalCard {
@@ -509,8 +517,12 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  padding: 32px 28px 24px;
+  padding: 32px 24px 24px;
+  width: calc(100% - 32px);
   max-width: 320px;
+  max-height: calc(100vh - 64px);
+  max-height: calc(100dvh - 64px); /* Dynamic viewport height for mobile */
+  overflow-y: auto;
   background: linear-gradient(160deg, rgba(30, 20, 50, 0.98), rgba(15, 10, 30, 0.98));
   border: 1px solid rgba(168, 85, 247, 0.4);
   border-radius: 16px;
@@ -520,10 +532,60 @@
     0 0 60px rgba(168, 85, 247, 0.15);
   transform: scale(0.95) translateY(10px);
   transition: transform 200ms ease;
+  /* Ensure modal is always visible */
+  margin: auto;
 }
 
 .BadlandsEntry__modal.is-open .BadlandsEntry__modalCard {
   transform: scale(1) translateY(0);
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 400px) {
+  .BadlandsEntry__modalCard {
+    padding: 24px 20px 20px;
+    gap: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .BadlandsEntry__modalIcon {
+    font-size: 36px;
+  }
+
+  .BadlandsEntry__modalTitle {
+    font-size: 18px;
+  }
+
+  .BadlandsEntry__modalDesc {
+    font-size: 13px;
+  }
+
+  .BadlandsEntry__modalBtn {
+    padding: 14px 16px;
+    min-height: 48px; /* Touch-friendly target */
+  }
+}
+
+/* Landscape mobile - ensure modal fits */
+@media (max-height: 500px) {
+  .BadlandsEntry__modalCard {
+    padding: 20px 20px 16px;
+    gap: 10px;
+    max-height: calc(100dvh - 32px);
+  }
+
+  .BadlandsEntry__modalIcon {
+    font-size: 32px;
+  }
+
+  .BadlandsEntry__modalTitle {
+    font-size: 16px;
+  }
+
+  .BadlandsEntry__modalDesc {
+    font-size: 12px;
+    line-height: 1.4;
+  }
 }
 
 .BadlandsEntry__modalIcon {
@@ -557,16 +619,22 @@
   gap: 12px;
   width: 100%;
   margin-top: 8px;
+  flex-wrap: wrap; /* Allow wrapping on very small screens */
 }
 
 .BadlandsEntry__modalBtn {
   flex: 1;
-  padding: 12px 16px;
+  min-width: 100px; /* Prevent too-narrow buttons */
+  padding: 14px 16px;
+  min-height: 48px; /* Touch-friendly target size */
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .BadlandsEntry__modalBtn--cancel {

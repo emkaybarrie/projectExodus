@@ -138,6 +138,68 @@ function getNextWorldState(currentState) {
   return WORLD_STATE_CYCLE[nextIndex];
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-UX-4: Evocative World State Captions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const WORLD_STATE_CAPTIONS = {
+  rest: {
+    titles: ['Sanctuary', 'Respite', 'Haven', 'Refuge'],
+    subtitles: [
+      '— The fire crackles softly',
+      '— A moment of peace',
+      '— Wounds mend, strength returns',
+      '— Safe, for now',
+    ],
+  },
+  patrol: {
+    titles: ['Wardwatch', 'The Perimeter', 'Vigil', 'Outer Guard'],
+    subtitles: [
+      '— All quiet on the frontier',
+      '— Eyes on the horizon',
+      '— The ward holds steady',
+      '— Shadows stir, but hold',
+    ],
+  },
+  explore: {
+    titles: ['The Unknown', 'Uncharted', 'Beyond the Ward', 'Terra Incognita'],
+    subtitles: [
+      '— What lies ahead?',
+      '— Fortune favors the bold',
+      '— New ground, old dangers',
+      '— Every step writes history',
+    ],
+  },
+  return: {
+    titles: ['Homeward', 'The Long Road', 'Journey\'s End', 'Back Trail'],
+    subtitles: [
+      '— The familiar beckons',
+      '— Each step toward safety',
+      '— Weary but wiser',
+      '— Almost there',
+    ],
+  },
+  city: {
+    titles: ['The Hub', 'Hearth & Home', 'Civilization', 'The Ward'],
+    subtitles: [
+      '— Markets hum with life',
+      '— Among kin and coin',
+      '— A world behind walls',
+      '— Trade and tidings',
+    ],
+  },
+};
+
+function getWorldStateCaption(stateName) {
+  const stateData = WORLD_STATE_CAPTIONS[stateName] || WORLD_STATE_CAPTIONS.patrol;
+  const titleIndex = Math.floor(Math.random() * stateData.titles.length);
+  const subtitleIndex = Math.floor(Math.random() * stateData.subtitles.length);
+  return {
+    title: stateData.titles[titleIndex],
+    subtitle: stateData.subtitles[subtitleIndex],
+  };
+}
+
 export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Load CSS
   const cssUrl = new URL('./uplift.css', import.meta.url).href;
@@ -197,6 +259,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     worldState: 'patrol', // rest | patrol | explore | return | city
     worldStateTimerId: null,
     currentBgUrl: null, // Current background URL (for any state)
+    // WO-UX-4: Evocative captions
+    scenicTitle: 'Wardwatch',
+    scenicSubtitle: '— All quiet on the frontier',
     // WO-STAGE-EPISODES-V1: Episode system state
     episodeActive: false,
     currentEpisode: null,
@@ -257,6 +322,11 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       preloadedImages.add(nextBgUrl);
     }
 
+    // WO-UX-4: Update evocative captions
+    const caption = getWorldStateCaption(nextState);
+    state.scenicTitle = caption.title;
+    state.scenicSubtitle = caption.subtitle;
+
     state.worldState = nextState;
     state.currentBgUrl = nextBgUrl;
     render(root, state);
@@ -285,6 +355,12 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   await preloadImage(initialBgUrl);
   preloadedImages.add(initialBgUrl);
   state.currentBgUrl = initialBgUrl;
+
+  // WO-UX-4: Initialize evocative caption for initial state
+  const initialCaption = getWorldStateCaption(state.worldState);
+  state.scenicTitle = initialCaption.title;
+  state.scenicSubtitle = initialCaption.subtitle;
+
   scheduleWorldStateTransition();
 
   // Combat simulation functions
@@ -931,6 +1007,12 @@ function renderCurrentEvent(root, state) {
     // Show scenic
     if (scenic) scenic.dataset.visible = 'true';
     if (encounter) encounter.dataset.visible = 'false';
+
+    // WO-UX-4: Update evocative captions
+    const titleEl = root.querySelector('[data-bind="scenicTitle"]');
+    const subtitleEl = root.querySelector('[data-bind="scenicSubtitle"]');
+    if (titleEl) titleEl.textContent = state.scenicTitle;
+    if (subtitleEl) subtitleEl.textContent = state.scenicSubtitle;
   }
 }
 
@@ -1011,6 +1093,7 @@ function renderLoadout(root, state) {
 function updateTimer(root, remaining, total) {
   const timerValue = root.querySelector('[data-bind="timerValue"]');
   const timerFill = root.querySelector('[data-bind="timerFill"]');
+  const timerContainer = root.querySelector('.BadlandsStage__encounterTimer');
 
   if (timerValue) {
     timerValue.textContent = Math.ceil(remaining);
@@ -1018,6 +1101,11 @@ function updateTimer(root, remaining, total) {
   if (timerFill && total > 0) {
     const percent = (remaining / total) * 100;
     timerFill.style.width = `${percent}%`;
+
+    // WO-UX-2: Set urgency level for timer gradient
+    const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
+    timerFill.dataset.urgency = urgency;
+    if (timerContainer) timerContainer.dataset.urgency = urgency;
   }
 }
 
@@ -1251,10 +1339,16 @@ function hideSlowTimeOverlay(root) {
 function updateSlowTimeTimer(root, remainingMs, totalMs) {
   const timerFill = root.querySelector('[data-bind="slowTimeTimerFill"]');
   const timerValue = root.querySelector('[data-bind="slowTimeTimerValue"]');
+  const timerBar = root.querySelector('.BadlandsStage__slowTimeTimerBar');
 
   if (timerFill && totalMs > 0) {
     const percent = (remainingMs / totalMs) * 100;
     timerFill.style.width = `${percent}%`;
+
+    // WO-UX-2: Set urgency level for timer gradient
+    const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
+    timerFill.dataset.urgency = urgency;
+    if (timerBar) timerBar.dataset.urgency = urgency;
   }
 
   if (timerValue) {

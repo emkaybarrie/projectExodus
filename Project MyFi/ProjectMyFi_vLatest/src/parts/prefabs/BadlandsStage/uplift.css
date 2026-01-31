@@ -420,8 +420,42 @@
   width: 45%;
   background: linear-gradient(90deg, #b8863a 0%, #d4a853 100%);
   border-radius: 3px;
-  transition: width 0.1s linear;
+  transition: width 0.1s linear, background 0.5s ease;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+/* WO-UX-2: Timer urgency gradients */
+.BadlandsStage__timerFill[data-urgency="warning"] {
+  background: linear-gradient(90deg, #c9a030 0%, #e8c040 100%);
+}
+
+.BadlandsStage__timerFill[data-urgency="critical"] {
+  background: linear-gradient(90deg, #c04040 0%, #e05050 100%);
+  animation: timerCriticalPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes timerCriticalPulse {
+  0%, 100% {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 8px rgba(224, 80, 80, 0.5);
+  }
+}
+
+/* WO-UX-2: Timer value urgency styling */
+.BadlandsStage__encounterTimer[data-urgency="warning"] .BadlandsStage__timerValue {
+  color: #e8c040;
+}
+
+.BadlandsStage__encounterTimer[data-urgency="critical"] .BadlandsStage__timerValue {
+  color: #e08080;
+  animation: timerValuePulse 0.6s ease-in-out infinite;
+}
+
+@keyframes timerValuePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
 .BadlandsStage__encounterCTA {
@@ -488,8 +522,29 @@
   border: 1px solid rgba(180, 140, 80, 0.1);
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s, opacity 0.2s;
+  /* WO-UX-3: Slide-in animation for new items */
+  animation: recentItemSlideIn 0.4s ease-out;
 }
+
+/* WO-UX-3: Staggered slide-in animation for recent events */
+@keyframes recentItemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* WO-UX-3: Staggered delays for first few items */
+.BadlandsStage__recentItem:nth-child(1) { animation-delay: 0s; }
+.BadlandsStage__recentItem:nth-child(2) { animation-delay: 0.05s; }
+.BadlandsStage__recentItem:nth-child(3) { animation-delay: 0.1s; }
+.BadlandsStage__recentItem:nth-child(4) { animation-delay: 0.15s; }
+.BadlandsStage__recentItem:nth-child(5) { animation-delay: 0.2s; }
 
 .BadlandsStage__recentItem:hover {
   background: rgba(0, 0, 0, 0.5);
@@ -1194,6 +1249,82 @@
   color: #d4a853;
 }
 
+/* WO-UX-1: Theme-specific incident icon animations */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__incidentIcon {
+  animation: iconPulseCombat 0.8s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__incidentIcon {
+  animation: iconSwayTraversal 3s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__incidentIcon {
+  animation: iconBounceSocial 2s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__incidentIcon {
+  animation: iconFlickerAnomaly 2.5s ease-in-out infinite;
+}
+
+/* WO-UX-1: Combat - Fast urgent pulse */
+@keyframes iconPulseCombat {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 4px 12px rgba(224, 128, 128, 0.6));
+  }
+}
+
+/* WO-UX-1: Traversal - Gentle sway/float */
+@keyframes iconSwayTraversal {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(3px) rotate(2deg);
+  }
+}
+
+/* WO-UX-1: Social - Subtle bounce */
+@keyframes iconBounceSocial {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* WO-UX-1: Anomaly - Mysterious flicker */
+@keyframes iconFlickerAnomaly {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  20% {
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 8px rgba(212, 168, 83, 0.4));
+  }
+  40% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  60% {
+    opacity: 0.9;
+    filter: drop-shadow(0 3px 10px rgba(212, 168, 83, 0.5));
+  }
+  80% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+}
+
 .BadlandsStage__incidentTitle {
   font-family: 'Cinzel', Georgia, serif;
   font-size: 1.1rem;
@@ -1420,8 +1551,22 @@
   height: 100%;
   background: linear-gradient(90deg, #8b5cf6, #a78bfa);
   border-radius: 2px;
-  transition: width 1s linear;
+  transition: width 1s linear, background 0.5s ease;
   width: 100%;
+}
+
+/* WO-UX-2: Slow-time timer urgency gradients */
+.BadlandsStage__slowTimeTimerFill[data-urgency="warning"] {
+  background: linear-gradient(90deg, #c9a030, #e8c040);
+}
+
+.BadlandsStage__slowTimeTimerFill[data-urgency="critical"] {
+  background: linear-gradient(90deg, #c04040, #e05050);
+  animation: timerCriticalPulse 0.6s ease-in-out infinite;
+}
+
+.BadlandsStage__slowTimeTimerBar[data-urgency="critical"] .BadlandsStage__slowTimeTimerLabel {
+  color: rgba(224, 128, 128, 0.8);
 }
 
 .BadlandsStage__slowTimeTimerLabel {
