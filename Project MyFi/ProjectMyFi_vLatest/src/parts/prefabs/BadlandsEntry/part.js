@@ -76,36 +76,63 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 function bindInteractions(root, ctx) {
   const { router, emitter } = ctx;
 
-  /**
-   * Launch the Badlands game with confirmation
-   */
-  function launchBadlands() {
-    // Show confirmation prompt
-    const confirmed = window.confirm(
-      '⚡ Enter the Badlands?\n\n' +
-      'You are about to travel to the Badlands Runner game.\n\n' +
-      'Your progress will be saved when you return.'
-    );
+  // Modal elements
+  const modal = root.querySelector('[data-modal="portalConfirm"]');
+  const modalBackdrop = modal?.querySelector('.BadlandsEntry__modalBackdrop');
+  const cancelBtn = modal?.querySelector('[data-action="modalCancel"]');
+  const confirmBtn = modal?.querySelector('[data-action="modalConfirm"]');
 
-    if (confirmed) {
-      // Open standalone Badland_P game (up 5 levels to Project MyFi folder)
-      const gameUrl = new URL('../../../../../Badland_P/index.html', import.meta.url).href;
-      window.open(gameUrl, 'badlands_game', 'width=1280,height=720');
-      console.log('[BadlandsEntry] Launching Badland_P game:', gameUrl);
+  /**
+   * Show the portal confirmation modal
+   */
+  function showModal() {
+    if (modal) {
+      modal.classList.add('is-open');
     }
   }
 
-  // Portal card - tap to travel (with confirmation)
+  /**
+   * Hide the portal confirmation modal
+   */
+  function hideModal() {
+    if (modal) {
+      modal.classList.remove('is-open');
+    }
+  }
+
+  /**
+   * Launch the Badlands game
+   */
+  function launchBadlands() {
+    hideModal();
+    // Open standalone Badland_P game (up 5 levels to Project MyFi folder)
+    const gameUrl = new URL('../../../../../Badland_P/index.html', import.meta.url).href;
+    window.open(gameUrl, 'badlands_game', 'width=1280,height=720');
+    console.log('[BadlandsEntry] Launching Badland_P game:', gameUrl);
+  }
+
+  // Modal interactions
+  if (modalBackdrop) {
+    modalBackdrop.addEventListener('click', hideModal);
+  }
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', hideModal);
+  }
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', launchBadlands);
+  }
+
+  // Portal card - tap to show confirmation modal
   const portalCard = root.querySelector('.BadlandsEntry__portal');
   if (portalCard) {
     portalCard.style.cursor = 'pointer';
-    portalCard.addEventListener('click', launchBadlands);
+    portalCard.addEventListener('click', showModal);
   }
 
-  // Enter Badlands button - opens Badland_P game with confirmation
+  // Enter Badlands button - shows confirmation modal
   const enterBtn = root.querySelector('[data-action="enterBadlands"]');
   if (enterBtn) {
-    enterBtn.addEventListener('click', launchBadlands);
+    enterBtn.addEventListener('click', showModal);
   }
 
   // Loadout edit
