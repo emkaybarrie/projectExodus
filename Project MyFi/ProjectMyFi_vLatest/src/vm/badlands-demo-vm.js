@@ -10,7 +10,7 @@ export function getBadlandsDemoVM() {
     // Slot: content (BadlandsEntry part)
     content: {
       // Subscription level determines portal background
-      subscriptionLevel: 'gold', // 'free', 'silver', 'gold'
+      subscriptionLevel: 'silver', // 'free', 'silver', 'gold'
 
       // Avatar info
       avatar: {

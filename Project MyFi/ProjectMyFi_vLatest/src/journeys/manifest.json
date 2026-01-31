@@ -2,6 +2,7 @@
   "version": 1,
   "journeys": [
     { "id": "smoke.actionToLog", "path": "./smoke.journey.json" },
-    { "id": "hub.viewModeToggle", "path": "./hub/viewModeToggle.journey.json" }
+    { "id": "hub.viewModeToggle", "path": "./hub/viewModeToggle.journey.json" },
+    { "id": "nav.keyboard", "path": "./nav/keyboardNav.journey.json" }
   ]
 }

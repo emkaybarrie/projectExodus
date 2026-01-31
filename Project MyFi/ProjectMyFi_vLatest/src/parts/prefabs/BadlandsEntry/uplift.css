@@ -484,11 +484,13 @@
   inset: 0;
   z-index: 1000;
   display: flex;
-  align-items: center;
+  /* Position near top so confirm button is easily reachable */
+  align-items: flex-start;
   justify-content: center;
   /* Safe padding for mobile notches and edges */
   padding: 16px;
-  padding-top: max(16px, env(safe-area-inset-top));
+  /* Push modal down from top for visual comfort */
+  padding-top: max(48px, calc(env(safe-area-inset-top) + 32px));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
@@ -520,8 +522,7 @@
   padding: 32px 24px 24px;
   width: calc(100% - 32px);
   max-width: 320px;
-  max-height: calc(100vh - 64px);
-  max-height: calc(100dvh - 64px); /* Dynamic viewport height for mobile */
+  max-height: calc(100dvh - 100px); /* Leave room for top padding */
   overflow-y: auto;
   background: linear-gradient(160deg, rgba(30, 20, 50, 0.98), rgba(15, 10, 30, 0.98));
   border: 1px solid rgba(168, 85, 247, 0.4);
@@ -530,10 +531,8 @@
     0 0 0 1px rgba(168, 85, 247, 0.2),
     0 8px 32px rgba(0, 0, 0, 0.5),
     0 0 60px rgba(168, 85, 247, 0.15);
-  transform: scale(0.95) translateY(10px);
+  transform: scale(0.95) translateY(-10px);
   transition: transform 200ms ease;
-  /* Ensure modal is always visible */
-  margin: auto;
 }
 
 .BadlandsEntry__modal.is-open .BadlandsEntry__modalCard {
