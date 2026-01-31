@@ -46,6 +46,17 @@ async function fetchJSON(url) {
 // World state cycle order (loop)
 const WORLD_STATE_CYCLE = ['rest', 'patrol', 'explore', 'return', 'city'];
 
+// WO-WATCH-EPISODE-ROUTING: Visual pool to world state bias mapping
+// Each activity visual pool biases which world states are more likely
+const VISUAL_POOL_STATE_BIAS = {
+  morning: ['rest', 'patrol', 'city'],           // Calm, safe states
+  active: ['patrol', 'explore', 'return'],       // Movement states
+  intense: ['explore', 'patrol'],                // High-energy states
+  evening: ['return', 'city', 'rest'],           // Winding down states
+  night: ['rest', 'city'],                       // Calm, shelter states
+  default: WORLD_STATE_CYCLE,                    // Full cycle
+};
+
 // Background folders for each state
 const BG_FOLDER_BASE = '../../../../assets/art/stages/';
 const STATE_FOLDERS = {
@@ -131,11 +142,19 @@ function preloadImage(url) {
 // WO-HUB-04: Track preloaded images to avoid re-preloading
 const preloadedImages = new Set();
 
-function getNextWorldState(currentState) {
-  const currentIndex = WORLD_STATE_CYCLE.indexOf(currentState);
-  if (currentIndex === -1) return WORLD_STATE_CYCLE[0]; // Default to first state
-  const nextIndex = (currentIndex + 1) % WORLD_STATE_CYCLE.length;
-  return WORLD_STATE_CYCLE[nextIndex];
+function getNextWorldState(currentState, visualPool = 'default') {
+  // WO-WATCH-EPISODE-ROUTING: Use visual pool bias if available
+  const biasedStates = VISUAL_POOL_STATE_BIAS[visualPool] || WORLD_STATE_CYCLE;
+
+  // If current state is in biased list, cycle within that list
+  const currentIndex = biasedStates.indexOf(currentState);
+  if (currentIndex !== -1) {
+    const nextIndex = (currentIndex + 1) % biasedStates.length;
+    return biasedStates[nextIndex];
+  }
+
+  // If current state not in bias list, pick a random biased state
+  return biasedStates[Math.floor(Math.random() * biasedStates.length)];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -274,6 +293,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     awaitingEngagement: false, // True when showing Engage/Skip buttons
     isPlayerEngaged: false, // True after player engages
     overlayConfig: null, // Mode-specific overlay configuration
+    // WO-WATCH-EPISODE-ROUTING: Activity state visual pool
+    currentVisualPool: 'default',
+    currentActivityState: null, // Activity state from episodeRouter
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -313,7 +335,8 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       return;
     }
 
-    const nextState = getNextWorldState(state.worldState);
+    // WO-WATCH-EPISODE-ROUTING: Use visual pool bias for state selection
+    const nextState = getNextWorldState(state.worldState, state.currentVisualPool);
     const nextBgUrl = selectBackgroundForState(nextState);
 
     // WO-HUB-04: Preload next background before transition
@@ -703,6 +726,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       ctx.actionBus.subscribe('sceneBeat:added', (data) => {
         const beat = data.beat;
         if (beat && beat.display) {
+          // WO-UX-NEXT: Show Resolution Echo for cause→effect visibility
+          showResolutionEcho(root, beat);
+
           // Convert scene beat to recent event format
           state.recentEvents.unshift({
             id: beat.id,
@@ -725,6 +751,46 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
           }
 
           render(root, state);
+        }
+      })
+    );
+
+    // WO-WATCH-EPISODE-ROUTING: Activity state changed - update visual pool and caption
+    unsubscribers.push(
+      ctx.actionBus.subscribe('activityState:changed', (data) => {
+        const newState = data.to;
+        if (newState) {
+          state.currentActivityState = newState;
+          state.currentVisualPool = newState.visualPool || 'default';
+          console.log(`[BadlandsStage] Activity state: ${newState.label}, visual pool: ${state.currentVisualPool}`);
+
+          // Update segment caption
+          updateSegmentCaption(root, newState.label);
+
+          // Optionally trigger immediate world state transition to align with new activity
+          // Only if not in combat and enough time has passed since last transition
+          if (state.stageMode !== 'encounter_autobattler' && data.reason !== 'init') {
+            // Check if current world state aligns with new visual pool
+            const biasedStates = VISUAL_POOL_STATE_BIAS[state.currentVisualPool] || WORLD_STATE_CYCLE;
+            if (!biasedStates.includes(state.worldState)) {
+              // Current world state doesn't fit new activity, transition soon
+              stopWorldStateTimer();
+              state.worldStateTimerId = setTimeout(transitionToNextWorldState, 2000);
+              console.log(`[BadlandsStage] World state doesn't fit activity, transitioning in 2s`);
+            }
+          }
+        }
+      })
+    );
+
+    // WO-WATCH-EPISODE-ROUTING: Clock tick - update time display
+    unsubscribers.push(
+      ctx.actionBus.subscribe('activityState:progress', (data) => {
+        // Get clock state from debug (or could be passed in progress event)
+        const clock = window.__MYFI_DEBUG__?.episodeClock;
+        if (clock) {
+          const clockState = clock.getState();
+          updateSegmentCaptionTime(root, clockState.timeString, clockState.segmentLabel);
         }
       })
     );
@@ -1363,6 +1429,82 @@ function showEpisodeCaption(root, text) {
   const captionEl = root.querySelector('[data-bind="episodeCaption"]');
   if (captionEl) {
     captionEl.textContent = text;
+  }
+}
+
+/**
+ * WO-UX-NEXT: Show Resolution Echo - cause→effect visibility
+ * Displays a brief overlay showing what happened and its impact
+ */
+function showResolutionEcho(root, beat) {
+  const echo = root.querySelector('.BadlandsStage__resolutionEcho');
+  if (!echo || !beat?.display) return;
+
+  // Update echo content
+  const iconEl = echo.querySelector('[data-bind="echoIcon"]');
+  const titleEl = echo.querySelector('[data-bind="echoTitle"]');
+  const closureEl = echo.querySelector('[data-bind="echoClosure"]');
+  const vitalsEl = echo.querySelector('[data-bind="echoVitals"]');
+
+  if (iconEl) iconEl.innerHTML = beat.display.icon;
+  if (titleEl) titleEl.textContent = beat.display.title;
+
+  // Closure narrative based on resolution
+  const closureLines = {
+    player: ['The choice is made.', 'You decided.', 'Action taken.'],
+    auto: ['The moment passes.', 'Autopilot handled it.', 'Resolved automatically.'],
+    skip: ['Left behind.', 'Skipped.', 'Dismissed.'],
+  };
+  const lines = closureLines[beat.resolvedBy] || closureLines.auto;
+  const closureLine = beat.display.subtitle || lines[Math.floor(Math.random() * lines.length)];
+  if (closureEl) closureEl.textContent = closureLine;
+
+  // Render vitals impact
+  if (vitalsEl) {
+    if (beat.display.vitalsImpact && beat.display.vitalsImpact.length > 0) {
+      vitalsEl.innerHTML = beat.display.vitalsImpact.map(v => `
+        <span class="BadlandsStage__echoVital BadlandsStage__echoVital--${v.isPositive ? 'positive' : 'negative'}">
+          ${v.label}
+        </span>
+      `).join('');
+    } else {
+      vitalsEl.innerHTML = '';
+    }
+  }
+
+  // Reset animation by removing and re-adding visible state
+  echo.dataset.visible = 'false';
+  // Force reflow to restart animation
+  void echo.offsetWidth;
+  echo.dataset.visible = 'true';
+
+  // Auto-hide after animation completes (3s)
+  setTimeout(() => {
+    echo.dataset.visible = 'false';
+  }, 3000);
+}
+
+/**
+ * WO-WATCH-EPISODE-ROUTING: Update segment caption activity label
+ */
+function updateSegmentCaption(root, activityLabel) {
+  const labelEl = root.querySelector('[data-bind="activityLabel"]');
+  if (labelEl) {
+    labelEl.textContent = activityLabel || 'Idle';
+  }
+}
+
+/**
+ * WO-WATCH-EPISODE-ROUTING: Update segment caption time and segment label
+ */
+function updateSegmentCaptionTime(root, timeString, segmentLabel) {
+  const timeEl = root.querySelector('[data-bind="segmentTime"]');
+  const segmentEl = root.querySelector('[data-bind="segmentLabel"]');
+  if (timeEl) {
+    timeEl.textContent = timeString || '--:--';
+  }
+  if (segmentEl) {
+    segmentEl.textContent = segmentLabel || '--';
   }
 }
 
