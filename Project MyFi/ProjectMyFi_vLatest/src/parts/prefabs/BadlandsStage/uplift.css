@@ -420,8 +420,42 @@
   width: 45%;
   background: linear-gradient(90deg, #b8863a 0%, #d4a853 100%);
   border-radius: 3px;
-  transition: width 0.1s linear;
+  transition: width 0.1s linear, background 0.5s ease;
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+/* WO-UX-2: Timer urgency gradients */
+.BadlandsStage__timerFill[data-urgency="warning"] {
+  background: linear-gradient(90deg, #c9a030 0%, #e8c040 100%);
+}
+
+.BadlandsStage__timerFill[data-urgency="critical"] {
+  background: linear-gradient(90deg, #c04040 0%, #e05050 100%);
+  animation: timerCriticalPulse 0.6s ease-in-out infinite;
+}
+
+@keyframes timerCriticalPulse {
+  0%, 100% {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  }
+  50% {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15), 0 0 8px rgba(224, 80, 80, 0.5);
+  }
+}
+
+/* WO-UX-2: Timer value urgency styling */
+.BadlandsStage__encounterTimer[data-urgency="warning"] .BadlandsStage__timerValue {
+  color: #e8c040;
+}
+
+.BadlandsStage__encounterTimer[data-urgency="critical"] .BadlandsStage__timerValue {
+  color: #e08080;
+  animation: timerValuePulse 0.6s ease-in-out infinite;
+}
+
+@keyframes timerValuePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
 }
 
 .BadlandsStage__encounterCTA {
@@ -488,8 +522,29 @@
   border: 1px solid rgba(180, 140, 80, 0.1);
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s, opacity 0.2s;
+  /* WO-UX-3: Slide-in animation for new items */
+  animation: recentItemSlideIn 0.4s ease-out;
 }
+
+/* WO-UX-3: Staggered slide-in animation for recent events */
+@keyframes recentItemSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* WO-UX-3: Staggered delays for first few items */
+.BadlandsStage__recentItem:nth-child(1) { animation-delay: 0s; }
+.BadlandsStage__recentItem:nth-child(2) { animation-delay: 0.05s; }
+.BadlandsStage__recentItem:nth-child(3) { animation-delay: 0.1s; }
+.BadlandsStage__recentItem:nth-child(4) { animation-delay: 0.15s; }
+.BadlandsStage__recentItem:nth-child(5) { animation-delay: 0.2s; }
 
 .BadlandsStage__recentItem:hover {
   background: rgba(0, 0, 0, 0.5);
@@ -552,6 +607,63 @@
 
 .BadlandsStage__recentItem--expanded .BadlandsStage__recentItemDetails {
   display: block;
+}
+
+/* WO-S5: Scene Beat enhancements */
+.BadlandsStage__recentItemBadge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__recentItemBadge--engaged {
+  background: rgba(180, 140, 80, 0.2);
+  color: #d4a853;
+}
+
+.BadlandsStage__recentItemBadge--auto {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+}
+
+.BadlandsStage__recentItemBadge--skipped {
+  background: rgba(100, 100, 100, 0.2);
+  color: rgba(240, 230, 210, 0.5);
+}
+
+.BadlandsStage__recentItemLocation {
+  display: block;
+  font-size: 0.7rem;
+  color: rgba(240, 230, 210, 0.4);
+  margin-top: 4px;
+}
+
+.BadlandsStage__recentItemVitals {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.BadlandsStage__recentItemVital {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.BadlandsStage__recentItemVital--positive {
+  background: rgba(80, 196, 80, 0.15);
+  color: #80e080;
+}
+
+.BadlandsStage__recentItemVital--negative {
+  background: rgba(196, 80, 80, 0.15);
+  color: #e08080;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -1053,7 +1165,8 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* EPISODE SLOW-TIME OVERLAY (WO-STAGE-EPISODES-V1) */
+/* WO-S3: UNIFIED INCIDENT OVERLAY (replaces WO-STAGE-EPISODES-V1 slow-time) */
+/* Shows for ALL incident types with mode-specific theming */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 .BadlandsStage__slowTime {
   position: absolute;
@@ -1083,6 +1196,20 @@
   backdrop-filter: blur(4px);
 }
 
+/* WO-S3: Theme-specific overlay backgrounds */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(20, 10, 10, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(10, 15, 20, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(15, 10, 20, 0.8);
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__slowTimeOverlay {
+  background: rgba(20, 15, 25, 0.85);
+}
+
 .BadlandsStage__slowTimeContent {
   position: relative;
   z-index: 1;
@@ -1091,6 +1218,203 @@
   align-items: center;
   gap: 16px;
   max-width: 320px;
+  width: 100%;
+}
+
+/* WO-S3: Incident Header (icon + title) */
+.BadlandsStage__incidentHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.BadlandsStage__incidentIcon {
+  font-size: 2.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* WO-S3: Theme-specific icon colors */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__incidentIcon {
+  color: #e08080;
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__incidentIcon {
+  color: #80b0e0;
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__incidentIcon {
+  color: #a78bfa;
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__incidentIcon {
+  color: #d4a853;
+}
+
+/* WO-UX-1: Theme-specific incident icon animations */
+.BadlandsStage__slowTime[data-theme="combat"] .BadlandsStage__incidentIcon {
+  animation: iconPulseCombat 0.8s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="traversal"] .BadlandsStage__incidentIcon {
+  animation: iconSwayTraversal 3s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="social"] .BadlandsStage__incidentIcon {
+  animation: iconBounceSocial 2s ease-in-out infinite;
+}
+.BadlandsStage__slowTime[data-theme="anomaly"] .BadlandsStage__incidentIcon {
+  animation: iconFlickerAnomaly 2.5s ease-in-out infinite;
+}
+
+/* WO-UX-1: Combat - Fast urgent pulse */
+@keyframes iconPulseCombat {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 4px 12px rgba(224, 128, 128, 0.6));
+  }
+}
+
+/* WO-UX-1: Traversal - Gentle sway/float */
+@keyframes iconSwayTraversal {
+  0%, 100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(-3px) rotate(-2deg);
+  }
+  75% {
+    transform: translateX(3px) rotate(2deg);
+  }
+}
+
+/* WO-UX-1: Social - Subtle bounce */
+@keyframes iconBounceSocial {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* WO-UX-1: Anomaly - Mysterious flicker */
+@keyframes iconFlickerAnomaly {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  20% {
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 8px rgba(212, 168, 83, 0.4));
+  }
+  40% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  60% {
+    opacity: 0.9;
+    filter: drop-shadow(0 3px 10px rgba(212, 168, 83, 0.5));
+  }
+  80% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+}
+
+.BadlandsStage__incidentTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* WO-S3: Overlay Actions Container */
+.BadlandsStage__overlayActions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/* WO-S3: Engage/Skip Buttons */
+.BadlandsStage__overlayBtn {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 8px;
+  font-family: 'Cinzel', Georgia, serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.BadlandsStage__overlayBtn--engage {
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.3) 0%, rgba(160, 120, 60, 0.4) 100%);
+  border: 2px solid rgba(180, 140, 80, 0.6);
+  color: rgba(240, 230, 210, 0.95);
+}
+
+.BadlandsStage__overlayBtn--engage:hover {
+  background: linear-gradient(180deg, rgba(180, 140, 80, 0.4) 0%, rgba(160, 120, 60, 0.5) 100%);
+  border-color: rgba(200, 160, 100, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(180, 140, 80, 0.3);
+}
+
+.BadlandsStage__overlayBtn--skip {
+  background: transparent;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  color: rgba(240, 230, 210, 0.6);
+}
+
+.BadlandsStage__overlayBtn--skip:hover {
+  border-color: rgba(240, 230, 210, 0.4);
+  color: rgba(240, 230, 210, 0.8);
+}
+
+.BadlandsStage__overlayBtn--skipTag {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid rgba(240, 230, 210, 0.2);
+  border-radius: 6px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.8rem;
+  color: rgba(240, 230, 210, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.BadlandsStage__overlayBtn--skipTag:hover {
+  border-color: rgba(240, 230, 210, 0.4);
+  color: rgba(240, 230, 210, 0.8);
+}
+
+.BadlandsStage__overlayBtnLabel {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.BadlandsStage__overlayBtnHint {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* WO-S3: Tagging Options Grid (when engaged) */
+.BadlandsStage__taggingOptionsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   width: 100%;
 }
 
@@ -1227,8 +1551,22 @@
   height: 100%;
   background: linear-gradient(90deg, #8b5cf6, #a78bfa);
   border-radius: 2px;
-  transition: width 1s linear;
+  transition: width 1s linear, background 0.5s ease;
   width: 100%;
+}
+
+/* WO-UX-2: Slow-time timer urgency gradients */
+.BadlandsStage__slowTimeTimerFill[data-urgency="warning"] {
+  background: linear-gradient(90deg, #c9a030, #e8c040);
+}
+
+.BadlandsStage__slowTimeTimerFill[data-urgency="critical"] {
+  background: linear-gradient(90deg, #c04040, #e05050);
+  animation: timerCriticalPulse 0.6s ease-in-out infinite;
+}
+
+.BadlandsStage__slowTimeTimerBar[data-urgency="critical"] .BadlandsStage__slowTimeTimerLabel {
+  color: rgba(224, 128, 128, 0.8);
 }
 
 .BadlandsStage__slowTimeTimerLabel {

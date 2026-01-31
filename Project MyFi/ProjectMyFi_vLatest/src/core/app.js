@@ -16,6 +16,8 @@ import { ensureGlobalCSS } from './styleLoader.js';
 // WO-STAGE-EPISODES-V1: Episode system imports
 import { createStageSignals, createTransactionSignal } from '../systems/stageSignals.js';
 import { createEpisodeRunner } from '../systems/episodeRunner.js';
+// WO-S5: Scene Beat Log
+import { createSceneBeatLog } from '../systems/sceneBeatLog.js';
 // Keyboard navigation for cross-layout screens
 import * as keyboardNav from './keyboardNav.js';
 // WO-P0-A: First-run welcome overlay
@@ -59,6 +61,13 @@ const episodeRunner = createEpisodeRunner({
   },
 });
 episodeRunner.init();
+
+// WO-S5: Scene Beat Log for Recent Events
+const sceneBeatLog = createSceneBeatLog({
+  actionBus,
+  maxBeats: 50,
+});
+sceneBeatLog.init();
 
 // Register demo VM providers for surfaces
 // Hub uses controller state if available, otherwise falls back to demo VM
@@ -150,6 +159,8 @@ window.__MYFI_DEBUG__ = {
   // WO-STAGE-EPISODES-V1: Episode system
   stageSignals,
   episodeRunner,
+  // WO-S5: Scene Beat Log
+  sceneBeatLog,
   // Helper to emit a demo transaction signal
   // WO-STAGE-EPISODES-V1: Updated to randomly select episode type
   // Categories map to: discretionary→COMBAT(autobattler), subscription→SOCIAL(choice), essential→TRAVERSAL(autobattler)

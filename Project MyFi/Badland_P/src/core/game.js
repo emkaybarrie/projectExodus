@@ -558,50 +558,94 @@ function createGame() {
   }
 
   /**
-   * Execute an auto-ability
+   * Execute an auto-ability with visual effects
    */
   function executeAutoAbility(ability, enemyManager) {
     const damageMultiplier = runPowerups.getModifier('damage');
 
     switch (ability.ability) {
       case 'flyingKick':
-      case 'swordSlash':
-      case 'groundPound':
-        // Direct damage to target enemy
+        // Flying kick - impact burst effect
         if (ability.target) {
           const damage = Math.round(ability.damage * damageMultiplier);
           ability.target.takeDamage(damage);
+          // Kick impact effect
+          particles.kickEffect(ability.target.x, ability.target.y, '#fbbf24');
+          events.emit('ability:hit', { ability: ability.name, damage });
+        }
+        break;
+
+      case 'swordSlash':
+        // Sword slash - arc effect
+        if (ability.target) {
+          const damage = Math.round(ability.damage * damageMultiplier);
+          ability.target.takeDamage(damage);
+          // Slash arc effect at player position toward target
+          particles.slashEffect(ability.playerX + 20, ability.playerY + 24, '#ff6b35');
+          // Hit sparks on enemy
           particles.spawn(ability.target.x, ability.target.y, 'hit', { color: '#ff6b35' });
           events.emit('ability:hit', { ability: ability.name, damage });
         }
         break;
 
-      case 'fireball':
-        // Spawn a projectile (handled by combat system)
+      case 'groundPound':
+        // Ground pound - shockwave on landing
         if (ability.target) {
+          const damage = Math.round(ability.damage * damageMultiplier);
+          ability.target.takeDamage(damage);
+          // Ground pound shockwave
+          particles.spawn(ability.playerX, ability.playerY + 48, 'groundPound');
+          events.emit('ability:hit', { ability: ability.name, damage });
+        } else {
+          // Ground pound without target - just the effect
+          particles.spawn(ability.playerX, ability.playerY + 48, 'groundPound');
+        }
+        break;
+
+      case 'fireball':
+        // Fireball projectile with trail
+        if (ability.target) {
+          const damage = Math.round(ability.damage * damageMultiplier);
+          // Spawn fireball effect that travels to target
+          particles.fireballEffect(
+            ability.playerX + 30,
+            ability.playerY + 24,
+            ability.target.x,
+            ability.target.y
+          );
+          // Delayed damage (when fireball reaches target)
+          setTimeout(() => {
+            if (ability.target && !ability.target.isDead) {
+              ability.target.takeDamage(damage);
+              particles.burst(ability.target.x, ability.target.y, '#ff6b35', 15);
+            }
+          }, 150);
           events.emit('ability:projectile', {
             type: 'fireball',
             x: ability.playerX + 30,
             y: ability.playerY,
             targetX: ability.target.x,
             targetY: ability.target.y,
-            damage: Math.round(ability.damage * damageMultiplier),
+            damage,
             speed: ability.projectileSpeed,
           });
         }
         break;
 
       case 'dodgeRoll':
-        // Grant iframes to player
+        // Grant iframes to player with afterimage effect
         if (player) {
           player.grantIframes(ability.iframeDuration);
-          particles.spawn(ability.playerX, ability.playerY, 'dodge', { color: '#6366f1' });
+          // Multiple afterimages for trail effect
+          particles.dodgeEffect(ability.playerX, ability.playerY + 24, '#6366f1');
+          particles.dodgeEffect(ability.playerX - 20, ability.playerY + 24, '#6366f1');
+          particles.dodgeEffect(ability.playerX - 40, ability.playerY + 24, '#6366f1');
           events.emit('ability:dodge', { duration: ability.iframeDuration });
         }
         break;
 
       case 'shockwave':
-        // Damage all enemies in range
+        // Damage all enemies in range with expanding ring
         const enemies = enemyManager.getEnemies();
         const shockDamage = Math.round(ability.damage * damageMultiplier);
         for (const enemy of enemies) {
@@ -611,9 +655,12 @@ function createGame() {
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist <= ability.range) {
             enemy.takeDamage(shockDamage);
+            // Hit effect on each enemy
+            particles.spawn(enemy.x, enemy.y, 'hit', { color: '#22d3ee' });
           }
         }
-        particles.spawn(ability.playerX, ability.playerY + 20, 'shockwave', { color: '#22d3ee', radius: ability.range });
+        // Main shockwave ring
+        particles.shockwaveEffect(ability.playerX, ability.playerY + 40, ability.range, '#22d3ee');
         events.emit('ability:shockwave', { damage: shockDamage, range: ability.range });
         break;
     }
@@ -646,6 +693,9 @@ function createGame() {
 
     // Update enemies
     enemies.update(dt, player, camera.getVisibleRange());
+
+    // Update enemy projectiles
+    enemies.updateProjectiles(dt, player, camera.getVisibleRange());
 
     // Update pickups
     pickups.update(dt, player, camera.getVisibleRange());
@@ -778,13 +828,25 @@ function createGame() {
 
     // Get camera transform
     const cameraOffset = camera.getOffset();
+    const zoom = camera.getZoom();
 
-    // Render parallax background
-    parallax.render(ctx, cameraOffset.x);
+    // Render parallax background (pass zoom for proper depth scaling)
+    parallax.render(ctx, cameraOffset.x, zoom);
 
-    // Begin camera transform
+    // Begin camera transform with zoom
+    // Zoom from center of viewport, then apply camera offset
     ctx.save();
-    ctx.translate(-cameraOffset.x, -cameraOffset.y);
+
+    // Translate to center of canvas
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    ctx.translate(centerX, centerY);
+
+    // Apply zoom
+    ctx.scale(zoom, zoom);
+
+    // Translate back and apply camera offset
+    ctx.translate(-centerX - cameraOffset.x, -centerY - cameraOffset.y);
 
     // Render platforms
     platforms.render(ctx);
@@ -794,6 +856,9 @@ function createGame() {
 
     // Render enemies
     enemies.render(ctx);
+
+    // Render enemy projectiles
+    enemies.renderProjectiles(ctx);
 
     // Render player
     player.render(ctx);

@@ -44,6 +44,8 @@ export function createEpisodeRunner(options = {}) {
   let autopilotTimerId = null;
   let phaseTimerId = null;
   let isSlowTimeActive = false;
+  // WO-S3: Track player engagement state
+  let isPlayerEngaged = false;
 
   // Timeline of resolved episodes
   const timeline = [];
@@ -157,59 +159,111 @@ export function createEpisodeRunner(options = {}) {
   }
 
   /**
-   * Active phase: Enable slow-time, start autopilot timer
-   * For autobattler mode: triggers combat via autobattler:spawn
-   * For choice mode: shows tagging overlay with timer
+   * Active phase: Show unified overlay, wait for player engage/skip
+   *
+   * WO-S3: Unified overlay for ALL incident types
+   * - All incidents show overlay first with Engage/Skip options
+   * - Engage = enter slow-time, show tagging options (combat spawns autobattler)
+   * - Skip = autopilot resolves immediately
    */
   function handleActive() {
     const mechanicsMode = currentIncident.mechanics?.mode || MECHANIC_MODES.CHOICE;
     const isAutobattler = mechanicsMode === MECHANIC_MODES.AUTOBATTLER;
 
-    console.log(`[EpisodeRunner] handleActive: mechanicsMode=${mechanicsMode}, isAutobattler=${isAutobattler}, MECHANIC_MODES.AUTOBATTLER=${MECHANIC_MODES.AUTOBATTLER}`);
+    console.log(`[EpisodeRunner] handleActive: mechanicsMode=${mechanicsMode}, isAutobattler=${isAutobattler}`);
 
-    // For choice/tagging episodes, enable slow-time
-    // For autobattler, combat handles the flow
-    isSlowTimeActive = !isAutobattler;
+    // WO-S3: Reset engagement state - player hasn't engaged yet
+    isPlayerEngaged = false;
+    isSlowTimeActive = false;
 
+    // WO-S3: Emit episode:active with overlay config - UI shows unified overlay
     emit('episode:active', {
       episode: currentEpisode,
       incident: currentIncident,
       taggingPrompt: currentIncident.taggingPrompt,
-      slowTimeActive: isSlowTimeActive,
+      overlayConfig: currentIncident._overlayConfig,
+      slowTimeActive: false, // Not active until player engages
+      mechanicsMode,
+      // WO-S3: New flag to indicate overlay should show Engage/Skip
+      awaitingEngagement: true,
+    });
+
+    // WO-S3: Start autopilot timer for ALL incidents
+    // If player doesn't engage in time, auto-resolve
+    const duration = (currentIncident.mechanics.durationS || 30) * 1000;
+    autopilotTimerId = setTimeout(() => {
+      if (currentEpisode && currentEpisode.phase === EPISODE_PHASES.ACTIVE && !isPlayerEngaged) {
+        console.log('[EpisodeRunner] Autopilot timeout - auto-resolving');
+        resolveWithAutopilot();
+      }
+    }, duration);
+
+    // Emit timer updates for overlay countdown
+    startTimerUpdates(duration);
+  }
+
+  /**
+   * WO-S3: Player engages with the incident
+   * Enters slow-time mode, shows tagging options
+   * For combat: spawns autobattler
+   */
+  function playerEngage() {
+    if (!currentEpisode || currentEpisode.phase !== EPISODE_PHASES.ACTIVE) {
+      console.warn('[EpisodeRunner] Cannot engage - not in active phase');
+      return;
+    }
+
+    if (isPlayerEngaged) {
+      console.warn('[EpisodeRunner] Already engaged');
+      return;
+    }
+
+    console.log('[EpisodeRunner] Player engaged - entering slow-time');
+    isPlayerEngaged = true;
+    isSlowTimeActive = true;
+
+    const mechanicsMode = currentIncident.mechanics?.mode || MECHANIC_MODES.CHOICE;
+    const isAutobattler = mechanicsMode === MECHANIC_MODES.AUTOBATTLER;
+
+    // Emit engagement event for UI to show tagging options
+    emit('episode:engaged', {
+      episode: currentEpisode,
+      incident: currentIncident,
+      taggingPrompt: currentIncident.taggingPrompt,
+      slowTimeActive: true,
       mechanicsMode,
     });
 
     if (isAutobattler) {
-      // Combat episode: trigger autobattler spawn
-      // Autobattler handles combat simulation and timer
-      // Episode resolves when autobattler:resolve is received
+      // Combat episode: now spawn the autobattler
       const encounter = {
         id: currentIncident.id,
         type: currentIncident.kind,
         label: currentIncident._enemy?.label || 'Encounter',
         icon: currentIncident._enemy?.icon || '&#128058;',
         baseDifficulty: currentIncident.mechanics?.difficulty || 1,
-        // Pass incident reference for episode resolution
         _incidentId: currentIncident.id,
         _episodeId: currentEpisode.id,
       };
 
-      console.log(`[EpisodeRunner] Combat episode - triggering autobattler:spawn`);
+      console.log('[EpisodeRunner] Combat episode - triggering autobattler:spawn');
       emit('autobattler:spawn', encounter);
-
-    } else {
-      // Choice/tagging episode: start autopilot timer
-      const duration = (currentIncident.mechanics.durationS || 30) * 1000;
-      autopilotTimerId = setTimeout(() => {
-        if (currentEpisode && currentEpisode.phase === EPISODE_PHASES.ACTIVE) {
-          console.log('[EpisodeRunner] Autopilot timeout - auto-resolving');
-          resolveWithAutopilot();
-        }
-      }, duration);
-
-      // Emit timer updates for tagging overlay
-      startTimerUpdates(duration);
     }
+    // For choice episodes, tagging options are already visible
+  }
+
+  /**
+   * WO-S3: Player skips the incident
+   * Immediately triggers autopilot resolution
+   */
+  function playerSkip() {
+    if (!currentEpisode || currentEpisode.phase !== EPISODE_PHASES.ACTIVE) {
+      console.warn('[EpisodeRunner] Cannot skip - not in active phase');
+      return;
+    }
+
+    console.log('[EpisodeRunner] Player skipped - autopilot resolving');
+    resolveWithAutopilot();
   }
 
   /**
@@ -315,6 +369,7 @@ export function createEpisodeRunner(options = {}) {
     currentEpisode = null;
     currentIncident = null;
     isSlowTimeActive = false;
+    isPlayerEngaged = false; // WO-S3: Reset engagement state
   }
 
   /**
@@ -428,6 +483,7 @@ export function createEpisodeRunner(options = {}) {
     currentEpisode = null;
     currentIncident = null;
     isSlowTimeActive = false;
+    isPlayerEngaged = false; // WO-S3: Reset engagement state
   }
 
   /**
@@ -468,6 +524,16 @@ export function createEpisodeRunner(options = {}) {
         playerChoice(data.choiceId);
       }, 'episodeRunner', { persistent: true });
 
+      // WO-S3: Allow external engage action
+      actionBus.subscribe('episode:engage', () => {
+        playerEngage();
+      }, 'episodeRunner', { persistent: true });
+
+      // WO-S3: Allow external skip action
+      actionBus.subscribe('episode:skip', () => {
+        playerSkip();
+      }, 'episodeRunner', { persistent: true });
+
       // Listen for autobattler resolution to complete combat episodes
       actionBus.subscribe('autobattler:resolve', (result) => {
         if (!currentEpisode || !currentIncident) return;
@@ -498,6 +564,9 @@ export function createEpisodeRunner(options = {}) {
     startFromSignal,
     startFromIncident,
     playerChoice,
+    // WO-S3: New engage/skip actions
+    playerEngage,
+    playerSkip,
     forceResolve,
     cancel,
 
@@ -506,6 +575,8 @@ export function createEpisodeRunner(options = {}) {
     getCurrentIncident: () => currentIncident,
     isActive: () => currentEpisode !== null,
     isSlowTimeActive: () => isSlowTimeActive,
+    // WO-S3: New engagement state getter
+    isPlayerEngaged: () => isPlayerEngaged,
     getTimeline: () => [...timeline],
     getPhase: () => currentEpisode?.phase || null,
   };

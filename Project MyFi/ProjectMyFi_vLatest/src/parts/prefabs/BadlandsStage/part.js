@@ -1,6 +1,29 @@
 // BadlandsStage Part — HUB Refactor: 3-Tab Stage
 // Tabs: Current Event | Recent Events | Loadout (tab bar at bottom)
 // WO-STAGE-EPISODES-V1: Added Episode system integration with slow-time overlay
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-S1: SPECTATOR-MODE SIMULATION MODEL
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// The Stage is a REAL-TIME NARRATIVE RENDERER, not a UI component.
+// It simulates the Badlands game loop in spectator mode.
+//
+// DERIVED MODES (see stageSchemas.STAGE_MODES):
+// ┌─────────────────┐     ┌───────────────────┐     ┌───────────────┐
+// │  IDLE_TRAVEL    │────►│ INCIDENT_OVERLAY  │────►│ COMBAT_ACTIVE │
+// │                 │     │   (or choice tag) │     │               │
+// │ World cycling:  │     │                   │     │ Autobattler   │
+// │ rest→patrol→    │◄────│ Slow-time, player │◄────│ ticks, enemy  │
+// │ explore→return→ │     │ can tag or skip   │     │ HP, damage    │
+// │ city (loop)     │     │                   │     │               │
+// └─────────────────┘     └───────────────────┘     └───────────────┘
+//        ▲                                                  │
+//        └────────────────── RESOLUTION ◄───────────────────┘
+//
+// KEY PRINCIPLE: Stage SHOWS mode, it does NOT control behavior.
+// Combat logic is in autobattler.js, episode logic is in episodeRunner.js.
+// ═══════════════════════════════════════════════════════════════════════════════
 
 import { ensureGlobalCSS } from '../../../core/styleLoader.js';
 
@@ -115,6 +138,68 @@ function getNextWorldState(currentState) {
   return WORLD_STATE_CYCLE[nextIndex];
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-UX-4: Evocative World State Captions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const WORLD_STATE_CAPTIONS = {
+  rest: {
+    titles: ['Sanctuary', 'Respite', 'Haven', 'Refuge'],
+    subtitles: [
+      '— The fire crackles softly',
+      '— A moment of peace',
+      '— Wounds mend, strength returns',
+      '— Safe, for now',
+    ],
+  },
+  patrol: {
+    titles: ['Wardwatch', 'The Perimeter', 'Vigil', 'Outer Guard'],
+    subtitles: [
+      '— All quiet on the frontier',
+      '— Eyes on the horizon',
+      '— The ward holds steady',
+      '— Shadows stir, but hold',
+    ],
+  },
+  explore: {
+    titles: ['The Unknown', 'Uncharted', 'Beyond the Ward', 'Terra Incognita'],
+    subtitles: [
+      '— What lies ahead?',
+      '— Fortune favors the bold',
+      '— New ground, old dangers',
+      '— Every step writes history',
+    ],
+  },
+  return: {
+    titles: ['Homeward', 'The Long Road', 'Journey\'s End', 'Back Trail'],
+    subtitles: [
+      '— The familiar beckons',
+      '— Each step toward safety',
+      '— Weary but wiser',
+      '— Almost there',
+    ],
+  },
+  city: {
+    titles: ['The Hub', 'Hearth & Home', 'Civilization', 'The Ward'],
+    subtitles: [
+      '— Markets hum with life',
+      '— Among kin and coin',
+      '— A world behind walls',
+      '— Trade and tidings',
+    ],
+  },
+};
+
+function getWorldStateCaption(stateName) {
+  const stateData = WORLD_STATE_CAPTIONS[stateName] || WORLD_STATE_CAPTIONS.patrol;
+  const titleIndex = Math.floor(Math.random() * stateData.titles.length);
+  const subtitleIndex = Math.floor(Math.random() * stateData.subtitles.length);
+  return {
+    title: stateData.titles[titleIndex],
+    subtitle: stateData.subtitles[subtitleIndex],
+  };
+}
+
 export default async function mount(host, { id, data = {}, ctx = {} }) {
   // Load CSS
   const cssUrl = new URL('./uplift.css', import.meta.url).href;
@@ -174,6 +259,9 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     worldState: 'patrol', // rest | patrol | explore | return | city
     worldStateTimerId: null,
     currentBgUrl: null, // Current background URL (for any state)
+    // WO-UX-4: Evocative captions
+    scenicTitle: 'Wardwatch',
+    scenicSubtitle: '— All quiet on the frontier',
     // WO-STAGE-EPISODES-V1: Episode system state
     episodeActive: false,
     currentEpisode: null,
@@ -182,6 +270,10 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
     slowTimeTimerRemaining: 0,
     slowTimeTimerTotal: 30,
     queueLength: 0, // Number of pending signals in queue
+    // WO-S3: Unified overlay state
+    awaitingEngagement: false, // True when showing Engage/Skip buttons
+    isPlayerEngaged: false, // True after player engages
+    overlayConfig: null, // Mode-specific overlay configuration
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -230,6 +322,11 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       preloadedImages.add(nextBgUrl);
     }
 
+    // WO-UX-4: Update evocative captions
+    const caption = getWorldStateCaption(nextState);
+    state.scenicTitle = caption.title;
+    state.scenicSubtitle = caption.subtitle;
+
     state.worldState = nextState;
     state.currentBgUrl = nextBgUrl;
     render(root, state);
@@ -258,6 +355,12 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
   await preloadImage(initialBgUrl);
   preloadedImages.add(initialBgUrl);
   state.currentBgUrl = initialBgUrl;
+
+  // WO-UX-4: Initialize evocative caption for initial state
+  const initialCaption = getWorldStateCaption(state.worldState);
+  state.scenicTitle = initialCaption.title;
+  state.scenicSubtitle = initialCaption.subtitle;
+
   scheduleWorldStateTransition();
 
   // Combat simulation functions
@@ -498,15 +601,13 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         state.currentIncident = data.incident; // Update incident reference
         console.log(`[BadlandsStage] Episode phase: ${data.newPhase}`);
 
-        // Only show tagging overlay for non-combat (choice mode) episodes
-        const mechanicsMode = data.incident?.mechanics?.mode;
-        const isTaggingEpisode = mechanicsMode === 'choice';
-
-        if (data.newPhase === 'active' && isTaggingEpisode) {
-          // Show slow-time overlay for tagging episodes only
-          renderSlowTimeOverlay(root, state);
+        // WO-S3: Show unified overlay for ALL incident types when active
+        if (data.newPhase === 'active') {
+          // Overlay rendering is handled by episode:active event
         } else if (data.newPhase === 'resolving' || data.newPhase === 'after') {
           // Hide slow-time overlay
+          state.awaitingEngagement = false;
+          state.isPlayerEngaged = false;
           hideSlowTimeOverlay(root);
         }
       })
@@ -521,23 +622,34 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       })
     );
 
-    // Episode active (show tagging prompt for choice mode only)
+    // WO-S3: Episode active - show unified overlay for ALL incident types
     unsubscribers.push(
       ctx.actionBus.subscribe('episode:active', (data) => {
         state.slowTimeTimerTotal = data.incident?.mechanics?.durationS || 30;
         state.slowTimeTimerRemaining = state.slowTimeTimerTotal;
-        state.currentIncident = data.incident; // Update incident reference
+        state.currentIncident = data.incident;
+        state.overlayConfig = data.overlayConfig || data.incident?._overlayConfig;
+        state.awaitingEngagement = data.awaitingEngagement !== false;
+        state.isPlayerEngaged = false;
 
-        // Only show tagging overlay for choice mode episodes (not combat)
         const mechanicsMode = data.mechanicsMode || data.incident?.mechanics?.mode;
-        const isTaggingEpisode = mechanicsMode === 'choice';
+        console.log(`[BadlandsStage] Episode active - showing unified overlay (mode: ${mechanicsMode}, awaiting: ${state.awaitingEngagement})`);
 
-        if (isTaggingEpisode) {
-          console.log('[BadlandsStage] Tagging episode active - showing slow-time overlay');
-          renderSlowTimeOverlay(root, state);
-        } else {
-          console.log(`[BadlandsStage] Combat episode active (mode: ${mechanicsMode}) - no tagging overlay`);
-        }
+        // WO-S3: Show unified overlay for ALL incidents
+        renderSlowTimeOverlay(root, state);
+      })
+    );
+
+    // WO-S3: Episode engaged - player chose to engage
+    unsubscribers.push(
+      ctx.actionBus.subscribe('episode:engaged', (data) => {
+        state.isPlayerEngaged = true;
+        state.awaitingEngagement = false;
+        state.currentIncident = data.incident;
+        console.log('[BadlandsStage] Player engaged - updating overlay');
+
+        // Update overlay to show tagging options (hide Engage/Skip buttons)
+        renderSlowTimeOverlay(root, state);
       })
     );
 
@@ -583,6 +695,37 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
       ctx.actionBus.subscribe('stageSignals:queueStatus', (data) => {
         state.queueLength = data.queueLength;
         updateQueueIndicator(root, data.queueLength);
+      })
+    );
+
+    // WO-S5: Scene Beat added - update Recent Events
+    unsubscribers.push(
+      ctx.actionBus.subscribe('sceneBeat:added', (data) => {
+        const beat = data.beat;
+        if (beat && beat.display) {
+          // Convert scene beat to recent event format
+          state.recentEvents.unshift({
+            id: beat.id,
+            name: beat.display.title,
+            icon: beat.display.icon,
+            result: beat.resolvedBy,
+            timestamp: beat.time,
+            details: beat.display.choiceLabel
+              ? `Tagged as: ${beat.display.choiceLabel}`
+              : beat.display.subtitle,
+            // WO-S5: Enhanced data from scene beat
+            location: beat.display.locationLabel,
+            vitalsImpact: beat.display.vitalsImpact,
+            resultBadge: beat.display.resultBadge,
+          });
+
+          // Keep only last 10 events
+          if (state.recentEvents.length > 10) {
+            state.recentEvents.pop();
+          }
+
+          render(root, state);
+        }
       })
     );
 
@@ -776,6 +919,22 @@ function bindInteractions(root, state, ctx) {
       ctx.actionBus.emit('episode:submitChoice', { choiceId: 'unknown' });
       return;
     }
+
+    // WO-S3: Engage button - player chooses to engage with incident
+    const engageBtn = e.target.closest('[data-action="engage"]');
+    if (engageBtn && ctx.actionBus) {
+      console.log('[BadlandsStage] Player engaging with incident');
+      ctx.actionBus.emit('episode:engage');
+      return;
+    }
+
+    // WO-S3: Skip button - player skips incident (autopilot)
+    const skipIncidentBtn = e.target.closest('[data-action="skip"]');
+    if (skipIncidentBtn && ctx.actionBus) {
+      console.log('[BadlandsStage] Player skipping incident');
+      ctx.actionBus.emit('episode:skip');
+      return;
+    }
   });
 }
 
@@ -848,6 +1007,12 @@ function renderCurrentEvent(root, state) {
     // Show scenic
     if (scenic) scenic.dataset.visible = 'true';
     if (encounter) encounter.dataset.visible = 'false';
+
+    // WO-UX-4: Update evocative captions
+    const titleEl = root.querySelector('[data-bind="scenicTitle"]');
+    const subtitleEl = root.querySelector('[data-bind="scenicSubtitle"]');
+    if (titleEl) titleEl.textContent = state.scenicTitle;
+    if (subtitleEl) subtitleEl.textContent = state.scenicSubtitle;
   }
 }
 
@@ -863,17 +1028,32 @@ function renderRecentEvents(root, state) {
     `;
   } else {
     listEl.innerHTML = state.recentEvents.map(event => `
-      <li class="BadlandsStage__recentItem">
+      <li class="BadlandsStage__recentItem" data-result="${event.result || 'auto'}">
         <div class="BadlandsStage__recentItemMain">
           <span class="BadlandsStage__recentItemIcon">${event.icon}</span>
           <div class="BadlandsStage__recentItemInfo">
             <span class="BadlandsStage__recentItemName">${event.name}</span>
             <span class="BadlandsStage__recentItemTime">${formatTimeAgo(event.timestamp)}</span>
           </div>
+          ${event.resultBadge ? `
+            <span class="BadlandsStage__recentItemBadge BadlandsStage__recentItemBadge--${event.resultBadge.class}">
+              ${event.resultBadge.label}
+            </span>
+          ` : ''}
         </div>
         <div class="BadlandsStage__recentItemDetails">
           ${event.details}
+          ${event.location ? `<span class="BadlandsStage__recentItemLocation">${event.location}</span>` : ''}
         </div>
+        ${event.vitalsImpact ? `
+          <div class="BadlandsStage__recentItemVitals">
+            ${event.vitalsImpact.map(v => `
+              <span class="BadlandsStage__recentItemVital BadlandsStage__recentItemVital--${v.isPositive ? 'positive' : 'negative'}">
+                ${v.label}
+              </span>
+            `).join('')}
+          </div>
+        ` : ''}
       </li>
     `).join('');
   }
@@ -913,6 +1093,7 @@ function renderLoadout(root, state) {
 function updateTimer(root, remaining, total) {
   const timerValue = root.querySelector('[data-bind="timerValue"]');
   const timerFill = root.querySelector('[data-bind="timerFill"]');
+  const timerContainer = root.querySelector('.BadlandsStage__encounterTimer');
 
   if (timerValue) {
     timerValue.textContent = Math.ceil(remaining);
@@ -920,6 +1101,11 @@ function updateTimer(root, remaining, total) {
   if (timerFill && total > 0) {
     const percent = (remaining / total) * 100;
     timerFill.style.width = `${percent}%`;
+
+    // WO-UX-2: Set urgency level for timer gradient
+    const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
+    timerFill.dataset.urgency = urgency;
+    if (timerContainer) timerContainer.dataset.urgency = urgency;
   }
 }
 
@@ -1009,7 +1195,10 @@ function getSkillData(skillId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Render the slow-time tagging overlay
+ * WO-S3: Render the unified incident overlay
+ * Shows for ALL incident types with mode-specific visuals
+ * - awaitingEngagement: shows Engage/Skip buttons
+ * - isPlayerEngaged: shows tagging options
  */
 function renderSlowTimeOverlay(root, state) {
   const overlay = root.querySelector('.BadlandsStage__slowTime');
@@ -1021,21 +1210,96 @@ function renderSlowTimeOverlay(root, state) {
     return;
   }
 
-  // Update caption
+  // Get overlay config (mode-specific visuals)
+  const config = state.overlayConfig || incident._overlayConfig || {
+    theme: 'combat',
+    icon: '&#9876;',
+    title: 'Incident',
+    subtitle: 'Something approaches',
+    engageLabel: 'Engage',
+    engageHint: 'Take action',
+    skipLabel: 'Skip',
+    skipHint: 'Let autopilot handle',
+  };
+
+  // Set overlay theme
+  overlay.dataset.theme = config.theme;
+
+  // Update caption (narrative)
   const captionEl = root.querySelector('[data-bind="episodeCaption"]');
-  if (captionEl && incident.narrative?.captionIn) {
-    captionEl.textContent = incident.narrative.captionIn;
+  if (captionEl) {
+    captionEl.textContent = incident.narrative?.captionIn || config.subtitle;
   }
 
-  // Update tagging question
+  // WO-S3: Show incident icon and title
+  const incidentIconEl = root.querySelector('[data-bind="incidentIcon"]');
+  if (incidentIconEl) {
+    // For combat, show enemy icon; otherwise show overlay config icon
+    const displayIcon = incident._enemy?.icon || config.icon;
+    incidentIconEl.innerHTML = displayIcon;
+  }
+
+  const incidentTitleEl = root.querySelector('[data-bind="incidentTitle"]');
+  if (incidentTitleEl) {
+    // For combat, show enemy label; otherwise show config title
+    const displayTitle = incident._enemy?.label || config.title;
+    incidentTitleEl.textContent = displayTitle;
+  }
+
+  // WO-S3: Render Engage/Skip buttons OR tagging options based on state
+  const actionsEl = root.querySelector('[data-bind="overlayActions"]');
+  if (actionsEl) {
+    if (state.awaitingEngagement && !state.isPlayerEngaged) {
+      // Show Engage/Skip buttons
+      actionsEl.innerHTML = `
+        <button class="BadlandsStage__overlayBtn BadlandsStage__overlayBtn--engage" data-action="engage">
+          <span class="BadlandsStage__overlayBtnLabel">${config.engageLabel}</span>
+          <span class="BadlandsStage__overlayBtnHint">${config.engageHint}</span>
+        </button>
+        <button class="BadlandsStage__overlayBtn BadlandsStage__overlayBtn--skip" data-action="skip">
+          <span class="BadlandsStage__overlayBtnLabel">${config.skipLabel}</span>
+          <span class="BadlandsStage__overlayBtnHint">${config.skipHint}</span>
+        </button>
+      `;
+    } else if (state.isPlayerEngaged && incident.taggingPrompt?.options) {
+      // Show tagging options
+      const iconMap = {
+        health: '&#10084;',
+        mana: '&#10024;',
+        stamina: '&#9889;',
+        wardfire: '&#128293;',
+        unknown: '&#10067;',
+      };
+
+      actionsEl.innerHTML = `
+        <div class="BadlandsStage__taggingQuestion">${incident.taggingPrompt.question}</div>
+        <div class="BadlandsStage__taggingOptionsGrid">
+          ${incident.taggingPrompt.options.map(opt => `
+            <div class="BadlandsStage__taggingOption" data-choice="${opt.id}" data-action="submitTagChoice">
+              <div class="BadlandsStage__taggingOptionIcon">${iconMap[opt.id] || '&#10067;'}</div>
+              <div class="BadlandsStage__taggingOptionContent">
+                <span class="BadlandsStage__taggingOptionLabel">${opt.label}</span>
+                ${opt.hint ? `<span class="BadlandsStage__taggingOptionHint">${opt.hint}</span>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="BadlandsStage__overlayBtn BadlandsStage__overlayBtn--skipTag" data-action="skipTagging">
+          Skip &rarr; Autopilot
+        </button>
+      `;
+    }
+  }
+
+  // Legacy: Update tagging question element if it exists separately
   const questionEl = root.querySelector('[data-bind="taggingQuestion"]');
-  if (questionEl && incident.taggingPrompt?.question) {
+  if (questionEl && incident.taggingPrompt?.question && state.isPlayerEngaged) {
     questionEl.textContent = incident.taggingPrompt.question;
   }
 
-  // Render tagging options
+  // Legacy: Render tagging options if separate element exists
   const optionsEl = root.querySelector('[data-bind="taggingOptions"]');
-  if (optionsEl && incident.taggingPrompt?.options) {
+  if (optionsEl && incident.taggingPrompt?.options && state.isPlayerEngaged) {
     const iconMap = {
       health: '&#10084;',
       mana: '&#10024;',
@@ -1075,10 +1339,16 @@ function hideSlowTimeOverlay(root) {
 function updateSlowTimeTimer(root, remainingMs, totalMs) {
   const timerFill = root.querySelector('[data-bind="slowTimeTimerFill"]');
   const timerValue = root.querySelector('[data-bind="slowTimeTimerValue"]');
+  const timerBar = root.querySelector('.BadlandsStage__slowTimeTimerBar');
 
   if (timerFill && totalMs > 0) {
     const percent = (remainingMs / totalMs) * 100;
     timerFill.style.width = `${percent}%`;
+
+    // WO-UX-2: Set urgency level for timer gradient
+    const urgency = percent > 50 ? 'normal' : percent > 25 ? 'warning' : 'critical';
+    timerFill.dataset.urgency = urgency;
+    if (timerBar) timerBar.dataset.urgency = urgency;
   }
 
   if (timerValue) {

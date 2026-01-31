@@ -1,5 +1,7 @@
 # World Topology
 
+**Implementation:** [`src/core/worldTopology.js`](../src/core/worldTopology.js)
+
 ## Overview
 
 MyFi's world is organized around a central **Hub City** with four directional **Sectors**, each containing progressively dangerous **Areas** that lead outward into the **Badlands**.
@@ -38,6 +40,8 @@ This topology supports:
 
 ## Position Schema
 
+**Factory:** `createWorldPosition()` in [`worldTopology.js:96`](../src/core/worldTopology.js#L96)
+
 ```typescript
 WorldPosition = {
   sector: 'north' | 'south' | 'east' | 'west' | 'center',
@@ -48,27 +52,44 @@ WorldPosition = {
 
 ### Examples
 ```javascript
+import { createWorldPosition, SECTORS } from '../core/worldTopology.js';
+
 // In the city
-{ sector: 'center', areaIndex: 0, zoneId: 'hub-plaza' }
+createWorldPosition({ sector: SECTORS.CENTER, areaIndex: 0, zoneId: 'hub-plaza' })
 
 // Just outside city (east side)
-{ sector: 'east', areaIndex: 1, zoneId: 'frontier-gate' }
+createWorldPosition({ sector: SECTORS.EAST, areaIndex: 1, zoneId: 'frontier-gate' })
 
 // Deep in the Badlands
-{ sector: 'east', areaIndex: 4, zoneId: 'void-threshold' }
+createWorldPosition({ sector: SECTORS.EAST, areaIndex: 4, zoneId: 'void-threshold' })
+
+// Default position (hub plaza)
+getDefaultPosition()  // Returns { sector: 'center', areaIndex: 0, zoneId: 'hub-plaza' }
 ```
 
 ---
 
 ## Risk Bands (Area Index)
 
-| Area Index | Name | Risk Level | Examples |
-|------------|------|------------|----------|
-| 0 | City Center | Safe | Hub Plaza, Market District |
-| 1 | City Edge | Low | Frontier Gates, Outer Walls |
-| 2 | Frontier | Medium | Trading Posts, Outposts |
-| 3 | Badlands | High | Ruins, Contested Zones |
-| 4+ | Deep Badlands / Void | Extreme | Void Threshold, The Wastes |
+**Enum:** `RISK_BANDS` in [`worldTopology.js:43`](../src/core/worldTopology.js#L43)
+**Helper:** `getRiskBandName(areaIndex)` in [`worldTopology.js:138`](../src/core/worldTopology.js#L138)
+
+| Area Index | Constant | Risk Level | Examples |
+|------------|----------|------------|----------|
+| 0 | `RISK_BANDS.SAFE` | Safe | Hub Plaza, Market District |
+| 1 | `RISK_BANDS.LOW` | Low | Frontier Gates, Outer Walls |
+| 2 | `RISK_BANDS.MEDIUM` | Medium | Trading Posts, Outposts |
+| 3 | `RISK_BANDS.HIGH` | High | Ruins, Contested Zones |
+| 4+ | `RISK_BANDS.EXTREME` | Extreme | Void Threshold, The Wastes |
+
+```javascript
+import { RISK_BANDS, getRiskBandName, isInCity, isInBadlands } from '../core/worldTopology.js';
+
+getRiskBandName(0);       // 'Safe'
+getRiskBandName(3);       // 'High'
+isInCity(position);       // true if center + areaIndex 0
+isInBadlands(position);   // true if areaIndex >= 3
+```
 
 ---
 
@@ -77,12 +98,22 @@ WorldPosition = {
 Each sector contains themed regions that affect encounter types and visuals.
 
 ### Sector Themes
-| Sector | Theme | Aesthetic | Enemy Types |
-|--------|-------|-----------|-------------|
-| North | Frozen | Ice, snow, cold | Frost creatures |
-| South | Volcanic | Lava, heat, ash | Fire elementals |
-| East | Corrupted | Void, decay | Shadow beings |
-| West | Overgrown | Jungle, nature | Beast creatures |
+
+**Enum:** `SECTOR_THEMES` in [`worldTopology.js:63`](../src/core/worldTopology.js#L63)
+
+| Sector | Constant | Theme | Aesthetic |
+|--------|----------|-------|-----------|
+| Center | `SECTORS.CENTER` | urban | Safe haven, markets, guilds |
+| North | `SECTORS.NORTH` | frozen | Ice, snow, cold |
+| South | `SECTORS.SOUTH` | volcanic | Lava, heat, ash |
+| East | `SECTORS.EAST` | corrupted | Void, decay, shadow |
+| West | `SECTORS.WEST` | overgrown | Jungle, nature, beasts |
+
+```javascript
+import { SECTORS, SECTOR_THEMES } from '../core/worldTopology.js';
+
+SECTOR_THEMES[SECTORS.EAST];  // { name: 'Corrupted Lands', theme: 'corrupted', aesthetic: '...' }
+```
 
 ### Region Structure
 ```javascript
@@ -101,64 +132,57 @@ Region = {
 
 ## Map Zoom Derivation
 
+**Enum:** `MAP_ZOOM` in [`worldTopology.js:54`](../src/core/worldTopology.js#L54)
+**Helper:** `deriveMapZoom(position)` in [`worldTopology.js:125`](../src/core/worldTopology.js#L125)
+
 Map zoom level is derived from `areaIndex`:
 
 ```javascript
-function getMapZoom(position) {
-  // areaIndex 0-1: zoomed in (city detail)
-  // areaIndex 2-3: medium zoom (frontier overview)
-  // areaIndex 4+: zoomed out (world view)
+import { MAP_ZOOM, deriveMapZoom } from '../core/worldTopology.js';
 
-  const { areaIndex } = position;
+// areaIndex 0-1: zoomed in (city detail)
+// areaIndex 2-3: medium zoom (frontier overview)
+// areaIndex 4+: zoomed out (world view)
 
-  if (areaIndex <= 1) return 'detail';      // City-level
-  if (areaIndex <= 3) return 'region';      // Regional view
-  return 'world';                            // Full world map
-}
+deriveMapZoom({ areaIndex: 0 });  // MAP_ZOOM.DETAIL ('detail')
+deriveMapZoom({ areaIndex: 2 });  // MAP_ZOOM.REGION ('region')
+deriveMapZoom({ areaIndex: 4 });  // MAP_ZOOM.WORLD ('world')
 ```
 
 ---
 
 ## Position Weighting
 
+**Function:** `selectNextZone()` in [`worldTopology.js:195`](../src/core/worldTopology.js#L195)
+**Helper:** `getAdjacentZones(position)` in [`worldTopology.js:248`](../src/core/worldTopology.js#L248)
+
 The avatar's current position is influenced by:
 
 ### 1. Player Preferences
 - Spending patterns suggest areas of interest
-- Engagement history weights familiar zones
+- Engagement history weights familiar zones (1.5x boost)
 
 ### 2. Financial Pressure
-- High essential spending → safer zones (patrol, return)
-- Discretionary spending → riskier zones (explore, deep)
+- High stress (>0.7) + deep zones (>2): 0.3x weight
+- Medium stress (>0.5) + extreme zones (>3): 0.5x weight
 
 ### 3. Randomness
-- Some variance to prevent predictability
+- ±50% variance to prevent predictability
 - Weighted random selection from valid zones
 
 ```javascript
-function selectNextZone(playerState, currentPosition) {
-  const validZones = getAdjacentZones(currentPosition);
-  const weights = validZones.map(zone => {
-    let weight = 1;
+import { selectNextZone, getAdjacentZones } from '../core/worldTopology.js';
 
-    // Player preference
-    if (playerState.preferredRegions.includes(zone.region)) {
-      weight *= 1.5;
-    }
+// Get adjacent zones from current position
+const adjacent = getAdjacentZones(currentPosition);
 
-    // Financial pressure (high stress → stay safe)
-    if (playerState.financialStress > 0.7 && zone.areaIndex > 2) {
-      weight *= 0.3;
-    }
-
-    // Randomness
-    weight *= 0.5 + Math.random();
-
-    return weight;
-  });
-
-  return weightedRandomSelect(validZones, weights);
-}
+// Select next zone with weighting
+const nextZone = selectNextZone({
+  currentPosition,
+  preferredRegions: ['east', 'north'],
+  financialStress: 0.3,
+  availableZones: adjacent,
+});
 ```
 
 ---
@@ -179,30 +203,22 @@ World states from Stage Engine map to position transitions:
 
 ## Endless Runner Coordinates
 
+**Function:** `positionToRunnerCoords(position)` in [`worldTopology.js:167`](../src/core/worldTopology.js#L167)
+
 For future Badland_P integration, positions map to runner distance:
 
 ```javascript
-function positionToRunnerCoords(position) {
-  const { areaIndex, sector } = position;
+import { positionToRunnerCoords } from '../core/worldTopology.js';
 
-  // Distance from center in game units
-  const baseDistance = areaIndex * 1000;  // 1000 units per area
+const coords = positionToRunnerCoords(position);
+// Returns: {
+//   distance: areaIndex * 1000,  // 1000 units per area
+//   angle: 0 | 90 | 180 | 270 | null,  // Sector direction
+//   region: 'frozen' | 'volcanic' | 'corrupted' | 'overgrown' | 'urban'
+// }
 
-  // Sector offset (cosmetic, affects parallax)
-  const sectorAngles = {
-    north: 0,
-    east: 90,
-    south: 180,
-    west: 270,
-    center: null
-  };
-
-  return {
-    distance: baseDistance,
-    angle: sectorAngles[sector],
-    region: getRegionAt(position)
-  };
-}
+// Sector angles:
+// NORTH = 0°, EAST = 90°, SOUTH = 180°, WEST = 270°, CENTER = null
 ```
 
 ---
@@ -238,11 +254,43 @@ function positionToRunnerCoords(position) {
 
 ---
 
+## Validation
+
+**Function:** `isValidPosition(position)` in [`worldTopology.js:296`](../src/core/worldTopology.js#L296)
+
+```javascript
+import { isValidPosition } from '../core/worldTopology.js';
+
+isValidPosition({ sector: 'east', areaIndex: 2, zoneId: 'outpost' });  // true
+isValidPosition({ sector: 'invalid', areaIndex: -1, zoneId: null });   // false
+```
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| [`src/core/worldTopology.js`](../src/core/worldTopology.js) | Schema definitions, helpers, validation |
+| [`docs/WORLD_TOPOLOGY.md`](./WORLD_TOPOLOGY.md) | This documentation |
+
+---
+
+## Implementation Status
+
+- [x] **WO-S2:** Schema locked in code (`worldTopology.js`)
+- [x] **WO-S2:** Zone selection helpers implemented
+- [x] **WO-S2:** Map zoom derivation implemented
+- [ ] **Future:** Position tracking in episode runner
+- [ ] **Future:** Endless runner integration (Badland_P)
+
+---
+
 ## Future Extensions
 
-1. **WO-S2 Implementation**
-   - Lock schema in code
-   - Add position tracking to episode runner
+1. **Episode Runner Integration**
+   - Track avatar position through episodes
+   - Position affects incident generation
    - Derive map zoom from avatar position
 
 2. **Endless Runner Integration**
