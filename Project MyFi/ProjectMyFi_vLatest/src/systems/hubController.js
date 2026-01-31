@@ -229,18 +229,19 @@ export function createHubController(options = {}) {
     });
 
     // Listen for events (actionBus uses 'subscribe' not 'on')
+    // WO-HUB-02: Mark as persistent (controller-level subscriptions, not cleaned up per-surface)
     if (actionBus && actionBus.subscribe) {
-      actionBus.subscribe('wardwatch:tick', handleWardwatchTick);
+      actionBus.subscribe('wardwatch:tick', handleWardwatchTick, 'hubController', { persistent: true });
       // HUB-05: Escalation events
-      actionBus.subscribe('encounter:escalate', handleEscalate);
-      actionBus.subscribe('escalation:exit', handleDeescalate);
-      actionBus.subscribe('escalation:victory', handleEscalationVictory);
-      actionBus.subscribe('escalation:action', handleEscalationAction);
+      actionBus.subscribe('encounter:escalate', handleEscalate, 'hubController', { persistent: true });
+      actionBus.subscribe('escalation:exit', handleDeescalate, 'hubController', { persistent: true });
+      actionBus.subscribe('escalation:victory', handleEscalationVictory, 'hubController', { persistent: true });
+      actionBus.subscribe('escalation:action', handleEscalationAction, 'hubController', { persistent: true });
       // HUB-F4/F5: Vitals regen and death reset events
-      actionBus.subscribe('vitals:regen', handleVitalsRegen);
-      actionBus.subscribe('player:reset', handlePlayerReset);
+      actionBus.subscribe('vitals:regen', handleVitalsRegen, 'hubController', { persistent: true });
+      actionBus.subscribe('player:reset', handlePlayerReset, 'hubController', { persistent: true });
       // Combat tick events from BadlandsStage autobattler simulation
-      actionBus.subscribe('combat:tick', handleCombatTick);
+      actionBus.subscribe('combat:tick', handleCombatTick, 'hubController', { persistent: true });
     }
   }
 

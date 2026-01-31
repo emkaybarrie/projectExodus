@@ -98,6 +98,7 @@ export function createAutobattler(options = {}) {
 
   // WO-STAGE-EPISODES-V1: Subscribe to autobattler:spawn from Episode system
   // This allows the Episode system to trigger combat encounters
+  // WO-HUB-02: Mark as persistent (system-level subscriptions, not cleaned up per-surface)
   if (actionBus && actionBus.subscribe) {
     unsubscribeSpawn = actionBus.subscribe('autobattler:spawn', (encounter) => {
       // Only accept if we don't have an active encounter
@@ -115,7 +116,7 @@ export function createAutobattler(options = {}) {
           onEncounterSpawn(currentEncounter);
         }
       }
-    });
+    }, 'autobattler', { persistent: true });
 
     // WO-STAGE-EPISODES-V1: Listen for autobattler:resolve to clear Episode-sourced encounters immediately
     // This prevents race conditions with stageSignals queue resumption
@@ -124,7 +125,7 @@ export function createAutobattler(options = {}) {
         console.log(`[Autobattler] Episode encounter resolved, clearing immediately`);
         currentEncounter = null;
       }
-    });
+    }, 'autobattler', { persistent: true });
   }
 
   // Timing constants

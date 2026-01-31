@@ -112,25 +112,26 @@ export function createStageSignals(options = {}) {
 
   /**
    * Subscribe to actionBus events if available
+   * WO-HUB-02: Mark as persistent (system-level subscriptions, not cleaned up per-surface)
    */
   function init() {
     if (actionBus && actionBus.subscribe) {
       // Listen for episode lifecycle to pause/resume
       actionBus.subscribe('episode:started', () => {
         pause();
-      });
+      }, 'stageSignals', { persistent: true });
 
       actionBus.subscribe('episode:resolved', () => {
         // Small delay before resuming to allow UI to settle
         setTimeout(() => {
           resume();
         }, 500);
-      });
+      }, 'stageSignals', { persistent: true });
 
       // Listen for external signal injection
       actionBus.subscribe('signal:inject', (data) => {
         ingest(data);
-      });
+      }, 'stageSignals', { persistent: true });
     }
   }
 

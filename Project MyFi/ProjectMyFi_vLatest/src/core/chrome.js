@@ -330,6 +330,117 @@ export function createChrome(chromeHost){
                 </label>
               </div>
             </div>
+            <!-- Watch Mode Settings -->
+            <div class="chrome__devConfigSection">
+              <h4 class="chrome__devConfigSectionTitle">Watch Mode</h4>
+              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                <label class="chrome__devConfigCheckboxLabel">
+                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="watchModeEnabled">
+                  <span>Enable Watch Mode</span>
+                </label>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Time Scale</label>
+                <div class="chrome__devConfigBtnGroup" data-config-group="watchTimeScale">
+                  <button class="chrome__devConfigScaleBtn" data-scale="1">1x</button>
+                  <button class="chrome__devConfigScaleBtn chrome__devConfigScaleBtn--active" data-scale="5">5x</button>
+                  <button class="chrome__devConfigScaleBtn" data-scale="20">20x</button>
+                  <button class="chrome__devConfigScaleBtn" data-scale="60">60x</button>
+                  <button class="chrome__devConfigScaleBtn" data-scale="300">300x</button>
+                </div>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Clock Control</label>
+                <div class="chrome__devConfigBtnGroup">
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPauseResume" data-bind="watchPauseBtn">Pause</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchPrevSegment">&lt; Prev</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="watchNextSegment">Next &gt;</button>
+                </div>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Jump to Segment</label>
+                <div class="chrome__devConfigBtnGroup chrome__devConfigBtnGroup--wrap" data-config-group="watchSegmentJump">
+                  <button class="chrome__devConfigSegmentBtn" data-segment="dawn">Dawn</button>
+                  <button class="chrome__devConfigSegmentBtn" data-segment="morning">Morning</button>
+                  <button class="chrome__devConfigSegmentBtn" data-segment="midday">Midday</button>
+                  <button class="chrome__devConfigSegmentBtn" data-segment="afternoon">Afternoon</button>
+                  <button class="chrome__devConfigSegmentBtn" data-segment="evening">Evening</button>
+                  <button class="chrome__devConfigSegmentBtn" data-segment="night">Night</button>
+                </div>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Current State</label>
+                <div class="chrome__devConfigStatus">
+                  <span class="chrome__devConfigStatusItem" data-bind="watchTime">--:--</span>
+                  <span class="chrome__devConfigStatusItem" data-bind="watchSegment">--</span>
+                  <span class="chrome__devConfigStatusItem" data-bind="watchActivity">--</span>
+                </div>
+              </div>
+            </div>
+            <!-- Hybrid Routing Settings (WO-HYBRID-ROUTING) -->
+            <div class="chrome__devConfigSection">
+              <h4 class="chrome__devConfigSectionTitle">Hybrid Routing</h4>
+              <div class="chrome__devConfigField chrome__devConfigField--checkbox">
+                <label class="chrome__devConfigCheckboxLabel">
+                  <input type="checkbox" class="chrome__devConfigCheckbox" data-config="hybridModeEnabled" checked>
+                  <span>Enable Hybrid Mode</span>
+                </label>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">EMA Alpha (smoothing)</label>
+                <input type="range" class="chrome__devConfigSlider" data-config="pressureEmaAlpha" min="5" max="20" value="10">
+                <span class="chrome__devConfigValue" data-value="pressureEmaAlpha">0.10</span>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Spike Threshold ($)</label>
+                <input type="range" class="chrome__devConfigSlider" data-config="spikeThreshold" min="20" max="150" value="50">
+                <span class="chrome__devConfigValue" data-value="spikeThreshold">50</span>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Explore Override Threshold</label>
+                <input type="range" class="chrome__devConfigSlider" data-config="exploreOverrideThreshold" min="20" max="100" value="50">
+                <span class="chrome__devConfigValue" data-value="exploreOverrideThreshold">0.50</span>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Return Override Threshold</label>
+                <input type="range" class="chrome__devConfigSlider" data-config="returnOverrideThreshold" min="50" max="150" value="80">
+                <span class="chrome__devConfigValue" data-value="returnOverrideThreshold">0.80</span>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Manual Controls</label>
+                <div class="chrome__devConfigBtnGroup">
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="triggerSpike">Trigger Spike</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="clearOverride">Clear Override</button>
+                  <button class="chrome__devConfigBtn chrome__devConfigBtn--small" data-action="resetDistance">Reset Distance</button>
+                </div>
+              </div>
+              <div class="chrome__devConfigField">
+                <label class="chrome__devConfigLabel">Current Pressure State</label>
+                <div class="chrome__devConfigStatus chrome__devConfigStatus--hybrid">
+                  <div class="chrome__devConfigStatusRow">
+                    <span class="chrome__devConfigStatusLabel">Distance:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridDistance">0.000</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridBand">City</span>
+                  </div>
+                  <div class="chrome__devConfigStatusRow">
+                    <span class="chrome__devConfigStatusLabel">Base:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridBaseSchedule">0.000</span>
+                    <span class="chrome__devConfigStatusLabel">Pressure:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridPressure">0.000</span>
+                  </div>
+                  <div class="chrome__devConfigStatusRow">
+                    <span class="chrome__devConfigStatusLabel">Spike:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridSpike">0.000</span>
+                    <span class="chrome__devConfigStatusLabel">Aftershock:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridAftershock">0.000</span>
+                  </div>
+                  <div class="chrome__devConfigStatusRow">
+                    <span class="chrome__devConfigStatusLabel">Override:</span>
+                    <span class="chrome__devConfigStatusItem" data-bind="hybridOverride">None</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div class="chrome__devConfigFooter">
             <button class="chrome__devConfigBtn chrome__devConfigBtn--reset" data-action="resetDevConfig">Reset Defaults</button>
@@ -384,6 +495,26 @@ export function createChrome(chromeHost){
     devConfigCheckboxes: Array.from(chromeHost.querySelectorAll('.chrome__devConfigCheckbox')),
     devConfigResetBtn: chromeHost.querySelector('[data-action="resetDevConfig"]'),
     devConfigApplyBtn: chromeHost.querySelector('[data-action="applyDevConfig"]'),
+    // Watch Mode dev config elements
+    watchTimeScaleBtns: Array.from(chromeHost.querySelectorAll('[data-config-group="watchTimeScale"] .chrome__devConfigScaleBtn')),
+    watchSegmentBtns: Array.from(chromeHost.querySelectorAll('[data-config-group="watchSegmentJump"] .chrome__devConfigSegmentBtn')),
+    watchPauseBtn: chromeHost.querySelector('[data-action="watchPauseResume"]'),
+    watchPrevBtn: chromeHost.querySelector('[data-action="watchPrevSegment"]'),
+    watchNextBtn: chromeHost.querySelector('[data-action="watchNextSegment"]'),
+    watchTimeDisplay: chromeHost.querySelector('[data-bind="watchTime"]'),
+    watchSegmentDisplay: chromeHost.querySelector('[data-bind="watchSegment"]'),
+    watchActivityDisplay: chromeHost.querySelector('[data-bind="watchActivity"]'),
+    // Hybrid Routing dev config elements
+    hybridDistanceDisplay: chromeHost.querySelector('[data-bind="hybridDistance"]'),
+    hybridBandDisplay: chromeHost.querySelector('[data-bind="hybridBand"]'),
+    hybridBaseScheduleDisplay: chromeHost.querySelector('[data-bind="hybridBaseSchedule"]'),
+    hybridPressureDisplay: chromeHost.querySelector('[data-bind="hybridPressure"]'),
+    hybridSpikeDisplay: chromeHost.querySelector('[data-bind="hybridSpike"]'),
+    hybridAftershockDisplay: chromeHost.querySelector('[data-bind="hybridAftershock"]'),
+    hybridOverrideDisplay: chromeHost.querySelector('[data-bind="hybridOverride"]'),
+    triggerSpikeBtn: chromeHost.querySelector('[data-action="triggerSpike"]'),
+    clearOverrideBtn: chromeHost.querySelector('[data-action="clearOverride"]'),
+    resetDistanceBtn: chromeHost.querySelector('[data-action="resetDistance"]'),
   };
 
   // HUB-G5: Dev config state
@@ -395,7 +526,19 @@ export function createChrome(chromeHost){
     damageMultiplier: 100,
     showDebugLogs: true,
     godMode: false,
+    // Watch Mode settings
+    watchModeEnabled: false,
+    watchTimeScale: 5,
+    // Hybrid Routing settings (WO-HYBRID-ROUTING)
+    hybridModeEnabled: true,
+    pressureEmaAlpha: 10,      // Stored as 10 = 0.10 (slider value / 100)
+    spikeThreshold: 50,        // $50
+    exploreOverrideThreshold: 50, // 0.50 (slider value / 100)
+    returnOverrideThreshold: 80,  // 0.80 (slider value / 100)
   };
+
+  // Watch Mode UI state
+  let watchModeUIUpdateInterval = null;
 
   // HUB-D4/G5: Enable DEV buttons (called from app.js after debug setup)
   // WO-STAGE-EPISODES-V1: Updated to emit demo signal through episode system
@@ -431,12 +574,14 @@ export function createChrome(chromeHost){
     if (els.devConfigModal) {
       els.devConfigModal.hidden = false;
       syncDevConfigUI();
+      startWatchModeUIUpdates(); // Start Watch Mode UI updates when modal opens
     }
   }
 
   function closeDevConfig() {
     if (els.devConfigModal) {
       els.devConfigModal.hidden = true;
+      stopWatchModeUIUpdates(); // Stop updates when modal closes
     }
   }
 
@@ -470,10 +615,47 @@ export function createChrome(chromeHost){
       devConfig[key] = checkbox.checked;
     });
 
-    // Broadcast config to window for other modules to read
-    window.__MYFI_DEV_CONFIG__ = { ...devConfig };
-    console.log('[Chrome] Dev config applied:', devConfig);
+    // WO-HYBRID-ROUTING: Build distanceDriver config with proper decimal values
+    const distanceDriverConfig = {
+      pressureEmaAlpha: devConfig.pressureEmaAlpha / 100,  // Convert to decimal
+      spikeThreshold: devConfig.spikeThreshold,
+      exploreOverrideThreshold: devConfig.exploreOverrideThreshold / 100,
+      returnOverrideThreshold: devConfig.returnOverrideThreshold / 100,
+    };
 
+    // WO-HYBRID-ROUTING: Build episodeRouter config
+    const episodeRouterConfig = {
+      hybridModeEnabled: devConfig.hybridModeEnabled,
+    };
+
+    // Broadcast config to window for other modules to read
+    window.__MYFI_DEV_CONFIG__ = {
+      ...devConfig,
+      distanceDriver: distanceDriverConfig,
+      episodeRouter: episodeRouterConfig,
+    };
+
+    // Apply Watch Mode settings to clock
+    const clock = getEpisodeClock();
+    if (clock) {
+      clock.setTimeScale(devConfig.watchTimeScale);
+    }
+
+    // Emit Watch Mode toggle event
+    if (window.__MYFI_DEBUG__?.actionBus) {
+      window.__MYFI_DEBUG__.actionBus.emit('watchMode:toggle', {
+        enabled: devConfig.watchModeEnabled,
+        timeScale: devConfig.watchTimeScale,
+      });
+
+      // WO-HYBRID-ROUTING: Emit hybrid mode toggle event
+      window.__MYFI_DEBUG__.actionBus.emit('hybridMode:configChanged', {
+        enabled: devConfig.hybridModeEnabled,
+        config: distanceDriverConfig,
+      });
+    }
+
+    console.log('[Chrome] Dev config applied:', devConfig);
     closeDevConfig();
   }
 
@@ -485,7 +667,23 @@ export function createChrome(chromeHost){
     devConfig.damageMultiplier = 100;
     devConfig.showDebugLogs = true;
     devConfig.godMode = false;
+    devConfig.watchModeEnabled = false;
+    devConfig.watchTimeScale = 5;
+    // WO-HYBRID-ROUTING: Reset hybrid settings
+    devConfig.hybridModeEnabled = true;
+    devConfig.pressureEmaAlpha = 10;
+    devConfig.spikeThreshold = 50;
+    devConfig.exploreOverrideThreshold = 50;
+    devConfig.returnOverrideThreshold = 80;
     syncDevConfigUI();
+    // Reset Watch Mode clock if present
+    const clock = getEpisodeClock();
+    if (clock) {
+      clock.setTimeScale(5);
+      clock.resume();
+    }
+    updateWatchModeUI();
+    updateHybridRoutingUI();
     console.log('[Chrome] Dev config reset to defaults');
   }
 
@@ -497,8 +695,16 @@ export function createChrome(chromeHost){
   els.devConfigSliders.forEach(slider => {
     slider.addEventListener('input', (e) => {
       const key = e.target.dataset.config;
+      const value = parseInt(e.target.value, 10);
       const valueEl = chromeHost.querySelector(`[data-value="${key}"]`);
-      if (valueEl) valueEl.textContent = e.target.value;
+      if (valueEl) {
+        // WO-HYBRID-ROUTING: Format hybrid sliders as decimals
+        if (key === 'pressureEmaAlpha' || key === 'exploreOverrideThreshold' || key === 'returnOverrideThreshold') {
+          valueEl.textContent = (value / 100).toFixed(2);
+        } else {
+          valueEl.textContent = value;
+        }
+      }
     });
   });
 
@@ -508,6 +714,215 @@ export function createChrome(chromeHost){
 
   if (els.devConfigApplyBtn) {
     els.devConfigApplyBtn.addEventListener('click', applyDevConfig);
+  }
+
+  // Watch Mode control handlers
+  function getEpisodeClock() {
+    return window.__MYFI_DEBUG__?.episodeClock;
+  }
+
+  function getEpisodeRouter() {
+    return window.__MYFI_DEBUG__?.episodeRouter;
+  }
+
+  function updateWatchModeUI() {
+    const clock = getEpisodeClock();
+    const router = getEpisodeRouter();
+
+    if (!clock) {
+      if (els.watchTimeDisplay) els.watchTimeDisplay.textContent = '--:--';
+      if (els.watchSegmentDisplay) els.watchSegmentDisplay.textContent = '--';
+      if (els.watchActivityDisplay) els.watchActivityDisplay.textContent = '--';
+      return;
+    }
+
+    const state = clock.getState();
+    if (els.watchTimeDisplay) els.watchTimeDisplay.textContent = state.timeString;
+    if (els.watchSegmentDisplay) els.watchSegmentDisplay.textContent = state.segmentLabel;
+
+    if (router) {
+      const activityState = router.getCurrentActivityState();
+      if (els.watchActivityDisplay && activityState) {
+        els.watchActivityDisplay.textContent = activityState.label;
+      }
+    }
+
+    // Update pause button text
+    if (els.watchPauseBtn) {
+      els.watchPauseBtn.textContent = state.isPaused ? 'Resume' : 'Pause';
+    }
+
+    // Update time scale button active state
+    els.watchTimeScaleBtns.forEach(btn => {
+      const scale = parseInt(btn.dataset.scale, 10);
+      btn.classList.toggle('chrome__devConfigScaleBtn--active', scale === state.timeScale);
+    });
+  }
+
+  function startWatchModeUIUpdates() {
+    if (watchModeUIUpdateInterval) return;
+    watchModeUIUpdateInterval = setInterval(() => {
+      updateWatchModeUI();
+      updateHybridRoutingUI(); // Also update hybrid routing UI
+    }, 500);
+    updateWatchModeUI(); // Initial update
+    updateHybridRoutingUI();
+  }
+
+  function stopWatchModeUIUpdates() {
+    if (watchModeUIUpdateInterval) {
+      clearInterval(watchModeUIUpdateInterval);
+      watchModeUIUpdateInterval = null;
+    }
+  }
+
+  // WO-HYBRID-ROUTING: Get distance driver for hybrid routing
+  function getDistanceDriver() {
+    return window.__MYFI_DEBUG__?.distanceDriver;
+  }
+
+  // WO-HYBRID-ROUTING: Update hybrid routing UI displays
+  function updateHybridRoutingUI() {
+    const driver = getDistanceDriver();
+    const router = getEpisodeRouter();
+
+    if (!driver) {
+      if (els.hybridDistanceDisplay) els.hybridDistanceDisplay.textContent = '--';
+      if (els.hybridBandDisplay) els.hybridBandDisplay.textContent = '--';
+      if (els.hybridBaseScheduleDisplay) els.hybridBaseScheduleDisplay.textContent = '--';
+      if (els.hybridPressureDisplay) els.hybridPressureDisplay.textContent = '--';
+      if (els.hybridSpikeDisplay) els.hybridSpikeDisplay.textContent = '--';
+      if (els.hybridAftershockDisplay) els.hybridAftershockDisplay.textContent = '--';
+      if (els.hybridOverrideDisplay) els.hybridOverrideDisplay.textContent = '--';
+      return;
+    }
+
+    const state = driver.getState();
+
+    if (els.hybridDistanceDisplay) {
+      els.hybridDistanceDisplay.textContent = state.distance01.toFixed(3);
+    }
+    if (els.hybridBandDisplay && state.distanceBand) {
+      els.hybridBandDisplay.textContent = state.distanceBand.label;
+    }
+    if (els.hybridBaseScheduleDisplay) {
+      els.hybridBaseScheduleDisplay.textContent = state.baseSchedule.toFixed(3);
+    }
+    if (els.hybridPressureDisplay) {
+      els.hybridPressureDisplay.textContent = state.pressureModifier.toFixed(3);
+    }
+    if (els.hybridSpikeDisplay) {
+      els.hybridSpikeDisplay.textContent = state.spikeImpulse.toFixed(3);
+    }
+    if (els.hybridAftershockDisplay) {
+      els.hybridAftershockDisplay.textContent = state.aftershock.toFixed(3);
+    }
+    if (els.hybridOverrideDisplay && router) {
+      const routerState = router.getState();
+      if (routerState.currentPressureOverride) {
+        els.hybridOverrideDisplay.textContent = routerState.currentPressureOverride.reason.toUpperCase();
+        els.hybridOverrideDisplay.classList.add('chrome__devConfigStatusItem--active');
+      } else {
+        els.hybridOverrideDisplay.textContent = 'None';
+        els.hybridOverrideDisplay.classList.remove('chrome__devConfigStatusItem--active');
+      }
+    }
+  }
+
+  // WO-HYBRID-ROUTING: Bind hybrid routing buttons
+  if (els.triggerSpikeBtn) {
+    els.triggerSpikeBtn.addEventListener('click', () => {
+      const driver = getDistanceDriver();
+      if (driver && driver.triggerSpike) {
+        driver.triggerSpike(100); // $100 spike
+        console.log('[Chrome] Manual spike triggered');
+        updateHybridRoutingUI();
+      }
+    });
+  }
+
+  if (els.clearOverrideBtn) {
+    els.clearOverrideBtn.addEventListener('click', () => {
+      const router = getEpisodeRouter();
+      if (router && router.clearOverride) {
+        router.clearOverride();
+        console.log('[Chrome] Override cleared');
+        updateHybridRoutingUI();
+      }
+    });
+  }
+
+  if (els.resetDistanceBtn) {
+    els.resetDistanceBtn.addEventListener('click', () => {
+      const driver = getDistanceDriver();
+      if (driver && driver.reset) {
+        driver.reset('manual');
+        console.log('[Chrome] Distance reset');
+        updateHybridRoutingUI();
+      }
+    });
+  }
+
+  // Bind Watch Mode time scale buttons
+  els.watchTimeScaleBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const scale = parseInt(btn.dataset.scale, 10);
+      devConfig.watchTimeScale = scale;
+
+      const clock = getEpisodeClock();
+      if (clock) {
+        clock.setTimeScale(scale);
+      }
+
+      // Update active state
+      els.watchTimeScaleBtns.forEach(b => {
+        b.classList.toggle('chrome__devConfigScaleBtn--active', b === btn);
+      });
+    });
+  });
+
+  // Bind Watch Mode segment jump buttons
+  els.watchSegmentBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const segment = btn.dataset.segment;
+      const clock = getEpisodeClock();
+      if (clock) {
+        clock.jumpToSegment(segment);
+        updateWatchModeUI();
+      }
+    });
+  });
+
+  // Bind pause/resume button
+  if (els.watchPauseBtn) {
+    els.watchPauseBtn.addEventListener('click', () => {
+      const clock = getEpisodeClock();
+      if (clock) {
+        clock.togglePause();
+        updateWatchModeUI();
+      }
+    });
+  }
+
+  // Bind prev/next segment buttons
+  if (els.watchPrevBtn) {
+    els.watchPrevBtn.addEventListener('click', () => {
+      const clock = getEpisodeClock();
+      if (clock) {
+        clock.jumpToPreviousSegment();
+        updateWatchModeUI();
+      }
+    });
+  }
+
+  if (els.watchNextBtn) {
+    els.watchNextBtn.addEventListener('click', () => {
+      const clock = getEpisodeClock();
+      if (clock) {
+        clock.jumpToNextSegment();
+        updateWatchModeUI();
+      }
+    });
   }
 
   function apply(cfg = {}){

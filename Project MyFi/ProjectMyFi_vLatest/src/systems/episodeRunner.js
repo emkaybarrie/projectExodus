@@ -23,6 +23,32 @@ const DEFAULTS = {
 };
 
 /**
+ * WO-BASELINE-COHERENCE: Default baseline mode configuration
+ * Overridable via __MYFI_DEV_CONFIG__.episodeRunner
+ */
+const BASELINE_DEFAULTS = {
+  // When true, incidents auto-resolve immediately without overlay/player interaction
+  baselineAutoResolveMode: false,
+
+  // Auto-resolve delay in baseline mode (ms) - minimal pause for visual continuity
+  baselineResolveDelayMs: 800,
+
+  // Whether to show brief resolution echo in baseline mode
+  baselineShowEcho: true,
+
+  // Probability of player "engagement" simulation in baseline mode (for varied outcomes)
+  baselineEngageChance: 0.3,
+};
+
+/**
+ * Get merged baseline config from defaults and __MYFI_DEV_CONFIG__
+ */
+function getBaselineConfig() {
+  const devConfig = typeof window !== 'undefined' && window.__MYFI_DEV_CONFIG__?.episodeRunner;
+  return { ...BASELINE_DEFAULTS, ...devConfig };
+}
+
+/**
  * Create an Episode Runner
  *
  * @param {Object} options
@@ -165,8 +191,13 @@ export function createEpisodeRunner(options = {}) {
    * - All incidents show overlay first with Engage/Skip options
    * - Engage = enter slow-time, show tagging options (combat spawns autobattler)
    * - Skip = autopilot resolves immediately
+   *
+   * WO-BASELINE-COHERENCE: Baseline auto-resolve mode
+   * - When baselineAutoResolveMode is true, skip overlay entirely
+   * - Resolve after brief delay with simulated outcome
    */
   function handleActive() {
+    const baselineConfig = getBaselineConfig();
     const mechanicsMode = currentIncident.mechanics?.mode || MECHANIC_MODES.CHOICE;
     const isAutobattler = mechanicsMode === MECHANIC_MODES.AUTOBATTLER;
 
@@ -175,6 +206,33 @@ export function createEpisodeRunner(options = {}) {
     // WO-S3: Reset engagement state - player hasn't engaged yet
     isPlayerEngaged = false;
     isSlowTimeActive = false;
+
+    // WO-BASELINE-COHERENCE: Check for baseline auto-resolve mode
+    if (baselineConfig.baselineAutoResolveMode) {
+      console.log('[EpisodeRunner] Baseline mode - auto-resolving without overlay');
+
+      // Emit minimal event for tracking (no overlay shown)
+      emit('episode:active', {
+        episode: currentEpisode,
+        incident: currentIncident,
+        mechanicsMode,
+        baselineMode: true,
+        awaitingEngagement: false,
+      });
+
+      // Simulate engagement based on chance
+      const simulatedEngagement = Math.random() < baselineConfig.baselineEngageChance;
+      isPlayerEngaged = simulatedEngagement;
+
+      // Brief delay for visual continuity, then auto-resolve
+      autopilotTimerId = setTimeout(() => {
+        if (currentEpisode && currentEpisode.phase === EPISODE_PHASES.ACTIVE) {
+          resolveWithAutopilot(simulatedEngagement);
+        }
+      }, baselineConfig.baselineResolveDelayMs);
+
+      return;
+    }
 
     // WO-S3: Emit episode:active with overlay config - UI shows unified overlay
     emit('episode:active', {
@@ -408,26 +466,49 @@ export function createEpisodeRunner(options = {}) {
 
   /**
    * Autopilot resolution (player didn't intervene)
+   *
+   * WO-BASELINE-COHERENCE: Enhanced for baseline mode
+   * @param {boolean} simulatedEngagement - If true, simulates player engagement for varied outcomes
    */
-  function resolveWithAutopilot() {
+  function resolveWithAutopilot(simulatedEngagement = false) {
     if (!currentEpisode || currentEpisode.phase !== EPISODE_PHASES.ACTIVE) {
       return;
     }
 
-    console.log('[EpisodeRunner] Autopilot resolution');
+    const baselineConfig = getBaselineConfig();
+    const isBaselineMode = baselineConfig.baselineAutoResolveMode;
+
+    console.log(`[EpisodeRunner] Autopilot resolution (baseline: ${isBaselineMode}, simEngaged: ${simulatedEngagement})`);
 
     // Auto-select based on signal category or default to unknown
     const autoChoice = currentIncident._signal?.payload?.category || 'unknown';
     const vitalsDelta = calculateVitalsDelta(currentIncident, autoChoice);
 
+    // WO-BASELINE-COHERENCE: Adjust resolution mode based on simulated engagement
+    const resolutionMode = simulatedEngagement ? 'player' : 'auto';
+    const confidence = simulatedEngagement ? 0.8 : 0.6;
+    const notes = isBaselineMode
+      ? `Baseline auto-resolved (simulated ${simulatedEngagement ? 'engaged' : 'skipped'})`
+      : 'Auto-resolved by autopilot';
+
     // Create resolution
     currentEpisode.resolution = createResolution({
-      mode: 'auto',
+      mode: resolutionMode,
       choiceId: autoChoice,
-      confidence: 0.6,
+      confidence,
       vitalsDelta,
-      notes: 'Auto-resolved by autopilot',
+      notes,
     });
+
+    // WO-BASELINE-COHERENCE: Emit baseline resolution event for echo display
+    if (isBaselineMode && baselineConfig.baselineShowEcho) {
+      emit('episode:baselineResolved', {
+        episode: currentEpisode,
+        incident: currentIncident,
+        resolution: currentEpisode.resolution,
+        simulatedEngagement,
+      });
+    }
 
     // Transition to resolving
     transitionToPhase(EPISODE_PHASES.RESOLVING);
@@ -559,6 +640,18 @@ export function createEpisodeRunner(options = {}) {
     }
   }
 
+  /**
+   * WO-BASELINE-COHERENCE: Set baseline auto-resolve mode at runtime
+   */
+  function setBaselineMode(enabled) {
+    if (typeof window !== 'undefined') {
+      window.__MYFI_DEV_CONFIG__ = window.__MYFI_DEV_CONFIG__ || {};
+      window.__MYFI_DEV_CONFIG__.episodeRunner = window.__MYFI_DEV_CONFIG__.episodeRunner || {};
+      window.__MYFI_DEV_CONFIG__.episodeRunner.baselineAutoResolveMode = !!enabled;
+      console.log(`[EpisodeRunner] Baseline mode ${enabled ? 'enabled' : 'disabled'}`);
+    }
+  }
+
   return {
     init,
     startFromSignal,
@@ -570,6 +663,10 @@ export function createEpisodeRunner(options = {}) {
     forceResolve,
     cancel,
 
+    // WO-BASELINE-COHERENCE: Baseline mode control
+    setBaselineMode,
+    getBaselineConfig,
+
     // Getters
     getCurrentEpisode: () => currentEpisode,
     getCurrentIncident: () => currentIncident,
@@ -579,6 +676,8 @@ export function createEpisodeRunner(options = {}) {
     isPlayerEngaged: () => isPlayerEngaged,
     getTimeline: () => [...timeline],
     getPhase: () => currentEpisode?.phase || null,
+    // WO-BASELINE-COHERENCE: Baseline mode getter
+    isBaselineMode: () => getBaselineConfig().baselineAutoResolveMode,
   };
 }
 

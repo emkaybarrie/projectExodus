@@ -119,9 +119,15 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  <!-- WO-S9: TOP BORDER ROW - Queue indicator pinned right -->
+  <!-- WO-S9: TOP BORDER ROW - Activity state caption left, Queue indicator right -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <div class="BadlandsStage__topBar">
+    <!-- WO-WATCH-EPISODE-ROUTING: Activity state segment caption -->
+    <div class="BadlandsStage__segmentCaption" data-bind="segmentCaption">
+      <span class="BadlandsStage__segmentTime" data-bind="segmentTime">06:00</span>
+      <span class="BadlandsStage__segmentLabel" data-bind="segmentLabel">Morning</span>
+      <span class="BadlandsStage__activityLabel" data-bind="activityLabel">Explore</span>
+    </div>
     <div class="BadlandsStage__queueIndicator" data-visible="false" data-bind="queueIndicator">
       <span class="BadlandsStage__queueLabel">Queued:</span>
       <div class="BadlandsStage__queueDots" data-bind="queueDots">
@@ -145,6 +151,18 @@
   <div class="BadlandsStage__tabToast" data-visible="false">
     <span class="BadlandsStage__tabToastIcon" data-bind="tabToastIcon">&#127758;</span>
     <span class="BadlandsStage__tabToastLabel" data-bind="tabToastLabel">Current</span>
+  </div>
+
+  <!-- WO-UX-NEXT: Resolution Echo - shows cause→effect after incident resolves -->
+  <div class="BadlandsStage__resolutionEcho" data-visible="false">
+    <div class="BadlandsStage__echoIcon" data-bind="echoIcon">&#128058;</div>
+    <div class="BadlandsStage__echoContent">
+      <span class="BadlandsStage__echoTitle" data-bind="echoTitle">Wolf Pack</span>
+      <span class="BadlandsStage__echoClosure" data-bind="echoClosure">The dust settles...</span>
+    </div>
+    <div class="BadlandsStage__echoVitals" data-bind="echoVitals">
+      <!-- Vitals impact rendered dynamically -->
+    </div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->

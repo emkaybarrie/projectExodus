@@ -18,6 +18,12 @@ import { createStageSignals, createTransactionSignal } from '../systems/stageSig
 import { createEpisodeRunner } from '../systems/episodeRunner.js';
 // WO-S5: Scene Beat Log
 import { createSceneBeatLog } from '../systems/sceneBeatLog.js';
+// WO-BASELINE-COHERENCE: Distance driver and scene pacer
+import { createDistanceDriver } from '../systems/distanceDriver.js';
+import { createScenePacer } from '../systems/scenePacer.js';
+// WO-WATCH-EPISODE-ROUTING: Episode clock and router
+import { createEpisodeClock } from '../systems/episodeClock.js';
+import { createEpisodeRouter } from '../systems/episodeRouter.js';
 // Keyboard navigation for cross-layout screens
 import * as keyboardNav from './keyboardNav.js';
 // WO-P0-A: First-run welcome overlay
@@ -68,6 +74,40 @@ const sceneBeatLog = createSceneBeatLog({
   maxBeats: 50,
 });
 sceneBeatLog.init();
+
+// WO-BASELINE-COHERENCE: Distance driver for map progression
+const distanceDriver = createDistanceDriver({
+  actionBus,
+  onDistanceChange: (distance01, details) => {
+    console.log(`[App] Distance: ${(distance01 * 100).toFixed(1)}% (trajectory: ${(details.trajectory * 100).toFixed(1)}%, pressure: ${details.pressure.toFixed(2)})`);
+  },
+});
+distanceDriver.init();
+
+// WO-BASELINE-COHERENCE: Scene pacer for incident timing
+const scenePacer = createScenePacer({
+  actionBus,
+  onReadyChange: (ready, reason) => {
+    console.log(`[App] Scene pacer: ${ready ? 'ready' : 'blocked'} (${reason})`);
+  },
+});
+scenePacer.init();
+
+// WO-WATCH-EPISODE-ROUTING: Episode clock (simulated time-of-day)
+const episodeClock = createEpisodeClock({
+  initialDayT: 0.25, // Start at 6:00 AM
+  defaultTimeScale: 5, // Default 5x speed for dev
+});
+
+// WO-WATCH-EPISODE-ROUTING: Episode router (time→activity state mapping)
+const episodeRouter = createEpisodeRouter({
+  actionBus,
+  episodeClock,
+  onStateChange: (transition) => {
+    console.log(`[App] Activity state: ${transition.to?.label || 'unknown'} (from ${transition.from?.label || 'none'})`);
+  },
+});
+episodeRouter.init();
 
 // Register demo VM providers for surfaces
 // Hub uses controller state if available, otherwise falls back to demo VM
@@ -161,6 +201,12 @@ window.__MYFI_DEBUG__ = {
   episodeRunner,
   // WO-S5: Scene Beat Log
   sceneBeatLog,
+  // WO-BASELINE-COHERENCE: Distance driver and scene pacer
+  distanceDriver,
+  scenePacer,
+  // WO-WATCH-EPISODE-ROUTING: Episode clock and router
+  episodeClock,
+  episodeRouter,
   // Helper to emit a demo transaction signal
   // WO-STAGE-EPISODES-V1: Updated to randomly select episode type
   // Categories map to: discretionary→COMBAT(autobattler), subscription→SOCIAL(choice), essential→TRAVERSAL(autobattler)
@@ -225,16 +271,57 @@ if (!firstRun.hasCompletedFirstRun()) {
 
 // Start Hub controller when on hub surface
 // WO-HUB-02: Mark as persistent (app-level subscriptions, not cleaned up per-surface)
+
+// WO-WATCH-EPISODE-ROUTING: Episode clock update loop
+let episodeClockIntervalId = null;
+const EPISODE_CLOCK_TICK_MS = 100; // Update every 100ms for smooth time progression
+
+function startEpisodeClock() {
+  if (episodeClockIntervalId) return;
+
+  let lastTime = Date.now();
+  episodeClockIntervalId = setInterval(() => {
+    const now = Date.now();
+    const dt = (now - lastTime) / 1000; // Convert to seconds
+    lastTime = now;
+    episodeClock.update(dt);
+  }, EPISODE_CLOCK_TICK_MS);
+
+  episodeRouter.start();
+  console.log('[App] WO-WATCH: Episode clock and router started');
+}
+
+function stopEpisodeClock() {
+  if (episodeClockIntervalId) {
+    clearInterval(episodeClockIntervalId);
+    episodeClockIntervalId = null;
+  }
+  episodeRouter.stop();
+  console.log('[App] WO-WATCH: Episode clock and router stopped');
+}
+
 actionBus.subscribe('surface:mounted', ({ surfaceId }) => {
   if (surfaceId === 'hub') {
     hubController.start();
+    // WO-BASELINE-COHERENCE: Start distance driver and scene pacer
+    distanceDriver.start();
+    scenePacer.start();
+    // WO-WATCH-EPISODE-ROUTING: Start episode clock
+    startEpisodeClock();
     console.log('[App] Hub controller started');
+    console.log('[App] WO-BASELINE: Distance driver and scene pacer started');
   }
 }, 'app', { persistent: true });
 
 actionBus.subscribe('surface:unmounted', ({ surfaceId }) => {
   if (surfaceId === 'hub') {
     hubController.stop();
+    // WO-BASELINE-COHERENCE: Stop distance driver and scene pacer
+    distanceDriver.stop();
+    scenePacer.stop();
+    // WO-WATCH-EPISODE-ROUTING: Stop episode clock
+    stopEpisodeClock();
     console.log('[App] Hub controller stopped');
+    console.log('[App] WO-BASELINE: Distance driver and scene pacer stopped');
   }
 }, 'app', { persistent: true });

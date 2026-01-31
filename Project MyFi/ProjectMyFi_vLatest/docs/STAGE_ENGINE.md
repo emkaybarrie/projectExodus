@@ -299,3 +299,43 @@ Timeline stored in `episodeRunner.getTimeline()` (last 50 episodes).
 3. **Combat is canonical** - Autobattler is the reference mechanic
 4. **Incidents differ only by presentation** - Same pipeline, different visuals
 5. **No forced engagement** - Autopilot handles inaction gracefully
+
+---
+
+## Watch Mode Episode Routing (WO-WATCH-EPISODE-ROUTING)
+
+Watch Mode adds time-of-day awareness to the stage, routing visual pools and incident rates based on simulated daily rhythm.
+
+### Integration with Stage
+
+The Episode Clock and Router integrate with the stage through:
+
+1. **Visual Pool Bias** - Activity states bias which world states appear
+   - Morning: calm states (rest, patrol, city)
+   - Active: movement states (patrol, explore, return)
+   - Evening: winding down (return, city, rest)
+   - Night: shelter (rest, city)
+
+2. **Segment Caption** - Top bar shows current time, segment, and activity state
+
+3. **Incident Pacing** - Scene Pacer adjusts probability based on activity:
+   - REST: 0.1x incidents (peaceful)
+   - EXPLORE: 1.0x incidents (normal)
+   - FOCUS: 1.5x incidents (intense)
+
+### Dev Controls
+
+Access Watch Mode controls via Dev Config modal:
+- Toggle Watch Mode on/off
+- Time scale buttons (1x to 300x)
+- Pause/Resume clock
+- Jump to segment
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/systems/episodeClock.js` | Simulated time-of-day tracking |
+| `src/systems/episodeRouter.js` | Time → Activity state mapping |
+
+See [BASELINE_MODE.md](./BASELINE_MODE.md#watch-mode-episode-routing-wo-watch-episode-routing) for full details.

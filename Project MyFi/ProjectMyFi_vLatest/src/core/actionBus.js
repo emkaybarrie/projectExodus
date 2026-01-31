@@ -47,9 +47,11 @@ export function emit(action, params = {}, source = 'unknown') {
  * @param {string} action - Action name to subscribe to ('*' for wildcard)
  * @param {Function} handler - Handler function (params, meta) => void
  * @param {string} [source] - Optional source identifier for dev-mode tracking
+ * @param {Object} [options] - Optional subscription options
+ * @param {boolean} [options.persistent] - If true, subscription won't trigger leak warnings (for app-level subscriptions)
  * @returns {Function} Unsubscribe function — MUST be called on unmount
  */
-export function subscribe(action, handler, source = 'unknown') {
+export function subscribe(action, handler, source = 'unknown', options = {}) {
   if (!listeners.has(action)) {
     listeners.set(action, []);
   }
@@ -63,6 +65,7 @@ export function subscribe(action, handler, source = 'unknown') {
       source,
       stack: new Error().stack,
       timestamp: Date.now(),
+      persistent: options.persistent || false, // WO-HUB-02: Mark as persistent (app-level, won't trigger leak warnings)
     });
   }
 
@@ -92,7 +95,8 @@ export function createPartEmitter(partId) {
   return {
     emit: (action, params = {}) => emit(action, params, partId),
     // HUB-08-R: Scoped subscribe with automatic source tagging
-    subscribe: (action, handler) => subscribe(action, handler, partId),
+    // WO-HUB-02: Supports options.persistent for app-level subscriptions
+    subscribe: (action, handler, options = {}) => subscribe(action, handler, partId, options),
   };
 }
 
@@ -107,6 +111,7 @@ export function getActiveSubscriptionCount() {
 /**
  * HUB-08-R: Check for subscription leaks after surface unmount
  * Call this from surfaceCompositor after unmounting all parts
+ * WO-HUB-02: Skips persistent (app-level) subscriptions
  * @param {string} surfaceId - Surface that was unmounted
  */
 export function checkForLeaks(surfaceId) {
@@ -116,6 +121,9 @@ export function checkForLeaks(surfaceId) {
   const now = Date.now();
 
   for (const [id, sub] of activeSubscriptions.entries()) {
+    // WO-HUB-02: Skip persistent subscriptions (app-level, intentionally not cleaned up per-surface)
+    if (sub.persistent) continue;
+
     // Subscriptions older than 100ms after unmount check are likely leaks
     if (now - sub.timestamp > 100) {
       leaks.push(sub);
