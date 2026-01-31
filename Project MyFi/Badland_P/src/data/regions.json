@@ -1,0 +1,61 @@
+{
+  "regions": [
+    {
+      "id": "frontier",
+      "name": "The Frontier",
+      "description": "Rolling plains and desert mesas. A land of opportunity and danger.",
+      "difficulty": 1,
+      "unlockCost": 0,
+      "theme": {
+        "sky": ["#1a0a2e", "#2d1b4e", "#4a2c5a"],
+        "horizon": "#fb923c",
+        "ground": "#3d2314",
+        "accent": "#f97316"
+      },
+      "enemies": ["charger", "jumper"],
+      "platformDensity": 0.8,
+      "hazardRate": 0.1,
+      "essenceMultiplier": 1.0
+    },
+    {
+      "id": "badlands",
+      "name": "The Badlands",
+      "description": "Scorched earth and volcanic rifts. The heat is relentless.",
+      "difficulty": 2,
+      "unlockCost": 500,
+      "theme": {
+        "sky": ["#1a0505", "#2d0a0a", "#4a1515"],
+        "horizon": "#ef4444",
+        "ground": "#4a1c1c",
+        "accent": "#f97316"
+      },
+      "enemies": ["charger", "jumper", "shooter"],
+      "platformDensity": 0.6,
+      "hazardRate": 0.2,
+      "essenceMultiplier": 1.5
+    },
+    {
+      "id": "void",
+      "name": "The Void",
+      "description": "Beyond the edge of reality. Only the strongest survive.",
+      "difficulty": 3,
+      "unlockCost": 1500,
+      "theme": {
+        "sky": ["#030014", "#0a0520", "#150a30"],
+        "horizon": "#a855f7",
+        "ground": "#1a0a2e",
+        "accent": "#6366f1"
+      },
+      "enemies": ["jumper", "shooter", "bomber"],
+      "platformDensity": 0.5,
+      "hazardRate": 0.3,
+      "essenceMultiplier": 2.0
+    }
+  ],
+  "hubCity": {
+    "id": "hub",
+    "name": "Nexus City",
+    "description": "The last bastion of civilization. Your home base.",
+    "services": ["upgrades", "loadout", "leaderboard"]
+  }
+}

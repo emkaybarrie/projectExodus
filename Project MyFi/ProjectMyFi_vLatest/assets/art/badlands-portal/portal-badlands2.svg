@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <!-- Badlands theme: Red/Orange - Volcanic wasteland -->
+    <linearGradient id="badlandsSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a0505"/>
+      <stop offset="40%" style="stop-color:#2d0a0a"/>
+      <stop offset="70%" style="stop-color:#4a1515"/>
+      <stop offset="100%" style="stop-color:#7c2d12;stop-opacity:0.5"/>
+    </linearGradient>
+    <linearGradient id="badlandsGround" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a1c1c"/>
+      <stop offset="100%" style="stop-color:#1a0808"/>
+    </linearGradient>
+    <radialGradient id="lavaGlow" cx="30%" cy="90%" r="50%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.6"/>
+      <stop offset="40%" style="stop-color:#f97316;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#f97316;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="lavaGlow2" cx="70%" cy="95%" r="40%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.5"/>
+      <stop offset="100%" style="stop-color:#f97316;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="badlandsGlow">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="400" height="600" fill="url(#badlandsSky)"/>
+
+  <!-- Smoke/ash particles -->
+  <g fill="#555" opacity="0.3">
+    <circle cx="100" cy="100" r="30"/>
+    <circle cx="300" cy="150" r="25"/>
+    <circle cx="50" cy="200" r="20"/>
+    <circle cx="350" cy="80" r="35"/>
+  </g>
+
+  <!-- Jagged mountains -->
+  <path d="M0 350 L40 280 L80 320 L130 250 L180 310 L220 240 L270 300 L320 220 L370 290 L400 260 L400 600 L0 600 Z"
+        fill="#2a1010" opacity="0.9"/>
+  <path d="M0 400 L50 350 L100 380 L150 320 L200 370 L260 300 L310 360 L360 290 L400 340 L400 600 L0 600 Z"
+        fill="#3d1818" opacity="0.8"/>
+
+  <!-- Lava glow -->
+  <rect x="0" y="450" width="400" height="150" fill="url(#lavaGlow)"/>
+  <rect x="0" y="500" width="400" height="100" fill="url(#lavaGlow2)"/>
+
+  <!-- Ground with lava cracks -->
+  <path d="M0 500 Q80 480 160 510 Q240 530 320 490 Q380 470 400 490 L400 600 L0 600 Z"
+        fill="url(#badlandsGround)"/>
+
+  <!-- Lava cracks -->
+  <g stroke="#ef4444" stroke-width="2" fill="none" opacity="0.8">
+    <path d="M50 550 Q70 540 90 560 Q110 580 130 570"/>
+    <path d="M200 530 Q220 550 240 540 Q270 520 290 550"/>
+    <path d="M320 560 Q340 550 360 570"/>
+  </g>
+
+  <!-- Rock spires -->
+  <g fill="#1a0808">
+    <path d="M80 500 L95 420 L110 500 Z"/>
+    <path d="M280 490 L300 380 L320 490 Z"/>
+    <path d="M350 510 L365 450 L380 510 Z"/>
+  </g>
+
+  <!-- Portal glow hint -->
+  <ellipse cx="200" cy="300" rx="70" ry="90" fill="#ef4444" opacity="0.15" filter="url(#badlandsGlow)"/>
+</svg>

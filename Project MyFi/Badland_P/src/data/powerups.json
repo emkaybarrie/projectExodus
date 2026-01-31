@@ -1,0 +1,190 @@
+{
+  "runPowerups": [
+    {
+      "id": "speed_boost",
+      "name": "Swift Stride",
+      "description": "+15% movement speed",
+      "rarity": "common",
+      "effect": {
+        "type": "stat",
+        "stat": "speed",
+        "value": 0.15,
+        "mode": "multiply"
+      },
+      "duration": "run",
+      "spawnWeight": 3
+    },
+    {
+      "id": "double_jump",
+      "name": "Wind Walker",
+      "description": "Enables double jump",
+      "rarity": "rare",
+      "effect": {
+        "type": "ability",
+        "ability": "doubleJump",
+        "value": true
+      },
+      "duration": "run",
+      "spawnWeight": 1
+    },
+    {
+      "id": "momentum_gain",
+      "name": "Flow State",
+      "description": "+50% momentum gain",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "stat",
+        "stat": "momentumGain",
+        "value": 0.5,
+        "mode": "multiply"
+      },
+      "duration": "run",
+      "spawnWeight": 2
+    },
+    {
+      "id": "damage_boost",
+      "name": "Power Strike",
+      "description": "+25% attack damage",
+      "rarity": "uncommon",
+      "effect": {
+        "type": "stat",
+        "stat": "damage",
+        "value": 0.25,
+        "mode": "multiply"
+      },
+      "duration": "run",
+      "spawnWeight": 2
+    },
+    {
+      "id": "shield",
+      "name": "Barrier",
+      "description": "Block one hit",
+      "rarity": "rare",
+      "effect": {
+        "type": "shield",
+        "charges": 1
+      },
+      "duration": "run",
+      "spawnWeight": 1
+    },
+    {
+      "id": "magnet",
+      "name": "Essence Magnet",
+      "description": "Attract nearby essence",
+      "rarity": "common",
+      "effect": {
+        "type": "ability",
+        "ability": "magnetRange",
+        "value": 150
+      },
+      "duration": "run",
+      "spawnWeight": 3
+    },
+    {
+      "id": "regen",
+      "name": "Vitality",
+      "description": "Slowly regenerate health",
+      "rarity": "rare",
+      "effect": {
+        "type": "regen",
+        "value": 1,
+        "interval": 5000
+      },
+      "duration": "run",
+      "spawnWeight": 1
+    }
+  ],
+  "persistentUpgrades": [
+    {
+      "id": "max_health",
+      "name": "Fortitude",
+      "description": "+10 max health",
+      "maxLevel": 10,
+      "baseCost": 100,
+      "costMultiplier": 1.5,
+      "effect": {
+        "type": "stat",
+        "stat": "maxHealth",
+        "valuePerLevel": 10
+      }
+    },
+    {
+      "id": "starting_momentum",
+      "name": "Quick Start",
+      "description": "+5 starting momentum",
+      "maxLevel": 10,
+      "baseCost": 150,
+      "costMultiplier": 1.5,
+      "effect": {
+        "type": "stat",
+        "stat": "startingMomentum",
+        "valuePerLevel": 5
+      }
+    },
+    {
+      "id": "essence_bonus",
+      "name": "Prospector",
+      "description": "+10% essence gained",
+      "maxLevel": 10,
+      "baseCost": 200,
+      "costMultiplier": 1.5,
+      "effect": {
+        "type": "stat",
+        "stat": "essenceMultiplier",
+        "valuePerLevel": 0.1
+      }
+    },
+    {
+      "id": "attack_power",
+      "name": "Weapon Training",
+      "description": "+5% attack damage",
+      "maxLevel": 10,
+      "baseCost": 175,
+      "costMultiplier": 1.5,
+      "effect": {
+        "type": "stat",
+        "stat": "damage",
+        "valuePerLevel": 0.05
+      }
+    },
+    {
+      "id": "momentum_decay",
+      "name": "Endurance",
+      "description": "-10% momentum decay",
+      "maxLevel": 5,
+      "baseCost": 250,
+      "costMultiplier": 2.0,
+      "effect": {
+        "type": "stat",
+        "stat": "momentumDecay",
+        "valuePerLevel": -0.1
+      }
+    }
+  ],
+  "pickups": {
+    "essence": {
+      "id": "essence",
+      "name": "Essence",
+      "description": "Currency for upgrades",
+      "color": "#fbbf24",
+      "size": 12,
+      "baseValue": 1
+    },
+    "health": {
+      "id": "health",
+      "name": "Health Orb",
+      "description": "Restore health",
+      "color": "#22c55e",
+      "size": 15,
+      "healAmount": 20
+    },
+    "momentum": {
+      "id": "momentum",
+      "name": "Momentum Surge",
+      "description": "Instant momentum boost",
+      "color": "#22d3ee",
+      "size": 15,
+      "momentumAmount": 25
+    }
+  }
+}
