@@ -13,6 +13,12 @@ import {
   createEffect,
 } from '../core/stageSchemas.js';
 
+import {
+  BEAT_TYPES,
+  incidentKindToBeatType,
+  buildAssetPathChain,
+} from './assetRoutingSchema.js';
+
 /**
  * Enemy definitions by category
  */
@@ -233,8 +239,9 @@ function determineTone(incidentKind, difficulty) {
 
 /**
  * Build render plan (DioramaSpec)
+ * WO-ASSET-ROUTING: Now includes assetRouting context for folder selection
  */
-function buildRenderPlan(signal, incidentKind, enemy, difficulty) {
+function buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase = null) {
   // Determine region based on incident kind
   const regionMap = {
     [INCIDENT_KINDS.COMBAT]: 'center',
@@ -243,7 +250,9 @@ function buildRenderPlan(signal, incidentKind, enemy, difficulty) {
     [INCIDENT_KINDS.ANOMALY]: 'north',
   };
 
-  // Determine state based on mood
+  const region = regionMap[incidentKind] || 'center';
+
+  // Determine state based on mood (legacy, for backward compatibility)
   const state = difficulty >= 3 ? 'explore' : 'patrol';
 
   // Time of day (could be derived from actual time)
@@ -252,6 +261,18 @@ function buildRenderPlan(signal, incidentKind, enemy, difficulty) {
   if (hour >= 17 || hour < 6) timeOfDay = 'night';
   if (hour >= 6 && hour < 9) timeOfDay = 'morning';
   if (hour >= 17 && hour < 20) timeOfDay = 'dusk';
+
+  // WO-ASSET-ROUTING: Build asset routing context
+  const beatType = incidentKindToBeatType(incidentKind);
+  const assetRouting = {
+    beatType,
+    activityPhase,
+    region,
+    // Pre-computed fallback path chain for asset selection
+    pathChain: buildAssetPathChain({ beatType, activityPhase, region }),
+    // Legacy state for backward compatibility
+    legacyState: state,
+  };
 
   // Build actors
   const actors = [
@@ -289,7 +310,7 @@ function buildRenderPlan(signal, incidentKind, enemy, difficulty) {
 
   return createDioramaSpec({
     seed: signal.id,
-    region: regionMap[incidentKind] || 'center',
+    region,
     state,
     timeOfDay,
     background: { id: state, variant: timeOfDay },
@@ -297,6 +318,8 @@ function buildRenderPlan(signal, incidentKind, enemy, difficulty) {
     props: [],
     effects,
     camera: { zoom: 1, pan: difficulty >= 3 ? 'right' : 'none' },
+    // WO-ASSET-ROUTING: Include routing context for asset selection
+    assetRouting,
   });
 }
 
@@ -339,13 +362,17 @@ function buildNarrative(signal, enemy, incidentKind) {
  * Main factory function
  *
  * @param {Object} signal - A valid Signal object
+ * @param {Object} options - Optional configuration
+ * @param {string} options.activityPhase - Current activity phase (wake, explore, focus, etc.)
  * @returns {Object} Incident object ready for episode execution
  */
-export function createIncidentFromSignal(signal) {
+export function createIncidentFromSignal(signal, options = {}) {
   if (!signal || !signal.id) {
     console.warn('[IncidentFactory] Invalid signal provided');
     return null;
   }
+
+  const { activityPhase = null } = options;
 
   // Determine incident kind
   const incidentKind = mapSignalToIncidentKind(signal);
@@ -359,7 +386,8 @@ export function createIncidentFromSignal(signal) {
   // Build components
   const mechanics = determineMechanics(incidentKind, difficulty);
   const tone = determineTone(incidentKind, difficulty);
-  const renderPlan = buildRenderPlan(signal, incidentKind, enemy, difficulty);
+  // WO-ASSET-ROUTING: Pass activity phase for asset routing context
+  const renderPlan = buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase);
   const narrative = buildNarrative(signal, enemy, incidentKind);
   const taggingPrompt = TAGGING_PROMPTS[incidentKind] || TAGGING_PROMPTS.combat;
 

@@ -302,9 +302,9 @@ Timeline stored in `episodeRunner.getTimeline()` (last 50 episodes).
 
 ---
 
-## Watch Mode Episode Routing (WO-WATCH-EPISODE-ROUTING)
+## Demo Mode Episode Routing (WO-WATCH-EPISODE-ROUTING)
 
-Watch Mode adds time-of-day awareness to the stage, routing visual pools and incident rates based on simulated daily rhythm.
+Demo Mode adds time-of-day awareness to the stage, routing visual pools and incident rates based on simulated daily rhythm.
 
 ### Integration with Stage
 
@@ -325,8 +325,8 @@ The Episode Clock and Router integrate with the stage through:
 
 ### Dev Controls
 
-Access Watch Mode controls via Dev Config modal:
-- Toggle Watch Mode on/off
+Access Demo Mode controls via Dev Config modal:
+- Toggle Demo Mode on/off via header chip
 - Time scale buttons (1x to 300x)
 - Pause/Resume clock
 - Jump to segment

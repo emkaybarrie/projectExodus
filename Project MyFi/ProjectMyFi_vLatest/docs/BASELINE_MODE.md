@@ -311,15 +311,15 @@ window.__MYFI_DEV_CONFIG__ = {
 | [`src/systems/distanceDriver.js`](../src/systems/distanceDriver.js) | Distance progression |
 | [`src/systems/scenePacer.js`](../src/systems/scenePacer.js) | Incident timing |
 | [`src/systems/episodeRunner.js`](../src/systems/episodeRunner.js) | Episode lifecycle |
-| [`src/systems/episodeClock.js`](../src/systems/episodeClock.js) | Watch Mode time-of-day tracking |
+| [`src/systems/episodeClock.js`](../src/systems/episodeClock.js) | Demo Mode time-of-day tracking |
 | [`src/systems/episodeRouter.js`](../src/systems/episodeRouter.js) | Activity state routing |
 | [`src/core/app.js`](../src/core/app.js) | System wiring |
 
 ---
 
-## Watch Mode Episode Routing (WO-WATCH-EPISODE-ROUTING)
+## Demo Mode Episode Routing (WO-WATCH-EPISODE-ROUTING)
 
-Watch Mode adds time-of-day awareness to the baseline experience, routing episodes based on simulated daily rhythm.
+Demo Mode adds time-of-day awareness to the baseline experience, routing episodes based on simulated daily rhythm.
 
 ### Episode Clock (`episodeClock.js`)
 
@@ -383,7 +383,7 @@ Maps time-of-day segments to activity states.
 
 Access via Dev Config modal (⚙️ button):
 
-- **Toggle Watch Mode** - Enable/disable time-based routing
+- **Toggle Demo Mode** - Enable/disable time-based routing
 - **Time Scale** - 1x, 5x, 20x, 60x, 300x buttons
 - **Pause/Resume** - Control clock
 - **Jump to Segment** - Dawn, Morning, Midday, etc.
@@ -434,7 +434,7 @@ Activity states add distance progression bias:
 
 ## Hybrid Routing (WO-HYBRID-ROUTING)
 
-Hybrid Routing extends Watch Mode with pressure-based overrides and spike handling. The schedule serves as the "spine" but pressure from spending can override activity states.
+Hybrid Routing extends Demo Mode with pressure-based overrides and spike handling. The schedule serves as the "spine" but pressure from spending can override activity states.
 
 ### Pressure Model
 
@@ -598,6 +598,238 @@ Access via Dev Config modal (⚙️ button) → "Hybrid Routing" section:
             [episodeRouter listens]
                           ↓
             Override activity state if needed
+```
+
+---
+
+## Dev → Render Binding (WO-DEV-RENDER-BINDING)
+
+This system exposes the causal chain from dev controls to stage rendering in real-time.
+
+### Render Inspector Service
+
+File: `src/systems/devRenderInspector.js`
+
+Subscribes to events and maintains:
+- Rolling timeline buffer (50 events)
+- Current render context snapshot
+- Missing assets tracking
+
+```javascript
+// Access via debug console
+window.__MYFI_DEBUG__.renderInspector.getCurrentRenderContext()
+window.__MYFI_DEBUG__.renderInspector.getTimeline(20)
+window.__MYFI_DEBUG__.renderInspector.getMissingAssets()
+window.__MYFI_DEBUG__.renderInspector.copyContextToClipboard()
+```
+
+### Stage Debug Overlay
+
+When `showStageDebugOverlay` is enabled, the BadlandsStage shows a small overlay with:
+- DayT, segment, activity state
+- Distance01, band, override state
+- Current pool folder, background filename
+- Active incident type, time remaining
+
+### Map Binding (Demo Mode)
+
+When `enableMapBinding` is enabled, the WorldMap avatar position is driven by:
+- `distance01` → radial distance from center (0 = city, 1 = edge)
+- `activityState` → movement style (jitter, outward/inward bias)
+- `distance:spike` events → immediate outward jump
+
+### Dev UI Controls
+
+Access via Dev Config modal → "Render Inspector" section:
+
+| Control | Description |
+|---------|-------------|
+| Enable Render Inspector | Track events in timeline buffer |
+| Show Stage Debug Overlay | Display debug overlay on stage |
+| Enable Map Binding | Bind WorldMap to simulated state |
+| Reset Day | Reset clock, distance, scene pacer |
+| +1 Hour | Advance simulated time by 1 hour |
+| Fast-Fwd Day | Run at turbo speed for 10 seconds |
+| Small/Med/Large Tx | Emit test transaction signals |
+
+### Trace Events Emitted
+
+| Event | Payload | When |
+|-------|---------|------|
+| `stage:poolSelected` | `{ stateId, poolFolder, reason }` | Stage selects visual pool |
+| `stage:bgSelected` | `{ poolFolder, filename, manifestPath }` | Background selected |
+| `stage:incidentShown` | `{ incidentType, mode, durationMs }` | Incident overlay shown |
+| `worldState:changed` | `{ state, regionName }` | World state transitions |
+| `map:positionUpdated` | `{ x, y, locationId }` | Map avatar position updates |
+| `asset:missing` | `{ type, expectedPath, fixInstructions }` | Asset failed to load |
+
+### Daily Schedule Config
+
+File: `src/systems/dailyScheduleConfig.js`
+
+Defines baseline daily routine that runs with zero spending inputs:
+
+| Segment | Time | Activity State | Visual Pool |
+|---------|------|----------------|-------------|
+| Prepare | 05:00-08:00 | Wake | morning |
+| Patrol | 08:00-12:00 | Explore | active |
+| Explore | 12:00-17:00 | Focus | intense |
+| Return | 17:00-20:00 | Wind Down | evening |
+| Relax | 20:00-23:00 | Wind Down | evening |
+| Recover | 23:00-05:00 | Rest | night |
+
+```javascript
+// Access schedule boundaries
+import { getScheduleSegmentBoundaries } from './systems/dailyScheduleConfig.js';
+getScheduleSegmentBoundaries(); // Returns array of { id, label, dayT, activityStateId }
+```
+
+---
+
+## Asset Preflight (WO-DEV-ASSET-PREFLIGHT)
+
+Dev-only system for validating asset existence and rendering visible placeholders when backgrounds fail to load.
+
+### Purpose
+
+- **Development feedback** - Instantly see which assets are missing
+- **Fix instructions** - Placeholder shows expected path and manifest entry
+- **Graceful fallback** - Attempts to find alternate background from same pool
+- **Inspector integration** - Missing assets tracked in render inspector
+
+### Enabling
+
+```javascript
+window.__MYFI_DEV_CONFIG__ = {
+  devAssetPreflightEnabled: true
+};
+```
+
+Or set in the dev config object before app initialization.
+
+### Implementation
+
+File: `src/systems/assetPreflight.js`
+
+#### Key Functions
+
+```javascript
+// Validate background before rendering
+const result = await preflightBackground({
+  imageUrl: 'assets/bg/patrol/bg_patrol_01.png',
+  poolFolder: 'patrol/',
+  filename: 'bg_patrol_01.png',
+  manifestPath: 'assets/bg/patrol/manifest.json',
+  stateName: 'patrol'
+});
+
+// Result structure
+{
+  valid: false,                  // Asset exists?
+  url: null,                     // Original URL (null if missing)
+  fallbackUrl: 'patrol/bg_patrol_02.png', // Found alternate (or null)
+  missingEntry: {                // Missing asset details
+    type: 'background',
+    poolFolder: 'patrol/',
+    filename: 'bg_patrol_01.png',
+    manifestPath: 'assets/bg/patrol/manifest.json',
+    expectedPath: 'assets/bg/patrol/bg_patrol_01.png',
+    stateName: 'patrol',
+    timestamp: 1706000000000,
+    fixSteps: [
+      '1. Create PNG file: bg_patrol_01.png',
+      '2. Place at: patrol/bg_patrol_01.png',
+      '3. Add "bg_patrol_01.png" to backgrounds array in manifest.json'
+    ]
+  }
+}
+```
+
+### Placeholder Panel Behavior
+
+When an asset fails validation:
+
+1. **Fallback attempt** - Searches same pool for valid alternate
+2. **If fallback found** - Uses fallback, logs missing asset
+3. **If no fallback** - Renders placeholder panel in stage viewport
+
+Placeholder panel displays:
+- ⚠️ Missing Asset warning
+- File name and expected path
+- Manifest path
+- Step-by-step fix instructions
+
+### Event Emission
+
+When an asset is missing:
+
+```javascript
+// actionBus event
+actionBus.emit('asset:missing', {
+  type: 'background',
+  poolFolder: 'patrol/',
+  filename: 'bg_patrol_01.png',
+  manifestPath: 'assets/bg/patrol/manifest.json',
+  expectedPath: 'assets/bg/patrol/bg_patrol_01.png'
+});
+```
+
+### Inspector Integration
+
+Missing assets are tracked in the render inspector:
+
+```javascript
+// Access via debug console
+window.__MYFI_DEBUG__.renderInspector.getMissingAssets()
+// Returns array of missing asset entries
+```
+
+### Caching
+
+Asset preflight uses two-level caching:
+
+1. **Manifest cache** - `manifestPath → { backgrounds: [], loaded: boolean }`
+2. **Asset existence cache** - `imageUrl → { exists: boolean, checked: boolean }`
+
+Caches persist for session lifetime to avoid redundant checks.
+
+### Console Reference
+
+```javascript
+// Check if preflight is enabled
+window.__MYFI_DEV_CONFIG__?.devAssetPreflightEnabled
+
+// Get all missing assets
+window.__MYFI_DEBUG__.renderInspector.getMissingAssets()
+
+// Manually check asset existence
+import { checkAssetExists } from './systems/assetPreflight.js';
+await checkAssetExists('assets/bg/patrol/bg_missing.png'); // false
+
+// Get cached manifest
+import { getCachedManifest } from './systems/assetPreflight.js';
+getCachedManifest('assets/bg/patrol/manifest.json');
+```
+
+### Integration with BadlandsStage
+
+The BadlandsStage part integrates preflight via:
+
+1. `selectBackgroundForState()` calls `preflightBackground()` before applying
+2. If valid: uses original URL
+3. If invalid + fallback found: uses fallback, records missing
+4. If invalid + no fallback: renders placeholder panel in stage
+
+```javascript
+// In BadlandsStage render cycle
+const result = await selectBackgroundForState(stateName);
+if (result.url) {
+  // Apply background
+  applyBackground(result.url);
+} else if (result.missingEntry) {
+  // Render placeholder
+  renderMissingAssetPlaceholder(root, result.missingEntry);
+}
 ```
 
 ---

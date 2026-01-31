@@ -39,8 +39,7 @@
   transition: opacity 0.3s ease, background-image 0.4s ease-out;
 }
 
-/* Hide background on Recent and Loadout tabs */
-.BadlandsStage__container[data-active-tab="recent"]::before,
+/* Hide background on Loadout tab only */
 .BadlandsStage__container[data-active-tab="loadout"]::before {
   opacity: 0;
 }
@@ -59,8 +58,7 @@
   transition: opacity 0.3s ease;
 }
 
-/* Hide vignette on Recent and Loadout tabs */
-.BadlandsStage__container[data-active-tab="recent"]::after,
+/* Hide vignette on Loadout tab only */
 .BadlandsStage__container[data-active-tab="loadout"]::after {
   opacity: 0;
 }
@@ -75,8 +73,7 @@
   z-index: 2;
 }
 
-/* Solid background for Recent and Loadout tabs (since illustrated bg is hidden) */
-.BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__content,
+/* Solid background for Loadout tab only (since illustrated bg is hidden) */
 .BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__content {
   background: linear-gradient(180deg, rgba(15, 10, 25, 0.95) 0%, rgba(10, 8, 18, 0.98) 100%);
 }
@@ -93,9 +90,10 @@
 }
 
 /* Show active tab with animation */
+/* 3-tab system: current + recent + narrative */
 .BadlandsStage__container[data-active-tab="current"] .BadlandsStage__tabContent[data-tab="current"],
 .BadlandsStage__container[data-active-tab="recent"] .BadlandsStage__tabContent[data-tab="recent"],
-.BadlandsStage__container[data-active-tab="loadout"] .BadlandsStage__tabContent[data-tab="loadout"] {
+.BadlandsStage__container[data-active-tab="narrative"] .BadlandsStage__tabContent[data-tab="narrative"] {
   display: flex;
   opacity: 1;
   transform: translateX(0);
@@ -502,11 +500,26 @@
   display: none;
 }
 
+/* Overlay wrapper for background image integration */
+.BadlandsStage__recentOverlay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 12, 25, 0.4) 0%,
+    rgba(15, 12, 25, 0.6) 50%,
+    rgba(15, 12, 25, 0.8) 100%
+  );
+}
+
 .BadlandsStage__recentList {
   flex: 1;
   list-style: none;
   margin: 0;
-  padding: 12px;
+  padding: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -667,7 +680,168 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-/* LOADOUT TAB */
+/* WO-HUB-LAYOUT: NARRATIVE LOG TAB */
+/* Chronicles the avatar's day as a narrative summary */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.BadlandsStage__narrativeLog {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.BadlandsStage__narrativeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(180, 140, 80, 0.15);
+}
+
+.BadlandsStage__narrativeIcon {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.BadlandsStage__narrativeTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.9);
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__narrativeList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.BadlandsStage__narrativeEntry {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 2px solid rgba(180, 140, 80, 0.3);
+  border-radius: 0 8px 8px 0;
+  animation: narrativeSlideIn 0.4s ease-out;
+}
+
+.BadlandsStage__narrativeEntry--placeholder {
+  text-align: center;
+  border-left-color: rgba(139, 92, 246, 0.3);
+  background: rgba(139, 92, 246, 0.05);
+}
+
+@keyframes narrativeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.BadlandsStage__narrativeTime {
+  display: block;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.7rem;
+  color: rgba(180, 140, 80, 0.7);
+  margin-bottom: 4px;
+}
+
+.BadlandsStage__narrativeText {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 0.85rem;
+  color: rgba(240, 230, 210, 0.85);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-HUB-LAYOUT: Layout Modes (Collapsed / Expanded) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* COLLAPSED STATE (when Map is expanded) */
+.BadlandsStage__container[data-layout-mode="collapsed"] {
+  height: 60px;
+  min-height: 60px;
+  max-height: 60px;
+  overflow: hidden;
+}
+
+.BadlandsStage__container[data-layout-mode="collapsed"] .BadlandsStage__content,
+.BadlandsStage__container[data-layout-mode="collapsed"] .BadlandsStage__topBar,
+.BadlandsStage__container[data-layout-mode="collapsed"] .BadlandsStage__bottomBar {
+  display: none;
+}
+
+/* Show only event orb in collapsed mode */
+.BadlandsStage__container[data-layout-mode="collapsed"] .BadlandsStage__eventOrb {
+  display: flex !important;
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  z-index: 20;
+}
+
+/* Collapsed state visual indicator */
+.BadlandsStage__container[data-layout-mode="collapsed"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(15, 10, 25, 0.95) 0%, rgba(20, 15, 35, 0.98) 100%);
+  z-index: 0;
+}
+
+.BadlandsStage__container[data-layout-mode="collapsed"]::after {
+  content: 'Double-tap to expand';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  color: rgba(240, 230, 210, 0.25);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Collapsed title indicator */
+.BadlandsStage__collapsedTitle {
+  display: none;
+}
+
+.BadlandsStage__container[data-layout-mode="collapsed"] .BadlandsStage__collapsedTitle {
+  display: flex;
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+}
+
+.BadlandsStage__collapsedTitleIcon {
+  font-size: 1.4rem;
+}
+
+.BadlandsStage__collapsedTitleText {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(240, 230, 210, 0.9);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-HUB-LAYOUT: DEPRECATED - LOADOUT TAB (Moved to WorldMap) */
+/* Styles kept for backwards compatibility during migration */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* WO-S8: Headers removed for cinematic feel - styles kept for reference */
 .BadlandsStage__loadoutHeader,
@@ -914,6 +1088,722 @@
   color: rgba(240, 230, 210, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-CAPSULE-V2: EVENT NOTIFICATION SYSTEM */
+/* States: hidden → pending (top banner) → collapsed (top-right orb) → expanded (HUD) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* PENDING STATE: Full capsule banner at top */
+.BadlandsStage__eventCapsule {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 10px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.85) 0%, rgba(99, 102, 241, 0.85) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.6);
+  border-radius: 24px;
+  box-shadow:
+    0 4px 20px rgba(139, 92, 246, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  min-width: 200px;
+  max-width: 90%;
+}
+
+.BadlandsStage__eventCapsule[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  animation: capsulePulse 2s ease-in-out infinite;
+}
+
+@keyframes capsulePulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(139, 92, 246, 0.6), 0 2px 12px rgba(0, 0, 0, 0.4); }
+}
+
+.BadlandsStage__eventCapsule:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* COLLAPSED STATE: Small orb at top-right with radial timer */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__eventOrb {
+  position: absolute;
+  top: 40px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+  box-shadow:
+    0 4px 16px rgba(139, 92, 246, 0.5),
+    0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 21;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.BadlandsStage__eventOrb[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.BadlandsStage__eventOrb:active {
+  transform: scale(0.92);
+}
+
+.BadlandsStage__orbTimer {
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 50px;
+  height: 50px;
+  pointer-events: none;
+}
+
+.BadlandsStage__orbTimerBg {
+  stroke: rgba(255, 255, 255, 0.2);
+}
+
+.BadlandsStage__orbTimerFill {
+  stroke: rgba(255, 255, 255, 0.9);
+  transition: stroke-dashoffset 0.1s linear, stroke 0.3s ease;
+}
+
+/* Orb timer urgency states */
+.BadlandsStage__orbTimerFill[data-urgency="warning"] {
+  stroke: rgba(255, 220, 100, 0.9);
+}
+
+.BadlandsStage__orbTimerFill[data-urgency="critical"] {
+  stroke: rgba(255, 100, 100, 0.9);
+  animation: orbTimerCritical 0.6s ease-in-out infinite;
+}
+
+@keyframes orbTimerCritical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.BadlandsStage__orbIcon {
+  font-size: 1.2rem;
+  z-index: 1;
+}
+
+.BadlandsStage__orbPulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.3);
+  transform: translate(-50%, -50%) scale(1);
+  animation: orbPulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes orbPulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+}
+
+/* Orb theme variants */
+.BadlandsStage__eventOrb[data-theme="combat"] {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.BadlandsStage__eventOrb[data-theme="combat"] .BadlandsStage__orbPulse {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.BadlandsStage__eventOrb[data-theme="social"] {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%);
+  box-shadow: 0 4px 16px rgba(52, 211, 153, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.BadlandsStage__eventOrb[data-theme="social"] .BadlandsStage__orbPulse {
+  background: rgba(52, 211, 153, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* EXPANDED STATE: HUD panel with scene log and engage button */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__eventHUD {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.BadlandsStage__eventHUD[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.BadlandsStage__hudBackdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.BadlandsStage__hudPanel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  width: 90%;
+  max-width: 340px;
+  background: linear-gradient(180deg, rgba(20, 16, 36, 0.95) 0%, rgba(10, 8, 21, 0.95) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.BadlandsStage__eventHUD[data-visible="true"] .BadlandsStage__hudPanel {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.BadlandsStage__hudHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(139, 92, 246, 0.15);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.BadlandsStage__hudIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.BadlandsStage__hudInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.BadlandsStage__hudTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.BadlandsStage__hudType {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(139, 92, 246, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__hudClose {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.BadlandsStage__hudClose:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__hudTimerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.BadlandsStage__hudTimerBar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.BadlandsStage__hudTimerFill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  transition: width 0.1s linear, background 0.3s ease;
+}
+
+.BadlandsStage__hudTimerFill[data-urgency="warning"] {
+  background: rgba(255, 220, 100, 0.9);
+}
+
+.BadlandsStage__hudTimerFill[data-urgency="critical"] {
+  background: rgba(255, 100, 100, 0.9);
+  animation: hudTimerCritical 0.6s ease-in-out infinite;
+}
+
+@keyframes hudTimerCritical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.BadlandsStage__hudTimerValue {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.8);
+  min-width: 36px;
+  text-align: right;
+}
+
+.BadlandsStage__hudSceneLog {
+  max-height: 140px;
+  overflow-y: auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.BadlandsStage__hudSceneLogHeader {
+  position: sticky;
+  top: 0;
+  padding: 8px 14px 6px;
+  background: rgba(20, 16, 36, 0.98);
+}
+
+.BadlandsStage__hudSceneLogTitle {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__hudSceneLogContent {
+  padding: 0 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.BadlandsStage__hudSceneEntry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.BadlandsStage__hudSceneTime {
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.BadlandsStage__hudSceneText {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.BadlandsStage__hudActions {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.BadlandsStage__hudEngageBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.6);
+  border-radius: 10px;
+  color: white;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.BadlandsStage__hudEngageBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.5);
+}
+
+.BadlandsStage__hudEngageBtn:active {
+  transform: translateY(0);
+}
+
+.BadlandsStage__hudEngageIcon {
+  font-size: 1.1rem;
+}
+
+.BadlandsStage__hudEngageLabel {
+  letter-spacing: 0.02em;
+}
+
+.BadlandsStage__hudAutoNote {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+/* HUD theme variants */
+.BadlandsStage__eventHUD[data-theme="combat"] .BadlandsStage__hudHeader {
+  background: rgba(239, 68, 68, 0.15);
+  border-bottom-color: rgba(239, 68, 68, 0.2);
+}
+
+.BadlandsStage__eventHUD[data-theme="combat"] .BadlandsStage__hudType {
+  color: rgba(239, 68, 68, 0.9);
+}
+
+.BadlandsStage__eventHUD[data-theme="combat"] .BadlandsStage__hudPanel {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.BadlandsStage__eventHUD[data-theme="combat"] .BadlandsStage__hudEngageBtn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.BadlandsStage__eventHUD[data-theme="combat"] .BadlandsStage__hudEngageBtn:hover {
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5);
+}
+
+.BadlandsStage__eventHUD[data-theme="social"] .BadlandsStage__hudHeader {
+  background: rgba(52, 211, 153, 0.15);
+  border-bottom-color: rgba(52, 211, 153, 0.2);
+}
+
+.BadlandsStage__eventHUD[data-theme="social"] .BadlandsStage__hudType {
+  color: rgba(52, 211, 153, 0.9);
+}
+
+.BadlandsStage__eventHUD[data-theme="social"] .BadlandsStage__hudPanel {
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.BadlandsStage__eventHUD[data-theme="social"] .BadlandsStage__hudEngageBtn {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.9) 0%, rgba(16, 185, 129, 0.9) 100%);
+  border-color: rgba(52, 211, 153, 0.6);
+}
+
+.BadlandsStage__capsuleIcon {
+  font-size: 1.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  flex-shrink: 0;
+}
+
+.BadlandsStage__capsuleContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.BadlandsStage__capsuleTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.BadlandsStage__capsuleType {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.BadlandsStage__capsuleTimer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.BadlandsStage__capsuleTimerBar {
+  width: 40px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.BadlandsStage__capsuleTimerFill {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+  transition: width 0.1s linear, background 0.5s ease;
+}
+
+/* WO-LIVE-DEMO: Capsule timer urgency states */
+.BadlandsStage__capsuleTimerFill[data-urgency="warning"] {
+  background: rgba(255, 220, 100, 0.9);
+}
+
+.BadlandsStage__capsuleTimerFill[data-urgency="critical"] {
+  background: rgba(255, 100, 100, 0.9);
+  animation: capsuleTimerCritical 0.6s ease-in-out infinite;
+}
+
+@keyframes capsuleTimerCritical {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.BadlandsStage__capsuleTimerBar[data-urgency="warning"] {
+  background: rgba(255, 220, 100, 0.2);
+}
+
+.BadlandsStage__capsuleTimerBar[data-urgency="critical"] {
+  background: rgba(255, 100, 100, 0.2);
+}
+
+.BadlandsStage__capsuleTimerValue {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: monospace;
+  transition: color 0.3s ease;
+}
+
+/* Timer value urgency colors */
+.BadlandsStage__eventCapsule:has(.BadlandsStage__capsuleTimerFill[data-urgency="warning"]) .BadlandsStage__capsuleTimerValue {
+  color: rgba(255, 220, 100, 1);
+}
+
+.BadlandsStage__eventCapsule:has(.BadlandsStage__capsuleTimerFill[data-urgency="critical"]) .BadlandsStage__capsuleTimerValue {
+  color: rgba(255, 100, 100, 1);
+}
+
+.BadlandsStage__capsuleTapHint {
+  display: none;
+  font-size: 0.55rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+}
+
+/* Show tap hint on mobile */
+@media (pointer: coarse) {
+  .BadlandsStage__capsuleTapHint {
+    display: block;
+  }
+}
+
+/* Combat theme */
+.BadlandsStage__eventCapsule[data-theme="combat"] {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.85) 0%, rgba(220, 38, 38, 0.85) 100%);
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.BadlandsStage__eventCapsule[data-theme="combat"][data-visible="true"] {
+  animation: capsulePulseCombat 2s ease-in-out infinite;
+}
+
+@keyframes capsulePulseCombat {
+  0%, 100% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(239, 68, 68, 0.6), 0 2px 12px rgba(0, 0, 0, 0.4); }
+}
+
+/* Social/Choice theme */
+.BadlandsStage__eventCapsule[data-theme="social"] {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.85) 0%, rgba(16, 185, 129, 0.85) 100%);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 4px 20px rgba(52, 211, 153, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-CAPSULE-V2: QUICK-ENGAGE OVERLAY */
+/* Shows when story beat generated, 5-second hold-to-engage */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__quickEngage {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: linear-gradient(180deg, rgba(10, 8, 21, 0.0) 0%, rgba(10, 8, 21, 0.95) 30%);
+  z-index: 22;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.BadlandsStage__quickEngage[data-visible="true"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.BadlandsStage__quickEngageContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.BadlandsStage__quickEngageIcon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.BadlandsStage__quickEngageInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.BadlandsStage__quickEngageTitle {
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.BadlandsStage__quickEngageFlavor {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.BadlandsStage__quickEngageTimer {
+  margin-bottom: 10px;
+}
+
+.BadlandsStage__quickEngageTimerBar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.BadlandsStage__quickEngageTimerFill {
+  height: 100%;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.BadlandsStage__quickEngageBtn {
+  width: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.8) 0%, rgba(99, 102, 241, 0.8) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 10px;
+  color: white;
+  font-family: 'Cinzel', Georgia, serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.BadlandsStage__quickEngageBtn:active {
+  transform: scale(0.98);
+}
+
+.BadlandsStage__quickEngageBtnLabel {
+  position: relative;
+  z-index: 1;
+}
+
+.BadlandsStage__quickEngageProgress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.25);
+  transition: width 0.05s linear;
+  pointer-events: none;
+}
+
+/* Theme variants */
+.BadlandsStage__quickEngage[data-theme="combat"] .BadlandsStage__quickEngageBtn {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.8) 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.BadlandsStage__quickEngage[data-theme="social"] .BadlandsStage__quickEngageBtn {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.8) 0%, rgba(16, 185, 129, 0.8) 100%);
+  border-color: rgba(52, 211, 153, 0.5);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -1775,4 +2665,148 @@
     font-size: 0.9rem;
     padding: 10px 14px;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-DEV-RENDER-BINDING: Dev Render Overlay Styles */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.BadlandsStage__devOverlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 9999;
+  width: 220px;
+  background: rgba(10, 8, 18, 0.92);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 8px;
+  font-family: 'Roboto Mono', 'Monaco', monospace;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.BadlandsStage__devOverlay[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.BadlandsStage__devOverlayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(139, 92, 246, 0.2);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 8px 8px 0 0;
+}
+
+.BadlandsStage__devOverlayTitle {
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(139, 92, 246, 0.9);
+}
+
+.BadlandsStage__devOverlayClose {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.BadlandsStage__devOverlayClose:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.BadlandsStage__devOverlayContent {
+  padding: 8px 10px;
+}
+
+.BadlandsStage__devOverlayRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.BadlandsStage__devOverlayRow:last-child {
+  margin-bottom: 0;
+}
+
+.BadlandsStage__devOverlayLabel {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  min-width: 50px;
+}
+
+.BadlandsStage__devOverlayValue {
+  color: rgba(52, 211, 153, 0.9);
+  background: rgba(52, 211, 153, 0.1);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.BadlandsStage__devOverlayValue--small {
+  font-size: 0.55rem;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.BadlandsStage__devOverlaySeparator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 8px 0;
+}
+
+.BadlandsStage__devOverlayFooter {
+  padding: 6px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.BadlandsStage__devOverlayBtn {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.65rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.BadlandsStage__devOverlayBtn:hover {
+  background: rgba(139, 92, 246, 0.35);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* WO-DEV-ASSET-PREFLIGHT: Missing Asset Placeholder */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+.BadlandsStage__assetPlaceholder {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: none;
+  pointer-events: none;
+}
+
+.BadlandsStage__assetPlaceholder[data-visible="true"] {
+  display: block;
+  pointer-events: auto;
 }

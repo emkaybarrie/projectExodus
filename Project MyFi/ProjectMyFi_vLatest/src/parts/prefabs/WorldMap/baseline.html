@@ -1,39 +1,30 @@
-<!-- WorldMap baseline.html — HUB Refactor: Dartboard radial map -->
-<!-- Top-down map with city at center, avatar meandering between zones -->
+<!-- WorldMap baseline.html — Compact Status Bar HUD -->
+<!-- Icon-driven world status: Region | Distance | Loadout preview -->
+<!-- Tap panels to open detail modals (stubbed) -->
 
 <div class="WorldMap__container">
-  <!-- Dartboard map visual -->
-  <div class="WorldMap__dartboard">
-    <!-- Cardinal labels -->
-    <span class="WorldMap__cardinal WorldMap__cardinal--north">NORTH</span>
-    <span class="WorldMap__cardinal WorldMap__cardinal--south">SOUTH</span>
-    <span class="WorldMap__cardinal WorldMap__cardinal--east">EAST</span>
-    <span class="WorldMap__cardinal WorldMap__cardinal--west">WEST</span>
 
-    <!-- Grid lines and rings -->
-    <div class="WorldMap__grid">
-      <div class="WorldMap__line WorldMap__line--ns"></div>
-      <div class="WorldMap__line WorldMap__line--ew"></div>
-      <div class="WorldMap__ring WorldMap__ring--outer"></div>
-      <div class="WorldMap__ring WorldMap__ring--mid"></div>
-      <div class="WorldMap__ring WorldMap__ring--inner"></div>
+  <!-- PANEL: World Location -->
+  <div class="WorldMap__panel WorldMap__panel--location" data-action="openLocationModal">
+    <span class="WorldMap__panelIcon">&#127984;</span>
+    <div class="WorldMap__panelInfo">
+      <span class="WorldMap__panelLabel" data-bind="zoneLabel">City</span>
+      <span class="WorldMap__panelValue" data-bind="distanceLabel">Home</span>
     </div>
-
-    <!-- City marker at center -->
-    <div class="WorldMap__city">
-      <span class="WorldMap__cityIcon">&#127984;</span>
-      <span class="WorldMap__cityLabel">HAVEN</span>
-    </div>
-
-    <!-- Meandering avatar -->
-    <div class="WorldMap__avatar" data-idle="true">
-      <span class="WorldMap__avatarIcon">&#129489;</span>
-    </div>
+    <span class="WorldMap__panelChevron">&#8250;</span>
   </div>
 
-  <!-- Location info overlay -->
-  <div class="WorldMap__info">
-    <span class="WorldMap__regionName" data-bind="regionName">Deep Twilight Marshes</span>
-    <span class="WorldMap__subtitle" data-bind="subtitle">— Shadows lengthen</span>
+  <!-- DIVIDER -->
+  <div class="WorldMap__divider"></div>
+
+  <!-- PANEL: Loadout Preview -->
+  <div class="WorldMap__panel WorldMap__panel--loadout" data-action="openLoadoutModal">
+    <div class="WorldMap__loadoutIcons" data-bind="loadoutIcons">
+      <span class="WorldMap__loadoutIcon">&#9876;</span>
+      <span class="WorldMap__loadoutIcon">&#128737;</span>
+      <span class="WorldMap__loadoutIcon WorldMap__loadoutIcon--empty">&#10133;</span>
+    </div>
+    <span class="WorldMap__panelChevron">&#8250;</span>
   </div>
+
 </div>

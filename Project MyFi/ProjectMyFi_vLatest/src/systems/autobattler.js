@@ -91,7 +91,6 @@ export function createAutobattler(options = {}) {
   } = options;
 
   let currentEncounter = null;
-  let timerId = null;
   let encounterCount = 0;
   let unsubscribeSpawn = null;
   let unsubscribeResolve = null;
@@ -128,45 +127,16 @@ export function createAutobattler(options = {}) {
     }, 'autobattler', { persistent: true });
   }
 
-  // Timing constants
-  // Encounters take ~30s to auto-resolve in the UI (BadlandsStage handles timer display)
-  // The autobattler doesn't auto-resolve - it's controlled by the stage timer or player actions
-  const SPAWN_CHECK_MS = 5000;    // Check for spawn every 5 seconds
-
-  /**
-   * Gets spawn chance from dev config or uses default
-   */
-  function getSpawnChance() {
-    const devConfig = window.__MYFI_DEV_CONFIG__ || {};
-    // encounterRate is 1-50 (percentage per tick), convert to 0-1
-    const rate = devConfig.encounterRate || 25;
-    return rate / 100;
-  }
-
-  /**
-   * Attempts to spawn a new encounter
-   * WO-STAGE-EPISODES-V1: Updated to use Episode system for random spawning
-   * This allows spawning any episode type (combat or choice/tagging)
-   */
-  function trySpawn() {
-    if (currentEncounter) return; // Already have an active encounter
-
-    if (Math.random() < getSpawnChance()) {
-      // Use Episode system for random spawning if available
-      // This routes through: Signal → Incident Factory → Episode Runner
-      // Combat episodes will emit autobattler:spawn back to us
-      // Choice episodes show tagging overlay instead
-      const emitDemoSignal = window.__MYFI_DEBUG__?.emitDemoSignal;
-      if (emitDemoSignal) {
-        console.log('[Autobattler] Random spawn via Episode system');
-        emitDemoSignal(); // Randomly picks episode type
-      } else {
-        // Fallback to legacy direct spawn (combat only)
-        console.log('[Autobattler] Random spawn (legacy fallback)');
-        spawnEncounter();
-      }
-    }
-  }
+  // WO-NARRATIVE-CONSOLIDATION: Removed legacy random spawn loop
+  // Autobattler no longer spawns encounters directly - it only RESPONDS to
+  // autobattler:spawn events from the Episode system.
+  //
+  // Event emission sources (consolidated):
+  // - Live mode: Player via Transaction Modal, Bank via TrueLayer integration
+  // - Demo mode: Narrative Engine (chrome.js auto-transaction loop)
+  //
+  // Flow: Transaction → stageSignals.ingest() → Incident Factory → Episode Runner
+  //       → autobattler:spawn event → Autobattler responds
 
   /**
    * Spawns a random encounter based on weighted types
@@ -330,21 +300,19 @@ export function createAutobattler(options = {}) {
 
   return {
     /**
-     * Start the autobattler loop
+     * Start the autobattler (subscribes to Episode system events)
+     * WO-NARRATIVE-CONSOLIDATION: No longer runs spawn loop - only responds to events
      */
     start() {
-      if (timerId) return;
-      timerId = setInterval(trySpawn, SPAWN_CHECK_MS);
+      // No-op: Subscriptions are set up in constructor
+      // Autobattler responds to autobattler:spawn events from Episode system
+      console.log('[Autobattler] Started (event-driven mode)');
     },
 
     /**
-     * Stop the autobattler loop
+     * Stop the autobattler
      */
     stop() {
-      if (timerId) {
-        clearInterval(timerId);
-        timerId = null;
-      }
       // WO-STAGE-EPISODES-V1: Cleanup subscriptions
       if (unsubscribeSpawn) {
         unsubscribeSpawn();
@@ -354,6 +322,7 @@ export function createAutobattler(options = {}) {
         unsubscribeResolve();
         unsubscribeResolve = null;
       }
+      console.log('[Autobattler] Stopped');
     },
 
     /**

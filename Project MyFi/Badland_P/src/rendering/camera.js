@@ -4,7 +4,8 @@
 
 // Camera constants
 const FOLLOW_SPEED = 5; // Interpolation speed
-const LOOK_AHEAD = 200; // How far ahead of player to look
+const LOOK_AHEAD_LANDSCAPE = 200; // How far ahead of player to look in landscape
+const LOOK_AHEAD_PORTRAIT = 100; // Reduced look-ahead for portrait (less horizontal space)
 const VERTICAL_DEAD_ZONE = 80; // Vertical dead zone (reduced for more responsive vertical tracking)
 
 // Zoom constants for height-based scaling
@@ -34,8 +35,15 @@ export function createCamera(viewportWidth, viewportHeight) {
    * Follow a target position
    */
   function follow(target, dt) {
+    // Determine look-ahead based on aspect ratio (portrait vs landscape)
+    const isPortrait = height > width;
+    const lookAhead = isPortrait ? LOOK_AHEAD_PORTRAIT : LOOK_AHEAD_LANDSCAPE;
+
+    // In portrait mode, center player more horizontally (0.4 vs 0.3)
+    const horizontalOffset = isPortrait ? 0.4 : 0.3;
+
     // Target X is ahead of player
-    targetX = target.x - width * 0.3 + LOOK_AHEAD;
+    targetX = target.x - width * horizontalOffset + lookAhead;
 
     // Target Y tries to keep player in vertical center with dead zone
     // More responsive vertical tracking for multi-tier gameplay

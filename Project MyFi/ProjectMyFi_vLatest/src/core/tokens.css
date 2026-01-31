@@ -210,38 +210,73 @@ body::after{
   justify-content: space-between;
 }
 
-/* WO-HUB-03: Chrome Status Badge (Demo/Connected indicator) */
-.chrome__status{
+/* WO-LIVE-DEMO: Mode Toggle (Live/Demo) - replaces old status badge */
+.chrome__modeToggle{
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   background: rgba(0, 0, 0, 0.25);
   border-radius: 12px;
-  border: 1px solid rgba(180, 140, 80, 0.15);
+  border: 1px solid rgba(180, 140, 80, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.chrome__statusIndicator{
+.chrome__modeToggle:hover{
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(180, 140, 80, 0.35);
+}
+
+.chrome__modeToggle:active{
+  transform: scale(0.97);
+}
+
+.chrome__modeIndicator{
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #c4943d;
-  box-shadow: 0 0 4px rgba(196, 148, 61, 0.5);
+  background: #5cb85c;
+  box-shadow: 0 0 4px rgba(92, 184, 92, 0.5);
   flex-shrink: 0;
+  transition: all 0.3s ease;
 }
 
-.chrome__statusIndicator[data-verified="true"]{
+/* Demo mode indicator - amber/orange */
+.chrome__modeIndicator[data-mode="demo"]{
+  background: #c4943d;
+  box-shadow: 0 0 4px rgba(196, 148, 61, 0.5);
+}
+
+/* Live mode indicator - green */
+.chrome__modeIndicator[data-mode="live"]{
   background: #5cb85c;
   box-shadow: 0 0 4px rgba(92, 184, 92, 0.5);
 }
 
-.chrome__statusLabel{
+.chrome__modeLabel{
   font-family: var(--font-display);
   font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: rgba(240, 230, 210, 0.7);
+  color: rgba(240, 230, 210, 0.8);
+  transition: color 0.2s ease;
+}
+
+.chrome__modeToggle:hover .chrome__modeLabel{
+  color: rgba(240, 230, 210, 1);
+}
+
+/* WO-LIVE-DEMO: Footer button pressed/held states */
+.chrome__footerBtn--pressed{
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.chrome__footerBtn--held{
+  transform: scale(0.92);
+  background: rgba(139, 92, 246, 0.2);
 }
 
 .chrome__devButtons{
@@ -560,6 +595,34 @@ body::after{
   background: rgba(255, 255, 255, 0.1);
 }
 
+/* WO-TRANSACTION-MODAL-V1: Primary button style */
+.chrome__devConfigBtn--primary{
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.7) 0%, rgba(99, 102, 241, 0.7) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+}
+
+.chrome__devConfigBtn--primary:hover{
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.9) 0%, rgba(99, 102, 241, 0.9) 100%);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.chrome__devConfigBtn--full{
+  width: 100%;
+  justify-content: center;
+}
+
+/* WO-TRANSACTION-MODAL-V1: Section description text */
+.chrome__devConfigSectionDesc{
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin: 0 0 10px 0;
+  font-style: italic;
+}
+
 /* Watch Mode Status Display */
 .chrome__devConfigStatus{
   display: flex;
@@ -585,6 +648,41 @@ body::after{
 .chrome__devConfigStatus--hybrid{
   flex-direction: column;
   gap: 6px;
+}
+
+/* WO-DEV-RENDER-BINDING: Watch Mode section styling */
+.chrome__devConfigSection--watchMode{
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.08), rgba(59, 130, 246, 0.06));
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.chrome__devConfigSectionTitle--watch{
+  color: rgba(139, 92, 246, 0.95);
+  border-bottom-color: rgba(139, 92, 246, 0.3);
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.chrome__devConfigSectionDesc{
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 12px;
+  font-style: italic;
+}
+
+.chrome__devConfigSubsection{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Visual indication when Watch Mode is off - fade subsections */
+.chrome__devConfigSection--watchMode:has(input[data-config="watchModeEnabled"]:not(:checked)) .chrome__devConfigSubsection{
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .chrome__devConfigStatusRow{
@@ -615,6 +713,49 @@ body::after{
   color: rgba(251, 191, 36, 1) !important;
   background: rgba(251, 191, 36, 0.15) !important;
   font-weight: 600;
+}
+
+/* WO-DEV-RENDER-BINDING: Missing assets display styles */
+.chrome__devConfigMissingAssets{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border-left: 3px solid rgba(239, 68, 68, 0.5);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.chrome__devConfigMissingAssetItem{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chrome__devConfigMissingAssetItem:last-child{
+  border-bottom: none;
+}
+
+.chrome__devConfigMissingAssetType{
+  font-size: 0.6rem;
+  color: rgba(239, 68, 68, 0.9);
+  text-transform: uppercase;
+  padding: 2px 4px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 3px;
+}
+
+.chrome__devConfigMissingAssetPath{
+  font-size: 0.65rem;
+  color: var(--text);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .chrome__surfaceHost{
@@ -882,11 +1023,11 @@ body::after{
   flex: 0 0 auto;
 }
 
-/* WO-S10: Map - more vertical space for readability */
+/* WO-HUB-LAYOUT: Map - compact status bar */
 .screen-host.bg-cosmic .slot[data-slot-id="map"]{
   flex: 0 0 auto;
-  min-height: 130px; /* Map gets more vertical space */
-  max-height: 160px;
+  min-height: 48px;
+  max-height: 60px;
 }
 
 /* Stage part should fill its slot */
@@ -909,6 +1050,11 @@ body::after{
 /* WO-S7: Hub vitals card gets minimal padding (Part handles its own) */
 .screen-host.bg-cosmic .slot-card[data-slot-id="vitals"]{
   padding: 0;
+}
+
+/* WO-HUB-LAYOUT: Map status bar gets minimal padding */
+.screen-host.bg-cosmic .slot-card[data-slot-id="map"]{
+  padding: 4px;
 }
 
 /* HUB-07/HUB-11: Overlay Slot Support — layering container
