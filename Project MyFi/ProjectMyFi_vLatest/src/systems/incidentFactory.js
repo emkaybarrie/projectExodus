@@ -19,6 +19,10 @@ import {
   buildAssetPathChain,
 } from './assetRoutingSchema.js';
 
+import {
+  segmentToTimeBucket,
+} from './dioramaResolver.js';
+
 /**
  * Enemy definitions by category
  */
@@ -240,8 +244,9 @@ function determineTone(incidentKind, difficulty) {
 /**
  * Build render plan (DioramaSpec)
  * WO-ASSET-ROUTING: Now includes assetRouting context for folder selection
+ * WO-DIORAMA-03: Added timeBucket and intensityTier for smart resolution
  */
-function buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase = null) {
+function buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase = null, clockSegment = null) {
   // Determine region based on incident kind
   const regionMap = {
     [INCIDENT_KINDS.COMBAT]: 'center',
@@ -263,13 +268,18 @@ function buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase 
   if (hour >= 17 && hour < 20) timeOfDay = 'dusk';
 
   // WO-ASSET-ROUTING: Build asset routing context
+  // WO-DIORAMA-03: Added timeBucket and intensityTier for smart resolution
   const beatType = incidentKindToBeatType(incidentKind);
+  const timeBucket = clockSegment ? segmentToTimeBucket(clockSegment) : null;
   const assetRouting = {
     beatType,
     activityPhase,
     region,
     // Pre-computed fallback path chain for asset selection
     pathChain: buildAssetPathChain({ beatType, activityPhase, region }),
+    // WO-DIORAMA-03: Smart resolver dimensions
+    timeBucket,
+    intensityTier: difficulty,
     // Legacy state for backward compatibility
     legacyState: state,
   };
@@ -364,6 +374,7 @@ function buildNarrative(signal, enemy, incidentKind) {
  * @param {Object} signal - A valid Signal object
  * @param {Object} options - Optional configuration
  * @param {string} options.activityPhase - Current activity phase (wake, explore, focus, etc.)
+ * @param {string} options.clockSegment - Current episode clock segment (dawn, morning, etc.)
  * @returns {Object} Incident object ready for episode execution
  */
 export function createIncidentFromSignal(signal, options = {}) {
@@ -372,7 +383,7 @@ export function createIncidentFromSignal(signal, options = {}) {
     return null;
   }
 
-  const { activityPhase = null } = options;
+  const { activityPhase = null, clockSegment = null } = options;
 
   // Determine incident kind
   const incidentKind = mapSignalToIncidentKind(signal);
@@ -387,7 +398,8 @@ export function createIncidentFromSignal(signal, options = {}) {
   const mechanics = determineMechanics(incidentKind, difficulty);
   const tone = determineTone(incidentKind, difficulty);
   // WO-ASSET-ROUTING: Pass activity phase for asset routing context
-  const renderPlan = buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase);
+  // WO-DIORAMA-03: Pass clock segment for timeBucket resolution
+  const renderPlan = buildRenderPlan(signal, incidentKind, enemy, difficulty, activityPhase, clockSegment);
   const narrative = buildNarrative(signal, enemy, incidentKind);
   const taggingPrompt = TAGGING_PROMPTS[incidentKind] || TAGGING_PROMPTS.combat;
 

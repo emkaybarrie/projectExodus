@@ -41,6 +41,12 @@ import {
   LEGACY_STATE_FOLDERS,
 } from '../../../systems/assetRoutingSchema.js';
 
+// WO-DIORAMA: Import smart diorama resolver
+import {
+  createDioramaResolver,
+  createRecipeFromContext,
+} from '../../../systems/dioramaResolver.js';
+
 async function fetchText(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`fetchText failed ${res.status} for ${url}`);
@@ -255,6 +261,104 @@ async function selectBackgroundForIncident(incident, baseUrl) {
   return selectBackgroundWithRouting(routingContext, baseUrl);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// WO-DIORAMA: Smart Diorama Resolver Integration
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Module-level smart resolver instance (created lazily)
+let smartResolver = null;
+
+/**
+ * WO-DIORAMA: Get or create the smart resolver instance
+ */
+function getSmartResolver() {
+  if (!smartResolver) {
+    smartResolver = createDioramaResolver({
+      lruSize: 10,
+      logDecisions: true, // Enable for dev visibility
+    });
+  }
+  return smartResolver;
+}
+
+/**
+ * WO-DIORAMA: Select background using the smart resolver with best-match algorithm
+ *
+ * @param {Object} incident - Incident object with renderPlan.assetRouting
+ * @param {Object} options - Additional options
+ * @param {string} options.clockSegment - Current clock segment from episodeClock
+ * @param {Object} options.actionBus - ActionBus for emitting resolver events
+ * @param {string} baseUrl - Base URL for asset paths
+ * @returns {Promise<{url: string, path: string, fallbackLevel: number, assetId: string}>}
+ */
+async function selectBackgroundWithSmartResolver(incident, options, baseUrl) {
+  const { clockSegment = null, actionBus = null } = options || {};
+  const routingContext = incident?.renderPlan?.assetRouting;
+
+  if (!routingContext) {
+    // No routing context, fall back to static selection
+    const result = await selectBackgroundForIncident(incident, baseUrl);
+    return result;
+  }
+
+  const resolver = getSmartResolver();
+
+  // Build recipe from routing context
+  const recipe = {
+    beatType: routingContext.beatType || 'idle',
+    activityPhase: routingContext.activityPhase || null,
+    region: routingContext.region || null,
+    timeBucket: routingContext.timeBucket || null,
+    intensityTier: routingContext.intensityTier || 2,
+    requiredTags: [],
+    preferredTags: [],
+    excludeTags: [],
+    activeTags: [],
+  };
+
+  // Resolve using smart algorithm
+  const result = await resolver.resolve(recipe);
+
+  // Emit event for dev inspector
+  if (actionBus) {
+    actionBus.emit('diorama:resolved', {
+      recipe,
+      decision: result.decision,
+      result: {
+        success: result.success,
+        url: result.url,
+        assetId: result.assetId,
+        path: result.path,
+        fallbackLevel: result.fallbackLevel,
+        score: result.score,
+      },
+    });
+  }
+
+  if (result.success && result.url) {
+    console.log(`[BadlandsStage] Smart resolver: Using ${result.path} (fallback level ${result.fallbackLevel})`);
+    return {
+      url: result.url,
+      folderUsed: result.path,
+      fallbackLevel: result.fallbackLevel,
+      filename: result.assetId,
+      assetId: result.assetId,
+    };
+  }
+
+  // Smart resolver failed, fall back to static selection
+  console.log('[BadlandsStage] Smart resolver found no match, using static fallback');
+  return selectBackgroundForIncident(incident, baseUrl);
+}
+
+/**
+ * WO-DIORAMA: Prewarm the smart resolver cache
+ */
+async function prewarmSmartResolver() {
+  const resolver = getSmartResolver();
+  await resolver.prewarm(['combat', 'traversal', 'social', 'anomaly', 'idle']);
+}
+
 /**
  * WO-HUB-04: Preload image and resolve when loaded
  * Returns a promise that resolves with the URL when the image is ready
@@ -368,6 +472,11 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
 
   // Pre-load all state backgrounds manifests
   await loadAllStateBackgrounds(import.meta.url);
+
+  // WO-DIORAMA: Prewarm smart resolver cache
+  prewarmSmartResolver().catch(err => {
+    console.warn('[BadlandsStage] Smart resolver prewarm failed:', err);
+  });
 
   // Combat settings (can be overridden by dev config)
   const DEFAULT_ENCOUNTER_DURATION = 30; // seconds (default, can be overridden)
@@ -864,10 +973,14 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         _incident: incident, // WO-ASSET-ROUTING: Attach incident for routing
       };
 
-      // WO-ASSET-ROUTING: Get background using routing if available
+      // WO-DIORAMA: Get background using smart resolver with best-match
       let combatBgUrl;
       if (incident.renderPlan?.assetRouting) {
-        const bgResult = await selectBackgroundForIncident(incident, import.meta.url);
+        const bgResult = await selectBackgroundWithSmartResolver(
+          incident,
+          { clockSegment: state.clockSegment, actionBus: ctx.actionBus },
+          import.meta.url
+        );
         combatBgUrl = bgResult.url;
       } else {
         combatBgUrl = getRandomBackground('combat', import.meta.url);
@@ -1001,13 +1114,17 @@ export default async function mount(host, { id, data = {}, ctx = {} }) {
         // Pause world state transitions during combat
         stopWorldStateTimer();
 
-        // WO-ASSET-ROUTING: Use routing if incident has routing context, else legacy
+        // WO-DIORAMA: Use smart resolver for best-match background selection
         let combatBgUrl;
         const incident = encounter._incident || state.currentIncident;
         if (incident?.renderPlan?.assetRouting) {
-          const bgResult = await selectBackgroundForIncident(incident, import.meta.url);
+          const bgResult = await selectBackgroundWithSmartResolver(
+            incident,
+            { clockSegment: state.clockSegment, actionBus: ctx.actionBus },
+            import.meta.url
+          );
           combatBgUrl = bgResult.url;
-          console.log(`[BadlandsStage] Combat bg from routing: ${bgResult.folderUsed} (level ${bgResult.fallbackLevel})`);
+          console.log(`[BadlandsStage] Smart resolver bg: ${bgResult.folderUsed} (level ${bgResult.fallbackLevel})`);
         } else {
           combatBgUrl = getRandomBackground('combat', import.meta.url);
         }

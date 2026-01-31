@@ -106,6 +106,18 @@ export function createDevRenderInspector(options = {}) {
     mapPosY: 0,
     mapZoom: 1,
     lastSpikeAmount: 0,
+
+    // WO-DIORAMA-05: Resolver State
+    dioramaResolver: {
+      lastRecipe: null,
+      lastDecision: null,
+      manifestsChecked: [],
+      candidatesScored: 0,
+      selectedAssetId: null,
+      selectedPath: null,
+      fallbackLevel: -1,
+      resolutionDuration: 0,
+    },
   };
 
   // Subscription unsubscribers
@@ -394,6 +406,53 @@ export function createDevRenderInspector(options = {}) {
       }, 'renderInspector', { persistent: true })
     );
 
+    // WO-DIORAMA-05: Diorama resolver decisions
+    unsubscribers.push(
+      actionBus.subscribe('diorama:resolved', (data) => {
+        const { recipe, decision, result } = data;
+
+        currentContext.dioramaResolver = {
+          lastRecipe: recipe ? {
+            beatType: recipe.beatType,
+            activityPhase: recipe.activityPhase,
+            region: recipe.region,
+            timeBucket: recipe.timeBucket,
+            intensityTier: recipe.intensityTier,
+          } : null,
+          lastDecision: decision ? {
+            probeOrder: decision.probeOrder?.slice(0, 5),
+            candidatesScored: decision.candidatesScored?.length || 0,
+          } : null,
+          manifestsChecked: decision?.manifestsChecked || [],
+          candidatesScored: decision?.candidatesScored?.length || 0,
+          selectedAssetId: result?.assetId || null,
+          selectedPath: result?.path || null,
+          fallbackLevel: result?.fallbackLevel ?? -1,
+          resolutionDuration: decision?.duration || 0,
+        };
+
+        addTimelineEvent('diorama:resolved', {
+          success: result?.success || false,
+          assetId: result?.assetId,
+          path: result?.path,
+          fallbackLevel: result?.fallbackLevel,
+          score: result?.score,
+          candidatesScored: decision?.candidatesScored?.length || 0,
+          durationMs: decision?.duration?.toFixed(2),
+        });
+      }, 'renderInspector', { persistent: true })
+    );
+
+    // Diorama cache/prewarm events
+    unsubscribers.push(
+      actionBus.subscribe('diorama:prewarmed', (data) => {
+        addTimelineEvent('diorama:prewarmed', {
+          cachedManifests: data.cachedManifests,
+          availablePaths: data.availablePaths,
+        });
+      }, 'renderInspector', { persistent: true })
+    );
+
     console.log('[RenderInspector] Subscribed to events');
   }
 
@@ -506,6 +565,49 @@ export function createDevRenderInspector(options = {}) {
     Object.assign(currentContext, updates);
   }
 
+  /**
+   * WO-DIORAMA-05: Get diorama resolver stats
+   */
+  function getDioramaResolverStats() {
+    const resolver = currentContext.dioramaResolver;
+    return {
+      // Last recipe used
+      recipe: resolver.lastRecipe,
+
+      // Resolution results
+      selectedAsset: resolver.selectedAssetId,
+      selectedPath: resolver.selectedPath,
+      fallbackLevel: resolver.fallbackLevel,
+      fallbackLabel: getFallbackLabel(resolver.fallbackLevel),
+
+      // Performance
+      durationMs: resolver.resolutionDuration?.toFixed(2),
+      candidatesScored: resolver.candidatesScored,
+
+      // Manifests checked
+      manifestsChecked: resolver.manifestsChecked.map(m => ({
+        path: m.path,
+        found: m.found,
+        items: m.itemCount,
+      })),
+    };
+  }
+
+  /**
+   * Get human-readable fallback level label
+   */
+  function getFallbackLabel(level) {
+    const labels = {
+      0: 'Full match (beatType/phase/region)',
+      1: 'Phase match (beatType/phase)',
+      2: 'Beat type only',
+      3: 'Idle fallback',
+      4: 'Legacy fallback',
+      [-1]: 'No match found',
+    };
+    return labels[level] || `Level ${level}`;
+  }
+
   return {
     init,
     stop,
@@ -528,10 +630,14 @@ export function createDevRenderInspector(options = {}) {
     copyContextToClipboard,
     isEnabled,
 
+    // WO-DIORAMA-05: Resolver stats
+    getDioramaResolverStats,
+
     // Direct access for debugging
     get context() { return currentContext; },
     get timeline() { return timelineBuffer; },
     get missing() { return missingAssets; },
+    get resolver() { return currentContext.dioramaResolver; },
   };
 }
 
