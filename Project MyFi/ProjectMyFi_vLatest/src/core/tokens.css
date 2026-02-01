@@ -1192,10 +1192,11 @@ body::after{
 }
 
 .chrome__orbCore{
-  /* WO-FIX: Absolute centering using inset + margin auto */
+  /* WO-FIX: Absolute centering with translate */
   position: absolute;
-  inset: 0;
-  margin: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -1205,7 +1206,6 @@ body::after{
     0 0 40px rgba(139, 92, 246, 0.4),
     inset 0 0 12px rgba(255, 255, 255, 0.3);
   animation: orbPulse 2.5s ease-in-out infinite;
-  transform-origin: center center;
   will-change: transform, box-shadow;
 }
 
@@ -1215,7 +1215,6 @@ body::after{
   border-radius: 50%;
   border: 2px solid rgba(139, 92, 246, 0.4);
   animation: orbRingPulse 2s ease-in-out infinite;
-  transform-origin: center center;
   will-change: transform, opacity;
 }
 
@@ -1225,7 +1224,8 @@ body::after{
       0 0 20px rgba(139, 92, 246, 0.6),
       0 0 40px rgba(139, 92, 246, 0.3),
       inset 0 0 12px rgba(255, 255, 255, 0.25);
-    transform: scale(1);
+    /* WO-FIX: Preserve translate centering during animation */
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
     box-shadow:
@@ -1233,7 +1233,7 @@ body::after{
       0 0 60px rgba(139, 92, 246, 0.5),
       0 0 80px rgba(139, 92, 246, 0.2),
       inset 0 0 15px rgba(255, 255, 255, 0.4);
-    transform: scale(1.08);
+    transform: translate(-50%, -50%) scale(1.08);
   }
 }
 
@@ -1250,7 +1250,8 @@ body::after{
 
 .chrome__navOrb--pressed .chrome__orbCore{
   animation: none;
-  transform: scale(0.92);
+  /* WO-FIX: Preserve translate centering when pressed */
+  transform: translate(-50%, -50%) scale(0.92);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
@@ -1266,6 +1267,8 @@ body::after{
 
 @keyframes orbHoldGlow{
   to {
+    /* WO-FIX: Preserve translate centering during hold glow */
+    transform: translate(-50%, -50%);
     box-shadow: 0 0 40px rgba(251, 146, 60, 0.8), 0 0 60px rgba(139, 92, 246, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.4);
     background: radial-gradient(circle at 30% 30%, #fb923c, #f97316, #ea580c);
   }
