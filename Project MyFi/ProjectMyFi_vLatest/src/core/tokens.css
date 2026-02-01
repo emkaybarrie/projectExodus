@@ -1189,14 +1189,13 @@ body::after{
   height: 48px;
   border-radius: 50%;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* WO-FIX: Ensure transforms scale from center */
-  transform-origin: center center;
 }
 
 .chrome__orbCore{
+  /* WO-FIX: Absolute centering using inset + margin auto */
+  position: absolute;
+  inset: 0;
+  margin: auto;
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -1206,8 +1205,8 @@ body::after{
     0 0 40px rgba(139, 92, 246, 0.4),
     inset 0 0 12px rgba(255, 255, 255, 0.3);
   animation: orbPulse 2.5s ease-in-out infinite;
-  /* WO-FIX: Explicit transform-origin for pulse animation */
   transform-origin: center center;
+  will-change: transform, box-shadow;
 }
 
 .chrome__orbRing{
@@ -1216,8 +1215,8 @@ body::after{
   border-radius: 50%;
   border: 2px solid rgba(139, 92, 246, 0.4);
   animation: orbRingPulse 2s ease-in-out infinite;
-  /* WO-FIX: Explicit transform-origin for ring pulse */
   transform-origin: center center;
+  will-change: transform, opacity;
 }
 
 @keyframes orbPulse{
